@@ -174,7 +174,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, connectAuthEmulator, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, connectFirestoreEmulator, doc, collection, onSnapshot, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, increment, Timestamp, query, where, orderBy, limit, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-var APP_VERSION = '1.26', RULES_VERSION = '1.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '1.27', RULES_VERSION = '1.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 var CYCLE = ['Red', 'Blue', 'White', 'Black'];   /* AM shift on consecutive days, from the 2026 Fire Service calendar */
 var ANCHOR = Date.UTC(2026, 9, 1) / 864e5;       /* 1 Oct 2026: AM = Red */
 var AM_START = 9, PM_START = 18;                 /* day shift 9am to 6pm, night shift 6pm to 9am */
@@ -1946,13 +1946,16 @@ function stepTo(cur, sign, lo, hi) { var n = cur + sign; return Math.max(lo, hi 
     if (e.touches.length !== 1 || $('#cf')) { st = null; return; }
     var sh = sheetOf(e.target); if (!sh) { st = null; return; }
     var r = sh.getBoundingClientRect(), y = e.touches[0].clientY;
-    st = { sh: sh, y0: y, x0: e.touches[0].clientX, t0: Date.now(), on: false, dead: false, top: (y - r.top) < 64 || sh.scrollTop <= 0 };
+    st = { sh: sh, y0: y, x0: e.touches[0].clientX, t0: Date.now(), on: false, dead: false, top: false };
+    var h = sh.querySelector(':scope > h2'), hb = h ? Math.min(h.getBoundingClientRect().bottom + 4, r.top + 96) : r.top + 56;   /* only the handle bar and the title row start a pull-down */
+    if (y < r.top || y > hb) { st = null; return; }
+    st.top = true;
   }, { passive: true });
   document.addEventListener('touchmove', function (e) {
     if (!st || st.dead) return; var y = e.touches[0].clientY, dy = y - st.y0, dx = Math.abs(e.touches[0].clientX - st.x0);
     if (!st.on) {
       if (Math.abs(dy) < 8 && dx < 8) return;
-      if (dx > Math.abs(dy) || dy < 0 || !(st.top || st.sh.scrollTop <= 0) || (st.sh.scrollTop > 0)) { st.dead = true; return; }
+      if (dx > Math.abs(dy) || dy < 0) { st.dead = true; return; }
       st.on = true; st.sh.classList.add('pulling');
     }
     e.preventDefault(); st.sh.style.transform = 'translateY(' + Math.max(0, dy) + 'px)';
