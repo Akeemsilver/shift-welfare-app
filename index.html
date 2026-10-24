@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Shift Welfare</title>
 <meta name="theme-color" content="#0F4C68">
-<meta name="color-scheme" content="light dark">
+<meta name="color-scheme" content="light">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest">
@@ -18,11 +18,11 @@
 --ok:#2E8B57;--ok-bg:#E2F3EA;--soon:#B87C00;--soon-bg:#FFF1CC;--exp:#C7361F;--exp-bg:#FBE9E5;
 --sh:0 1px 2px rgba(16,24,40,.07),0 4px 12px rgba(16,24,40,.09);--r:18px;--bar:68px;
 --cnt:#1F6FA8;--cnt-bg:#E3EEF8;--s-red:#C7361F;--s-blue:#1F6FA8;--s-white:#8996A1;--s-black:#14181C;
---field:#fff;--link:var(--brand);--dis:#EEF0F2;--toast:#0E1B24;--pop:var(--bg);--ov:rgba(14,27,36,.55);--secb:#7C9DB0;color-scheme:light}
+--field:#fff;--link:var(--brand);--dis:#EEF0F2;--toast:#0E1B24;--pop:var(--bg);--ov:rgba(14,27,36,.55);--secb:#7C9DB0;--ib:#C9D1D9;color-scheme:light}
 /* dark: chosen in Settings > Appearance, or followed from the phone when it is on Automatic */
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#10181F;--surface:#212E3A;--ink:#E8EEF2;--muted:#9FAEBA;--line:#2E3B46;--soft:#243542;--ok:#4FC48C;--ok-bg:#163428;--soon:#E2AB2B;--soon-bg:#3B3011;--exp:#F2705C;--exp-bg:#3C1E19;--sh:0 1px 2px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.35);--cnt:#5DAEE6;--cnt-bg:#17324A;--s-red:#D9533D;--s-blue:#3C8BCB;--s-white:#9FAEBA;--s-black:#05080A;--field:#222E38;--link:#86C7EA;--dis:#26323C;--toast:#2B3A47;--pop:#18232D;--ov:rgba(0,0,0,.72);--secb:#58798D;color-scheme:dark}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#10181F;--surface:#212E3A;--ink:#E8EEF2;--muted:#9FAEBA;--line:#2E3B46;--soft:#243542;--ok:#4FC48C;--ok-bg:#163428;--soon:#E2AB2B;--soon-bg:#3B3011;--exp:#F2705C;--exp-bg:#3C1E19;--sh:0 1px 2px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.35);--cnt:#5DAEE6;--cnt-bg:#17324A;--s-red:#D9533D;--s-blue:#3C8BCB;--s-white:#9FAEBA;--s-black:#05080A;--field:#222E38;--link:#86C7EA;--dis:#26323C;--toast:#2B3A47;--pop:#18232D;--ov:rgba(0,0,0,.72);--secb:#58798D;--ib:#4A5E70;color-scheme:dark}
 :root:not([data-theme=light]) .sw.Black{border:1px solid rgba(255,255,255,.3)}:root:not([data-theme=light]) .sigimg{filter:invert(1)}}
-:root[data-theme=dark]{--bg:#10181F;--surface:#212E3A;--ink:#E8EEF2;--muted:#9FAEBA;--line:#2E3B46;--soft:#243542;--ok:#4FC48C;--ok-bg:#163428;--soon:#E2AB2B;--soon-bg:#3B3011;--exp:#F2705C;--exp-bg:#3C1E19;--sh:0 1px 2px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.35);--cnt:#5DAEE6;--cnt-bg:#17324A;--s-red:#D9533D;--s-blue:#3C8BCB;--s-white:#9FAEBA;--s-black:#05080A;--field:#222E38;--link:#86C7EA;--dis:#26323C;--toast:#2B3A47;--pop:#18232D;--ov:rgba(0,0,0,.72);--secb:#58798D;color-scheme:dark}
+:root[data-theme=dark]{--bg:#10181F;--surface:#212E3A;--ink:#E8EEF2;--muted:#9FAEBA;--line:#2E3B46;--soft:#243542;--ok:#4FC48C;--ok-bg:#163428;--soon:#E2AB2B;--soon-bg:#3B3011;--exp:#F2705C;--exp-bg:#3C1E19;--sh:0 1px 2px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.35);--cnt:#5DAEE6;--cnt-bg:#17324A;--s-red:#D9533D;--s-blue:#3C8BCB;--s-white:#9FAEBA;--s-black:#05080A;--field:#222E38;--link:#86C7EA;--dis:#26323C;--toast:#2B3A47;--pop:#18232D;--ov:rgba(0,0,0,.72);--secb:#58798D;--ib:#4A5E70;color-scheme:dark}
 :root[data-theme=dark] .sw.Black{border:1px solid rgba(255,255,255,.3)}:root[data-theme=dark] .sigimg{filter:invert(1)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;overscroll-behavior-y:none;background:var(--bg);color:var(--ink);font:13px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,Lato,sans-serif}
@@ -68,11 +68,12 @@ button.btn.sm{height:34px;padding:0 12px;font-size:12px}
 button.btn.block{width:100%}
 button:disabled{opacity:.45}
 .row{display:flex;gap:10px;align-items:center}.row>*{min-width:0}.grow{flex:1}
+.row.f{align-items:flex-end}   /* side-by-side fields line up on the bottom edge even when one label wraps to two lines */
 .stepper{display:flex;align-items:center;gap:6px}
 .stepper button{width:46px;height:46px;border:0;border-radius:12px;background:var(--brand);color:#fff;font-size:23px;font-weight:600;line-height:1}
 .stepper .stepin{width:74px;height:46px;text-align:center;font-size:16px;font-weight:600;padding:0 4px}
 .selbtn{display:flex;align-items:center;justify-content:space-between;text-align:left;background:var(--field)!important;color:var(--ink)!important;border:2px solid var(--secb)!important;font-weight:600!important}
-input,select{font:inherit;font-size:14px;height:42px;border:1px solid var(--line);border-radius:10px;padding:0 10px;background:var(--field);color:var(--ink);width:100%}
+input,select{font:inherit;font-size:14px;height:42px;border:1px solid var(--ib);border-radius:10px;padding:0 10px;background:var(--field);color:var(--ink);width:100%}
 label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 4px}
 .f{margin-bottom:10px}
 .list>div{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
@@ -116,7 +117,7 @@ nav button.on{color:var(--link);background:var(--soft)}
 .sec-h{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);padding:10px 0 2px;border:0!important}
 .sigimg{max-width:100%;max-height:90px;display:block;margin:6px 0}
 .sigcard{border:2px dashed var(--line);border-radius:14px;padding:10px;background:var(--field)}
-textarea{font:inherit;width:100%;min-height:90px;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--field);color:var(--ink)}
+textarea{font:inherit;width:100%;min-height:90px;border:1px solid var(--ib);border-radius:10px;padding:8px;background:var(--field);color:var(--ink)}
 .cancelbar{background:var(--exp-bg);color:var(--exp);font-weight:700;border-radius:12px;padding:8px 12px;margin-bottom:10px}
 #pad{position:fixed;inset:0;background:var(--surface);z-index:80;overflow:hidden;touch-action:none}
 #pad .prot{position:absolute;left:0;top:0;transform-origin:top left}
@@ -142,6 +143,19 @@ input:disabled{background:var(--dis);color:var(--muted)}
 #hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bar) + 58px + env(safe-area-inset-bottom));background:var(--toast);color:#fff;padding:8px 14px;border-radius:999px;z-index:25;font-size:12px;max-width:92%;opacity:0;transition:opacity .25s;pointer-events:none;text-align:center}
 #hint.show{opacity:1}
 .helpc ol,.helpc ul{margin:0;padding-left:18px;line-height:1.55}.helpc li{margin-bottom:3px}
+.sp-top{display:flex;align-items:center;gap:12px;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;background:var(--surface);border-bottom:1px solid var(--line);flex:none}
+.sp-top button{width:40px;height:40px;border-radius:50%;border:0;background:var(--soft);color:var(--link);font-size:24px;line-height:1;font-weight:600}
+.sp-top b{flex:1;text-align:center;font-size:18px;font-weight:700;margin-right:40px}
+#spage{position:fixed;inset:0;z-index:15;background:var(--bg);display:flex;flex-direction:column}
+.sp-body{flex:1;overflow:auto;padding:14px 16px calc(28px + env(safe-area-inset-bottom));max-width:640px;margin:0 auto;width:100%;overscroll-behavior:contain}
+.sp-h{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:18px 6px 8px}
+.sp-card{background:var(--surface);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.sp-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border-top:1px solid var(--line);cursor:pointer}.sp-row:first-child{border-top:0}
+.sp-ic{width:44px;height:44px;border-radius:12px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-size:20px;font-style:normal;flex:none}
+.sp-row b{font-size:16px;font-weight:600;display:block}.sp-row .muted{font-size:13px;margin-top:2px}
+.sp-ch{color:var(--muted);font-size:24px;flex:none}
+.sp-row.red b{color:var(--exp)}.sp-row.red .sp-ic{background:var(--exp-bg)}
+body.spo nav{display:none!important}body.spo .modal>div{margin-bottom:0;max-height:calc(100vh - 24px - env(safe-area-inset-bottom))}
 [hidden]{display:none!important}
 .mn{color:var(--exp)!important}
 .tile.wide:not(.pf1) .mn{color:#FF9E92!important}
@@ -149,10 +163,10 @@ input:disabled{background:var(--dis);color:var(--muted)}
 .tbtn{border:0;text-align:left;font:inherit;color:inherit;width:100%;cursor:pointer;border-left:4px solid var(--cnt)}
 input[type=number]{-moz-appearance:textfield;appearance:textfield}
 input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-.ig{display:flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:10px;background:#fff;height:42px;padding:0 10px}
+.ig{display:flex;align-items:center;gap:5px;border:1px solid var(--ib);border-radius:10px;background:var(--field);height:42px;padding:0 10px}
 .ig input{border:0!important;height:40px;padding:0!important;background:none!important;flex:1;min-width:0;outline:0}
 .ig i{font-style:normal;color:var(--muted);font-size:12px;white-space:nowrap}
-.ig:has(input:disabled){background:#EEF0F2}
+.ig:has(input:disabled){background:var(--dis)}
 </style>
 </head>
 <body>
@@ -174,6 +188,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 </nav>
 <div id="toast"></div>
 <div id="updbar" hidden><span></span><button class="btn sm" data-act="updgo">Update</button><button class="btn sec sm" data-act="updlater">Later</button></div>
+<div id="spage" hidden></div>
 <div id="modal"></div>
 <div id="padhost"></div>
 
@@ -187,7 +202,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, connectAuthEmulator, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, connectFirestoreEmulator, doc, collection, onSnapshot, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, increment, Timestamp, query, where, orderBy, limit, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-var APP_VERSION = '1.38', RULES_VERSION = '1.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '1.47', RULES_VERSION = '1.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 var CYCLE = ['Red', 'Blue', 'White', 'Black'];   /* AM shift on consecutive days, from the 2026 Fire Service calendar */
 var ANCHOR = Date.UTC(2026, 9, 1) / 864e5;       /* 1 Oct 2026: AM = Red */
 var AM_START = 9, PM_START = 18;                 /* day shift 9am to 6pm, night shift 6pm to 9am */
@@ -287,7 +302,11 @@ function dupName(p) {   /* two people with the same name: show the service numbe
 }
 function plabel(p) { return !p ? '' : p.kind === 'g' ? p.name : p.name + (p.no && dupName(p) ? ' (' + p.no + ')' : ''); }
 function plab(id) { return plabel(party(id)) || '(removed name)'; }
-function myName() { var p = myPerson(); return p ? plabel(p) : (EMAIL || ''); }
+function myName() { var p = myPerson(); return p ? plabel(p) : 'A member'; }   /* never an email */
+function nameOfEmail(em) {   /* a name for an email address, for anything shown on screen */
+  var m = S.members.filter(function (x) { return x.email === em; })[0], p = m && m.personId ? person(m.personId) : null; if (p) return plabel(p);
+  var r = (S.requests || []).filter(function (x) { return x.email === em; })[0]; return r ? r.name : 'A member';
+}
 function balance(id) { id = rootOf(id); var s = 0; for (var k in S.bal) if (rootOf(k) === id) s += S.bal[k]; return Math.round(s * 100) / 100; }
 function partyIds(id) { id = rootOf(id); var ids = [id]; S.guests.forEach(function (g) { if (g.id !== id && rootOf(g.id) === id) ids.push(g.id); }); return ids; }
 function owing() {
@@ -549,7 +568,7 @@ function shWork() {
     var id = newId('shiftreqs');
     guard(setDoc(ref('shiftreqs/' + id), { fromEmail: EMAIL, fromName: myName(), toEmail: po.email, toName: po.name || '', target: { name: cs.name, half: cs.half, date: cs.date }, what: SHPEND ? SHPEND.what : '', status: 'pending', sid: SH().sid, at: Date.now() }));
     SHWAIT = { id: id, to: po.name || po.email, cs: cs };
-    shShow('<h2>Waiting for approval</h2><p style="margin-top:0"><b>' + esc(po.name || po.email) + '</b> handed over to you. They have been told what you want to change and must approve recording on <b>' + esc(shText(cs)) + '</b>.</p><button class="btn sec block" data-act="shcancelreq">Cancel request</button>');
+    shShow('<h2>Waiting for approval</h2><p style="margin-top:0"><b>' + esc(po.name || nameOfEmail(po.email)) + '</b> handed over to you. They have been told what you want to change and must approve recording on <b>' + esc(shText(cs)) + '</b>.</p><button class="btn sec block" data-act="shcancelreq">Cancel request</button>');
   });
 }
 function shReqSeen() {   /* the person who asked hears the answer */
@@ -620,6 +639,7 @@ function vCount() {
   if (!S.items.length) return h + '<div class="card empty">No items yet.<br>Go to <b>Stock</b> and add your items and prices.</div>';
   if (inControl() && !(S.state && S.state.pending) && soList(true).length) h += '<button class="btn sec sm" data-act="startover" style="margin:-6px 0 12px;float:right">↺ Start over</button><div style="clear:both"></div>';
   h += '<div class="card" style="padding:10px 14px;margin-bottom:12px"><div class="row"><b class="grow" style="color:var(--cnt)">Counted so far ' + n + ' of ' + S.items.length + '</b><span class="muted" style="font-size:12px">tap an item to count it</span></div><div class="cprog"><div style="width:' + Math.round(100 * n / S.items.length) + '%"></div></div></div>';
+  h += '<div class="muted" style="margin:-4px 4px 12px">What you see is what was handed over to you. At the end of your shift, count so it shows what you are handing over.</div>';
   return h + '<div class="cgrid">' + S.items.map(function (i) {
     var c = cnum(i.id), cl = c.counted ? ' done' : i.stock <= 0 ? ' out' : i.stock <= 6 ? ' low' : '';
     return '<button class="cc' + cl + '" data-act="pick" data-id="' + i.id + '"><div class="cn">' + esc(i.name) + '</div><div class="cv">' + i.stock + '</div><div class="cs">' + (i.shelf ? '🧁 On the shelf' : '🔒 Cage: ' + i.cage + (i.cage === 1 ? ' case' : ' cases')) + '</div>' + (c.counted ? '<div class="cs" style="margin-top:3px"><span class="pill">Sold ' + Math.max(0, c.sold - c.sp) + '</span>' + (c.cr ? ' <span class="pill low">Credit ' + c.cr + '</span>' : '') + (c.sp ? ' <span class="pill out">Spoiled ' + c.sp + '</span>' : '') + '</div><span class="ck">✓ −' + c.sold + '</span>' : '') + '</button>';
@@ -627,7 +647,7 @@ function vCount() {
 }
 function cnPreview(it) {
   var c = cnum(it.id), miss = it.stock - CN.to, gone = c.sold + miss, sold = Math.max(0, gone - c.sp), cash = Math.max(0, sold - c.cr), over = c.cr > sold || c.sp > gone;
-  return '<div class="muted" style="margin-top:12px">Last count: <b>' + it.stock + '</b></div>' +
+  return '<div class="muted" style="margin-top:12px">Handed over count: <b>' + (it.open || 0) + '</b></div><div class="muted" style="margin-top:2px">My count: <b>' + (c.counted ? it.stock : 'not counted yet') + '</b></div>' +
     (gone ? '<div style="margin-top:6px;line-height:2"><span class="pill" style="font-size:14px">' + sold + ' sold</span> <span class="muted">(' + cash + ' cash)</span> ' + (c.cr ? '<span class="pill low" style="font-size:14px">' + c.cr + ' on credit</span> ' : '') + (c.sp ? '<span class="pill out" style="font-size:14px">' + c.sp + ' spoiled</span>' : '') + '</div>' + (c.sold && miss ? '<div class="muted" style="font-size:12px">' + c.sold + ' sold earlier this shift + ' + miss + ' now</div>' : '') : '<div class="muted" style="margin-top:4px">Nothing sold yet</div>') +
     (over ? '<div class="card" style="background:var(--exp-bg);box-shadow:none;margin:8px 0 0;color:var(--exp)"><b>Credit (' + c.cr + ') or spoiled (' + c.sp + ') is more than what was sold or gone (' + sold + ' sold, ' + gone + ' gone).</b> Check it. You cannot hand over until it matches.</div>' : '');
 }
@@ -903,7 +923,7 @@ function profitModal() {
 /* ---------- Use cash (money from the welfare cash spent on something that is not a loan) ---------- */
 var UC = null;
 /* ---------- who held control during the shift (a visiting admin can take over and hand over; the shortage stays with the watch on duty) ---------- */
-function whoOf(email) { var m = S.members.filter(function (x) { return x.email === email; })[0], p = m && m.personId ? person(m.personId) : null; return { name: p ? plabel(p) : (email || 'nobody'), wk: p ? (p.watch || '') : '' }; }
+function whoOf(email) { var m = S.members.filter(function (x) { return x.email === email; })[0], p = m && m.personId ? person(m.personId) : null; return { name: p ? plabel(p) : (email ? 'A member' : 'nobody'), wk: p ? (p.watch || '') : '' }; }
 function ctlTrail() {
   return S.log.filter(function (e) { return e.type === 'takeover' || e.type === 'switch'; }).sort(function (a, b) { return a.t - b.t; }).map(function (e) {
     var f = whoOf(e.type === 'takeover' ? e.from : e.by), t = whoOf(e.type === 'takeover' ? e.by : e.to);
@@ -1129,11 +1149,12 @@ var IP = null;
 function ipList(q) {
   var k = nkey(q), l = S.items.filter(function (i) { return !k || nkey(i.name).indexOf(k) >= 0; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
   var h = l.map(function (i) { return '<div data-act="ippick" data-id="' + i.id + '"><div class="grow"><b>' + esc(i.name) + '</b><div class="muted">' + (i.shelf ? i.stock + ' on shelf' : i.stock + ' in fridge · ' + i.cage + ' case' + (i.cage === 1 ? '' : 's')) + '</div></div>' + (i.id === IP.cur ? '<span class="pill">✓</span>' : '') + '</div>'; }).join('');
-  return h + '<div data-act="ipnew" style="background:var(--soft);border-radius:10px;padding-left:10px"><div class="grow"><b>+ New item' + (q.trim() ? ' “' + esc(q.trim()) + '”' : ' (not on the list)') + '</b></div></div>';
+  return h;
 }
+function ipNewRow(q) { return '<div data-act="ipnew" style="background:var(--surface);border:2px solid var(--secb);border-radius:10px;padding:10px 12px;margin-top:8px;cursor:pointer"><b>+ New item' + (q.trim() ? ' “' + esc(q.trim()) + '”' : ' (not on the list)') + '</b></div>'; }   /* always at the top, under the search box */
 function itemPicker(k) {
   IP = { k: k, cur: BUY.lines[k].item };
-  modal('<h2>Choose the item</h2><div class="sq"><input id="ip-q" placeholder="Search or scroll the list" autocomplete="off"></div><div class="list" id="ip-list">' + ipList('') + '</div><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>', true);
+  modal('<h2>Choose the item</h2><div class="sq"><input id="ip-q" placeholder="Search or scroll the list" autocomplete="off"><div id="ip-new">' + ipNewRow('') + '</div></div><div class="list" id="ip-list">' + ipList('') + '</div><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>', true);
   $('#ip-q').focus();
 }
 var HEV = {};   /* events seen in lists, so a tapped row can show its details */
@@ -1432,10 +1453,11 @@ function doSignType() { var n = prompt('Type your name to use as your signature:
 function stageHtml() {
   if (STAGE === 'config') return '<div class="card"><h2>Setup needed</h2><p>Firebase is not connected yet. Open <b>firebase-config.js</b> and paste your Firebase web app settings (see README.md).</p></div>';
   if (STAGE === 'loading') return '<div class="card empty">Loading…</div>';
-  if (STAGE === 'login') return '<div style="text-align:center"><img src="icons/logo.png" alt="Shift Welfare" width="220" style="max-width:70%;height:auto"></div><div class="card"><h2>Sign in</h2><p class="muted" style="margin-top:0">Enter the email you were invited with. We send you a sign-in link; open it on this phone.</p>' +
+  if (STAGE === 'login') return '<div style="text-align:center"><img src="icons/logo.png" alt="Shift Welfare" width="220" style="max-width:70%;height:auto"></div>' + instCard(false) + '<div class="card"><h2>Sign in</h2><p class="muted" style="margin-top:0">Enter your email. We send you a sign-in link; open it on this phone. New here? After signing in you can ask for access.</p>' +
     '<div class="f"><label>Email</label><input id="lg-email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" value="' + esc(SENT) + '"></div>' +
-    '<button class="btn block" data-act="sendlogin">Send sign-in link</button><div id="lg-msg" class="muted" style="margin-top:10px"></div></div>' + instBtn();
-  if (STAGE === 'noaccess') return '<div class="card"><h2>Something went wrong</h2><p>The app could not check access for ' + esc(EMAIL) + '. Check your connection and sign in again.</p><button class="btn sec block" data-act="signout">Sign out</button></div>';
+    '<button class="btn block" data-act="sendlogin">Send sign-in link</button><div id="lg-msg" class="muted" style="margin-top:10px"></div>' +
+    '<details style="margin-top:10px"><summary class="muted" style="cursor:pointer">Opened the link somewhere else, or it did not sign you in?</summary><p class="muted">Press and hold the link in the email, copy it, then paste it here with your email above.</p><div class="f"><input id="lg-link" placeholder="Paste the sign-in link" autocomplete="off"></div><button class="btn sec block" data-act="pastelogin">Sign in with this link</button></details></div>';
+  if (STAGE === 'noaccess') return '<div class="card"><h2>Something went wrong</h2><p>The app could not check your access. Check your connection and sign in again.</p><button class="btn sec block" data-act="signout">Sign out</button></div>';
   if (STAGE === 'request') return requestHtml();
   if (STAGE === 'setup') return '<div class="card"><h2>Waiting for set-up</h2><p>The owner has not set the app up yet. Try again in a moment.</p><button class="btn sec block" data-act="signout">Sign out</button></div>';
   return '';
@@ -1474,7 +1496,7 @@ function render() {
   $('#main').innerHTML = ready ? banner() + srCard() + reqCard() + VIEWS[tab]() : stageHtml();
   if (ready && viewOnly()) document.querySelectorAll('#main input:not(#c-q):not([data-b]):not([data-bl])').forEach(function (el) { el.disabled = true; });
   if (focus && $('#' + focus)) $('#' + focus).focus();
-  vv(); hsync();
+  vv(); hsync(); if (ready) spRender();
   if (ready && !INST_ASKED && M && S.people.length && installDue() && !$('#modal').innerHTML) installPrompt();
   else if (ready && autoRx()) showRx();
   else if (ready && M && !M.personId && !WHO_DONE && !$('#modal').innerHTML) { WHO_DONE = true; whoModal(); }
@@ -1749,17 +1771,24 @@ function rqList(q) {
   var l = S.names.filter(function (p) { return !q || p.name.toLowerCase().indexOf(q.toLowerCase().trim()) >= 0; }).slice(0, 40);
   return l.length ? l.map(function (p) { return '<div data-act="rqpick" data-id="' + p.id + '" style="cursor:pointer"><div class="grow"><b>' + esc(p.name) + '</b></div>' + wsw(p.watch) + '</div>'; }).join('') : '<div class="empty">No match.</div>';
 }
-function instBtn() { return isStandalone() ? '' : '<button class="btn sec block" data-act="instapp" style="margin-bottom:14px">📲 Install the app on your phone</button>'; }
+function instCard(signedIn) {   /* an optional but recommended install, with the steps for this phone */
+  if (isStandalone()) return '';
+  var ios = isIOS(), h = '<div class="card helpc"><h2>📲 Install the app (recommended)</h2><p class="muted" style="margin-top:0">You do not have to, but we recommend installing before you sign up. It opens full screen like a normal app, loads faster and copes better with a weak signal.</p>';
+  if (ios) h += '<ol><li>Open this page in <b>Safari</b> (not inside another app).</li><li>Tap the <b>Share</b> button (the square with an arrow pointing up).</li><li>Scroll down and tap <b>Add to Home Screen</b>.</li><li>Tap <b>Add</b>. The Shift Welfare icon appears on your home screen.</li><li>Open the app from the home screen and sign in there.</li></ol>' +
+    '<p class="muted" style="margin-bottom:0">On iPhone the installed app keeps its own sign-in. If the email link opens in Safari instead of the app, press and hold the link, copy it, open the app and paste it under <b>Opened the link somewhere else</b>.' + (signedIn ? ' If you install now, you will need to sign in once more inside the app.' : '') + '</p>';
+  else h += '<ol><li>Tap the <b>⋮</b> menu at the top right of Chrome.</li><li>Tap <b>Install app</b> (or <b>Add to Home screen</b>).</li><li>Tap <b>Install</b>, then open the app from your home screen.</li></ol><button class="btn sec block" data-act="instapp" style="margin-top:10px">Install the app</button>';
+  return h + '</div>';
+}
 function requestHtml() {
   var logo = '<div style="text-align:center"><img src="icons/logo.png" alt="Shift Welfare" width="160" style="max-width:55%;height:auto"></div>';
   if (MYREQ === undefined) return '<div class="card empty">Loading…</div>';
-  if (MYREQ) return logo + instBtn() + '<div class="card"><h2>Awaiting access from Admin</h2><p class="muted" style="margin-top:0">Your request was sent. An Admin will let you in. You can close the app and come back later.</p>' +
-    '<div class="card sum" style="box-shadow:none;padding:0"><div><span>Name</span><b>' + esc(MYREQ.name) + '</b></div><div><span>Watch</span><b>' + esc(MYREQ.watch || '') + '</b></div><div><span>Email</span><b>' + esc(EMAIL) + '</b></div></div>' +
-    '<button class="btn sec block" data-act="rqcancel" style="margin-top:12px">Cancel request</button><button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>';
-  var picked = RQ.pick ? S.names.filter(function (n) { return n.id === RQ.pick; })[0] : null, h = logo + instBtn() + '<div class="card"><h2>Request access</h2><p class="muted" style="margin-top:0">Find your name. If it is not on the list, add it. An Admin then lets you in.</p>';
+  if (MYREQ) return logo + '<div class="card"><h2>Awaiting access from Admin</h2><p class="muted" style="margin-top:0">Your request was sent. An Admin will let you in. You can close the app and come back later.</p>' +
+    '<div class="card sum" style="box-shadow:none;padding:0"><div><span>Name</span><b>' + esc(MYREQ.name) + '</b></div><div><span>Watch</span><b>' + esc(MYREQ.watch || '') + '</b></div></div>' +
+    '<button class="btn sec block" data-act="rqcancel" style="margin-top:12px">Cancel request</button><button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>' + instCard(true);
+  var picked = RQ.pick ? S.names.filter(function (n) { return n.id === RQ.pick; })[0] : null, h = logo + instCard(true) + '<div class="card"><h2>Request access</h2><p class="muted" style="margin-top:0">Find your name. If it is not on the list, add it. An Admin then lets you in.</p>';
   if (picked) h += '<div class="card sum" style="box-shadow:none;padding:0"><div><span>You are</span><b>' + esc(picked.name) + '</b></div><div><span>Watch</span><b>' + esc(picked.watch || '') + '</b></div></div><button class="btn sec block" data-act="rqchange" style="margin-top:10px">Choose a different name</button><button class="btn block" data-act="rqsend" style="margin-top:10px">Send request</button>';
-  else if (RQ.mode === 'new') h += '<div class="f"><label>Full name</label><input data-rq="name" autocomplete="off" value="' + esc(RQ.name) + '"></div><div class="f"><label>Service number</label><input data-rq="no" inputmode="numeric" autocomplete="off" value="' + esc(RQ.no) + '"></div><div class="f"><label>Rank (optional)</label><input data-rq="rank" autocomplete="off" value="' + esc(RQ.rank) + '"></div>' +
-    '<div class="f"><label>Watch</label><div class="seg" style="grid-template-columns:repeat(4,1fr)">' + WATCHES.map(function (w) { return '<button type="button" data-act="rqwatch" data-v="' + w + '" class="' + (RQ.watch === w ? 'on' : '') + '">' + w + '</button>'; }).join('') + '</div></div>' +
+  else if (RQ.mode === 'new') h += '<div class="f"><label>Surname *</label><input data-rq="name" autocomplete="off" value="' + esc(RQ.name) + '"></div><div class="f"><label>Service number *</label><input data-rq="no" inputmode="numeric" autocomplete="off" value="' + esc(RQ.no) + '"></div><div class="f"><label>Rank *</label><input data-rq="rank" autocomplete="off" placeholder="example FF / F sub O" value="' + esc(RQ.rank) + '"></div>' +
+    '<div class="f"><label>Watch *</label><div class="seg" style="grid-template-columns:repeat(4,1fr)">' + WATCHES.map(function (w) { return '<button type="button" data-act="rqwatch" data-v="' + w + '" class="' + (RQ.watch === w ? 'on' : '') + '">' + w + '</button>'; }).join('') + '</div></div>' +
     '<button class="btn block" data-act="rqsend">Send request</button><button class="btn sec block" data-act="rqlist" style="margin-top:10px">Back to the list</button>';
   else h += '<div class="sq"><input id="rq-q" placeholder="Search your name" autocomplete="off"></div><div class="list" id="rq-list">' + rqList('') + '</div><button class="btn sec block" data-act="rqnew" style="margin-top:10px">My name is not on the list</button>';
   return h + '<button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>';
@@ -1768,7 +1797,7 @@ function rqSend() {
   var d = { email: EMAIL, name: '', no: '', rank: '', watch: '', personId: '', at: Date.now() };
   if (RQ.pick) { var n = S.names.filter(function (x) { return x.id === RQ.pick; })[0]; if (!n) return toast('Choose your name'); d.name = n.name; d.watch = n.watch || ''; d.personId = n.id; }
   else {
-    if (!RQ.name.trim()) return toast('Enter your full name'); if (!RQ.no.trim()) return toast('Enter your service number'); if (!RQ.watch) return toast('Choose your watch');
+    if (!RQ.name.trim()) return toast('Enter your surname'); if (!RQ.no.trim()) return toast('Enter your service number'); if (!RQ.rank.trim()) return toast('Enter your rank'); if (!RQ.watch) return toast('Choose your watch');
     d.name = RQ.name.trim(); d.no = RQ.no.trim(); d.rank = RQ.rank.trim(); d.watch = RQ.watch;
   }
   guard(setDoc(ref('requests/' + EMAIL), d)).then(function () { toast('Request sent'); });
@@ -1784,15 +1813,15 @@ function reqCard() {
 function reqListHtml() {
   if (!S.requests.length) return '';
   return '<div class="card"><h2>Waiting for access (' + S.requests.length + ')</h2><div class="list">' + S.requests.map(function (r) {
-    return '<div data-act="rqopen" data-id="' + esc(r.email) + '" style="cursor:pointer"><div class="grow"><b>' + esc(r.name) + '</b><div class="muted">' + esc(r.email) + '</div></div>' + wsw(r.watch) + '</div>';
+    return '<div data-act="rqopen" data-id="' + esc(r.email) + '" style="cursor:pointer"><div class="grow"><b>' + esc(r.name) + '</b></div>' + wsw(r.watch) + '</div>';
   }).join('') + '</div></div>';
 }
 function rqOpen(email) {
   var r = S.requests.filter(function (x) { return x.email === email; })[0]; if (!r) return toast('That request is gone');
   var linked = r.personId && S.members.filter(function (m) { return m.personId === r.personId; })[0], roles = rqRoles(), pp = r.personId ? person(r.personId) : null;
-  modal('<h2>Access request</h2><div class="card sum"><div><span>Name</span><b>' + esc(r.name) + '</b></div><div><span>Watch</span><b>' + esc(r.watch || '') + '</b></div>' + (r.no ? '<div><span>Service number</span><b>' + esc(r.no) + '</b></div>' : '') + (r.rank ? '<div><span>Rank</span><b>' + esc(r.rank) + '</b></div>' : '') + '<div><span>Email</span><b>' + esc(r.email) + '</b></div></div>' +
+  modal('<h2>Access request</h2><div class="card sum"><div><span>Name</span><b>' + esc(r.name) + '</b></div><div><span>Watch</span><b>' + esc(r.watch || '') + '</b></div>' + (r.no ? '<div><span>Service number</span><b>' + esc(r.no) + '</b></div>' : '') + (r.rank ? '<div><span>Rank</span><b>' + esc(r.rank) + '</b></div>' : '') + '</div>' +
     '<div class="card"><div class="muted">' + (r.personId ? (pp ? 'Chose <b>' + esc(plabel(pp)) + '</b> from the list.' : 'Chose a name from the list.') : 'Not on the list: this name will be added to People.') + '</div>' +
-    (linked ? '<div style="color:var(--exp);margin-top:6px"><b>That name is already linked to ' + esc(linked.email) + '.</b> Decline this request, or ask a President to fix it.</div>' : '') +
+    (linked ? '<div style="color:var(--exp);margin-top:6px"><b>That name is already linked to ' + esc(nameOfEmail(linked.email)) + '.</b> Decline this request, or ask a President to fix it.</div>' : '') +
     '<div class="f" style="margin-top:10px"><label>App rank</label><input type="hidden" id="rq-role" value="user"><div class="seg" style="grid-template-columns:repeat(' + roles.length + ',1fr)">' + roles.map(function (x) { return '<button type="button" data-act="rqrole" data-v="' + x + '" class="' + (x === 'user' ? 'on' : '') + '">' + roleLabel(x) + '</button>'; }).join('') + '</div></div></div>' +
     '<button class="btn block" data-act="rqaccept" data-id="' + esc(email) + '"' + (linked ? ' disabled' : '') + '>Accept</button><button class="btn red block" data-act="rqdecline" data-id="' + esc(email) + '" style="margin-top:10px">Decline</button><button class="btn sec block" data-act="rqlater2" data-id="' + esc(email) + '" style="margin-top:10px">Maybe later</button>');
 }
@@ -1818,9 +1847,9 @@ async function migrateRanks() {   /* once, by the owner: president -> owner, adm
 /* ---------- access: invitations (president and admins) ---------- */
 function accessModal() {
   var link = location.origin + location.pathname;
-  var rows = S.members.slice().sort(function (a, b) { return (plabel(person(a.personId)) || a.email).localeCompare(plabel(person(b.personId)) || b.email); }).map(function (m) {
+  var rows = S.members.slice().sort(function (a, b) { return (plabel(person(a.personId)) || 'zzz').localeCompare(plabel(person(b.personId)) || 'zzz'); }).map(function (m) {
     var p = person(m.personId);
-    return '<div data-act="medit" data-id="' + esc(m.email) + '"><div class="grow"><b>' + (p ? esc(plabel(p)) : esc(m.email)) + '</b><div class="muted">' + esc(m.email) + '</div></div><span class="pill ' + (roleShown(m) === 'user' ? '' : 'low') + '">' + esc(roleLabel(roleShown(m))) + '</span></div>';
+    return '<div data-act="medit" data-id="' + esc(m.email) + '"><div class="grow"><b>' + (p ? esc(plabel(p)) : 'Not linked to a name yet') + '</b>' + (p && p.watch ? '<div class="muted">' + esc(p.watch) + ' watch</div>' : '') + '</div><span class="pill ' + (roleShown(m) === 'user' ? '' : 'low') + '">' + esc(roleLabel(roleShown(m))) + '</span></div>';
   }).join('');
   modal('<h2>Access (' + S.members.length + ')</h2><div class="card"><label>App link to share</label><div class="row"><input readonly value="' + esc(link) + '" style="font-size:12px"><button class="btn sm" data-act="copylink">Copy</button></div><p class="muted" style="margin-bottom:0">Invited people get a sign-in email straight away. They open the link on their phone and enter their email.</p></div>' + reqListHtml() + (canAdmin() ? '<button class="btn block" data-act="medit" data-id="" style="margin-bottom:10px">+ Invite someone</button>' : '') + '<div class="list">' + (rows || '<div class="empty">Nobody yet.</div>') + '</div><button class="btn sec block" data-act="settings" style="margin-top:10px">Back</button>'); REFRESH = accessModal;
 }
@@ -1835,7 +1864,7 @@ function medit(email) {
   var pcur = person(m.personId);
   modal('<h2>' + (email ? 'Edit access' : 'Invite someone') + '</h2><div class="card"><label>This person is</label>' +
     '<div class="row f"><div class="grow"><b id="mb-pl">' + (pcur ? esc(plabel(pcur)) : 'Not chosen') + '</b></div>' + (locked ? '' : '<button class="btn sec sm" data-act="mbperson">Choose name</button>') + '</div><div id="mb-pk"></div>' +
-    '<div class="f"><label>Email</label><input id="mb-email" type="email" value="' + esc(m.email) + '"' + (email ? ' disabled' : '') + ' placeholder="name@example.com"></div>' +
+    (email ? '<input id="mb-email" type="hidden" value="' + esc(m.email) + '">' : '<div class="f"><label>Email of the person to invite</label><input id="mb-email" type="email" value="" placeholder="name@example.com"></div>') +
     '<div class="f"><label>Role</label><input type="hidden" id="mb-role" value="' + esc(m.role) + '"><div class="seg" style="grid-template-columns:repeat(' + roles.length + ',1fr)">' + roles.map(function (r) { return '<button type="button" data-act="mbrolep" data-v="' + r[0] + '"' + (locked || email === PRESIDENT ? ' disabled' : '') + ' class="' + (r[0] === m.role ? 'on' : '') + '">' + r[1] + '</button>'; }).join('') + '</div></div></div>' +
     (locked ? '<p class="muted">You cannot change this person.</p>' : '<button class="btn block" data-act="mbsave" data-id="' + esc(email) + '">' + (email ? 'Save' : 'Invite &amp; send email') + '</button>') +
     (email && !locked ? '<button class="btn sec block" data-act="mbresend" data-id="' + esc(email) + '" style="margin-top:10px">Resend sign-in email</button>' : '') +
@@ -2023,7 +2052,7 @@ function swList(q) {
   var h = '', last = null;
   rows.forEach(function (r) {
     if (r.same !== last) { h += '<div class="sec-h">' + (r.same ? 'This watch (' + esc(wk) + ')' : 'Other members') + '</div>'; last = r.same; }
-    h += '<div data-act="swpick" data-id="' + esc(r.m.email) + '"><div class="grow"><b>' + esc(r.label) + '</b>' + (r.p ? '<div class="muted">' + esc(r.m.email) + '</div>' : '') + '</div>' + (r.p ? wsw(r.p.watch) : '') + '</div>';
+    h += '<div data-act="swpick" data-id="' + esc(r.m.email) + '"><div class="grow"><b>' + esc(r.label) + '</b></div>' + (r.p ? wsw(r.p.watch) : '') + '</div>';
   });
   return h || '<div class="empty">No one else has access yet.</div>';
 }
@@ -2138,7 +2167,7 @@ async function resetApp() {
     fin.set(ref('shop/state'), { controlEmail: EMAIL, controlName: myName(), pending: '', shift: newShift(currentShift(), 0), v: 2, resetting: false });
     fin.set(ref('resets/' + newId('resets')), { at: Date.now(), by: EMAIL, byName: myName(), counts: counts });
     await fin.commit();
-    EVC = {}; sel = null; qty = 1; BUY = null; tab = 'sell'; closeModal(); toast('App reset. It is empty and you are in control.');
+    EVC = {}; sel = null; qty = 1; BUY = null; tab = 'sell'; closeModal(); spClose(); toast('App reset. It is empty and you are in control.');
   } catch (e) {
     console.error(e); msg.textContent = 'Reset stopped: ' + ((e && e.message) || e) + '. Check the internet and try again.';
     try { await updateDoc(ref('shop/state'), { resetting: false }); } catch (x) {} go.disabled = false;
@@ -2146,27 +2175,49 @@ async function resetApp() {
 }
 
 /* ---------- settings ---------- */
-function settings() {
+/* ---------- Settings: a full page. The account bubble on top, everything else as rows below it; each row opens its own page or sheet ---------- */
+function spRow(ic, title, sub, act, extra) { return '<div class="sp-row' + (extra || '') + '" data-act="' + act + '"><i class="sp-ic">' + ic + '</i><div class="grow"><b>' + title + '</b><div class="muted">' + sub + '</div></div><span class="sp-ch">›</span></div>'; }
+function spOpen() { $('#spage').hidden = false; document.body.classList.add('spo'); spRender(); hsync(); }
+function spClose() { $('#spage').hidden = true; document.body.classList.remove('spo'); $('#spage').innerHTML = ''; hsync(); }
+function spRender() {
+  var pg = $('#spage'); if (pg.hidden) return;
+  var old = pg.querySelector('.sp-body'), st = old ? old.scrollTop : 0, unread = (S.notices || []).filter(function (x) { return !x.read; }).length;
+  var h = '<div class="sp-top"><button data-act="close" aria-label="Back">‹</button><b>Settings</b></div><div class="sp-body">' +
+    '<div class="card"><h2>Account</h2><div><b>' + esc(myPerson() ? myName() : isPres() ? 'Owner' : 'Your name is not set') + '</b></div><div class="muted">' + esc(roleLabel(myRole())) + '</div>' + (M && !M.personId ? '<p class="muted">Your email is not linked to a name yet. Ask a President or an Admin to link it under Access.</p>' : '') + '<button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>' +
+    '<div class="sp-h">Me</div><div class="sp-card">' +
+    spRow('✍️', 'My signature', M && M.signature ? 'Saved. Tap to sign again' : 'Not signed yet', 'sigsheet') +
+    spRow('🌓', 'Appearance', THEME === 'auto' ? 'Automatic (follows your phone)' : THEME === 'dark' ? 'Dark' : 'Light', 'themesheet') +
+    spRow('🔔', 'Notifications', unread ? unread + ' new' : 'Nothing new', 'notices') +
+    (isStandalone() ? '' : spRow('📲', 'Install on this phone', 'Opens full screen like a normal app', 'install')) +
+    spRow('📖', 'How to use', 'Help for every tab and topic', 'helplist') + '</div>' +
+    '<div class="sp-h">People &amp; access</div><div class="sp-card">' +
+    spRow('👥', 'People', S.people.length + ' names', 'people') +
+    (canApprove() ? spRow('🔑', 'Access', S.members.length + ' with access' + (S.requests.length ? ' · ' + S.requests.length + ' waiting' : ''), 'access') : '') +
+    (canAdmin() ? spRow('🏷️', 'Saved names', 'Names typed in when selling on credit', 'guests') + spRow('🗑️', 'Cancelled entries', 'Kept for about 31 days', 'cancelled') : '') + '</div>' +
+    '<div class="sp-h">Shifts</div><div class="sp-card">' +
+    spRow('📅', 'Roster', 'Day 9am–6pm · Night 6pm–9am', 'rostersheet') +
+    spRow('📋', 'Past handovers', 'Kept for about 31 days', 'pasthos') +
+    (isPres() ? spRow('📝', 'Enter previous handover', 'Owner only. Opening cash, stock and credit by hand', 'opopen') : '') +
+    (isPres() && viewOnlyText() ? spRow('🛡️', 'Take control now', 'Someone else is in control or a handover is stuck', 'ptake') : '') + '</div>' +
+    '<div class="sp-h">App</div><div class="sp-card">' +
+    spRow('⬆️', 'App version ' + APP_VERSION, 'Needs rules ' + RULES_VERSION + '. Tap to check for updates', 'updcheck') +
+    (isPres() ? spRow('⚠️', 'Reset app to default', 'Clears stock, sales, handovers, credit and profit history', 'resetask', ' red') : '') + '</div></div>';
+  pg.innerHTML = h; var nb = pg.querySelector('.sp-body'); if (nb) nb.scrollTop = st;
+}
+function settings() { spOpen(); }
+function sigSheet() { modal('<h2>My signature</h2>' + sigCard('My signature') + '<button class="btn sec block" data-act="close">Close</button>'); REFRESH = sigSheet; }
+function themeSheet() {
+  modal('<h2>Appearance</h2><div class="card"><div class="seg" id="th-seg" style="grid-template-columns:repeat(3,1fr)">' + [['light', 'Light'], ['dark', 'Dark'], ['auto', 'Automatic']].map(function (x) { return '<button data-act="theme" data-v="' + x[0] + '" class="' + (THEME === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div><p class="muted" style="margin:8px 0 0">Light is the default. Automatic follows your phone\'s light or dark setting.</p></div><button class="btn sec block" data-act="close">Close</button>');
+}
+function rosterSheet() {
   var d = new Date(), rows = '';
   for (var k = 0; k < 8; k++) {
     var x = new Date(d.getFullYear(), d.getMonth(), d.getDate() + k);
     rows += '<div>' + x.toLocaleDateString([], {weekday: 'short', day: 'numeric', month: 'short'}) + '</div><div><span class="sw ' + amShift(x) + '">' + amShift(x) + '</span></div><div><span class="sw ' + pmShift(x) + '">' + pmShift(x) + '</span></div>';
   }
-  modal('<h2>Settings</h2><div class="card"><h2>Account</h2><div><b>' + esc(myName()) + '</b></div><div class="muted">' + esc(EMAIL) + ' · ' + esc(roleLabel(myRole())) + '</div>' + (M && !M.personId ? '<p class="muted">Your email is not linked to a name yet. Ask a President or an Admin to link it under Access.</p>' : '') + '<button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button><div class="row" style="margin-top:10px"><div class="grow"><b>App version ' + APP_VERSION + '</b><div class="muted">needs rules version ' + RULES_VERSION + '</div></div><button class="btn sec sm" data-act="updcheck">Check for updates</button></div></div>' +
-    '<button class="btn sec block" data-act="notices" style="margin-bottom:14px">🔔 Notifications' + ((S.notices || []).filter(function (x) { return !x.read; }).length ? ' (' + (S.notices || []).filter(function (x) { return !x.read; }).length + ' new)' : '') + '</button>' +
-    sigCard('My signature') +
-    (isStandalone() ? '' : '<div class="card"><h2>Install on this phone</h2><p class="muted" style="margin-top:0">Add Shift Welfare to your home screen so it opens like an app.</p><button class="btn block" data-act="install">⬇ Install app</button></div>') +
-    '<div class="card"><h2>How to use</h2><button class="btn sec block" data-act="helplist">📖 Help and how-to guides</button></div>' +
-    '<div class="card"><h2>Appearance</h2><div class="seg" id="th-seg" style="grid-template-columns:repeat(3,1fr)">' + [['light', 'Light'], ['dark', 'Dark'], ['auto', 'Automatic']].map(function (x) { return '<button data-act="theme" data-v="' + x[0] + '" class="' + (THEME === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div><p class="muted" style="margin:8px 0 0">Automatic follows your phone\'s light or dark setting.</p></div>' +
-    '<div class="card"><h2>People &amp; access</h2><div class="row"><button class="btn grow" data-act="people">People (' + S.people.length + ')</button>' + (canApprove() ? '<button class="btn grow" data-act="access">Access (' + S.members.length + ')' + (S.requests.length ? ' · ' + S.requests.length + ' new' : '') + '</button>' : '') + '</div>' +
-    (canAdmin() ? '<div class="row" style="margin-top:10px"><button class="btn sec grow" data-act="guests">Saved names</button><button class="btn sec grow" data-act="cancelled">Cancelled entries</button></div>' : '') + '</div>' +
-    (isPres() ? '<div class="card"><h2>Previous handover</h2><p class="muted" style="margin-top:0">Owner only. Enter or correct the opening cash, stock counts and credit owed by hand.</p><button class="btn sec block" data-act="opopen">📝 Enter previous handover</button></div>' : '') +
-    (isPres() ? '<div class="card"><h2>Reset app to default</h2><p class="muted" style="margin-top:0">Clears stock, sales, handovers, credit and profit history so the app is empty again. People, access, saved names and the shift roster stay.</p><button class="btn red block" data-act="resetask">Reset app to default</button></div>' : '') +
-    (isPres() && viewOnlyText() ? '<div class="card"><h2>President</h2><p class="muted" style="margin-top:0">' + viewOnlyText() + '</p><button class="btn sec block" data-act="ptake">Take control now</button></div>' : '') +
-    '<div class="card"><h2>Roster (Day 9am–6pm / Night 6pm–9am)</h2><div class="ros"><b></b><b>Day</b><b>Night</b>' + rows + '</div></div>' +
-    '<div class="card"><h2>Past handovers</h2><p class="muted" style="margin-top:0">Kept for about 31 days.</p><button class="btn sec block" data-act="hlist">Show recent handovers</button><div id="hl"></div></div>' +
-    '<button class="btn sec block" data-act="close">Close</button>'); REFRESH = settings;
+  modal('<h2>Roster</h2><div class="card"><h2>Day 9am–6pm / Night 6pm–9am</h2><div class="ros"><b></b><b>Day</b><b>Night</b>' + rows + '</div></div><button class="btn sec block" data-act="close">Close</button>');
 }
+function pastHandovers() { modal('<h2>Past handovers</h2><p class="muted" style="margin-top:0">Kept for about 31 days.</p><div id="hl"><div class="empty">Loading…</div></div><button class="btn sec block" data-act="close" style="margin-top:10px">Close</button>'); hlist(); }
 function viewOnlyText() { return inControl() ? '' : 'Someone else is in control, or a handover is waiting. As the Owner you can override this if it is stuck.'; }
 function diffsOf(h) {
   var d = []; if (!h.receivedItems) return d;
@@ -2218,14 +2269,29 @@ function hlist() {
 function cancelledModal() {
   liveModal(query(collection(DB, 'cancelled'), orderBy('at', 'desc'), limit(40)), function (docs) {
     return '<h2>Cancelled entries</h2><p class="muted" style="margin-top:0">A private record kept for admins. These no longer show in History.</p><div class="list">' + (docs.length ? docs.map(function (c) {
-      var e = c.event || {}; return '<div><div class="grow"><b>' + esc(e.type === 'sale' || e.type === 'cnote' || e.type === 'snote' ? e.qty + ' × ' + e.name : e.type === 'count' ? 'Count of ' + e.name : e.type === 'buy' ? 'Purchase ' + buyText(e) : e.type === 'loan' ? 'Cash loan' : e.name || e.type) + '</b><div class="muted">' + new Date(c.at).toLocaleString() + ' · cancelled by ' + esc(c.byName || c.by) + (c.reason ? ' · ' + esc(c.reason) : '') + '</div></div><b>' + (e.amt ? money(e.amt) : '') + '</b></div>';
+      var e = c.event || {}; return '<div><div class="grow"><b>' + esc(e.type === 'sale' || e.type === 'cnote' || e.type === 'snote' ? e.qty + ' × ' + e.name : e.type === 'count' ? 'Count of ' + e.name : e.type === 'buy' ? 'Purchase ' + buyText(e) : e.type === 'loan' ? 'Cash loan' : e.name || e.type) + '</b><div class="muted">' + new Date(c.at).toLocaleString() + ' · cancelled by ' + esc(nameOfEmail(c.by) !== 'A member' ? nameOfEmail(c.by) : (c.byName || 'a member')) + (c.reason ? ' · ' + esc(c.reason) : '') + '</div></div><b>' + (e.amt ? money(e.amt) : '') + '</b></div>';
     }).join('') : '<div class="empty">Nothing cancelled.</div>') + '</div><button class="btn sec block" data-act="settings" style="margin-top:10px">Back</button>';
   });
 }
 
+/* ---------- never show an email address on screen (only on the sign-in page, and in the box when inviting someone) ---------- */
+(function () {
+  var EM = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/, EMG = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, busy = false;
+  function scrub() {
+    if (busy || STAGE !== 'ready') return; busy = true;
+    try {
+      var w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null), list = [], n;
+      while ((n = w.nextNode())) { if (EM.test(n.nodeValue) && !(n.parentNode && /^(SCRIPT|STYLE|TEXTAREA|INPUT|OPTION)$/.test(n.parentNode.nodeName))) list.push(n); }
+      list.forEach(function (t) { t.nodeValue = t.nodeValue.replace(EMG, function (m) { return nameOfEmail(m.toLowerCase()); }); });
+    } finally { busy = false; }
+  }
+  if (window.MutationObserver) new MutationObserver(scrub).observe(document.body, { childList: true, subtree: true, characterData: true });
+})();
+
 /* ---------- help: a ? badge on the active tab; tap the active tab again (or the badge) to read the help for that tab ---------- */
 var HELP = {
   sell: { t: 'Count', steps: ['Tap an item.', 'Type what is really in the fridge (or on the shelf) now. The app works out how many were sold: the last count minus yours.', 'Press <b>Save count</b>.', 'Taking cases from the cage? Press <b>Add from cage</b> first, then count.', 'Some items sold on credit or spoiled? Add a note (<b>On credit to…</b> or <b>Spoiled</b>) before you save, so they are not counted as cash.', 'Cash taken for the station? Use the dashed <b>Use cash</b> button at the top and give a reason.'],
+    extra: [{ t: 'Selling on credit from the Count page', ol: ['Tap the item that was taken on credit.', 'In <b>Credit and spoiled notes</b>, set how many items were taken on credit with the + and − buttons.', 'Press <b>On credit to…</b> and choose the person. If their name is not on the list, save it as a new name first.', 'Check the pop-up and confirm. The note is saved, but it <b>does not change the number</b> in the fridge.', 'Now count the fridge as usual and press <b>Save count</b>. The items taken on credit are part of what was sold, but they are not counted as cash.', 'Cash for that item = items sold − items on credit. The credit amount is added to what that person owes.'], ul: ['You can add more than one note for the same item, for example two people.', 'The credit notes can never be more than what was sold.', 'The person now shows under <b>People owing</b> in the Credit tab. When they pay, tap their name there and enter the amount.', 'Put the wrong person? Cancel the note from History and add it again.'] }],
     fix: ['Wrong count on one item: tap <b>Undo</b> on the message straight after, or open History (the clock) and use <b>Cancel an item</b>.', 'Several counts wrong: <b>Start over</b> (top of this page) cancels your counts only, or everything on the shift.', 'Credit or spoiled bigger than what was sold? The app warns you. Fix the note or the count.', 'On a different watch from the one working? You are asked once which shift to record on (see Which shift am I on?).'] },
   stock: { t: 'Stock', steps: ['Tap an item to move a case from the cage to the fridge, record spoiled items, or edit its name, price and cost.', '<b>+ Add a new item</b>: give it a name, the selling price, how many are in a case and how many you have now. The same name cannot be added twice.', 'Cost is optional. When a receipt gives an item its first cost, the app fills in the cost of its earlier sales for you.'],
     fix: ['Moved the wrong number: open History and <b>Cancel an item</b>.', 'Wrong price or name: edit the item. New sales use the new price; past sales keep the old one.', '<b>Edit stock by hand</b> only fixes a real error. It asks for a reason and shows in red in History and in the handover.'] },
@@ -2242,6 +2308,7 @@ var HELPORDER = ['sell', 'stock', 'buy', 'credit', 'handover', 'ranks', 'shift']
 function helpOpen(k, back) {
   var h = HELP[k]; if (!h) return;
   modal('<h2>Help · ' + h.t + '</h2><div class="card helpc"><h2>' + (k === 'ranks' || k === 'shift' ? 'Good to know' : 'How to use it') + '</h2><ol>' + h.steps.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ol></div>' +
+    (h.extra || []).map(function (x) { return '<div class="card helpc"><h2>' + x.t + '</h2><ol>' + x.ol.map(function (y) { return '<li>' + y + '</li>'; }).join('') + '</ol>' + (x.ul ? '<ul style="margin-top:8px">' + x.ul.map(function (y) { return '<li>' + y + '</li>'; }).join('') + '</ul>' : '') + '</div>'; }).join('') +
     (h.fix.length ? '<div class="card helpc"><h2>Made a mistake?</h2><ul>' + h.fix.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul></div>' : '') +
     (back ? '<div class="row"><button class="btn sec grow" data-act="helplist">Back</button><button class="btn sec grow" data-act="close">Close</button></div>' : '<button class="btn sec block" data-act="close">Close</button>'));
 }
@@ -2260,7 +2327,7 @@ function tabHint() {   /* the first time someone opens a tab: a short, temporary
 document.addEventListener('click', function () { var el = $('#hint'); if (el) el.classList.remove('show'); }, true);
 
 /* ---------- appearance: light, dark or automatic (follows the phone) ---------- */
-var THEME = 'auto'; try { THEME = localStorage.getItem('sw.theme') || 'auto'; } catch (x) {}
+var THEME = 'light'; try { THEME = localStorage.getItem('sw.theme') || 'light'; } catch (x) {}   /* light until someone changes it */
 if (['auto', 'light', 'dark'].indexOf(THEME) < 0) THEME = 'auto';
 function isDark() { return THEME === 'dark' || (THEME !== 'light' && !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)); }
 function applyTheme() {
@@ -2545,9 +2612,14 @@ document.addEventListener('click', function (e) {
   else if (a === 'rxaccept') rxAccept();
   else if (a === 'copy') shareText();
   else if (a === 'print') window.print();
-  else if (a === 'close') closeModal();
+  else if (a === 'close') { if ($('#modal').innerHTML) closeModal(); else if (!$('#spage').hidden) spClose(); }
+  else if (a === 'spclose') spClose();
+  else if (a === 'sigsheet') sigSheet();
+  else if (a === 'themesheet') themeSheet();
+  else if (a === 'rostersheet') rosterSheet();
+  else if (a === 'pasthos') pastHandovers();
   else if (a === 'install') installApp();
-  else if (a === 'settings') settings();
+  else if (a === 'settings') { if (!$('#spage').hidden) closeModal(); else spOpen(); }
   else if (a === 'hv') histOpen(b.dataset.v);
   else if (a === 'hwk') { HV.wk = b.dataset.v; histOpen(); }
   else if (a === 'shopen') { HV.id = id; histOpen(); }
@@ -2572,8 +2644,14 @@ document.addEventListener('click', function (e) {
   else if (a === 'gmerge') { var into = $('#g-into').value; if (!into) return toast('Choose who to merge into'); var gg = guest(id); askConfirm('Merge names?', '<b>' + esc(gg.name) + '</b> becomes <b>' + esc(plab(into)) + '</b>. What they owe is added together.', 'Yes, merge', function () { guard(updateDoc(ref('guests/' + id), { mergedInto: into })); guestsModal(); toast('Merged'); }); }
   else if (a === 'gdel') { if (balance(id) <= 0) askConfirm('Delete this name?', 'Delete <b>' + esc(guest(id).name) + '</b>? Old entries keep the name they were made with.', 'Yes, delete', function () { guard(deleteDoc(ref('guests/' + id))); guestsModal(); }); }
   else if (a === 'cancelled') cancelledModal();
-  else if (a === 'theme') { THEME = b.dataset.v; try { localStorage.setItem('sw.theme', THEME); } catch (x) {} applyTheme(); b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); }
+  else if (a === 'theme') { THEME = b.dataset.v; try { localStorage.setItem('sw.theme', THEME); } catch (x) {} applyTheme(); b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); spRender(); }
   else if (a === 'instapp') installApp();
+  else if (a === 'pastelogin') {
+    var lk = ($('#lg-link').value || '').trim(), em2 = ($('#lg-email').value || SENT || '').trim().toLowerCase();
+    if (!em2) return toast('Type your email in the box above first');
+    if (!lk || !isSignInWithEmailLink(AUTH, lk)) return toast('That is not a sign-in link from the email');
+    signInWithEmailLink(AUTH, em2, lk).catch(function () { toast('That link did not work. Check the email and send a new link.'); });
+  }
   else if (a === 'access') accessModal();
   else if (a === 'rqpick') { RQ.pick = id; render(); }
   else if (a === 'rqchange') { RQ.pick = ''; render(); }
@@ -2618,7 +2696,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'resetask') resetAsk();
   else if (a === 'resetgo') resetApp();
   else if (a === 'sendlogin') sendLogin();
-  else if (a === 'signout') { closeModal(); signOut(AUTH); }
+  else if (a === 'signout') { closeModal(); spClose(); signOut(AUTH); }
 });
 document.addEventListener('input', function (e) {
   var t = e.target;
@@ -2640,7 +2718,7 @@ document.addEventListener('input', function (e) {
   else if (t.dataset.op) OP[t.dataset.op] = t.value;
   else if (t.dataset.oc) { OP.counts[t.dataset.oc] = OP.counts[t.dataset.oc] || {}; OP.counts[t.dataset.oc][t.dataset.f] = t.value; }
   else if (t.id === 'sw-q') $('#sw-list').innerHTML = swList(t.value);
-  else if (t.id === 'ip-q') $('#ip-list').innerHTML = ipList(t.value);
+  else if (t.id === 'ip-q') { $('#ip-list').innerHTML = ipList(t.value); $('#ip-new').innerHTML = ipNewRow(t.value); }
   else if (t.dataset.step === 'bl') { BUY.lines[+t.dataset.k].cases = Math.max(1, Math.floor(num(t.value)) || 1); buyLive(); }
   else if (t.dataset.rp) RP[t.dataset.rp] = t.value;
   else if (t.dataset.es) ES[t.dataset.es] = t.value;
@@ -2772,7 +2850,7 @@ if (CONFIGURED) {
 }
 /* ---------- phone back button: close the top pop-up, then go back to Sell, then ask before leaving ---------- */
 var HD = 1, SKIP = 0, LASTBACK = 0;
-function layers() { return 1 + ($('#padhost').children.length ? 1 : 0) + $('#modal').children.length + (tab !== 'sell' ? 1 : 0); }
+function layers() { return 1 + ($('#padhost').children.length ? 1 : 0) + $('#modal').children.length + ($('#spage').hidden ? 0 : 1) + (tab !== 'sell' ? 1 : 0); }
 function hsync() {   /* keep one history entry per open layer, so the back button always has something to close */
   var n = layers();
   while (HD < n) { history.pushState({ sw: 1 }, ''); HD++; }
@@ -2786,6 +2864,7 @@ window.addEventListener('popstate', function () {
   else if (top && top.id === 'cf') { CONF = null; top.remove(); }
   else if (top && top.id === 'instp') { var l = top.querySelector('[data-act=instlater]'); if (l) l.click(); }
   else if (top) closeModal();
+  else if (!$('#spage').hidden) { $('#spage').hidden = true; document.body.classList.remove('spo'); $('#spage').innerHTML = ''; }
   else if (tab !== 'sell') { tab = 'sell'; render(); window.scrollTo(0, 0); }
   else if (Date.now() - LASTBACK < 2500) { HD = 0; history.back(); return; }   /* second back press: leave the app */
   else { LASTBACK = Date.now(); toast('Press back again to leave the app'); }
