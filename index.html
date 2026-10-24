@@ -176,7 +176,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, connectAuthEmulator, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, connectFirestoreEmulator, doc, collection, onSnapshot, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, increment, Timestamp, query, where, orderBy, limit, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-var APP_VERSION = '1.32', RULES_VERSION = '1.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '1.33', RULES_VERSION = '1.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 var CYCLE = ['Red', 'Blue', 'White', 'Black'];   /* AM shift on consecutive days, from the 2026 Fire Service calendar */
 var ANCHOR = Date.UTC(2026, 9, 1) / 864e5;       /* 1 Oct 2026: AM = Red */
 var AM_START = 9, PM_START = 18;                 /* day shift 9am to 6pm, night shift 6pm to 9am */
@@ -1182,7 +1182,7 @@ function creditCard(t) {
 var HT = 'fridge';
 function vHandover() {
   var t = totals(), sh = SH(), rows = hoRows(), counted = sh.counted === '' ? null : num(sh.counted);
-  var h = (inControl() ? '<div class="card"><b>🔁 Switch operator</b><div class="muted" style="margin:4px 0 10px">Give the app to someone else on this shift without a handover. You become view only.</div><button class="btn sec block" data-act="swopen">Switch operator</button></div>' : '') + (isPres() && S.state && !S.state.openingDone ? '<div class="card" style="border:2px dashed var(--brand)"><b>First time using the app?</b><div class="muted" style="margin:4px 0 10px">President only. Enter the previous handover by hand: the cash received, the stock counted, and who owes.</div><button class="btn block" data-act="opopen">📝 Enter previous handover</button><button class="btn sec sm block" data-act="ophide" style="margin-top:8px">Not needed, hide this</button></div>' : '') +
+  var h = '<button class="btn sec block" data-act="hovlist" style="margin-bottom:12px">📄 View previous handover</button>' + (inControl() ? '<div class="card"><b>🔁 Switch operator</b><div class="muted" style="margin:4px 0 10px">Give the app to someone else on this shift without a handover. You become view only.</div><button class="btn sec block" data-act="swopen">Switch operator</button></div>' : '') + (isPres() && S.state && !S.state.openingDone ? '<div class="card" style="border:2px dashed var(--brand)"><b>First time using the app?</b><div class="muted" style="margin:4px 0 10px">President only. Enter the previous handover by hand: the cash received, the stock counted, and who owes.</div><button class="btn block" data-act="opopen">📝 Enter previous handover</button><button class="btn sec sm block" data-act="ophide" style="margin-top:8px">Not needed, hide this</button></div>' : '') +
     '<div class="card sum"><h2><span class="sw ' + sh.name + '">' + sh.name + '</span> shift · ' + sh.date + ' ' + HL(sh.half) + '</h2>' +
     '<div><span>Received from previous handover</span><b>' + money(sh.received) + '</b></div>' +
     '<div><span>Sales</span><b>+ ' + money(t.sales) + '</b></div>' +
@@ -1964,6 +1964,41 @@ function diffsOf(h) {
   if (h.receivedCash != null && h.receivedCash !== h.cash) d.push('Cash: counted ' + money(h.receivedCash) + ', handed over ' + money(h.cash));
   return d;
 }
+/* ---------- view a previous handover (read only): the one I received and the one I handed over; admins see all recent ones ---------- */
+function hoViewList() {
+  modal('<h2>Previous handover</h2><div class="empty">Loading…</div>');
+  getDocs(query(collection(DB, 'handovers'), orderBy('at', 'desc'), limit(30))).then(function (snap) {
+    var all = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }), mineRx = function (h) { return h.status === 'accepted' && (h.acceptedBy === EMAIL || (h.toEmails || []).indexOf(EMAIL) >= 0); }, mineTx = function (h) { return h.fromEmail === EMAIL && h.status !== 'cancelled'; };
+    var list = canAdmin() ? all.filter(function (h) { return h.status !== 'cancelled'; }) : [all.filter(mineRx)[0], all.filter(mineTx)[0]].filter(Boolean);
+    S._hv = list;
+    modal('<h2>Previous handover</h2><p class="muted" style="margin-top:0">' + (canAdmin() ? 'Recent handovers (about the last month).' : 'The last handover you received and the last one you handed over.') + ' Read only.</p><div class="list">' + (list.length ? list.map(function (h, i) {
+      var sh = h.shift || {}, tag = mineRx(h) ? 'Received by you' : h.fromEmail === EMAIL ? 'Handed over by you' : esc(h.fromName) + ' → ' + (h.locked ? 'Locked' : esc((h.toLabels || []).join(', ')));
+      return '<div data-act="hovopen" data-i="' + i + '"><div class="grow"><b>' + esc(sh.name || '') + '</b> · ' + esc(sh.date || '') + ' ' + esc(HL(sh.half)) + '<div class="muted">' + tag + ' · ' + new Date(h.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' · ' + esc(h.status) + '</div></div><span class="muted">›</span></div>';
+    }).join('') : '<div class="empty">No handover to show yet.<br><span class="muted">Handovers are kept for about a month.</span></div>') + '</div><button class="btn sec block" data-act="close" style="margin-top:10px">Close</button>');
+  }).catch(function (e) { closeModal(); toast(errText(e)); });
+}
+function hoViewShow(i) {
+  var h = (S._hv || [])[i]; if (!h) return;
+  var sh = h.shift || {}, ri = h.receivedItems || null, its = (h.items || []).filter(function (x) { return x.open || x.stock || x.cageOpen || x.cage; }), when = function (t) { return t ? new Date(t).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''; };
+  var table = function (title, list, cage) {
+    if (!list.length) return '';
+    return '<div class="card"><h2>' + title + '</h2><table><tr><th>Item</th><th>Was</th><th>Handed over</th>' + (ri ? '<th>Counted</th>' : '') + '</tr>' + list.map(function (x) {
+      var r = ri && ri[x.id], now = cage ? x.cage : x.stock, got = r ? (cage ? r.cage : r.stock) : null;
+      return '<tr><td>' + esc(x.name) + '</td><td>' + (cage ? x.cageOpen : x.open) + '</td><td><b>' + now + '</b></td>' + (ri ? '<td' + (got != null && got !== now ? ' style="color:var(--exp)"><b>' + got + '</b>' : '>' + (got == null ? '' : got)) + '</td>' : '') + '</tr>';
+    }).join('') + '</table></div>';
+  };
+  var diffs = diffsOf(h), sig = function (src, who, t) { return src ? '<div style="margin-top:8px"><img class="sigimg" src="' + src + '" alt="signature"><div class="muted">' + esc(who || '') + (t ? ' · ' + when(t) : '') + '</div></div>' : ''; };
+  var cashRow = '<div><span>Cash handed over</span><b>' + money(h.cash) + '</b></div>' + (h.receivedCash != null ? '<div><span>Cash counted by receiver</span><b>' + money(h.receivedCash) + '</b></div>' + (h.receivedCash !== h.cash ? '<div><span>' + (h.receivedCash < h.cash ? 'Short' : 'Over') + '</span><b style="color:var(--exp)">' + money(Math.abs(h.receivedCash - h.cash)) + '</b></div>' : '') : '');
+  modal('<h2><span class="sw ' + esc(sh.name || '') + '">' + esc(sh.name || '') + '</span> shift · ' + esc(sh.date || '') + ' ' + esc(HL(sh.half)) + '</h2>' +
+    '<div class="card sum"><div><span>From</span><b>' + esc(h.fromName || '') + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (not handed to a person)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Sent</span><b>' + when(h.at) + '</b></div>' +
+    (h.receivedName ? '<div><span>Received by</span><b>' + esc(h.receivedName) + ' · ' + when(h.acceptedAt) + '</b></div>' : '<div><span>Status</span><b>' + (h.status === 'open' ? 'Waiting to be taken' : esc(h.status)) + '</b></div>') + cashRow +
+    (h.owedTotal != null ? '<div><span>Owed by people at the time</span><b>' + money(h.owedTotal) + '</b></div>' : '') + '</div>' +
+    table('Fridge', its.filter(function (x) { return !x.shelf && (x.open || x.stock); }), false) + table('Shelf', its.filter(function (x) { return x.shelf; }), false) + table('Cage (cases)', its.filter(function (x) { return !x.shelf && (x.cageOpen || x.cage); }), true) +
+    (h.status === 'accepted' && ri ? '<div class="card"><h2>Check when it was received</h2>' + (diffs.length ? diffs.map(function (d) { return '<div style="color:var(--exp)">' + esc(d) + '</div>'; }).join('') : '<div style="color:var(--ok)"><b>✓ Everything matched</b></div>') + '</div>' : '') +
+    '<div class="card"><h2>Signatures</h2>' + sig(h.sig, h.fromName, h.at) + sig(h.receivedSig, h.receivedName, h.acceptedAt) + '</div>' +
+    '<div class="row"><button class="btn sec grow" data-act="hovlist">Back</button><button class="btn sec grow" data-act="close">Close</button></div>');
+}
+
 function hlist() {
   getDocs(query(collection(DB, 'handovers'), orderBy('at', 'desc'), limit(15))).then(function (snap) {
     S._hl = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; });
@@ -2112,6 +2147,8 @@ document.addEventListener('click', function (e) {
   else if (a === 'reason') { window.__reason = b.dataset.v; document.querySelectorAll('#cf .chips button').forEach(function (x) { x.classList.toggle('on', x.dataset.v === window.__reason); }); }
   else if (a === 'cancelyes') { var c3 = $('#cf'); if (c3) c3.remove(); cancelEvent(window.__cid, window.__reason); }
   else if (a === 'cancelask') cancelAsk(id);
+  else if (a === 'hovlist') hoViewList();
+  else if (a === 'hovopen') hoViewShow(+b.dataset.i);
   else if (a === 'startover') startOverAsk();
   else if (a === 'sovgo') startOverGo(b.dataset.v === 'all');
   else if (a === 'cmtog') { CM = !CM; var bx = $('#modal .modal > div'); if (bx && LASTV) bx.innerHTML = LASTV(); }
