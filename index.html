@@ -202,7 +202,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, connectAuthEmulator, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, connectFirestoreEmulator, doc, collection, onSnapshot, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, increment, Timestamp, query, where, orderBy, limit, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-var APP_VERSION = '1.47', RULES_VERSION = '1.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '1.48', RULES_VERSION = '1.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 var CYCLE = ['Red', 'Blue', 'White', 'Black'];   /* AM shift on consecutive days, from the 2026 Fire Service calendar */
 var ANCHOR = Date.UTC(2026, 9, 1) / 864e5;       /* 1 Oct 2026: AM = Red */
 var AM_START = 9, PM_START = 18;                 /* day shift 9am to 6pm, night shift 6pm to 9am */
@@ -2008,14 +2008,14 @@ function whoModal() {
 }
 var NP = { name: '', no: '', rank: '', watch: '' };
 function whoNewForm() {
-  modal('<h2>Add your name</h2><p class="muted" style="margin-top:0">You will be added to the list and linked to your email.</p><div class="card"><div class="f"><label>Name <b style="color:var(--exp)">*</b></label><input data-np="name" value="' + esc(NP.name) + '" placeholder="e.g. Ali" autocomplete="off"></div>' +
+  modal('<h2>Add your name</h2><p class="muted" style="margin-top:0">You will be added to the list and linked to you.</p><div class="card"><div class="f"><label>Surname <b style="color:var(--exp)">*</b></label><input data-np="name" value="' + esc(NP.name) + '" placeholder="e.g. Ali" autocomplete="off"></div>' +
     '<div class="f"><label>Service number <b style="color:var(--exp)">*</b></label><input data-np="no" value="' + esc(NP.no) + '" placeholder="e.g. 4139" autocomplete="off"></div>' +
-    '<div class="f"><label>Rank (optional)</label><input data-np="rank" value="' + esc(NP.rank) + '" placeholder="e.g. FF" autocomplete="off"></div>' +
+    '<div class="f"><label>Rank <b style="color:var(--exp)">*</b></label><input data-np="rank" value="' + esc(NP.rank) + '" placeholder="example FF / F sub O" autocomplete="off"></div>' +
     '<div class="f" style="margin-bottom:0"><label>Shift (leave on none if you are not part of the station)</label><div class="seg" style="grid-template-columns:repeat(3,1fr)">' + [['', 'None'], ['Black', 'Black'], ['White', 'White'], ['Blue', 'Blue'], ['Red', 'Red']].map(function (x) { return '<button type="button" data-act="npwatch" data-v="' + x[0] + '" class="' + (NP.watch === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div></div></div>' +
     '<button class="btn block" data-act="npsave">Save and continue</button><button class="btn sec block" data-act="npback" style="margin-top:10px">Back to the list</button>', true);
 }
 function whoNewSave() {
-  var nm = NP.name.trim(), no = NP.no.trim(); if (!nm) return toast('Enter your name'); if (!no) return toast('Enter your service number');
+  var nm = NP.name.trim(), no = NP.no.trim(); if (!nm) return toast('Enter your surname'); if (!no) return toast('Enter your service number'); if (!NP.rank.trim()) return toast('Enter your rank');
   var id = newId('people'), b = writeBatch(DB);
   b.set(ref('people/' + id), { name: nm, no: no, rank: NP.rank.trim(), watch: NP.watch, selfEmail: EMAIL, at: Date.now() });
   b.update(ref('members/' + EMAIL), { personId: id });
@@ -2185,6 +2185,7 @@ function spRender() {
   var h = '<div class="sp-top"><button data-act="close" aria-label="Back">‹</button><b>Settings</b></div><div class="sp-body">' +
     '<div class="card"><h2>Account</h2><div><b>' + esc(myPerson() ? myName() : isPres() ? 'Owner' : 'Your name is not set') + '</b></div><div class="muted">' + esc(roleLabel(myRole())) + '</div>' + (M && !M.personId ? '<p class="muted">Your email is not linked to a name yet. Ask a President or an Admin to link it under Access.</p>' : '') + '<button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>' +
     '<div class="sp-h">Me</div><div class="sp-card">' +
+    (M && !M.personId ? spRow('🪪', 'My name', 'Not set yet. Tap to choose your name', 'whoopen') : '') +
     spRow('✍️', 'My signature', M && M.signature ? 'Saved. Tap to sign again' : 'Not signed yet', 'sigsheet') +
     spRow('🌓', 'Appearance', THEME === 'auto' ? 'Automatic (follows your phone)' : THEME === 'dark' ? 'Dark' : 'Light', 'themesheet') +
     spRow('🔔', 'Notifications', unread ? unread + ' new' : 'Nothing new', 'notices') +
@@ -2675,6 +2676,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'mbdel') { if (confirm('Remove access for ' + id + '?')) { guard(deleteDoc(ref('members/' + id))); accessModal(); } }
   else if (a === 'whopick') { guard(updateDoc(ref('members/' + EMAIL), { personId: id })); if (M) M.personId = id; closeModal(); render(); toast('Linked to ' + plab(id)); }
   else if (a === 'whoskip') closeModal();
+  else if (a === 'whoopen') whoModal();
   else if (a === 'whonew') { NP = { name: '', no: '', rank: '', watch: '' }; whoNewForm(); }
   else if (a === 'npwatch') { NP.watch = b.dataset.v; whoNewForm(); }
   else if (a === 'npsave') whoNewSave();
