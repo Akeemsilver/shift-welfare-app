@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.googleusercontent.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.gstatic.com; frame-src https://*.firebaseapp.com; object-src 'none'; base-uri 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.googleusercontent.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.gstatic.com https://apis.google.com; frame-src https://*.firebaseapp.com https://accounts.google.com https://apis.google.com https://content.googleapis.com; object-src 'none'; base-uri 'self'">
 
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Shift Welfare</title>
@@ -199,10 +199,10 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
    Everyone invited can see everything live. */
 import { firebaseConfig, president } from './firebase-config.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import { getAuth, connectAuthEmulator, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import { getAuth, connectAuthEmulator, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, updatePassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, connectFirestoreEmulator, doc, collection, onSnapshot, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, increment, Timestamp, query, where, orderBy, limit, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-var APP_VERSION = '1.48', RULES_VERSION = '1.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '1.53', RULES_VERSION = '1.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 var CYCLE = ['Red', 'Blue', 'White', 'Black'];   /* AM shift on consecutive days, from the 2026 Fire Service calendar */
 var ANCHOR = Date.UTC(2026, 9, 1) / 864e5;       /* 1 Oct 2026: AM = Red */
 var AM_START = 9, PM_START = 18;                 /* day shift 9am to 6pm, night shift 6pm to 9am */
@@ -271,7 +271,7 @@ var ref = function (p) { return doc(DB, p); };
 var newId = function (col) { return doc(collection(DB, col)).id; };
 
 /* ---------- state (kept in sync from Firestore) ---------- */
-var STAGE = CONFIGURED ? 'loading' : 'config', EMAIL = '', M = null, SENT = '';
+var STAGE = CONFIGURED ? 'loading' : 'config', EMAIL = '', M = null, SENT = '', LGM = 'in';
 var S = { all: [], items: [], people: [], guests: [], suppliers: [], members: [], state: null, log: [], bal: {}, hand: null };
 var tab = 'sell', sel = null, qty = 1, PK = {}, PE = {}, HD = 0, RX = null, UNSUB = null, ST = null, CONF = null, BUY = null, CM = false, WHO_DONE = false, MIGR = false;
 var subs = [], logSid = null, handId = null, unsubLog = null, unsubHand = null, EVC = {};
@@ -1453,10 +1453,18 @@ function doSignType() { var n = prompt('Type your name to use as your signature:
 function stageHtml() {
   if (STAGE === 'config') return '<div class="card"><h2>Setup needed</h2><p>Firebase is not connected yet. Open <b>firebase-config.js</b> and paste your Firebase web app settings (see README.md).</p></div>';
   if (STAGE === 'loading') return '<div class="card empty">Loading…</div>';
-  if (STAGE === 'login') return '<div style="text-align:center"><img src="icons/logo.png" alt="Shift Welfare" width="220" style="max-width:70%;height:auto"></div>' + instCard(false) + '<div class="card"><h2>Sign in</h2><p class="muted" style="margin-top:0">Enter your email. We send you a sign-in link; open it on this phone. New here? After signing in you can ask for access.</p>' +
+  if (STAGE === 'login') { var cr = LGM === 'create';
+    return '<div style="text-align:center"><img src="icons/logo.png" alt="Shift Welfare" width="220" style="max-width:70%;height:auto"></div>' + instCard(false) + '<div class="card"><h2>' + (cr ? 'Create an account' : 'Sign in') + '</h2><p class="muted" style="margin-top:0">' + (cr ? 'Enter your email and choose a password. We send one email to check it is yours.' : 'Enter your email and password. No password yet? Create an account, or get a sign-in link by email.') + ' New here? After signing in you can ask for access. <b>Check your spam or junk folder if an email does not arrive.</b></p>' +
+    '<button class="btn block" data-act="googlelogin" style="background:#fff;color:#1F1F1F;border:2px solid var(--secb)"><svg width="18" height="18" viewBox="0 0 48 48" style="vertical-align:-3px;margin-right:8px"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.5 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.4 0 20.1 0 24s.9 7.6 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.8 2.3-8.3 2.3-6.3 0-11.6-4-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>Continue with Google</button><div class="muted" style="text-align:center;margin:12px 0">or use your email</div>' +
     '<div class="f"><label>Email</label><input id="lg-email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" value="' + esc(SENT) + '"></div>' +
-    '<button class="btn block" data-act="sendlogin">Send sign-in link</button><div id="lg-msg" class="muted" style="margin-top:10px"></div>' +
-    '<details style="margin-top:10px"><summary class="muted" style="cursor:pointer">Opened the link somewhere else, or it did not sign you in?</summary><p class="muted">Press and hold the link in the email, copy it, then paste it here with your email above.</p><div class="f"><input id="lg-link" placeholder="Paste the sign-in link" autocomplete="off"></div><button class="btn sec block" data-act="pastelogin">Sign in with this link</button></details></div>';
+    '<div class="f"><label>Password</label><input id="lg-pw" type="password" autocomplete="' + (cr ? 'new-password' : 'current-password') + '" placeholder="' + (cr ? 'At least 6 characters' : 'Your password') + '"></div>' +
+    (cr ? '<div class="f"><label>Repeat the password</label><input id="lg-pw2" type="password" autocomplete="new-password"></div>' : '') +
+    '<button class="btn block" data-act="' + (cr ? 'pwcreate' : 'pwlogin') + '">' + (cr ? 'Create account' : 'Sign in') + '</button>' +
+    '<button class="btn sec block" data-act="lgmode" data-v="' + (cr ? 'in' : 'create') + '" style="margin-top:10px">' + (cr ? 'I already have an account' : 'Create an account') + '</button>' +
+    (cr ? '' : '<button class="btn sec block" data-act="pwforgot" style="margin-top:10px">Forgot password (or set one)</button>') +
+    '<button class="btn sec block" data-act="sendlogin" style="margin-top:10px">Email me a sign-in link instead</button><div id="lg-msg" class="muted" style="margin-top:10px"></div>' +
+    '<details style="margin-top:10px"><summary class="muted" style="cursor:pointer">Opened the link somewhere else, or it did not sign you in?</summary><p class="muted">Press and hold the link in the email, copy it, then paste it here with your email above.</p><div class="f"><input id="lg-link" placeholder="Paste the sign-in link" autocomplete="off"></div><button class="btn sec block" data-act="pastelogin">Sign in with this link</button></details></div>'; }
+  if (STAGE === 'verify') return '<div style="text-align:center"><img src="icons/logo.png" alt="Shift Welfare" width="160" style="max-width:55%;height:auto"></div><div class="card"><h2>Verify your email</h2><p class="muted" style="margin-top:0">We sent a link to <b>' + esc(EMAIL) + '</b>. Open it, then come back here and tap the button. <b>Check your spam or junk folder if it is not there.</b></p><p class="muted">After you open the link, come back here. This page carries on by itself.</p><button class="btn block" data-act="vcheck">I have verified</button><button class="btn sec block" data-act="vresend" style="margin-top:10px">Send the email again</button><button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button><div id="lg-msg" class="muted" style="margin-top:10px"></div></div>';
   if (STAGE === 'noaccess') return '<div class="card"><h2>Something went wrong</h2><p>The app could not check your access. Check your connection and sign in again.</p><button class="btn sec block" data-act="signout">Sign out</button></div>';
   if (STAGE === 'request') return requestHtml();
   if (STAGE === 'setup') return '<div class="card"><h2>Waiting for set-up</h2><p>The owner has not set the app up yet. Try again in a moment.</p><button class="btn sec block" data-act="signout">Sign out</button></div>';
@@ -2183,11 +2191,12 @@ function spRender() {
   var pg = $('#spage'); if (pg.hidden) return;
   var old = pg.querySelector('.sp-body'), st = old ? old.scrollTop : 0, unread = (S.notices || []).filter(function (x) { return !x.read; }).length;
   var h = '<div class="sp-top"><button data-act="close" aria-label="Back">‹</button><b>Settings</b></div><div class="sp-body">' +
-    '<div class="card"><h2>Account</h2><div><b>' + esc(myPerson() ? myName() : isPres() ? 'Owner' : 'Your name is not set') + '</b></div><div class="muted">' + esc(roleLabel(myRole())) + '</div>' + (M && !M.personId ? '<p class="muted">Your email is not linked to a name yet. Ask a President or an Admin to link it under Access.</p>' : '') + '<button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>' +
+    '<div class="card"><h2>Account</h2><div><b>' + esc(myPerson() ? myName() : isPres() ? 'Owner' : 'Your name is not set') + '</b></div><div class="muted">' + esc(roleLabel(myRole())) + '</div>' + (M && !M.personId ? '<p class="muted">Your email is not linked to a name yet. Ask a President or an Admin to link it under Access.</p>' : '') + '<div class="f" style="margin:12px 0 0"><label>App link to share</label><div class="row"><input readonly id="sp-link" value="' + esc(location.origin + location.pathname) + '" style="font-size:12px"><button class="btn sm" data-act="copylink">Copy</button></div><button class="btn sec block" data-act="sharelink" style="margin-top:8px">↗ Share the app link</button></div><button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>' +
     '<div class="sp-h">Me</div><div class="sp-card">' +
     (M && !M.personId ? spRow('🪪', 'My name', 'Not set yet. Tap to choose your name', 'whoopen') : '') +
     spRow('✍️', 'My signature', M && M.signature ? 'Saved. Tap to sign again' : 'Not signed yet', 'sigsheet') +
     spRow('🌓', 'Appearance', THEME === 'auto' ? 'Automatic (follows your phone)' : THEME === 'dark' ? 'Dark' : 'Light', 'themesheet') +
+    spRow('🔒', 'Password', 'Set or change the password you sign in with', 'pwsheet') +
     spRow('🔔', 'Notifications', unread ? unread + ' new' : 'Nothing new', 'notices') +
     (isStandalone() ? '' : spRow('📲', 'Install on this phone', 'Opens full screen like a normal app', 'install')) +
     spRow('📖', 'How to use', 'Help for every tab and topic', 'helplist') + '</div>' +
@@ -2667,7 +2676,17 @@ document.addEventListener('click', function (e) {
   else if (a === 'rqdecline') askConfirm('Decline this request?', 'They are told it was declined and can send a new request.', 'Yes, decline', function () { guard(deleteDoc(ref('requests/' + id))); closeModal(); });
   else if (a === 'rqlater') { reqPending().forEach(function (r) { RQHIDE[r.email] = 1; }); render(); }
   else if (a === 'rqlater2') { RQHIDE[id] = 1; closeModal(); render(); }
-  else if (a === 'copylink') { if (navigator.clipboard) navigator.clipboard.writeText(location.origin + location.pathname).then(function () { toast('Link copied'); }); }
+  else if (a === 'copylink') {
+    var lk0 = location.origin + location.pathname;
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(lk0).then(function () { toast('Link copied'); }, function () { var i0 = $('#sp-link'); if (i0) { i0.select(); document.execCommand('copy'); toast('Link copied'); } });
+    else { var i1 = $('#sp-link'); if (i1) { i1.select(); try { document.execCommand('copy'); toast('Link copied'); } catch (x) { toast('Press and hold the link to copy it'); } } }
+  }
+  else if (a === 'sharelink') {
+    var lk = location.origin + location.pathname;
+    if (navigator.share) navigator.share({ title: 'Shift Welfare', text: 'Install Shift Welfare, then sign in and ask for access:', url: lk }).catch(function () {});
+    else if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(lk).then(function () { toast('Sharing is not available here, so the link was copied'); });
+    else toast('Press and hold the link to copy it');
+  }
   else if (a === 'medit') medit(id);
   else if (a === 'mbperson') mbPicker();
   else if (a === 'mbpick') { PE.person = id; $('#mb-pl').textContent = plab(id); $('#mb-pk').innerHTML = ''; }
@@ -2698,7 +2717,16 @@ document.addEventListener('click', function (e) {
   else if (a === 'resetask') resetAsk();
   else if (a === 'resetgo') resetApp();
   else if (a === 'sendlogin') sendLogin();
-  else if (a === 'signout') { closeModal(); spClose(); signOut(AUTH); }
+  else if (a === 'googlelogin') googleLogin();
+  else if (a === 'pwlogin') pwLogin();
+  else if (a === 'pwcreate') pwCreate();
+  else if (a === 'pwforgot') pwForgot();
+  else if (a === 'lgmode') { var e0 = $('#lg-email'); if (e0) SENT = (e0.value || '').trim(); LGM = b.dataset.v; render(); }
+  else if (a === 'vcheck') vCheck();
+  else if (a === 'vresend') vResend();
+  else if (a === 'pwsheet') pwSheet();
+  else if (a === 'pwsave') pwSave();
+  else if (a === 'signout') { closeModal(); spClose(); LGM = 'in'; signOut(AUTH); }
 });
 document.addEventListener('input', function (e) {
   var t = e.target;
@@ -2760,8 +2788,77 @@ async function sendLogin() {
   try {
     await sendInvite(em);
     try { localStorage.setItem('sw.email', em); } catch (x) {}
-    msg.innerHTML = '✅ Link sent to <b>' + esc(em) + '</b>. Open the email on this phone and tap the link.';
-  } catch (e) { msg.textContent = 'Could not send the link: ' + (e.code || e.message); }
+    msg.innerHTML = '✅ Link sent to <b>' + esc(em) + '</b>. Open the email on this phone and tap the link.<br><b>Not there after a minute? Check your spam or junk folder.</b>';
+  } catch (e) { msg.textContent = authMsg(e); }
+}
+function authMsg(e) {
+  var c = (e && e.code) || '';
+  if (c === 'auth/quota-exceeded') return 'Firebase has reached its daily limit for sending emails. Sign in with your password instead, or try the email again tomorrow.';
+  if (/invalid-credential|wrong-password|user-not-found|invalid-login/.test(c)) return 'Wrong email or password. First time here? Tap Create an account. Signed in with an email link before? Tap Forgot password to set a password.';
+  if (c === 'auth/email-already-in-use') return 'That email already has an account. Tap Sign in, or Forgot password if you have not set a password yet.';
+  if (c === 'auth/weak-password') return 'Use a password with at least 6 characters.';
+  if (c === 'auth/too-many-requests') return 'Too many tries. Wait a few minutes and try again.';
+  if (c === 'auth/network-request-failed') return 'No connection. Check your signal and try again.';
+  if (c === 'auth/operation-not-allowed') return 'Email and password sign-in is not switched on yet. The Owner needs to enable it in Firebase: Authentication, Sign-in method, Email/Password.';
+  if (c === 'auth/requires-recent-login') return 'For safety, sign out and sign in again first, then try again.';
+  return 'That did not work (' + (c || (e && e.message) || 'error') + ').';
+}
+function lgFields() { var em = ($('#lg-email').value || '').trim().toLowerCase(); try { SENT = em; localStorage.setItem('sw.email', em); } catch (x) {} return { em: em, pw: ($('#lg-pw') || {}).value || '' }; }
+function googleLogin() {   /* no email is sent and no password is needed: Google has already checked the address */
+  var msg = $('#lg-msg'); if (msg) msg.textContent = 'Opening Google…';
+  signInWithPopup(AUTH, new GoogleAuthProvider()).catch(function (e) {
+    var c = (e && e.code) || '';
+    if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') { if (msg) msg.textContent = ''; return; }
+    if (c === 'auth/popup-blocked') { if (msg) msg.textContent = 'Your browser blocked the Google window. Allow pop-ups for this page and try again, or use your email and password.'; return; }
+    if (c === 'auth/account-exists-with-different-credential') { if (msg) msg.textContent = 'This email already signs in another way. Use your email and password, or the email link.'; return; }
+    if (c === 'auth/operation-not-allowed') { if (msg) msg.textContent = 'Google sign-in is not switched on yet. The Owner needs to enable it in Firebase: Authentication, Sign-in method, Google.'; return; }
+    if (msg) msg.textContent = authMsg(e);
+  });
+}
+function pwLogin() {
+  var f = lgFields(), msg = $('#lg-msg');
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.em)) { msg.textContent = 'Enter a valid email.'; return; }
+  if (!f.pw) { msg.textContent = 'Enter your password.'; return; }
+  msg.textContent = 'Signing in…';
+  signInWithEmailAndPassword(AUTH, f.em, f.pw).catch(function (e) { msg.textContent = authMsg(e); });
+}
+function pwCreate() {
+  var f = lgFields(), msg = $('#lg-msg'), p2 = ($('#lg-pw2') || {}).value || '';
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.em)) { msg.textContent = 'Enter a valid email.'; return; }
+  if (f.pw.length < 6) { msg.textContent = 'Use a password with at least 6 characters.'; return; }
+  if (f.pw !== p2) { msg.textContent = 'The two passwords are not the same.'; return; }
+  msg.textContent = 'Creating your account…';
+  createUserWithEmailAndPassword(AUTH, f.em, f.pw).then(function (cred) {
+    return sendEmailVerification(cred.user, { url: location.origin + location.pathname + (EMU ? '?emu' : '') }).catch(function (e) { toast(authMsg(e)); });
+  }).catch(function (e) { msg.textContent = authMsg(e); });
+}
+function pwForgot() {
+  var f = lgFields(), msg = $('#lg-msg');
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.em)) { msg.textContent = 'Type your email above first.'; return; }
+  msg.textContent = 'Sending…';
+  sendPasswordResetEmail(AUTH, f.em, { url: location.origin + location.pathname + (EMU ? '?emu' : '') }).then(function () { msg.innerHTML = '✅ If that email has an account, we sent a link to set a new password.<br><b>Not there after a minute? Check your spam or junk folder.</b>'; }, function (e) { msg.textContent = authMsg(e); });
+}
+function vCheck() {
+  var u = AUTH.currentUser, msg = $('#lg-msg'); if (!u) return;
+  msg.textContent = 'Checking…';
+  u.reload().then(function () { if (u.emailVerified) return u.getIdToken(true).then(function () { afterSignIn(u); }); msg.textContent = 'Not verified yet. Open the email we sent and tap its link, then try again.'; }, function (e) { msg.textContent = authMsg(e); });
+}
+var VPOLL = null;
+function vPoll(quiet) {   /* the verify page checks by itself: once the link in the email has been opened (on any phone or browser), the app carries on */
+  var u = AUTH && AUTH.currentUser; if (!u || STAGE !== 'verify') { clearInterval(VPOLL); VPOLL = null; return; }
+  u.reload().then(function () { if (u.emailVerified && STAGE === 'verify') { clearInterval(VPOLL); VPOLL = null; return u.getIdToken(true).then(function () { afterSignIn(u); }); } }, function () {});
+}
+function vWatch() { if (!VPOLL) VPOLL = setInterval(vPoll, 3000); setTimeout(vPoll, 400); }
+document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && STAGE === 'verify') vPoll(); });
+function vResend() { var u = AUTH.currentUser, msg = $('#lg-msg'); if (!u) return; sendEmailVerification(u, { url: location.origin + location.pathname + (EMU ? '?emu' : '') }).then(function () { msg.innerHTML = '✅ Sent again. <b>Check your spam or junk folder.</b>'; }, function (e) { msg.textContent = authMsg(e); }); }
+function pwSheet() {
+  modal('<h2>Password</h2><div class="card"><p class="muted" style="margin-top:0">Set or change the password you sign in with. You can then sign in without waiting for an email.</p><div class="f"><label>New password</label><input id="pw-new" type="password" autocomplete="new-password" placeholder="At least 6 characters"></div><div class="f"><label>Repeat the password</label><input id="pw-new2" type="password" autocomplete="new-password"></div><button class="btn block" data-act="pwsave">Save password</button><div id="pw-msg" class="muted" style="margin-top:10px"></div></div><button class="btn sec block" data-act="close">Close</button>');
+}
+function pwSave() {
+  var a = $('#pw-new').value, b = $('#pw-new2').value, msg = $('#pw-msg');
+  if (a.length < 6) { msg.textContent = 'Use a password with at least 6 characters.'; return; }
+  if (a !== b) { msg.textContent = 'The two passwords are not the same.'; return; }
+  updatePassword(AUTH.currentUser, a).then(function () { closeModal(); toast('Password saved. You can sign in with it now.'); }, function (e) { msg.textContent = authMsg(e); });
 }
 function stopListeners() { subs.forEach(function (u) { u(); }); subs = []; if (unsubLog) unsubLog(); if (unsubHand) unsubHand(); unsubLog = unsubHand = null; logSid = handId = null; S.all = []; S.items = []; S.people = []; S.guests = []; S.requests = []; S.shreqIn = []; S.shreqOut = [];  S.suppliers = []; S.members = []; S.state = null; S.log = []; S.bal = {}; S.hand = null; }
 function watch(q, fn) { subs.push(onSnapshot(q, fn, function (e) { console.error(e); toast(errText(e)); })); }
@@ -2824,7 +2921,9 @@ function bootstrap() {
   commit(b);
 }
 async function afterSignIn(user) {
-  EMAIL = (user.email || '').toLowerCase(); STAGE = 'loading'; render();
+  EMAIL = (user.email || '').toLowerCase();
+  if (!user.emailVerified) { STAGE = 'verify'; render(); vWatch(); return; }   /* a password account must prove the email is theirs first */
+  STAGE = 'loading'; render();
   try {
     var m = await getDoc(ref('members/' + EMAIL));
     if (m.exists()) M = m.data();
