@@ -92,7 +92,7 @@ nav button.on{color:var(--brand);background:var(--soft)}
 .modal>div{background:var(--bg);width:100%;max-width:640px;max-height:calc(100vh - var(--bar) - 24px - env(safe-area-inset-bottom));overflow:auto;border-radius:18px 18px 0 0;padding:14px 16px 20px;margin-bottom:calc(var(--bar) + env(safe-area-inset-bottom))}
 .modal.mid{align-items:center;padding:16px;z-index:40}.modal.mid>div{border-radius:18px;max-height:88vh;margin-bottom:0}
 .modal h2{margin:0 0 10px;font-size:14px;font-weight:600}
-.grab{display:block;width:38px;height:4px;border-radius:2px;background:#B5C0C8;margin:-4px auto 10px}
+.modal:not(.top):not(.mid)>div::before{content:'';display:block;width:38px;height:4px;border-radius:2px;background:#B5C0C8;margin:-4px auto 10px}   /* the pull bar is drawn by the sheet itself, so every pop-up has it even when its content is redrawn */
 .modal>div{transition:transform .18s ease}.modal>div.pulling{transition:none}
 .seg{display:grid;gap:8px}
 .seg button{border:2px solid var(--line);border-radius:10px;min-height:44px;background:#fff;font:inherit;font-weight:600;padding:0 6px}
@@ -176,7 +176,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, connectAuthEmulator, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, connectFirestoreEmulator, doc, collection, onSnapshot, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, increment, Timestamp, query, where, orderBy, limit, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-var APP_VERSION = '1.33', RULES_VERSION = '1.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '1.34', RULES_VERSION = '1.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 var CYCLE = ['Red', 'Blue', 'White', 'Black'];   /* AM shift on consecutive days, from the 2026 Fire Service calendar */
 var ANCHOR = Date.UTC(2026, 9, 1) / 864e5;       /* 1 Oct 2026: AM = Red */
 var AM_START = 9, PM_START = 18;                 /* day shift 9am to 6pm, night shift 6pm to 9am */
@@ -256,9 +256,13 @@ function SH() { return S.state && S.state.shift ? S.state.shift : blankShift(); 
 function inControl() { return !!(S.state && EMAIL && S.state.controlEmail === EMAIL); }
 function viewOnly() { return !inControl(); }
 function isPres() { return EMAIL === PRESIDENT; }
-function roleShown(m) { return m.email === PRESIDENT && !isPres() ? 'user' : m.role; }   /* only the president sees that title */
-function myRole() { return isPres() ? 'president' : (M && M.role) || 'user'; }
-function canAdmin() { return myRole() === 'president' || myRole() === 'admin'; }
+function roleShown(m) { return m.email === PRESIDENT && !isPres() ? 'user' : m.role; }   /* only the owner sees that title; everyone else sees a plain user */
+function roleLabel(r) { return r === 'owner' ? 'Owner' : r === 'president' ? 'President' : r === 'admin' ? 'Admin' : 'User'; }
+function myRole() { return isPres() ? 'owner' : (M && M.role) || 'user'; }
+function canAdmin() { return myRole() === 'owner' || myRole() === 'president'; }   /* the admin tools: people, corrections, cancelled entries ... */
+function canApprove() { return canAdmin() || myRole() === 'admin'; }   /* accept or decline access requests */
+function canManage(m) { return isPres() ? m.email !== PRESIDENT : myRole() === 'president' && (m.role === 'user' || m.role === 'admin'); }
+function rqRoles() { return isPres() ? ['user', 'admin', 'president'] : myRole() === 'president' ? ['user', 'admin'] : ['user']; }
 function item(id) { return S.all.filter(function (i) { return i.id === id; })[0]; }
 function person(id) { return S.people.filter(function (p) { return p.id === id; })[0]; }
 function guest(id) { return S.guests.filter(function (g) { return g.id === id; })[0]; }
@@ -1315,8 +1319,9 @@ function stageHtml() {
   if (STAGE === 'login') return '<div style="text-align:center"><img src="icons/logo.png" alt="Shift Welfare" width="220" style="max-width:70%;height:auto"></div><div class="card"><h2>Sign in</h2><p class="muted" style="margin-top:0">Enter the email you were invited with. We send you a sign-in link; open it on this phone.</p>' +
     '<div class="f"><label>Email</label><input id="lg-email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" value="' + esc(SENT) + '"></div>' +
     '<button class="btn block" data-act="sendlogin">Send sign-in link</button><div id="lg-msg" class="muted" style="margin-top:10px"></div></div>';
-  if (STAGE === 'noaccess') return '<div class="card"><h2>Not invited yet</h2><p>' + esc(EMAIL) + ' is not on the invited list. Ask the president to invite this email.</p><button class="btn sec block" data-act="signout">Sign out</button></div>';
-  if (STAGE === 'setup') return '<div class="card"><h2>Waiting for set-up</h2><p>The president has not set the app up yet. Try again in a moment.</p><button class="btn sec block" data-act="signout">Sign out</button></div>';
+  if (STAGE === 'noaccess') return '<div class="card"><h2>Something went wrong</h2><p>The app could not check access for ' + esc(EMAIL) + '. Check your connection and sign in again.</p><button class="btn sec block" data-act="signout">Sign out</button></div>';
+  if (STAGE === 'request') return requestHtml();
+  if (STAGE === 'setup') return '<div class="card"><h2>Waiting for set-up</h2><p>The owner has not set the app up yet. Try again in a moment.</p><button class="btn sec block" data-act="signout">Sign out</button></div>';
   return '';
 }
 
@@ -1349,7 +1354,7 @@ function render() {
     document.querySelectorAll('#nav button').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === tab); });
   } else $('#hdr').innerHTML = 'Shift Welfare';
   var focus = document.activeElement && document.activeElement.id;
-  $('#main').innerHTML = ready ? banner() + VIEWS[tab]() : stageHtml();
+  $('#main').innerHTML = ready ? banner() + reqCard() + VIEWS[tab]() : stageHtml();
   if (ready && viewOnly()) document.querySelectorAll('#main input:not(#c-q):not([data-b]):not([data-bl])').forEach(function (el) { el.disabled = true; });
   if (focus && $('#' + focus)) $('#' + focus).focus();
   vv(); hsync();
@@ -1372,7 +1377,7 @@ var REFRESH = null;
 function refreshModal() { var a = document.activeElement; if (REFRESH && !(a && /INPUT|SELECT|TEXTAREA/.test(a.tagName) && $('#modal').contains(a))) REFRESH(); }
 var LASTV = null;
 function closeModal() { REFRESH = null; CONF = null; RX = null; LASTV = null; if (UNSUB) { UNSUB(); UNSUB = null; } $('#modal').innerHTML = ''; }
-function modal(html, top) { REFRESH = null; CONF = null; if (UNSUB) { UNSUB(); UNSUB = null; } $('#modal').innerHTML = '<div class="modal' + (top ? ' top' : '') + '" id="mbg"><div>' + (top ? '' : '<i class="grab"></i>') + html + '</div></div>'; }   /* top: pop-ups with a search box stay at the top so the keyboard never covers the results */
+function modal(html, top) { REFRESH = null; CONF = null; if (UNSUB) { UNSUB(); UNSUB = null; } $('#modal').innerHTML = '<div class="modal' + (top ? ' top' : '') + '" id="mbg"><div>' + html + '</div></div>'; }   /* top: pop-ups with a search box stay at the top so the keyboard never covers the results */
 function liveModal(qs, build) {   /* a pop-up that stays in step with the database */
   if (!Array.isArray(qs)) qs = [qs];
   modal('<div class="empty">Loading…</div>');
@@ -1584,7 +1589,7 @@ function pedit(id) {
 function pesave() {
   var name = $('#pe-name').value.trim(); if (!name) return toast('Enter a name');
   var rec = { watch: PE.watch, no: $('#pe-no').value.trim(), rank: $('#pe-rank').value.trim(), name: name };
-  guard(setDoc(ref('people/' + (PE.id || newId('people'))), rec)); peopleEditor(); toast('Saved');
+  var pid = PE.id || newId('people'), nb = writeBatch(DB); nb.set(ref('people/' + pid), rec); nb.set(ref('names/' + pid), { name: rec.name, watch: rec.watch || '' }); guard(nb.commit()); peopleEditor(); toast('Saved');
 }
 
 /* ---------- saved names (credit customers who are not on the roster) ---------- */
@@ -1607,29 +1612,111 @@ function gedit(id) {
     '<button class="btn red block" data-act="gdel" data-id="' + id + '"' + (b > 0 ? ' disabled' : '') + '>Delete name</button>' + (b > 0 ? '<p class="muted">Cannot delete: owes ' + money(b) + '.</p>' : '') + '<button class="btn sec block" data-act="guests" style="margin-top:10px">Back</button>');
 }
 
+/* ---------- asking for access: anyone signed in can send one request; owner, presidents and admins accept or decline ---------- */
+var RQ = { pick: '', mode: 'list', name: '', no: '', rank: '', watch: '' }, MYREQ, RQHIDE = {};
+S.names = []; S.requests = [];
+function requestStage() {
+  STAGE = 'request'; MYREQ = undefined; RQ = { pick: '', mode: 'list', name: '', no: '', rank: '', watch: '' }; render();
+  getDocs(collection(DB, 'names')).then(function (sn) { S.names = docs(sn).sort(function (a, b) { return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }); }); if (STAGE === 'request') render(); }).catch(function (e) { console.error(e); });
+  subs.push(onSnapshot(ref('requests/' + EMAIL), function (sn) {
+    var had = MYREQ; MYREQ = sn.exists() ? sn.data() : null;
+    if (had && !MYREQ) setTimeout(function () { if (STAGE === 'request' && !MYREQ) toast('Your request was declined'); }, 1500);
+    if (STAGE === 'request') render();
+  }, function (e) { console.error(e); MYREQ = null; if (STAGE === 'request') render(); }));
+  subs.push(onSnapshot(ref('members/' + EMAIL), function (sn) { if (sn.exists() && STAGE === 'request') { stopListeners(); afterSignIn(AUTH.currentUser); } }, function () {}));
+}
+function rqList(q) {
+  var l = S.names.filter(function (p) { return !q || p.name.toLowerCase().indexOf(q.toLowerCase().trim()) >= 0; }).slice(0, 40);
+  return l.length ? l.map(function (p) { return '<div data-act="rqpick" data-id="' + p.id + '" style="cursor:pointer"><div class="grow"><b>' + esc(p.name) + '</b></div>' + wsw(p.watch) + '</div>'; }).join('') : '<div class="empty">No match.</div>';
+}
+function requestHtml() {
+  var logo = '<div style="text-align:center"><img src="icons/logo.png" alt="Shift Welfare" width="160" style="max-width:55%;height:auto"></div>';
+  if (MYREQ === undefined) return '<div class="card empty">Loading…</div>';
+  if (MYREQ) return logo + '<div class="card"><h2>Awaiting access from Admin</h2><p class="muted" style="margin-top:0">Your request was sent. An Admin will let you in. You can close the app and come back later.</p>' +
+    '<div class="card sum" style="box-shadow:none;padding:0"><div><span>Name</span><b>' + esc(MYREQ.name) + '</b></div><div><span>Watch</span><b>' + esc(MYREQ.watch || '') + '</b></div><div><span>Email</span><b>' + esc(EMAIL) + '</b></div></div>' +
+    '<button class="btn sec block" data-act="rqcancel" style="margin-top:12px">Cancel request</button><button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>';
+  var picked = RQ.pick ? S.names.filter(function (n) { return n.id === RQ.pick; })[0] : null, h = logo + '<div class="card"><h2>Request access</h2><p class="muted" style="margin-top:0">Find your name. If it is not on the list, add it. An Admin then lets you in.</p>';
+  if (picked) h += '<div class="card sum" style="box-shadow:none;padding:0"><div><span>You are</span><b>' + esc(picked.name) + '</b></div><div><span>Watch</span><b>' + esc(picked.watch || '') + '</b></div></div><button class="btn sec block" data-act="rqchange" style="margin-top:10px">Choose a different name</button><button class="btn block" data-act="rqsend" style="margin-top:10px">Send request</button>';
+  else if (RQ.mode === 'new') h += '<div class="f"><label>Full name</label><input data-rq="name" autocomplete="off" value="' + esc(RQ.name) + '"></div><div class="f"><label>Service number</label><input data-rq="no" inputmode="numeric" autocomplete="off" value="' + esc(RQ.no) + '"></div><div class="f"><label>Rank (optional)</label><input data-rq="rank" autocomplete="off" value="' + esc(RQ.rank) + '"></div>' +
+    '<div class="f"><label>Watch</label><div class="seg" style="grid-template-columns:repeat(4,1fr)">' + WATCHES.map(function (w) { return '<button type="button" data-act="rqwatch" data-v="' + w + '" class="' + (RQ.watch === w ? 'on' : '') + '">' + w + '</button>'; }).join('') + '</div></div>' +
+    '<button class="btn block" data-act="rqsend">Send request</button><button class="btn sec block" data-act="rqlist" style="margin-top:10px">Back to the list</button>';
+  else h += '<div class="sq"><input id="rq-q" placeholder="Search your name" autocomplete="off"></div><div class="list" id="rq-list">' + rqList('') + '</div><button class="btn sec block" data-act="rqnew" style="margin-top:10px">My name is not on the list</button>';
+  return h + '<button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>';
+}
+function rqSend() {
+  var d = { email: EMAIL, name: '', no: '', rank: '', watch: '', personId: '', at: Date.now() };
+  if (RQ.pick) { var n = S.names.filter(function (x) { return x.id === RQ.pick; })[0]; if (!n) return toast('Choose your name'); d.name = n.name; d.watch = n.watch || ''; d.personId = n.id; }
+  else {
+    if (!RQ.name.trim()) return toast('Enter your full name'); if (!RQ.no.trim()) return toast('Enter your service number'); if (!RQ.watch) return toast('Choose your watch');
+    d.name = RQ.name.trim(); d.no = RQ.no.trim(); d.rank = RQ.rank.trim(); d.watch = RQ.watch;
+  }
+  guard(setDoc(ref('requests/' + EMAIL), d)).then(function () { toast('Request sent'); });
+}
+function reqPending() { return S.requests.filter(function (r) { return !RQHIDE[r.email]; }); }
+function reqCard() {
+  if (!canApprove()) return '';
+  var l = reqPending(); if (!l.length) return '';
+  var r = l[0];
+  return '<div class="card" style="border-left:4px solid var(--brand);margin-bottom:12px"><div class="row"><div class="grow"><b>👤 ' + esc(r.name) + '</b> asked for access<div class="muted">' + esc(r.watch || '') + (l.length > 1 ? ' · +' + (l.length - 1) + ' more waiting' : '') + '</div></div></div>' +
+    '<div class="row" style="margin-top:10px"><button class="btn grow" data-act="rqopen" data-id="' + esc(r.email) + '">Accept</button><button class="btn sec grow" data-act="rqlater">Maybe later</button></div></div>';
+}
+function reqListHtml() {
+  if (!S.requests.length) return '';
+  return '<div class="card"><h2>Waiting for access (' + S.requests.length + ')</h2><div class="list">' + S.requests.map(function (r) {
+    return '<div data-act="rqopen" data-id="' + esc(r.email) + '" style="cursor:pointer"><div class="grow"><b>' + esc(r.name) + '</b><div class="muted">' + esc(r.email) + '</div></div>' + wsw(r.watch) + '</div>';
+  }).join('') + '</div></div>';
+}
+function rqOpen(email) {
+  var r = S.requests.filter(function (x) { return x.email === email; })[0]; if (!r) return toast('That request is gone');
+  var linked = r.personId && S.members.filter(function (m) { return m.personId === r.personId; })[0], roles = rqRoles(), pp = r.personId ? person(r.personId) : null;
+  modal('<h2>Access request</h2><div class="card sum"><div><span>Name</span><b>' + esc(r.name) + '</b></div><div><span>Watch</span><b>' + esc(r.watch || '') + '</b></div>' + (r.no ? '<div><span>Service number</span><b>' + esc(r.no) + '</b></div>' : '') + (r.rank ? '<div><span>Rank</span><b>' + esc(r.rank) + '</b></div>' : '') + '<div><span>Email</span><b>' + esc(r.email) + '</b></div></div>' +
+    '<div class="card"><div class="muted">' + (r.personId ? (pp ? 'Chose <b>' + esc(plabel(pp)) + '</b> from the list.' : 'Chose a name from the list.') : 'Not on the list: this name will be added to People.') + '</div>' +
+    (linked ? '<div style="color:var(--exp);margin-top:6px"><b>That name is already linked to ' + esc(linked.email) + '.</b> Decline this request, or ask a President to fix it.</div>' : '') +
+    '<div class="f" style="margin-top:10px"><label>App rank</label><input type="hidden" id="rq-role" value="user"><div class="seg" style="grid-template-columns:repeat(' + roles.length + ',1fr)">' + roles.map(function (x) { return '<button type="button" data-act="rqrole" data-v="' + x + '" class="' + (x === 'user' ? 'on' : '') + '">' + roleLabel(x) + '</button>'; }).join('') + '</div></div></div>' +
+    '<button class="btn block" data-act="rqaccept" data-id="' + esc(email) + '"' + (linked ? ' disabled' : '') + '>Accept</button><button class="btn red block" data-act="rqdecline" data-id="' + esc(email) + '" style="margin-top:10px">Decline</button><button class="btn sec block" data-act="rqlater2" data-id="' + esc(email) + '" style="margin-top:10px">Maybe later</button>');
+}
+function rqAccept(email) {
+  var r = S.requests.filter(function (x) { return x.email === email; })[0]; if (!r) return toast('That request is gone');
+  var role = $('#rq-role').value; if (rqRoles().indexOf(role) < 0) return toast('Pick a rank');
+  var b = writeBatch(DB), pid = r.personId;
+  if (!pid) { pid = newId('people'); b.set(ref('people/' + pid), { name: r.name, no: r.no || '', rank: r.rank || '', watch: r.watch || '', fromRequest: email, at: Date.now() }); b.set(ref('names/' + pid), { name: r.name, watch: r.watch || '' }); }
+  b.set(ref('members/' + email), { email: email, role: role, personId: pid, addedBy: EMAIL, at: Date.now() });
+  b.delete(ref('requests/' + email));
+  commit(b); closeModal(); toast(r.name + ' now has access');
+}
+async function migrateRanks() {   /* once, by the owner: president -> owner, admin -> president, user -> admin; also copies the names list for the sign-up page */
+  try {
+    var ms = await getDocs(collection(DB, 'members')), ps = await getDocs(collection(DB, 'people')), ops = [], map = { president: 'president', admin: 'president', user: 'admin' };
+    ms.docs.forEach(function (d) { var x = d.data(); if (x.ranks === 2) return; ops.push([ref('members/' + d.id), { role: d.id === EMAIL ? 'owner' : (map[x.role] || 'admin'), ranks: 2 }, true]); });
+    ps.docs.forEach(function (d) { var x = d.data(); ops.push([ref('names/' + d.id), { name: x.name || '', watch: x.watch || '' }, false]); });
+    for (var i = 0; i < ops.length; i += 400) { var b = writeBatch(DB); ops.slice(i, i + 400).forEach(function (o) { if (o[2]) b.update(o[0], o[1]); else b.set(o[0], o[1]); }); await b.commit(); }
+    M = Object.assign({}, M, { role: 'owner', ranks: 2 }); toast('Ranks updated');
+  } catch (e) { console.error(e); toast(e && e.code === 'permission-denied' ? 'Publish the new Firestore rules (v1.14) first, then close and reopen the app' : errText(e)); }
+}
+
 /* ---------- access: invitations (president and admins) ---------- */
 function accessModal() {
   var link = location.origin + location.pathname;
   var rows = S.members.slice().sort(function (a, b) { return (plabel(person(a.personId)) || a.email).localeCompare(plabel(person(b.personId)) || b.email); }).map(function (m) {
     var p = person(m.personId);
-    return '<div data-act="medit" data-id="' + esc(m.email) + '"><div class="grow"><b>' + (p ? esc(plabel(p)) : esc(m.email)) + '</b><div class="muted">' + esc(m.email) + '</div></div><span class="pill ' + (roleShown(m) === 'user' ? '' : 'low') + '">' + esc(roleShown(m)) + '</span></div>';
+    return '<div data-act="medit" data-id="' + esc(m.email) + '"><div class="grow"><b>' + (p ? esc(plabel(p)) : esc(m.email)) + '</b><div class="muted">' + esc(m.email) + '</div></div><span class="pill ' + (roleShown(m) === 'user' ? '' : 'low') + '">' + esc(roleLabel(roleShown(m))) + '</span></div>';
   }).join('');
-  modal('<h2>Access (' + S.members.length + ')</h2><div class="card"><label>App link to share</label><div class="row"><input readonly value="' + esc(link) + '" style="font-size:12px"><button class="btn sm" data-act="copylink">Copy</button></div><p class="muted" style="margin-bottom:0">Invited people get a sign-in email straight away. They open the link on their phone and enter their email.</p></div><button class="btn block" data-act="medit" data-id="" style="margin-bottom:10px">+ Invite someone</button><div class="list">' + (rows || '<div class="empty">Nobody yet.</div>') + '</div><button class="btn sec block" data-act="settings" style="margin-top:10px">Back</button>'); REFRESH = accessModal;
+  modal('<h2>Access (' + S.members.length + ')</h2><div class="card"><label>App link to share</label><div class="row"><input readonly value="' + esc(link) + '" style="font-size:12px"><button class="btn sm" data-act="copylink">Copy</button></div><p class="muted" style="margin-bottom:0">Invited people get a sign-in email straight away. They open the link on their phone and enter their email.</p></div>' + reqListHtml() + (canAdmin() ? '<button class="btn block" data-act="medit" data-id="" style="margin-bottom:10px">+ Invite someone</button>' : '') + '<div class="list">' + (rows || '<div class="empty">Nobody yet.</div>') + '</div><button class="btn sec block" data-act="settings" style="margin-top:10px">Back</button>'); REFRESH = accessModal;
 }
 function medit(email) {
   var m = email ? S.members.filter(function (x) { return x.email === email; })[0] : { email: '', role: 'user', personId: '' };
   if (!m) return;
-  var locked = email && !isPres() && m.role !== 'user';   /* admins cannot change other admins */
+  var locked = email && !canManage(m);   /* the owner manages everyone; a president manages admins and users; admins manage nobody */
   var used = {}; S.members.forEach(function (x) { if (x.email !== email && x.personId) used[x.personId] = 1; });
-  var roles = isPres() ? [['user', 'User'], ['admin', 'Admin (can invite users and edit people)']] : [['user', 'User']];
-  if (email === PRESIDENT) roles = [['president', 'President']];
+  var roles = rqRoles().map(function (r) { return [r, roleLabel(r)]; });
+  if (email === PRESIDENT) roles = [['owner', 'Owner']];
   PE = { person: m.personId };
   var pcur = person(m.personId);
   modal('<h2>' + (email ? 'Edit access' : 'Invite someone') + '</h2><div class="card"><label>This person is</label>' +
     '<div class="row f"><div class="grow"><b id="mb-pl">' + (pcur ? esc(plabel(pcur)) : 'Not chosen') + '</b></div>' + (locked ? '' : '<button class="btn sec sm" data-act="mbperson">Choose name</button>') + '</div><div id="mb-pk"></div>' +
     '<div class="f"><label>Email</label><input id="mb-email" type="email" value="' + esc(m.email) + '"' + (email ? ' disabled' : '') + ' placeholder="name@example.com"></div>' +
     '<div class="f"><label>Role</label><input type="hidden" id="mb-role" value="' + esc(m.role) + '"><div class="seg" style="grid-template-columns:repeat(' + roles.length + ',1fr)">' + roles.map(function (r) { return '<button type="button" data-act="mbrolep" data-v="' + r[0] + '"' + (locked || email === PRESIDENT ? ' disabled' : '') + ' class="' + (r[0] === m.role ? 'on' : '') + '">' + r[1] + '</button>'; }).join('') + '</div></div></div>' +
-    (locked ? '<p class="muted">Only the president can change an admin.</p>' : '<button class="btn block" data-act="mbsave" data-id="' + esc(email) + '">' + (email ? 'Save' : 'Invite &amp; send email') + '</button>') +
+    (locked ? '<p class="muted">You cannot change this person.</p>' : '<button class="btn block" data-act="mbsave" data-id="' + esc(email) + '">' + (email ? 'Save' : 'Invite &amp; send email') + '</button>') +
     (email && !locked ? '<button class="btn sec block" data-act="mbresend" data-id="' + esc(email) + '" style="margin-top:10px">Resend sign-in email</button>' : '') +
     (email && !locked && email !== PRESIDENT ? '<button class="btn red block" data-act="mbdel" data-id="' + esc(email) + '" style="margin-top:10px">Remove access</button>' : '') +
     '<button class="btn sec block" data-act="access" style="margin-top:10px">Cancel</button>');
@@ -1650,7 +1737,7 @@ function sendInvite(em) {
 function mbsave(email) {
   var e = (email || $('#mb-email').value).trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return toast('Enter a valid email');
-  var rec = { email: e, role: email === PRESIDENT ? 'president' : $('#mb-role').value, personId: PE.person || '', addedBy: EMAIL, at: Date.now() };
+  var rec = { email: e, role: email === PRESIDENT ? 'owner' : $('#mb-role').value, personId: PE.person || '', addedBy: EMAIL, at: Date.now() };
   var old = S.members.filter(function (x) { return x.email === e; })[0]; if (old && old.signature) rec.signature = old.signature;
   guard(setDoc(ref('members/' + e), rec));
   if (!email) { sendInvite(e).then(function () { toast('Invite sent to ' + e); }, function (x) { toast('Saved, but the email could not be sent (' + (x.code || x.message) + ')'); }); }
@@ -1944,20 +2031,20 @@ function settings() {
     var x = new Date(d.getFullYear(), d.getMonth(), d.getDate() + k);
     rows += '<div>' + x.toLocaleDateString([], {weekday: 'short', day: 'numeric', month: 'short'}) + '</div><div><span class="sw ' + amShift(x) + '">' + amShift(x) + '</span></div><div><span class="sw ' + pmShift(x) + '">' + pmShift(x) + '</span></div>';
   }
-  modal('<h2>Settings</h2><div class="card"><h2>Account</h2><div><b>' + esc(myName()) + '</b></div><div class="muted">' + esc(EMAIL) + ' · ' + esc(myRole()) + '</div>' + (M && !M.personId ? '<p class="muted">Your email is not linked to a name yet. Ask the president to link it under Access.</p>' : '') + '<button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button><div class="row" style="margin-top:10px"><div class="grow"><b>App version ' + APP_VERSION + '</b><div class="muted">needs rules version ' + RULES_VERSION + '</div></div><button class="btn sec sm" data-act="updcheck">Check for updates</button></div></div>' +
+  modal('<h2>Settings</h2><div class="card"><h2>Account</h2><div><b>' + esc(myName()) + '</b></div><div class="muted">' + esc(EMAIL) + ' · ' + esc(roleLabel(myRole())) + '</div>' + (M && !M.personId ? '<p class="muted">Your email is not linked to a name yet. Ask a President or an Admin to link it under Access.</p>' : '') + '<button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button><div class="row" style="margin-top:10px"><div class="grow"><b>App version ' + APP_VERSION + '</b><div class="muted">needs rules version ' + RULES_VERSION + '</div></div><button class="btn sec sm" data-act="updcheck">Check for updates</button></div></div>' +
     '<button class="btn sec block" data-act="notices" style="margin-bottom:14px">🔔 Notifications' + ((S.notices || []).filter(function (x) { return !x.read; }).length ? ' (' + (S.notices || []).filter(function (x) { return !x.read; }).length + ' new)' : '') + '</button>' +
     sigCard('My signature') +
     (isStandalone() ? '' : '<div class="card"><h2>Install on this phone</h2><p class="muted" style="margin-top:0">Add Shift Welfare to your home screen so it opens like an app.</p><button class="btn block" data-act="install">⬇ Install app</button></div>') +
-    '<div class="card"><h2>People &amp; access</h2><div class="row"><button class="btn grow" data-act="people">People (' + S.people.length + ')</button>' + (canAdmin() ? '<button class="btn grow" data-act="access">Access (' + S.members.length + ')</button>' : '') + '</div>' +
+    '<div class="card"><h2>People &amp; access</h2><div class="row"><button class="btn grow" data-act="people">People (' + S.people.length + ')</button>' + (canApprove() ? '<button class="btn grow" data-act="access">Access (' + S.members.length + ')' + (S.requests.length ? ' · ' + S.requests.length + ' new' : '') + '</button>' : '') + '</div>' +
     (canAdmin() ? '<div class="row" style="margin-top:10px"><button class="btn sec grow" data-act="guests">Saved names</button><button class="btn sec grow" data-act="cancelled">Cancelled entries</button></div>' : '') + '</div>' +
-    (isPres() ? '<div class="card"><h2>Previous handover</h2><p class="muted" style="margin-top:0">President only. Enter or correct the opening cash, stock counts and credit owed by hand.</p><button class="btn sec block" data-act="opopen">📝 Enter previous handover</button></div>' : '') +
+    (isPres() ? '<div class="card"><h2>Previous handover</h2><p class="muted" style="margin-top:0">Owner only. Enter or correct the opening cash, stock counts and credit owed by hand.</p><button class="btn sec block" data-act="opopen">📝 Enter previous handover</button></div>' : '') +
     (isPres() ? '<div class="card"><h2>Reset app to default</h2><p class="muted" style="margin-top:0">Clears stock, sales, handovers, credit and profit history so the app is empty again. People, access, saved names and the shift roster stay.</p><button class="btn red block" data-act="resetask">Reset app to default</button></div>' : '') +
     (isPres() && viewOnlyText() ? '<div class="card"><h2>President</h2><p class="muted" style="margin-top:0">' + viewOnlyText() + '</p><button class="btn sec block" data-act="ptake">Take control now</button></div>' : '') +
     '<div class="card"><h2>Roster (Day 9am–6pm / Night 6pm–9am)</h2><div class="ros"><b></b><b>Day</b><b>Night</b>' + rows + '</div></div>' +
     '<div class="card"><h2>Past handovers</h2><p class="muted" style="margin-top:0">Kept for about 31 days.</p><button class="btn sec block" data-act="hlist">Show recent handovers</button><div id="hl"></div></div>' +
     '<button class="btn sec block" data-act="close">Close</button>'); REFRESH = settings;
 }
-function viewOnlyText() { return inControl() ? '' : 'Someone else is in control, or a handover is waiting. As president you can override this if it is stuck.'; }
+function viewOnlyText() { return inControl() ? '' : 'Someone else is in control, or a handover is waiting. As the Owner you can override this if it is stuck.'; }
 function diffsOf(h) {
   var d = []; if (!h.receivedItems) return d;
   (h.items || []).forEach(function (i) { var r = h.receivedItems[i.id]; if (!r) return; if (r.stock !== i.stock) d.push(i.name + ': counted ' + r.stock + ', handed over ' + i.stock); if (!i.shelf && r.cage !== i.cage) d.push(i.name + ' (cage): counted ' + r.cage + ' cases, handed over ' + i.cage); });
@@ -2296,7 +2383,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'pedit') { if (canAdmin()) pedit(id); }
   else if (a === 'pewatch') { PE.watch = b.dataset.w; document.querySelectorAll('#pe-w button').forEach(function (x) { x.classList.toggle('on', x.dataset.w === PE.watch); }); }
   else if (a === 'pesave') pesave();
-  else if (a === 'pedel') { if (confirm('Delete this person?') && balance(PE.id) <= 0) { guard(deleteDoc(ref('people/' + PE.id))); peopleEditor(); } }
+  else if (a === 'pedel') { if (confirm('Delete this person?') && balance(PE.id) <= 0) { var db3 = writeBatch(DB); db3.delete(ref('people/' + PE.id)); db3.delete(ref('names/' + PE.id)); guard(db3.commit()); peopleEditor(); } }
   else if (a === 'guests') guestsModal();
   else if (a === 'gedit') gedit(id);
   else if (a === 'gsave') { var gn = $('#g-name').value.trim(); if (!gn) return toast('Enter a name'); guard(updateDoc(ref('guests/' + id), { name: gn, nameKey: nkey(gn) })); guestsModal(); toast('Saved'); }
@@ -2304,6 +2391,19 @@ document.addEventListener('click', function (e) {
   else if (a === 'gdel') { if (balance(id) <= 0) askConfirm('Delete this name?', 'Delete <b>' + esc(guest(id).name) + '</b>? Old entries keep the name they were made with.', 'Yes, delete', function () { guard(deleteDoc(ref('guests/' + id))); guestsModal(); }); }
   else if (a === 'cancelled') cancelledModal();
   else if (a === 'access') accessModal();
+  else if (a === 'rqpick') { RQ.pick = id; render(); }
+  else if (a === 'rqchange') { RQ.pick = ''; render(); }
+  else if (a === 'rqnew') { RQ.mode = 'new'; render(); }
+  else if (a === 'rqlist') { RQ.mode = 'list'; render(); }
+  else if (a === 'rqwatch') { RQ.watch = b.dataset.v; render(); }
+  else if (a === 'rqsend') rqSend();
+  else if (a === 'rqcancel') guard(deleteDoc(ref('requests/' + EMAIL)));
+  else if (a === 'rqopen') rqOpen(id);
+  else if (a === 'rqrole') { $('#rq-role').value = b.dataset.v; b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); }
+  else if (a === 'rqaccept') rqAccept(id);
+  else if (a === 'rqdecline') askConfirm('Decline this request?', 'They are told it was declined and can send a new request.', 'Yes, decline', function () { guard(deleteDoc(ref('requests/' + id))); closeModal(); });
+  else if (a === 'rqlater') { reqPending().forEach(function (r) { RQHIDE[r.email] = 1; }); render(); }
+  else if (a === 'rqlater2') { RQHIDE[id] = 1; closeModal(); render(); }
   else if (a === 'copylink') { if (navigator.clipboard) navigator.clipboard.writeText(location.origin + location.pathname).then(function () { toast('Link copied'); }); }
   else if (a === 'medit') medit(id);
   else if (a === 'mbperson') mbPicker();
@@ -2349,6 +2449,8 @@ document.addEventListener('input', function (e) {
   else if (t.dataset.fx) { FX[t.dataset.fx] = t.value; }
   else if (t.dataset.fxi !== undefined) { FX.items[+t.dataset.fxi] = t.value; }
   else if (t.id === 'pe-q') $('#pe-list').innerHTML = peopleList(t.value);
+  else if (t.id === 'rq-q') $('#rq-list').innerHTML = rqList(t.value);
+  else if (t.dataset.rq) RQ[t.dataset.rq] = t.value;
   else if (t.id === 'mbp-q') $('#mbp-list').innerHTML = mbpList(t.value);
   else if (t.id === 'who-q') $('#who-list').innerHTML = whoList(t.value);
   else if (t.dataset.op) OP[t.dataset.op] = t.value;
@@ -2397,7 +2499,7 @@ async function sendLogin() {
     msg.innerHTML = '✅ Link sent to <b>' + esc(em) + '</b>. Open the email on this phone and tap the link.';
   } catch (e) { msg.textContent = 'Could not send the link: ' + (e.code || e.message); }
 }
-function stopListeners() { subs.forEach(function (u) { u(); }); subs = []; if (unsubLog) unsubLog(); if (unsubHand) unsubHand(); unsubLog = unsubHand = null; logSid = handId = null; S.all = []; S.items = []; S.people = []; S.guests = []; S.suppliers = []; S.members = []; S.state = null; S.log = []; S.bal = {}; S.hand = null; }
+function stopListeners() { subs.forEach(function (u) { u(); }); subs = []; if (unsubLog) unsubLog(); if (unsubHand) unsubHand(); unsubLog = unsubHand = null; logSid = handId = null; S.all = []; S.items = []; S.people = []; S.guests = []; S.requests = [];  S.suppliers = []; S.members = []; S.state = null; S.log = []; S.bal = {}; S.hand = null; }
 function watch(q, fn) { subs.push(onSnapshot(q, fn, function (e) { console.error(e); toast(errText(e)); })); }
 function docs(s) { return s.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); }
 function migrate() {   /* items made by the earlier version counted the cage in single items; cases are the unit now */
@@ -2414,6 +2516,7 @@ function startListeners() {
   watch(collection(DB, 'guests'), function (s) { S.guests = docs(s).map(function (x) { x.kind = 'g'; x.watch = ''; x.no = ''; x.rank = ''; return x; }); scheduleRender(); refreshModal(); });
   watch(query(collection(DB, 'notices'), where('toEmail', '==', EMAIL)), function (s) { S.notices = docs(s).sort(function (a, b) { return b.at - a.at; }); updateBell(); });
   watch(collection(DB, 'suppliers'), function (s) { S.suppliers = docs(s); scheduleRender(); });
+  if (canApprove()) subs.push(onSnapshot(collection(DB, 'requests'), function (s) { S.requests = docs(s).sort(function (a, b) { return (a.at || 0) - (b.at || 0); }); scheduleRender(); refreshModal(); }, function (e) { console.error(e); }));
   watch(collection(DB, 'members'), function (s) { S.members = s.docs.map(function (d) { return d.data(); }); var me = S.members.filter(function (m) { return m.email === EMAIL; })[0]; if (me) M = me; scheduleRender(); refreshModal(); });
   watch(collection(DB, 'credit'), function (s) { S.bal = {}; s.docs.forEach(function (d) { S.bal[d.id] = d.data().bal || 0; }); scheduleRender(); });
   watch(ref('shop/state'), function (s) {
@@ -2446,7 +2549,7 @@ function bootstrap() {
   if (BOOT) return; BOOT = true;
   var b = writeBatch(DB);
   b.set(ref('shop/state'), { controlEmail: EMAIL, controlName: 'President', pending: '', shift: newShift(currentShift(), 0), v: 2 });
-  seedPeople().forEach(function (p) { b.set(ref('people/' + p.id), { watch: p.watch, no: p.no, rank: p.rank, name: p.name }); });
+  seedPeople().forEach(function (p) { b.set(ref('people/' + p.id), { watch: p.watch, no: p.no, rank: p.rank, name: p.name }); b.set(ref('names/' + p.id), { name: p.name, watch: p.watch }); });
   commit(b);
 }
 async function afterSignIn(user) {
@@ -2454,9 +2557,10 @@ async function afterSignIn(user) {
   try {
     var m = await getDoc(ref('members/' + EMAIL));
     if (m.exists()) M = m.data();
-    else if (EMAIL === PRESIDENT) { M = { email: EMAIL, role: 'president', personId: '', addedBy: EMAIL, at: Date.now() }; await setDoc(ref('members/' + EMAIL), M); }
-    else { STAGE = 'noaccess'; render(); return; }
+    else if (EMAIL === PRESIDENT) { M = { email: EMAIL, role: 'owner', ranks: 2, personId: '', addedBy: EMAIL, at: Date.now() }; await setDoc(ref('members/' + EMAIL), M); }
+    else { requestStage(); return; }
   } catch (e) { console.error(e); STAGE = 'noaccess'; render(); return; }
+  if (isPres() && M.ranks !== 2) await migrateRanks();
   startListeners();
 }
 if (CONFIGURED) {
