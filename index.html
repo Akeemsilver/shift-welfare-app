@@ -18,11 +18,11 @@
 --ok:#2E8B57;--ok-bg:#E2F3EA;--soon:#B87C00;--soon-bg:#FFF1CC;--exp:#C7361F;--exp-bg:#FBE9E5;
 --sh:0 1px 2px rgba(16,24,40,.07),0 4px 12px rgba(16,24,40,.09);--r:18px;--bar:68px;
 --cnt:#1F6FA8;--cnt-bg:#E3EEF8;--s-red:#C7361F;--s-blue:#1F6FA8;--s-white:#8996A1;--s-black:#14181C;
---field:#fff;--link:var(--brand);--dis:#EEF0F2;--toast:#0E1B24;--pop:var(--bg);--ov:rgba(14,27,36,.55);color-scheme:light}
+--field:#fff;--link:var(--brand);--dis:#EEF0F2;--toast:#0E1B24;--pop:var(--bg);--ov:rgba(14,27,36,.55);--secb:#7C9DB0;color-scheme:light}
 /* dark: chosen in Settings > Appearance, or followed from the phone when it is on Automatic */
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#10181F;--surface:#212E3A;--ink:#E8EEF2;--muted:#9FAEBA;--line:#2E3B46;--soft:#243542;--ok:#4FC48C;--ok-bg:#163428;--soon:#E2AB2B;--soon-bg:#3B3011;--exp:#F2705C;--exp-bg:#3C1E19;--sh:0 1px 2px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.35);--cnt:#5DAEE6;--cnt-bg:#17324A;--s-red:#D9533D;--s-blue:#3C8BCB;--s-white:#9FAEBA;--s-black:#05080A;--field:#222E38;--link:#86C7EA;--dis:#26323C;--toast:#2B3A47;--pop:#18232D;--ov:rgba(0,0,0,.72);color-scheme:dark}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#10181F;--surface:#212E3A;--ink:#E8EEF2;--muted:#9FAEBA;--line:#2E3B46;--soft:#243542;--ok:#4FC48C;--ok-bg:#163428;--soon:#E2AB2B;--soon-bg:#3B3011;--exp:#F2705C;--exp-bg:#3C1E19;--sh:0 1px 2px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.35);--cnt:#5DAEE6;--cnt-bg:#17324A;--s-red:#D9533D;--s-blue:#3C8BCB;--s-white:#9FAEBA;--s-black:#05080A;--field:#222E38;--link:#86C7EA;--dis:#26323C;--toast:#2B3A47;--pop:#18232D;--ov:rgba(0,0,0,.72);--secb:#58798D;color-scheme:dark}
 :root:not([data-theme=light]) .sw.Black{border:1px solid rgba(255,255,255,.3)}:root:not([data-theme=light]) .sigimg{filter:invert(1)}}
-:root[data-theme=dark]{--bg:#10181F;--surface:#212E3A;--ink:#E8EEF2;--muted:#9FAEBA;--line:#2E3B46;--soft:#243542;--ok:#4FC48C;--ok-bg:#163428;--soon:#E2AB2B;--soon-bg:#3B3011;--exp:#F2705C;--exp-bg:#3C1E19;--sh:0 1px 2px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.35);--cnt:#5DAEE6;--cnt-bg:#17324A;--s-red:#D9533D;--s-blue:#3C8BCB;--s-white:#9FAEBA;--s-black:#05080A;--field:#222E38;--link:#86C7EA;--dis:#26323C;--toast:#2B3A47;--pop:#18232D;--ov:rgba(0,0,0,.72);color-scheme:dark}
+:root[data-theme=dark]{--bg:#10181F;--surface:#212E3A;--ink:#E8EEF2;--muted:#9FAEBA;--line:#2E3B46;--soft:#243542;--ok:#4FC48C;--ok-bg:#163428;--soon:#E2AB2B;--soon-bg:#3B3011;--exp:#F2705C;--exp-bg:#3C1E19;--sh:0 1px 2px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.35);--cnt:#5DAEE6;--cnt-bg:#17324A;--s-red:#D9533D;--s-blue:#3C8BCB;--s-white:#9FAEBA;--s-black:#05080A;--field:#222E38;--link:#86C7EA;--dis:#26323C;--toast:#2B3A47;--pop:#18232D;--ov:rgba(0,0,0,.72);--secb:#58798D;color-scheme:dark}
 :root[data-theme=dark] .sw.Black{border:1px solid rgba(255,255,255,.3)}:root[data-theme=dark] .sigimg{filter:invert(1)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;overscroll-behavior-y:none;background:var(--bg);color:var(--ink);font:13px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,Lato,sans-serif}
@@ -63,7 +63,7 @@ b,strong{font-weight:600}
 .pill{display:inline-block;font-size:12px;font-weight:600;color:var(--ok)}
 .pill.low{color:var(--soon)}.pill.out{color:var(--exp)}
 button.btn{border:0;border-radius:12px;height:42px;padding:0 18px;font:inherit;font-weight:600;background:var(--brand);color:var(--brand-ink)}
-button.btn.sec{background:var(--soft);color:var(--link)}button.btn.red{background:var(--exp);color:#fff}button.btn.amber{background:var(--soon);color:#fff}button.btn.green{background:var(--ok)}
+button.btn.sec{background:var(--surface);color:var(--link);border:2px solid var(--secb);box-shadow:0 1px 3px rgba(16,24,40,.12)}button.btn.red{background:var(--exp);color:#fff}button.btn.amber{background:var(--soon);color:#fff}button.btn.green{background:var(--ok)}
 button.btn.sm{height:34px;padding:0 12px;font-size:12px}
 button.btn.block{width:100%}
 button:disabled{opacity:.45}
@@ -71,7 +71,7 @@ button:disabled{opacity:.45}
 .stepper{display:flex;align-items:center;gap:6px}
 .stepper button{width:46px;height:46px;border:0;border-radius:12px;background:var(--brand);color:#fff;font-size:23px;font-weight:600;line-height:1}
 .stepper .stepin{width:74px;height:46px;text-align:center;font-size:16px;font-weight:600;padding:0 4px}
-.selbtn{display:flex;align-items:center;justify-content:space-between;text-align:left;background:var(--field)!important;color:var(--ink)!important;border:1px solid var(--line)!important;font-weight:600!important}
+.selbtn{display:flex;align-items:center;justify-content:space-between;text-align:left;background:var(--field)!important;color:var(--ink)!important;border:2px solid var(--secb)!important;font-weight:600!important}
 input,select{font:inherit;font-size:14px;height:42px;border:1px solid var(--line);border-radius:10px;padding:0 10px;background:var(--field);color:var(--ink);width:100%}
 label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 4px}
 .f{margin-bottom:10px}
@@ -102,10 +102,10 @@ nav button.on{color:var(--link);background:var(--soft)}
 .modal:not(.top):not(.mid)>div::before{content:'';display:block;width:38px;height:4px;border-radius:2px;background:#B5C0C8;margin:-4px auto 10px}   /* the pull bar is drawn by the sheet itself, so every pop-up has it even when its content is redrawn */
 .modal>div{transition:transform .18s ease}.modal>div.pulling{transition:none}
 .seg{display:grid;gap:8px}
-.seg button{border:2px solid var(--line);border-radius:10px;min-height:44px;background:var(--field);color:var(--ink);font:inherit;font-weight:600;padding:0 6px}
+.seg button{border:2px solid var(--secb);border-radius:10px;min-height:44px;background:var(--field);color:var(--ink);font:inherit;font-weight:600;padding:0 6px}
 .seg button.on{border-color:var(--brand);background:var(--soft)}
 .chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px}
-.chips button{flex:none;border:2px solid var(--line);border-radius:18px;height:34px;padding:0 12px;background:var(--field);color:var(--ink);font:inherit;font-size:12px;font-weight:600}
+.chips button{flex:none;border:2px solid var(--secb);border-radius:18px;height:34px;padding:0 12px;background:var(--field);color:var(--ink);font:inherit;font-size:12px;font-weight:600}
 .chips button.on{border-color:var(--brand);background:var(--soft)}
 .ros{display:grid;grid-template-columns:auto 1fr 1fr;gap:4px 10px;font-size:13px;align-items:center}
 .sw{display:inline-block;padding:1px 9px;border-radius:8px;color:#fff;font-size:11px;font-weight:700}
@@ -187,7 +187,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, connectAuthEmulator, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, connectFirestoreEmulator, doc, collection, onSnapshot, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, increment, Timestamp, query, where, orderBy, limit, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-var APP_VERSION = '1.37', RULES_VERSION = '1.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '1.38', RULES_VERSION = '1.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 var CYCLE = ['Red', 'Blue', 'White', 'Black'];   /* AM shift on consecutive days, from the 2026 Fire Service calendar */
 var ANCHOR = Date.UTC(2026, 9, 1) / 864e5;       /* 1 Oct 2026: AM = Red */
 var AM_START = 9, PM_START = 18;                 /* day shift 9am to 6pm, night shift 6pm to 9am */
