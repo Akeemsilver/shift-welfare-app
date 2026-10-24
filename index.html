@@ -176,7 +176,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, connectAuthEmulator, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, connectFirestoreEmulator, doc, collection, onSnapshot, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, increment, Timestamp, query, where, orderBy, limit, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-var APP_VERSION = '1.30', RULES_VERSION = '1.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '1.32', RULES_VERSION = '1.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 var CYCLE = ['Red', 'Blue', 'White', 'Black'];   /* AM shift on consecutive days, from the 2026 Fire Service calendar */
 var ANCHOR = Date.UTC(2026, 9, 1) / 864e5;       /* 1 Oct 2026: AM = Red */
 var AM_START = 9, PM_START = 18;                 /* day shift 9am to 6pm, night shift 6pm to 9am */
@@ -389,11 +389,94 @@ function cancelEvent(id, reason, quiet) {
   if (!e) return toast('Entry not found');
   DAYQ = []; var b = writeBatch(DB), err = reverseEvent(b, e);
   if (err) return toast(err);
-  DAYQ.push({ e: e, sign: -1 });
+  DAYQ.push({ e: cxEv(e), sign: -1 });
   var rec = {}; for (var k in e) if (k !== 'id') rec[k] = e[k];
   b.set(ref('cancelled/' + id), { at: Date.now(), by: EMAIL, byName: myName(), reason: reason || '', sid: e.sid, event: rec, expireAt: EXP() });
   b.delete(ref('events/' + id)); delete EVC[id];
   commit(b); toast(quiet ? 'Undone' : 'Cancelled and removed');
+}
+
+/* ---------- first cost for an item: give every earlier sale that had no cost the new cost (daily totals, by watch, by item) ---------- */
+function fillCosts(list) {
+  list = list.filter(function (x) { var it = item(x.id); return it && it.cost > 0 && !it.costFilled; });
+  if (!list.length) return Promise.resolve();
+  return getDocs(collection(DB, 'daily')).then(function (snap) {
+    var ids = list.map(function (x) { return x.id; }), left = {}, plan = [], tot = {};
+    S.items.forEach(function (i) { if (ids.indexOf(i.id) < 0 && !i.cost && !i.removed) left[i.id] = 1; });
+    snap.docs.forEach(function (d) {
+      var data = d.data(), its = data.it || {}, add = 0, per = {};
+      list.forEach(function (x) { var y = its[x.id]; if (y && y.n > 0) { var a = r2(y.n * x.cost); per[x.id] = a; add += a; var t = tot[x.id] || (tot[x.id] = { n: 0, add: 0 }); t.n += y.n; t.add = r2(t.add + a); } });
+      if (!add) return;
+      var w = data.w || {}, keys = Object.keys(w), sh = keys.map(function (k) { return Math.max(0, w[k].sales || 0); }), sum = sh.reduce(function (a, v) { return a + v; }, 0), wc = {};
+      if (!keys.length) wc['None'] = r2(add);
+      else if (sum <= 0) wc[keys[0]] = r2(add);
+      else { var big = 0, used = 0; keys.forEach(function (k, i) { wc[k] = r2(add * sh[i] / sum); used += wc[k]; if (sh[i] > sh[big]) big = i; }); wc[keys[big]] = r2(wc[keys[big]] + add - used); }
+      var other = Object.keys(its).some(function (id) { return ids.indexOf(id) < 0 && its[id].n > 0 && left[id]; });
+      plan.push({ k: d.id, wc: wc, per: per, nc: !other && data.nc > 0 ? data.nc : 0 });
+    });
+    if (!plan.length) return null;
+    var names = list.map(function (x) { return item(x.id).name; }), qty = 0, cost = 0; Object.keys(tot).forEach(function (id) { qty += tot[id].n; cost = r2(cost + tot[id].add); });
+    var note = list.map(function (x) { var t = tot[x.id]; return t ? item(x.id).name + ' ' + money(x.cost) + ' each: ' + t.n + ' earlier sold, cost + ' + money(t.add) : ''; }).filter(Boolean).join('; ');
+    var chunks = []; for (var i = 0; i < plan.length; i += 400) chunks.push(plan.slice(i, i + 400));
+    var run = Promise.resolve(), ok = true;
+    chunks.forEach(function (ch, ci) {
+      run = run.then(function () {
+        if (!ok) return;
+        DAYQ = []; var b = writeBatch(DB), eid = newEv();
+        mkEvent(b, 'costfill', item(ids[0]), qty, 0, { items: ids, name: names.join(', '), cogs: cost, dly: 0, note: note + (ci ? ' (part ' + (ci + 1) + ')' : '') }); DAYQ = [];
+        if (!ci) list.forEach(function (x) { b.update(ref('items/' + x.id), { costFilled: true, costFillAt: Date.now(), costFill: x.cost, lastEvent: eid }); });
+        ch.forEach(function (d) {
+          var u = { month: d.k.slice(0, 7), lastEvent: eid, w: {}, it: {} };
+          Object.keys(d.wc).forEach(function (w) { u.w[w] = { cogs: increment(d.wc[w]) }; });
+          Object.keys(d.per).forEach(function (id) { u.it[id] = { p: increment(-d.per[id]) }; });
+          if (d.nc) u.nc = increment(-d.nc);
+          b.set(ref('daily/' + d.k), u, { merge: true });
+        });
+        return b.commit().catch(function (e) { ok = false; console.error(e); toast(errText(e)); });
+      });
+    });
+    return run.then(function () { return ok ? { qty: qty, cost: cost, list: list, tot: tot } : null; });
+  }).then(function (r) {
+    if (!r) return;
+    infoBox('Cost filled in', r.list.map(function (x) { var t = r.tot[x.id]; return t ? '<b>' + esc(item(x.id).name) + '</b> now costs ' + money(x.cost) + ' each.<br>' + t.n + ' earlier sale' + (t.n === 1 ? '' : 's') + ' recalculated: cost + ' + money(t.add) + ', profit − ' + money(t.add) + '.' : ''; }).filter(Boolean).join('<br><br>') + '<br><br><span class="muted">Sales after a later cost change keep the cost they had.</span>');
+  }).catch(function (e) { console.error(e); toast(errText(e)); });
+}
+/* an unpriced sale from before the cost was filled in: cancelling it takes the filled-in cost back out too */
+function cxEv(e) {
+  var it = item(e.item);
+  if (e.nc && (e.type === 'sale' || e.type === 'count') && it && it.costFilled && it.costFill && e.t < (it.costFillAt || 0)) { var c = {}; for (var k in e) c[k] = e[k]; c.cogs = r2(it.costFill * e.qty); c.nc = 0; return c; }
+  return e;
+}
+
+/* ---------- start over: cancel this shift's entries (counts only, or everything) before the handover ---------- */
+var SO_ALL = ['sale', 'count', 'cnote', 'snote', 'opencredit', 'usecash', 'loan', 'pay', 'spoil', 'adjust', 'cageadj', 'move', 'buy', 'other'];
+function soList(all) { return S.log.filter(function (e) { return all ? SO_ALL.indexOf(e.type) >= 0 : e.type === 'count'; }).sort(function (a, b) { return (b.t || 0) - (a.t || 0); }); }
+function startOverAsk() {
+  if (!inControl()) return toast('Only the person in control can start over');
+  if (S.state && S.state.pending) return toast('The handover was already sent');
+  var nc = soList(false).length, na = soList(true).length;
+  if (!na) return toast('Nothing to cancel yet');
+  modal('<h2>Start over</h2><div class="card"><p style="margin-top:0">Choose what to cancel. The entries are removed from this shift and the history, and kept in <b>Cancelled entries</b> for about 31 days. Stock goes back to how it was.</p>' +
+    '<button class="btn red block" data-act="sovgo" data-v="count"' + (nc ? '' : ' disabled') + '>Cancel my counts only (' + nc + ')</button><div class="muted" style="margin:4px 0 12px">Credit, cash lent, payments, purchases and spoilage stay.</div>' +
+    '<button class="btn red block" data-act="sovgo" data-v="all">Cancel everything this shift (' + na + ')</button><div class="muted" style="margin:4px 0 0">Counts, credit, payments, purchases, spoilage and cage moves. Opening entries and stock edits stay.</div></div>' +
+    '<button class="btn sec block" data-act="close">Keep everything</button>');
+}
+function startOverGo(all) {
+  var list = soList(all); if (!list.length) return toast('Nothing to cancel');
+  askConfirm('Start over?', 'This cancels <b>' + list.length + '</b> ' + (all ? 'entries from this shift' : 'count' + (list.length === 1 ? '' : 's')) + ' and cannot be undone here. They stay in Cancelled entries for about 31 days.', 'Yes, cancel them', function () { startOverRun(list); });
+}
+async function startOverRun(list) {
+  closeModal(); toast('Cancelling ' + list.length + ' entries…'); var done = 0, err = '';
+  for (var k = 0; k < list.length; k++) {
+    var e = list[k]; DAYQ = []; var b = writeBatch(DB); err = reverseEvent(b, e); if (err) break;
+    DAYQ.push({ e: cxEv(e), sign: -1 });
+    var rec = {}; for (var f in e) if (f !== 'id') rec[f] = e[f];
+    b.set(ref('cancelled/' + e.id), { at: Date.now(), by: EMAIL, byName: myName(), reason: 'Start over', sid: e.sid, event: rec, expireAt: EXP() });
+    b.delete(ref('events/' + e.id)); delete EVC[e.id]; dayFlush(b);
+    try { await b.commit(); } catch (x) { console.error(x); err = errText(x); break; }
+    done++; await new Promise(function (r) { setTimeout(r, 120); });
+  }
+  toast(err ? 'Stopped after ' + done + ': ' + err : 'Started over: ' + done + ' entr' + (done === 1 ? 'y' : 'ies') + ' cancelled'); render();
 }
 
 /* ---------- small helpers for the views ---------- */
@@ -415,6 +498,7 @@ function vCount() {
        '<div class="tile"><div class="l">Cash on hand</div><div class="v">' + money(t.cash) + '</div></div></div>';
   h += '<button class="btn sec block" data-act="ucopen" style="margin-bottom:14px;border:2px dashed var(--brand);height:50px">💵 Use cash <span style="font-weight:500;font-size:12px">· station supplies, etc.</span></button>';
   if (!S.items.length) return h + '<div class="card empty">No items yet.<br>Go to <b>Stock</b> and add your items and prices.</div>';
+  if (inControl() && !(S.state && S.state.pending) && soList(true).length) h += '<button class="btn sec sm" data-act="startover" style="margin:-6px 0 12px;float:right">↺ Start over</button><div style="clear:both"></div>';
   h += '<div class="card" style="padding:10px 14px;margin-bottom:12px"><div class="row"><b class="grow" style="color:var(--cnt)">Counted so far ' + n + ' of ' + S.items.length + '</b><span class="muted" style="font-size:12px">tap an item to count it</span></div><div class="cprog"><div style="width:' + Math.round(100 * n / S.items.length) + '%"></div></div></div>';
   return h + '<div class="cgrid">' + S.items.map(function (i) {
     var c = cnum(i.id), cl = c.counted ? ' done' : i.stock <= 0 ? ' out' : i.stock <= 6 ? ' low' : '';
@@ -945,7 +1029,7 @@ function showPurchase(id) {
 }
 function buyText(e) { return (e.lines || []).map(function (l) { return l.cases + ' × ' + l.name; }).join(', ') || e.name; }
 function buySave() {
-  var lines = [], b = writeBatch(DB), supName = BUY.sup.trim(), total = num(BUY.total), eid = newEv();
+  var lines = [], fills = [], b = writeBatch(DB), supName = BUY.sup.trim(), total = num(BUY.total), eid = newEv();
   if (!BUY.other && !supName) return toast('Who was it bought from?');
   if (!BUY.other && total <= 0) return toast('Enter the total on the bill');
   if (BUY.other && !BUY.note.trim()) return toast('Add a note');
@@ -960,13 +1044,13 @@ function buySave() {
       var nid = newId('items'), pr = num(l.price), pp = Math.max(1, Math.floor(num(l.per)) || 24), shf = l.where === 'shelf';
       b.set(ref('items/' + nid), { name: l.name.trim(), price: pr, per: shf ? 1 : pp, stock: shf ? l.cases : 0, open: 0, cage: shf ? 0 : l.cases, cageOpen: 0, shelf: shf, ord: Date.now() + k, lastEvent: eid, cost: ce });
       lines.push({ item: nid, name: l.name.trim(), cases: l.cases, per: shf ? 1 : pp, shelf: shf, cost: lc });
-    } else { var it = item(l.item); if (!it) return toast('Pick an item'); var idl = it.shelf ? { stock: l.cases } : { cage: l.cases }; idl.cost = ce; itemInc(b, it.id, idl); lines.push({ item: it.id, name: it.name, cases: l.cases, per: per(it), shelf: !!it.shelf, cost: lc }); }
+    } else { var it = item(l.item); if (!it) return toast('Pick an item'); var idl = it.shelf ? { stock: l.cases } : { cage: l.cases }; idl.cost = ce; if (!it.cost && ce > 0) fills.push({ id: it.id, cost: ce }); itemInc(b, it.id, idl); lines.push({ item: it.id, name: it.name, cases: l.cases, per: per(it), shelf: !!it.shelf, cost: lc }); }
   }
   var when = BUY.when ? new Date(BUY.when).getTime() : Date.now();
   if (!BUY.other && !S.suppliers.some(function (s) { return nkey(s.name) === nkey(supName); })) b.set(ref('suppliers/' + newId('suppliers')), { name: supName, nameKey: nkey(supName) });
   var tc = lines.reduce(function (a, l) { return a + l.cases; }, 0);
   mkEvent(b, BUY.other ? 'other' : 'buy', null, tc, BUY.other ? 0 : paid, { invoice: BUY.other ? 0 : total, writeoff: BUY.other ? 0 : wo, name: BUY.other ? 'Added stock' : 'Purchase', lines: lines, supplier: BUY.other ? '' : supName, tax: BUY.other ? 0 : num(BUY.tax), receipt: BUY.other ? '' : (BUY.receipt || ''), note: BUY.other ? BUY.note.trim() : '', t: when, items: lines.map(function (l) { return l.item; }) });
-  commit(b); BUY = null; toast('Stock added', eid); render();
+  commit(b).then(function () { return fillCosts(fills); }); BUY = null; toast('Stock added', eid); render();
 }
 
 /* ---------- Credit ---------- */
@@ -1255,7 +1339,7 @@ function banner() {
   return box('Nobody is in control', 'The president can take control.', isPres() ? tc : '');
 }
 
-var MUT = {}; ['pick', 'cnsave', 'cnmove', 'cnote', 'snote', 'lend', 'loannext', 'pkpick', 'pkadd', 'paynext', 'cancelask', 'newitem', 'saveitem', 'stockitem', 'savecount', 'domove', 'dospoil', 'savedetails', 'rmitem', 'buysave', 'prepare', 'dohandover', 'chooseto', 'mode', 'ucopen', 'ucreview', 'editfromsell', 'editstock', 'esack', 'esreview', 'opopen', 'opreview', 'opcredit', 'opcnext', 'swopen', 'swpick'].forEach(function (k) { MUT[k] = 1; });
+var MUT = {}; ['startover', 'sovgo', 'pick', 'cnsave', 'cnmove', 'cnote', 'snote', 'lend', 'loannext', 'pkpick', 'pkadd', 'paynext', 'cancelask', 'newitem', 'saveitem', 'stockitem', 'savecount', 'domove', 'dospoil', 'savedetails', 'rmitem', 'buysave', 'prepare', 'dohandover', 'chooseto', 'mode', 'ucopen', 'ucreview', 'editfromsell', 'editstock', 'esack', 'esreview', 'opopen', 'opreview', 'opcredit', 'opcnext', 'swopen', 'swpick'].forEach(function (k) { MUT[k] = 1; });
 var VIEWS = { sell: vCount, stock: vStock, buy: vBuy, credit: vCredit, handover: vHandover };
 function render() {
   var sh = SH(), ready = STAGE === 'ready';
@@ -1330,6 +1414,7 @@ function evRow(e, cancelable) {
   else if (e.type === 'newitem') { ic = '🆕'; tx = 'New item: ' + e.name; sub = e.note; }
   else if (e.type === 'remove') { ic = '🚫'; tx = 'Item removed: ' + e.name; sub = e.note; }
   else if (e.type === 'edit') { ic = '✏️'; tx = 'Item changed: ' + e.name; sub = e.note; }
+  else if (e.type === 'costfill') { ic = '🧮'; tx = 'Cost filled in: ' + e.name; sub = e.note; }
   else if (e.type === 'cageadj') { ic = '🔒'; tx = 'Cage count changed: ' + e.name + ' (' + (e.qty > 0 ? '+' : '') + e.qty + ' cases)'; }
   else { ic = '✏️'; tx = 'Count changed: ' + e.name + ' (' + (e.qty > 0 ? '+' : '') + e.qty + ')'; }
   HEV[e.id] = e;
@@ -2027,6 +2112,8 @@ document.addEventListener('click', function (e) {
   else if (a === 'reason') { window.__reason = b.dataset.v; document.querySelectorAll('#cf .chips button').forEach(function (x) { x.classList.toggle('on', x.dataset.v === window.__reason); }); }
   else if (a === 'cancelyes') { var c3 = $('#cf'); if (c3) c3.remove(); cancelEvent(window.__cid, window.__reason); }
   else if (a === 'cancelask') cancelAsk(id);
+  else if (a === 'startover') startOverAsk();
+  else if (a === 'sovgo') startOverGo(b.dataset.v === 'all');
   else if (a === 'cmtog') { CM = !CM; var bx = $('#modal .modal > div'); if (bx && LASTV) bx.innerHTML = LASTV(); }
   else if (a === 'pkw') { PK.w = b.dataset.w; document.querySelectorAll('#pk-chips button').forEach(function (x) { x.classList.toggle('on', x.dataset.w === PK.w); }); $('#pk-list').innerHTML = pickerList($('#pk-q').value); }
   else if (a === 'pkpick') pickParty(id);
@@ -2111,7 +2198,7 @@ document.addEventListener('click', function (e) {
     if (!ch.length) return closeModal();
     if (S.items.some(function (i) { return i.id !== di.id && nkey(i.name) === nkey(nn); })) return toast('Another item already has that name');
     askConfirm('Save item changes?', '<b>' + esc(di.name) + '</b><br>' + ch.map(esc).join('<br>') + '<br><span class="muted">New sales use the new name and price. Past sales, handovers and profit keep the old ones and are not changed.</span>', 'Yes, save changes', function () {
-      var db2 = writeBatch(DB); newEv(); db2.update(ref('items/' + di.id), { name: nn, price: np, per: npr, shelf: sh2, cost: nco, lastEvent: LE }); mkEvent(db2, 'edit', di, 0, 0, { note: ch.join('; ') }); commit(db2); closeModal(); toast('Saved');
+      var db2 = writeBatch(DB); newEv(); db2.update(ref('items/' + di.id), { name: nn, price: np, per: npr, shelf: sh2, cost: nco, lastEvent: LE }); mkEvent(db2, 'edit', di, 0, 0, { note: ch.join('; ') }); var fl = !di.cost && nco > 0 ? [{ id: di.id, cost: nco }] : []; commit(db2).then(function () { return fillCosts(fl); }); closeModal(); toast('Saved');
     });
   }
   else if (a === 'rmitem') { var ri = item(ST.id); if (ri) askConfirm('Remove item?', 'Remove <b>' + esc(ri.name) + '</b> from the list? Past history keeps its name.', 'Yes, remove', function () { var rb = writeBatch(DB); newEv(); rb.update(ref('items/' + ri.id), { removed: true, lastEvent: LE }); mkEvent(rb, 'remove', ri, 0, 0, { note: 'Removed ' + ri.name + ' (' + ri.stock + ' in stock)' }); commit(rb); closeModal(); }); }
