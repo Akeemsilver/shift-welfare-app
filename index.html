@@ -18,7 +18,7 @@
 --sh:0 1px 2px rgba(16,24,40,.07),0 4px 12px rgba(16,24,40,.09);--r:18px;--bar:68px;
 --cnt:#1F6FA8;--cnt-bg:#E3EEF8;--s-red:#C7361F;--s-blue:#1F6FA8;--s-white:#8996A1;--s-black:#14181C}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,Lato,sans-serif}
+html,body{margin:0;overscroll-behavior-y:none;background:var(--bg);color:var(--ink);font:13px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,Lato,sans-serif}
 body{padding-bottom:calc(var(--bar) + 24px + env(safe-area-inset-bottom))}
 header{position:sticky;top:0;z-index:5;background:var(--brand);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:10px}
 header h1{font-size:14px;margin:0;flex:1}
@@ -123,6 +123,7 @@ textarea{font:inherit;width:100%;min-height:90px;border:1px solid var(--line);bo
 .pl>div{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line)}.pl>div:first-child,.pl>h2+div{border-top:0}.pl .big{font-size:14px;font-weight:600}.pl .sub{padding-left:14px;color:var(--muted);font-size:13px}
 .bar{height:10px;border-radius:5px;background:var(--ok)}.bar.neg{background:var(--exp)}.good{color:var(--ok)}.bad{color:var(--exp)}
 .modal.top{align-items:flex-start}.modal.top>div{margin-bottom:0;border-radius:0 0 18px 18px;max-height:calc(var(--vvh,100vh) - var(--navoff,68px));padding-top:calc(10px + env(safe-area-inset-top))}
+.modal.top>div:has(>.sq+.list){display:flex;flex-direction:column;overflow:hidden}.modal.top>div:has(>.sq+.list)>.list{flex:1;min-height:0;overflow:auto}   /* search pop-ups: title and search stay put, only the list scrolls, Cancel stays at the bottom */
 .sq{position:sticky;top:-10px;z-index:3;background:var(--bg);padding:6px 0 8px;margin:-6px 0 0}
 .stick{position:sticky;top:var(--hh,60px);z-index:4;background:var(--bg);padding:6px 0 10px;margin:-6px 0 0}
 input:disabled{background:#EEF0F2;color:#7C8791}
@@ -174,7 +175,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, connectAuthEmulator, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, connectFirestoreEmulator, doc, collection, onSnapshot, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, increment, Timestamp, query, where, orderBy, limit, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-var APP_VERSION = '1.27', RULES_VERSION = '1.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '1.29', RULES_VERSION = '1.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 var CYCLE = ['Red', 'Blue', 'White', 'Black'];   /* AM shift on consecutive days, from the 2026 Fire Service calendar */
 var ANCHOR = Date.UTC(2026, 9, 1) / 864e5;       /* 1 Oct 2026: AM = Red */
 var AM_START = 9, PM_START = 18;                 /* day shift 9am to 6pm, night shift 6pm to 9am */
@@ -1056,6 +1057,9 @@ function sheetRows() {
     return R;
   });
 }
+function hoRows() {   /* the handover leaves out items that were 0 at the start and are 0 now (fridge and cage) */
+  return sheetRows().filter(function (r) { return r.open || r.stock || r.cageOpen || r.cage; });
+}
 function tags(r, mode) {
   var cage = mode === 'cage', t = [], g = function (n, txt, cls) { if (n) t.push('<span class="tag ' + cls + '">' + txt + '</span>'); };
   if (mode === 'shelf') { g(r.edit, '⚠ edited by hand ' + (r.edit > 0 ? '+' : '') + r.edit, 'neg'); g(r.sold, r.sold + ' sold', 'pos'); g(r.crQ, r.crQ + ' on credit', 'cr'); g(r.spQ, r.spQ + ' spoiled (note)', 'neg'); g(r.bought, '+' + r.bought + ' bought', 'pos'); g(r.spoil, '−' + r.spoil + ' spoiled', 'neg'); g(r.adj, (r.adj > 0 ? '+' : '') + r.adj + ' count', ''); }
@@ -1092,7 +1096,7 @@ function creditCard(t) {
 }
 var HT = 'fridge';
 function vHandover() {
-  var t = totals(), sh = SH(), rows = sheetRows(), counted = sh.counted === '' ? null : num(sh.counted);
+  var t = totals(), sh = SH(), rows = hoRows(), counted = sh.counted === '' ? null : num(sh.counted);
   var h = (inControl() ? '<div class="card"><b>🔁 Switch operator</b><div class="muted" style="margin:4px 0 10px">Give the app to someone else on this shift without a handover. You become view only.</div><button class="btn sec block" data-act="swopen">Switch operator</button></div>' : '') + (isPres() && S.state && !S.state.openingDone ? '<div class="card" style="border:2px dashed var(--brand)"><b>First time using the app?</b><div class="muted" style="margin:4px 0 10px">President only. Enter the previous handover by hand: the cash received, the stock counted, and who owes.</div><button class="btn block" data-act="opopen">📝 Enter previous handover</button><button class="btn sec sm block" data-act="ophide" style="margin-top:8px">Not needed, hide this</button></div>' : '') +
     '<div class="card sum"><h2><span class="sw ' + sh.name + '">' + sh.name + '</span> shift · ' + sh.date + ' ' + HL(sh.half) + '</h2>' +
     '<div><span>Received from previous handover</span><b>' + money(sh.received) + '</b></div>' +
@@ -1140,7 +1144,7 @@ function sigCard(title) {
   return '<div class="card"><label>' + title + '</label><div class="sigcard">' + (sg ? '<img class="sigimg" src="' + sg + '" alt="signature">' : '<div class="muted">No signature yet. You sign once; it is kept for next time.</div>') + '<div class="row" style="margin-top:6px"><button class="btn sec sm grow" data-act="sign">' + (sg ? 'Sign again' : '✍ Sign') + '</button><button class="btn sec sm grow" data-act="signtype">Type instead</button></div></div></div>';
 }
 function handoverText() {
-  var t = totals(), sh = SH(), rows = sheetRows(), counted = sh.counted === '' ? null : num(sh.counted);
+  var t = totals(), sh = SH(), rows = hoRows(), counted = sh.counted === '' ? null : num(sh.counted);
   var L = [sh.mode === 'locked' ? 'LOCKED HANDOVER (fridge and cage locked, not handed to a person)' : 'SHIFT HANDOVER', sh.name.toUpperCase() + ' shift · ' + sh.date + ' ' + HL(sh.half)];
   L.push('From: ' + myName()); if (tosList().length && sh.mode !== 'locked') L.push('To: ' + tosText() + ' (or the next watch if not taken)');
   L.push('', 'Received from previous: ' + money(sh.received), 'Sales: ' + money(t.sales));
@@ -1315,7 +1319,7 @@ function evRow(e, cancelable) {
   else if (e.type === 'move') { ic = '🧊'; tx = 'Moved ' + e.cases + ' case' + (e.cases === 1 ? '' : 's') + ' of ' + e.name + ' to fridge'; sub = e.qty + ' items'; }
   else if (e.type === 'usecash') { ic = '💵'; tx = 'Cash used: ' + e.note; sub = e.receipt ? 'Receipt attached' : 'No receipt: ' + e.noReceipt; amt = '− ' + money(e.amt); col = 'var(--soon)'; }
   else if (e.type === 'cashshort') { ic = '⚠️'; tx = 'Cash counted short at handover'; sub = e.wk + ' watch handed over'; amt = money(e.amt); col = 'var(--exp)'; }
-  else if (e.type === 'stockedit') { ic = '⚠️'; tx = 'Stock edited by hand: ' + e.name; sub = (e.reason || '') + (e.note ? ' · ' + e.note : ''); amt = (e.qty ? (e.qty > 0 ? '+' : '−') + Math.abs(e.qty) : '') + (e.cases ? ' / ' + (e.cases > 0 ? '+' : '−') + Math.abs(e.cases) + ' cs' : ''); col = 'var(--exp)'; }
+  else if (e.type === 'stockedit') { ic = '⚠️'; tx = 'Stock edited by hand: ' + e.name; sub = (e.reason || '') + (e.note ? ' · ' + e.note : ''); amt = (e.qty ? (e.qty > 0 ? '+' : '−') + Math.abs(e.qty) : '') + (e.qty && e.cases ? ' / ' : '') + (e.cases ? (e.cases > 0 ? '+' : '−') + Math.abs(e.cases) + (Math.abs(e.cases) === 1 ? ' case' : ' cases') : ''); col = 'var(--exp)'; }
   else if (e.type === 'shortfix') { ic = '✎'; tx = 'Shortage corrected: ' + (e.wk || '') + ' watch'; sub = e.note || ''; col = 'var(--cnt)'; }
   else if (e.type === 'repay') { ic = '💵'; tx = 'Shortage repaid by ' + (e.forWk || '') + ' watch'; sub = e.note || ''; amt = '+ ' + money(e.amt); col = 'var(--ok)'; }
   else if (e.type === 'takeover') { ic = '🛡️'; tx = 'Control taken'; sub = e.note; }
@@ -1581,7 +1585,7 @@ function prepare() {
   prepareShow();
 }
 function prepareShow() {
-  var t = totals(), sh = SH(), rows = sheetRows(), locked = sh.mode === 'locked';
+  var t = totals(), sh = SH(), rows = hoRows(), locked = sh.mode === 'locked';
   modal('<h2>' + (locked ? '🔒 Locked handover ready' : 'Handover ready') + '</h2><div class="card sum"><div><span>Shift</span><b>' + sh.name + ' · ' + sh.date + ' ' + HL(sh.half) + '</b></div><div><span>From</span><b>' + esc(myName()) + '</b></div><div><span>To</span><b>' + (locked ? 'Locked: no one in particular' : esc(tosText())) + '</b></div><div><span>Received</span><b>' + money(sh.received) + '</b></div><div><span>Sales</span><b>' + money(t.sales) + '</b></div>' + (t.crN ? '<div><span>On credit</span><b>' + money(t.crN) + '</b></div>' : '') + (t.loans ? '<div><span>Cash lent out</span><b>' + money(t.loans) + '</b></div>' : '') + (t.purch ? '<div><span>Purchases</span><b>' + money(t.purch) + '</b></div>' : '') + (t.used ? '<div><span>Cash used</span><b>' + money(t.used) + '</b></div>' : '') + '<div class="t"><span>Cash to hand over</span><span>' + money(sh.counted === '' ? t.cash : num(sh.counted)) + '</span></div></div>' +
     '<div class="card"><table><tr><th>Fridge</th><th>Sold</th><th>Now</th><th>Cases</th></tr>' + rows.map(function (r) { return '<tr><td>' + esc(r.name) + '</td><td>' + r.sold + '</td><td><b>' + r.stock + '</b></td><td><b>' + (r.shelf ? '–' : r.cage) + '</b></td></tr>'; }).join('') + '</table>' + (sh.notes ? '<p class="muted">Remarks: ' + esc(sh.notes) + '</p>' : '') + '</div>' +
     '<div class="card"><label>Signed</label><img class="sigimg" src="' + M.signature + '" alt="signature"><div class="muted">' + esc(myName()) + '</div></div>' +
@@ -1590,7 +1594,7 @@ function prepareShow() {
 }
 function doHandover() {
   SELF = Date.now();
-  var t = totals(), sh = SH(), locked = sh.mode === 'locked', id = newId('handovers'), rows = sheetRows();
+  var t = totals(), sh = SH(), locked = sh.mode === 'locked', id = newId('handovers'), rows = hoRows();
   var toEmails = locked ? [] : (sh.tos || []).map(function (pid) { return S.members.filter(function (m) { return m.personId === pid; })[0]; }).filter(Boolean).map(function (m) { return m.email; });
   var trl = ctlTrail(), ctl = [EMAIL]; trl.forEach(function (x) { [x.fe, x.te].forEach(function (em) { if (em && ctl.indexOf(em) < 0) ctl.push(em); }); });
   var h = { status: 'open', at: Date.now(), fromEmail: EMAIL, fromName: myName(), fromWatch: whoOf(EMAIL).wk, trail: trl, ctl: ctl, locked: locked, tos: locked ? [] : (sh.tos || []).slice(), toLabels: locked ? [] : tosList().map(plabel), toEmails: toEmails, nw: nextWatch(),
@@ -2048,6 +2052,8 @@ document.addEventListener('click', function (e) {
   else if (a === 'saveitem') {
     var name = $('#ni-name').value.trim(); if (!name) return toast('Enter a name');
     if (!(num($('#ni-price').value) > 0)) return toast('Enter the selling price (more than $0)');
+    var nk = function (x) { return String(x).toLowerCase().replace(/\s+/g, ' ').trim(); };
+    if (S.items.some(function (i) { return nk(i.name) === nk(name); })) return toast(name + ' already exists');
     var fr = Math.max(0, Math.floor(num($('#ni-fr').value))), shf = $('#ni-where').value === 'shelf', cg = shf ? 0 : Math.max(0, Math.floor(num($('#ni-cg').value)));
     if (!shf && Math.floor(num($('#ni-per').value)) < 1) return toast('Enter how many items are in a case');
     var nid = newId('items'), nb = writeBatch(DB), nev = newEv();
