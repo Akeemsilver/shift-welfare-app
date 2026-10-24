@@ -7,6 +7,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Shift Welfare</title>
 <meta name="theme-color" content="#0F4C68">
+<meta name="color-scheme" content="light dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest">
@@ -16,7 +17,13 @@
 :root{--bg:#E7EBEF;--surface:#fff;--ink:#0E1B24;--muted:#4A5661;--line:#C9D1D9;--brand:#0F4C68;--brand-ink:#fff;--soft:#E4EEF3;
 --ok:#2E8B57;--ok-bg:#E2F3EA;--soon:#B87C00;--soon-bg:#FFF1CC;--exp:#C7361F;--exp-bg:#FBE9E5;
 --sh:0 1px 2px rgba(16,24,40,.07),0 4px 12px rgba(16,24,40,.09);--r:18px;--bar:68px;
---cnt:#1F6FA8;--cnt-bg:#E3EEF8;--s-red:#C7361F;--s-blue:#1F6FA8;--s-white:#8996A1;--s-black:#14181C}
+--cnt:#1F6FA8;--cnt-bg:#E3EEF8;--s-red:#C7361F;--s-blue:#1F6FA8;--s-white:#8996A1;--s-black:#14181C;
+--field:#fff;--link:var(--brand);--dis:#EEF0F2;--toast:#0E1B24;--pop:var(--bg);--ov:rgba(14,27,36,.55);color-scheme:light}
+/* dark: chosen in Settings > Appearance, or followed from the phone when it is on Automatic */
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#10181F;--surface:#212E3A;--ink:#E8EEF2;--muted:#9FAEBA;--line:#2E3B46;--soft:#243542;--ok:#4FC48C;--ok-bg:#163428;--soon:#E2AB2B;--soon-bg:#3B3011;--exp:#F2705C;--exp-bg:#3C1E19;--sh:0 1px 2px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.35);--cnt:#5DAEE6;--cnt-bg:#17324A;--s-red:#D9533D;--s-blue:#3C8BCB;--s-white:#9FAEBA;--s-black:#05080A;--field:#222E38;--link:#86C7EA;--dis:#26323C;--toast:#2B3A47;--pop:#18232D;--ov:rgba(0,0,0,.72);color-scheme:dark}
+:root:not([data-theme=light]) .sw.Black{border:1px solid rgba(255,255,255,.3)}:root:not([data-theme=light]) .sigimg{filter:invert(1)}}
+:root[data-theme=dark]{--bg:#10181F;--surface:#212E3A;--ink:#E8EEF2;--muted:#9FAEBA;--line:#2E3B46;--soft:#243542;--ok:#4FC48C;--ok-bg:#163428;--soon:#E2AB2B;--soon-bg:#3B3011;--exp:#F2705C;--exp-bg:#3C1E19;--sh:0 1px 2px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.35);--cnt:#5DAEE6;--cnt-bg:#17324A;--s-red:#D9533D;--s-blue:#3C8BCB;--s-white:#9FAEBA;--s-black:#05080A;--field:#222E38;--link:#86C7EA;--dis:#26323C;--toast:#2B3A47;--pop:#18232D;--ov:rgba(0,0,0,.72);color-scheme:dark}
+:root[data-theme=dark] .sw.Black{border:1px solid rgba(255,255,255,.3)}:root[data-theme=dark] .sigimg{filter:invert(1)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;overscroll-behavior-y:none;background:var(--bg);color:var(--ink);font:13px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,Lato,sans-serif}
 body{padding-bottom:calc(var(--bar) + 24px + env(safe-area-inset-bottom))}
@@ -42,7 +49,7 @@ b,strong{font-weight:600}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .bub{background:var(--surface);border:2px solid transparent;border-radius:16px;box-shadow:var(--sh);padding:10px 12px;text-align:left;font:inherit;color:inherit;min-height:84px;position:relative;display:block;width:100%}
 .bub .n{font-weight:600;display:block;line-height:1.2}
-.bub .p{font-size:14px;font-weight:600;color:var(--brand)}
+.bub .p{font-size:14px;font-weight:600;color:var(--link)}
 .bub .s{font-size:11px;color:var(--muted)}
 .bub .pill{position:absolute;right:8px;top:8px}
 .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -56,7 +63,7 @@ b,strong{font-weight:600}
 .pill{display:inline-block;font-size:12px;font-weight:600;color:var(--ok)}
 .pill.low{color:var(--soon)}.pill.out{color:var(--exp)}
 button.btn{border:0;border-radius:12px;height:42px;padding:0 18px;font:inherit;font-weight:600;background:var(--brand);color:var(--brand-ink)}
-button.btn.sec{background:var(--soft);color:var(--brand)}button.btn.red{background:var(--exp);color:#fff}button.btn.amber{background:var(--soon);color:#fff}button.btn.green{background:var(--ok)}
+button.btn.sec{background:var(--soft);color:var(--link)}button.btn.red{background:var(--exp);color:#fff}button.btn.amber{background:var(--soon);color:#fff}button.btn.green{background:var(--ok)}
 button.btn.sm{height:34px;padding:0 12px;font-size:12px}
 button.btn.block{width:100%}
 button:disabled{opacity:.45}
@@ -64,8 +71,8 @@ button:disabled{opacity:.45}
 .stepper{display:flex;align-items:center;gap:6px}
 .stepper button{width:46px;height:46px;border:0;border-radius:12px;background:var(--brand);color:#fff;font-size:23px;font-weight:600;line-height:1}
 .stepper .stepin{width:74px;height:46px;text-align:center;font-size:16px;font-weight:600;padding:0 4px}
-.selbtn{display:flex;align-items:center;justify-content:space-between;text-align:left;background:#fff!important;color:var(--ink)!important;border:1px solid var(--line)!important;font-weight:600!important}
-input,select{font:inherit;font-size:14px;height:42px;border:1px solid var(--line);border-radius:10px;padding:0 10px;background:#fff;color:var(--ink);width:100%}
+.selbtn{display:flex;align-items:center;justify-content:space-between;text-align:left;background:var(--field)!important;color:var(--ink)!important;border:1px solid var(--line)!important;font-weight:600!important}
+input,select{font:inherit;font-size:14px;height:42px;border:1px solid var(--line);border-radius:10px;padding:0 10px;background:var(--field);color:var(--ink);width:100%}
 label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 4px}
 .f{margin-bottom:10px}
 .list>div{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
@@ -80,25 +87,25 @@ tr.tot td{font-weight:600}
 nav{z-index:30!important;position:fixed;left:0;right:0;bottom:0;height:calc(var(--bar) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);z-index:6}
 nav button{border:0;background:none;font:inherit;font-size:10px;font-weight:600;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
 nav button span{font-size:18px}
-nav button.on{color:var(--brand);background:var(--soft)}
+nav button.on{color:var(--link);background:var(--soft)}
 .sum>div{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--line)}.sum>div:first-child,.sum>h2+div{border-top:0}
 .sum .t{font-weight:600;font-size:14px}
-#toast{position:fixed;left:50%;bottom:calc(var(--navoff,var(--bar)) + 12px);transform:translateX(-50%);background:#0E1B24;color:#fff;padding:7px 8px 9px 14px;border-radius:999px;z-index:60;opacity:0;pointer-events:none;transition:opacity .2s;max-width:94%;display:flex;gap:10px;align-items:center;font-size:12px;overflow:hidden}
+#toast{position:fixed;left:50%;bottom:calc(var(--navoff,var(--bar)) + 12px);transform:translateX(-50%);background:var(--toast);color:#fff;padding:7px 8px 9px 14px;border-radius:999px;z-index:60;opacity:0;pointer-events:none;transition:opacity .2s;max-width:94%;display:flex;gap:10px;align-items:center;font-size:12px;overflow:hidden}
 #toast .tline{position:absolute;left:0;bottom:0;height:3px;background:#6FC3E8;width:100%;transform-origin:left;animation:tl 3s linear forwards}
 @keyframes tl{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 #toast.show{opacity:1;pointer-events:auto}
-#toast button{border:0;background:#fff;color:var(--ink);font:inherit;font-weight:800;font-size:12px;border-radius:999px;height:28px;padding:0 12px}
-.modal{position:fixed;inset:0;background:rgba(14,27,36,.55);z-index:20;display:flex;align-items:flex-end;justify-content:center}
-.modal>div{background:var(--bg);width:100%;max-width:640px;max-height:calc(100vh - var(--bar) - 24px - env(safe-area-inset-bottom));overflow:auto;border-radius:18px 18px 0 0;padding:14px 16px 20px;margin-bottom:calc(var(--bar) + env(safe-area-inset-bottom))}
-.modal.mid{align-items:center;padding:16px;z-index:40}.modal.mid>div{border-radius:18px;max-height:88vh;margin-bottom:0}
+#toast button{border:0;background:#fff;color:#0E1B24;font:inherit;font-weight:800;font-size:12px;border-radius:999px;height:28px;padding:0 12px}
+.modal{position:fixed;inset:0;background:var(--ov);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.modal>div{background:var(--pop);box-shadow:0 -6px 24px rgba(0,0,0,.35);border-top:1px solid var(--line);width:100%;max-width:640px;max-height:calc(100vh - var(--bar) - 24px - env(safe-area-inset-bottom));overflow:auto;border-radius:18px 18px 0 0;padding:14px 16px 20px;margin-bottom:calc(var(--bar) + env(safe-area-inset-bottom))}
+.modal.mid{align-items:center;padding:16px;z-index:40}.modal.mid>div{border-radius:18px;max-height:88vh;margin-bottom:0;border:1px solid var(--line);box-shadow:0 10px 36px rgba(0,0,0,.5)}
 .modal h2{margin:0 0 10px;font-size:14px;font-weight:600}
 .modal:not(.top):not(.mid)>div::before{content:'';display:block;width:38px;height:4px;border-radius:2px;background:#B5C0C8;margin:-4px auto 10px}   /* the pull bar is drawn by the sheet itself, so every pop-up has it even when its content is redrawn */
 .modal>div{transition:transform .18s ease}.modal>div.pulling{transition:none}
 .seg{display:grid;gap:8px}
-.seg button{border:2px solid var(--line);border-radius:10px;min-height:44px;background:#fff;font:inherit;font-weight:600;padding:0 6px}
+.seg button{border:2px solid var(--line);border-radius:10px;min-height:44px;background:var(--field);color:var(--ink);font:inherit;font-weight:600;padding:0 6px}
 .seg button.on{border-color:var(--brand);background:var(--soft)}
 .chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px}
-.chips button{flex:none;border:2px solid var(--line);border-radius:18px;height:34px;padding:0 12px;background:#fff;font:inherit;font-size:12px;font-weight:600}
+.chips button{flex:none;border:2px solid var(--line);border-radius:18px;height:34px;padding:0 12px;background:var(--field);color:var(--ink);font:inherit;font-size:12px;font-weight:600}
 .chips button.on{border-color:var(--brand);background:var(--soft)}
 .ros{display:grid;grid-template-columns:auto 1fr 1fr;gap:4px 10px;font-size:13px;align-items:center}
 .sw{display:inline-block;padding:1px 9px;border-radius:8px;color:#fff;font-size:11px;font-weight:700}
@@ -108,15 +115,15 @@ nav button.on{color:var(--brand);background:var(--soft)}
 .tag.neg{color:var(--exp)}.tag.pos{color:var(--ok)}.tag.cr{color:var(--soon)}
 .sec-h{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);padding:10px 0 2px;border:0!important}
 .sigimg{max-width:100%;max-height:90px;display:block;margin:6px 0}
-.sigcard{border:2px dashed var(--line);border-radius:14px;padding:10px;background:#fff}
-textarea{font:inherit;width:100%;min-height:90px;border:1px solid var(--line);border-radius:10px;padding:8px}
+.sigcard{border:2px dashed var(--line);border-radius:14px;padding:10px;background:var(--field)}
+textarea{font:inherit;width:100%;min-height:90px;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--field);color:var(--ink)}
 .cancelbar{background:var(--exp-bg);color:var(--exp);font-weight:700;border-radius:12px;padding:8px 12px;margin-bottom:10px}
-#pad{position:fixed;inset:0;background:#fff;z-index:80;overflow:hidden;touch-action:none}
+#pad{position:fixed;inset:0;background:var(--surface);z-index:80;overflow:hidden;touch-action:none}
 #pad .prot{position:absolute;left:0;top:0;transform-origin:top left}
 #pad canvas{position:absolute;left:0;top:0;touch-action:none}
-#pad .plb{position:absolute;left:36px;top:30px;font-size:13px;font-weight:700;color:#3E4B57;max-width:50%}
+#pad .plb{position:absolute;left:36px;top:30px;font-size:13px;font-weight:700;color:var(--muted);max-width:50%}
 #pad .pbts{position:absolute;right:20px;top:16px;display:flex;gap:12px}
-#pad .pbts button{width:110px;height:46px;border-radius:14px;border:1.5px solid var(--line);color:var(--brand);font:inherit;font-weight:800;font-size:15px;background:#fff}
+#pad .pbts button{width:110px;height:46px;border-radius:14px;border:1.5px solid var(--line);color:var(--link);font:inherit;font-weight:800;font-size:15px;background:var(--surface)}
 #pad .pbts button.d{background:var(--brand);color:#fff;border-color:var(--brand)}
 #pad .phint{position:absolute;left:0;right:0;top:50%;margin-top:-10px;text-align:center;color:#9AA7B3;font-size:18px;font-weight:600;pointer-events:none}
 #pad .pline{position:absolute;left:36px;right:36px;bottom:50px;border-top:2px solid var(--line);pointer-events:none}
@@ -125,16 +132,20 @@ textarea{font:inherit;width:100%;min-height:90px;border:1px solid var(--line);bo
 .modal.top{align-items:flex-start}.modal.top>div{margin-bottom:0;border-radius:0 0 18px 18px;max-height:calc(var(--vvh,100vh) - var(--navoff,68px));padding-top:calc(10px + env(safe-area-inset-top))}
 html:has(#mbg.top),body:has(#mbg.top){overflow:hidden;overscroll-behavior:none}.modal.top>div,.modal.top .list{overscroll-behavior:contain}   /* a search pop-up never lets the page behind it scroll */
 .modal.top>div:has(>.sq+.list){display:flex;flex-direction:column;overflow:hidden}.modal.top>div:has(>.sq+.list)>.list{flex:1;min-height:0;overflow:auto}   /* search pop-ups: title and search stay put, only the list scrolls, Cancel stays at the bottom */
-.sq{position:sticky;top:-10px;z-index:3;background:var(--bg);padding:6px 0 8px;margin:-6px 0 0}
+.sq{position:sticky;top:-10px;z-index:3;background:var(--pop);padding:6px 0 8px;margin:-6px 0 0}
 .stick{position:sticky;top:var(--hh,60px);z-index:4;background:var(--bg);padding:6px 0 10px;margin:-6px 0 0}
-input:disabled{background:#EEF0F2;color:#7C8791}
+input:disabled{background:var(--dis);color:var(--muted)}
 @media print{body>*:not(#modal){display:none!important}.modal{position:static;background:none}.modal>div{max-height:none;overflow:visible}.noprint{display:none!important}}
-#updbar{position:fixed;left:12px;right:12px;bottom:calc(var(--bar) + 10px + env(safe-area-inset-bottom));z-index:28;background:#0E1B24;color:#fff;border-radius:14px;padding:10px 12px;display:flex;gap:8px;align-items:center;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+#updbar{position:fixed;left:12px;right:12px;bottom:calc(var(--bar) + 10px + env(safe-area-inset-bottom));z-index:28;background:var(--toast);color:#fff;border-radius:14px;padding:10px 12px;display:flex;gap:8px;align-items:center;box-shadow:0 4px 14px rgba(0,0,0,.3)}
 #updbar span{flex:1;font-weight:700;font-size:13px}
+.qb{position:absolute;right:22%;top:6px;width:18px;height:18px;border-radius:50%;background:var(--brand);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid var(--surface)}
+#hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bar) + 58px + env(safe-area-inset-bottom));background:var(--toast);color:#fff;padding:8px 14px;border-radius:999px;z-index:25;font-size:12px;max-width:92%;opacity:0;transition:opacity .25s;pointer-events:none;text-align:center}
+#hint.show{opacity:1}
+.helpc ol,.helpc ul{margin:0;padding-left:18px;line-height:1.55}.helpc li{margin-bottom:3px}
 [hidden]{display:none!important}
 .mn{color:var(--exp)!important}
 .tile.wide:not(.pf1) .mn{color:#FF9E92!important}
-.tile.wide.pf1{background:#fff;color:var(--ink);border-left:6px solid var(--ok)}.tile.wide.pf1.neg{border-left-color:var(--exp)}.pf1 .l{color:var(--muted)!important}.pf1 .v{color:var(--ok)}.pf1.neg .v{color:var(--exp)}
+.tile.wide.pf1{background:var(--surface);color:var(--ink);border-left:6px solid var(--ok)}.tile.wide.pf1.neg{border-left-color:var(--exp)}.pf1 .l{color:var(--muted)!important}.pf1 .v{color:var(--ok)}.pf1.neg .v{color:var(--exp)}
 .tbtn{border:0;text-align:left;font:inherit;color:inherit;width:100%;cursor:pointer;border-left:4px solid var(--cnt)}
 input[type=number]{-moz-appearance:textfield;appearance:textfield}
 input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
@@ -176,7 +187,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, connectAuthEmulator, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, connectFirestoreEmulator, doc, collection, onSnapshot, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, increment, Timestamp, query, where, orderBy, limit, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-var APP_VERSION = '1.34', RULES_VERSION = '1.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '1.37', RULES_VERSION = '1.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 var CYCLE = ['Red', 'Blue', 'White', 'Black'];   /* AM shift on consecutive days, from the 2026 Fire Service calendar */
 var ANCHOR = Date.UTC(2026, 9, 1) / 864e5;       /* 1 Oct 2026: AM = Red */
 var AM_START = 9, PM_START = 18;                 /* day shift 9am to 6pm, night shift 6pm to 9am */
@@ -359,6 +370,7 @@ function newEv() { LE = newId('events'); DAYQ = []; return LE; }
 function mkEvent(b, type, it, q, amt, extra, given) {
   var id = given || LE || newId('events'), e = { t: Date.now(), type: type, item: it ? it.id : '', items: it ? [it.id] : [], name: it ? it.name : '', qty: q, amt: amt || 0, sid: SH().sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: SH().name, dly: 1 };
   if (extra) for (var k in extra) e[k] = extra[k];
+  if (type !== 'shiftrec' && type !== 'watchchg' && corrOn()) e.corr = myName();   /* entries made as a correction are marked until the shift changes */
   b.set(ref('events/' + id), e); EVC[id] = e; e.id = id; DAYQ.push({ e: e, sign: 1 }); return id;
 }
 function itemInc(b, id, d, ev) { var u = { lastEvent: ev || LE }; if (d.cost) u.cost = d.cost; if (d.stock) u.stock = increment(d.stock); if (d.cage) u.cage = increment(d.cage); b.update(ref('items/' + id), u); }
@@ -368,7 +380,7 @@ function setShift(obj) { var u = {}; for (var k in obj) u['shift.' + k] = obj[k]
 /* put back everything an entry did; returns a message if it can't be undone */
 function reverseEvent(b, e) {
   var it = item(e.item), cid = e.cid || rootOf(e.cr || e.person || ''); LE = e.id;   /* the cancelled record carries the same id as the event */
-  if (['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix'].indexOf(e.type) >= 0) return 'This entry cannot be cancelled';
+  if (['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'shiftrec', 'watchchg'].indexOf(e.type) >= 0) return 'This entry cannot be cancelled';
   if (e.type === 'sale') { if (!it) return 'That item no longer exists'; itemInc(b, it.id, { stock: e.qty }); if (e.cr) balInc(b, cid, -e.amt); }
   else if (e.type === 'count') { if (e.qty > 0) { if (!it) return 'That item no longer exists'; itemInc(b, it.id, { stock: e.qty }); } }
   else if (e.type === 'cnote') balInc(b, cid, -e.amt);
@@ -450,6 +462,110 @@ function cxEv(e) {
   var it = item(e.item);
   if (e.nc && (e.type === 'sale' || e.type === 'count') && it && it.costFilled && it.costFill && e.t < (it.costFillAt || 0)) { var c = {}; for (var k in e) c[k] = e[k]; c.cogs = r2(it.costFill * e.qty); c.nc = 0; return c; }
   return e;
+}
+
+/* ---------- which shift do my changes go on? ----------
+   The header always shows the shift working now (phone clock). If I am on that watch, my changes go on it (the shift record is relabelled to match).
+   If I am on another watch (for example I took a handover 30 minutes early) I choose once: my own watch's shift, the working shift (the person who
+   handed over to me must approve), "my watch has changed", or, for admins and up, "making a correction". The choice lasts until the shift on the clock changes. */
+var SHOK = {}; try { SHOK = JSON.parse(localStorage.getItem('sw.shok') || '{}'); } catch (x) {}
+var SHPEND = null, SHWAIT = null;
+S.shreqIn = []; S.shreqOut = [];
+function shKey(c) { return (c.name || '') + '|' + (c.date || '') + '|' + (c.half || ''); }
+function shText(c) { return c.name + ' ' + HL(c.half) + ' ' + c.date; }
+function shSet(mode) { SHOK = { key: shKey(currentShift()), by: EMAIL, mode: mode }; try { localStorage.setItem('sw.shok', JSON.stringify(SHOK)); } catch (x) {} }
+function shOk() { return SHOK.key === shKey(currentShift()) && SHOK.by === EMAIL ? SHOK.mode : ''; }
+function corrOn() { return shOk() === 'corr'; }
+function nextShiftOf(watch) {   /* the first shift of this watch from now on */
+  var c = currentShift(), pp = c.date.split('/'), day = new Date(+pp[2], +pp[1] - 1, +pp[0]), half = c.half;
+  if (c.name === watch) return c;
+  for (var k = 0; k < 12; k++) {
+    if (half === 'AM') half = 'PM'; else { half = 'AM'; day = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1); }
+    var nm = half === 'AM' ? amShift(day) : pmShift(day);
+    if (nm === watch) return { name: nm, half: half, date: dstr(day) };
+  }
+  return c;
+}
+function shiftTo(c) {   /* record from now on on this shift (same shift record, new label) */
+  var sh = SH(); if (shKey(sh) === shKey(c)) return;
+  sh.name = c.name; sh.half = c.half; sh.date = c.date;   /* local copy at once so the very next entry already uses it */
+  setShift({ name: c.name, half: c.half, date: c.date });
+}
+function shiftGate(a, b) {   /* true = stop this action and ask which shift to record on */
+  try { if (localStorage.getItem('sw.noshiftgate')) return false; } catch (x) {}
+  var p = myPerson(); if (!p || !p.watch || !inControl()) return false;
+  var cs = currentShift(), sh = SH();
+  if (p.watch === cs.name) { if (shKey(sh) !== shKey(cs)) shiftTo(cs); return false; }
+  if (sh.name === p.watch || shOk()) return false;
+  var it = b && b.dataset && b.dataset.id ? item(b.dataset.id) : null;
+  var tx = ((b && b.tagName === 'BUTTON' && b.textContent) || '').replace(/\s+/g, ' ').trim();
+  SHPEND = { b: b, a: a, id: b && b.dataset ? b.dataset.id : '', what: a === 'pick' && it ? 'Counting ' + it.name : (tx && tx.length < 40 ? tx + (it ? ' · ' + it.name : '') : it ? 'A change to ' + it.name : 'A change') };
+  shiftAsk(); return true;
+}
+function shClose() { var c = $('#cf'); if (c) c.remove(); }
+function shShow(html) {   /* one pop-up that is redrawn in place: removing and adding pop-ups in quick succession confuses the phone back-button layers */
+  var c = $('#cf'); if (c) { c.firstElementChild.innerHTML = html; return; }
+  $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf" style="z-index:70"><div>' + html + '</div></div>');
+}
+function shResume() {   /* do what they were about to do, now that the shift is chosen (the page may have redrawn, so find the button again) */
+  var q = SHPEND; SHPEND = null; if (!q) return;
+  setTimeout(function () { var b = q.b && document.contains(q.b) ? q.b : document.querySelector('[data-act="' + q.a + '"]' + (q.id ? '[data-id="' + q.id + '"]' : '')); if (b) b.click(); }, 120);
+}
+function shiftAsk() {
+  var p = myPerson(), cs = currentShift(), mine = nextShiftOf(p.watch);
+  CONF = null;
+  shShow('<h2>Different shift</h2><p style="margin-top:0">The shift working now is <b>' + esc(shText(cs)) + '</b>, but you are on the <b>' + esc(p.watch) + '</b> watch. Which shift should your changes be recorded on?</p>' +
+    '<button class="btn block" data-act="shown">Record on my watch: ' + esc(shText(mine)) + '</button>' +
+    '<button class="btn sec block" data-act="shwork" style="margin-top:10px">Record on ' + esc(shText(cs)) + ' (needs approval)</button>' +
+    '<button class="btn sec block" data-act="shwatch" style="margin-top:10px">My watch has changed</button>' +
+    (canApprove() ? '<button class="btn amber block" data-act="shcorr" style="margin-top:10px">Making a correction on ' + esc(shText(cs)) + '</button>' : '') +
+    '<button class="btn sec block" data-act="shno" style="margin-top:10px">Cancel</button>');
+}
+function shNote(text) { var b = writeBatch(DB); newEv(); mkEvent(b, 'shiftrec', null, 0, 0, { note: text, dly: 0 }); commit(b); }
+function shOwn() { var p = myPerson(), mine = nextShiftOf(p.watch); shiftTo(mine); shSet('own'); shClose(); shNote(myName() + ' records on the ' + shText(mine) + ' (own watch)'); toast('Recording on ' + shText(mine)); shResume(); }
+function shCorr() { var cs = currentShift(); shiftTo(cs); shSet('corr'); shClose(); shNote(myName() + ' is making corrections on the ' + shText(cs) + ' (not on that watch). Every entry is marked until the shift changes.'); toast('Entries are marked as corrections until the shift changes'); shResume(); }
+function shWatchPick() {
+  shShow('<h2>My watch has changed</h2><p style="margin-top:0">Which watch are you on now? Your name moves to that watch.</p><div class="seg" style="grid-template-columns:repeat(2,1fr)">' + WATCHES.map(function (w) { return '<button data-act="shwatchset" data-v="' + w + '">' + w + '</button>'; }).join('') + '</div><button class="btn sec block" data-act="shno" style="margin-top:12px">Cancel</button>');
+}
+function shWatchSet(w) {
+  var p = myPerson(); if (!p) return; var old = p.watch || '';
+  if (w === old) { shClose(); return shOwn(); }
+  var b = writeBatch(DB); newEv(); b.update(ref('people/' + p.id), { watch: w });
+  mkEvent(b, 'watchchg', null, 0, 0, { note: myName() + ' changed watch ' + old + ' → ' + w, dly: 0 }); commit(b);
+  p.watch = w; shClose();
+  var c = nextShiftOf(w); shiftTo(c); shSet('own'); toast('You are now on the ' + w + ' watch. Recording on ' + shText(c)); shResume();
+}
+function shPrevOp() {   /* who handed over to this shift's operator: they approve recording on the working shift */
+  var sh = SH(); if (sh.prevEmail) return Promise.resolve({ email: sh.prevEmail, name: sh.prevName || '' });
+  return getDocs(query(collection(DB, 'handovers'), orderBy('at', 'desc'), limit(10))).then(function (sn) {
+    var h = sn.docs.map(function (d) { return d.data(); }).filter(function (x) { return x.status === 'accepted'; })[0];
+    return h ? { email: h.fromEmail, name: h.fromName } : null;
+  }).catch(function () { return null; });
+}
+function shWork() {
+  var cs = currentShift();
+  shPrevOp().then(function (po) {
+    if (!po || po.email === EMAIL) { shClose(); shiftTo(cs); shSet('approved'); shNote(myName() + ' records on the ' + shText(cs)); toast('Recording on ' + shText(cs)); return shResume(); }
+    var id = newId('shiftreqs');
+    guard(setDoc(ref('shiftreqs/' + id), { fromEmail: EMAIL, fromName: myName(), toEmail: po.email, toName: po.name || '', target: { name: cs.name, half: cs.half, date: cs.date }, what: SHPEND ? SHPEND.what : '', status: 'pending', sid: SH().sid, at: Date.now() }));
+    SHWAIT = { id: id, to: po.name || po.email, cs: cs };
+    shShow('<h2>Waiting for approval</h2><p style="margin-top:0"><b>' + esc(po.name || po.email) + '</b> handed over to you. They have been told what you want to change and must approve recording on <b>' + esc(shText(cs)) + '</b>.</p><button class="btn sec block" data-act="shcancelreq">Cancel request</button>');
+  });
+}
+function shReqSeen() {   /* the person who asked hears the answer */
+  S.shreqOut.forEach(function (r) {
+    if (!SHWAIT || SHWAIT.id !== r.id || r.status === 'pending') return;
+    var w = SHWAIT; SHWAIT = null; guard(deleteDoc(ref('shiftreqs/' + r.id)));
+    if (r.status === 'approved') { shClose(); var cs = currentShift(); shiftTo(cs); shSet('approved'); shNote(myName() + ' records on the ' + shText(cs) + ' (approved by ' + (r.toName || 'the previous operator') + '): ' + (r.what || '')); toast('Approved. Recording on ' + shText(cs)); shResume(); }
+    else shShow('<h2>Not approved</h2><p style="margin-top:0"><b>' + esc(r.toName || 'The previous operator') + '</b> did not approve recording on ' + esc(shText(w.cs)) + '. Choose another option.</p><button class="btn block" data-act="cno">OK</button>');
+  });
+}
+function srCard() {
+  var l = S.shreqIn.filter(function (r) { return r.status === 'pending'; }); if (!l.length) return '';
+  return l.map(function (r) {
+    return '<div class="card" style="border-left:4px solid var(--soon);margin-bottom:12px"><b>🕘 ' + esc(r.fromName) + '</b> wants to record on the <b>' + esc(shText(r.target)) + '</b><div class="muted" style="margin-top:2px">They tried: ' + esc(r.what || 'a change') + '</div>' +
+      '<div class="row" style="margin-top:10px"><button class="btn grow" data-act="shreqok" data-id="' + esc(r.id) + '">Approve</button><button class="btn sec grow" data-act="shreqno" data-id="' + esc(r.id) + '">Decline</button></div></div>';
+  }).join('');
 }
 
 /* ---------- start over: cancel this shift's entries (counts only, or everything) before the handover ---------- */
@@ -572,7 +688,7 @@ function similar(q) {   /* saved names or roster names that look like what was t
 }
 function pickerList(q) {
   var all = everyone(), nw = PK.mode === 'to' ? nextWatch() : '';
-  if (PK.mode === 'to') all = all.filter(function (p) { return p.kind === 'p'; });
+  if (PK.mode === 'to') { var reg = {}; S.members.forEach(function (m) { if (m.personId && m.email !== EMAIL) reg[m.personId] = 1; }); all = all.filter(function (p) { return p.kind === 'p' && reg[p.id]; }); }   /* only people who are registered and accepted in the app, and not me */
   var list = all.filter(function (p) { return matches(p, q) && (!PK.w || (PK.w === 'Saved' ? p.kind === 'g' : p.watch === PK.w)); });
   list.sort(function (a, b) { return (b.watch === nw) - (a.watch === nw) || a.name.localeCompare(b.name); });
   var qt = q.trim(), exact = all.some(function (p) { return nkey(p.name) === nkey(qt) || nkey(plabel(p)) === nkey(qt); }), h = '';
@@ -585,7 +701,7 @@ function pickerList(q) {
     var b = PK.mode === 'sale' || PK.mode === 'cnote' || PK.mode === 'loan' || PK.mode === 'open' ? balance(p.id) : 0;
     return '<div data-act="pkpick" data-id="' + p.id + '"><div class="grow"><b>' + (PK.mode === 'to' && PK.tos.indexOf(p.id) >= 0 ? '✅ ' : '') + esc(plabel(p)) + '</b></div>' + (b > 0 ? '<span class="pill out">owes ' + money(b) + '</span>' : '') + wsw(p.watch) + '</div>';
   }).join('');
-  return h || '<div class="empty">No match.</div>';
+  return h || '<div class="empty">' + (PK.mode === 'to' ? 'Nobody matches. Only people who are registered and accepted in the app are listed.' : 'No match.') + '</div>';
 }
 function openPicker(mode) {
   PK = { mode: mode, w: '', tos: (SH().tos || []).slice() };
@@ -1185,9 +1301,9 @@ function creditCard(t) {
 }
 var HT = 'fridge';
 function vHandover() {
-  var t = totals(), sh = SH(), rows = hoRows(), counted = sh.counted === '' ? null : num(sh.counted);
+  var cs0 = currentShift(), t = totals(), sh = SH(), rows = hoRows(), counted = sh.counted === '' ? null : num(sh.counted);
   var h = '<button class="btn sec block" data-act="hovlist" style="margin-bottom:12px">📄 View previous handover</button>' + (inControl() ? '<div class="card"><b>🔁 Switch operator</b><div class="muted" style="margin:4px 0 10px">Give the app to someone else on this shift without a handover. You become view only.</div><button class="btn sec block" data-act="swopen">Switch operator</button></div>' : '') + (isPres() && S.state && !S.state.openingDone ? '<div class="card" style="border:2px dashed var(--brand)"><b>First time using the app?</b><div class="muted" style="margin:4px 0 10px">President only. Enter the previous handover by hand: the cash received, the stock counted, and who owes.</div><button class="btn block" data-act="opopen">📝 Enter previous handover</button><button class="btn sec sm block" data-act="ophide" style="margin-top:8px">Not needed, hide this</button></div>' : '') +
-    '<div class="card sum"><h2><span class="sw ' + sh.name + '">' + sh.name + '</span> shift · ' + sh.date + ' ' + HL(sh.half) + '</h2>' +
+    '<div class="card sum"><h2><span class="sw ' + cs0.name + '">' + cs0.name + '</span> shift · ' + cs0.date + ' ' + HL(cs0.half) + '</h2>' + (cs0.name + cs0.date + cs0.half !== sh.name + sh.date + sh.half ? '<div class="muted" style="margin:-4px 0 6px">The records below are still on the ' + esc(sh.name) + ' shift of ' + esc(sh.date) + ' ' + esc(HL(sh.half)) + ' until a handover is accepted.</div>' : '') +
     '<div><span>Received from previous handover</span><b>' + money(sh.received) + '</b></div>' +
     '<div><span>Sales</span><b>+ ' + money(t.sales) + '</b></div>' +
     (t.crN ? '<div><span>Sold on credit (not cash)</span><b>− ' + money(t.crN) + '</b></div>' : '') +
@@ -1266,7 +1382,7 @@ function openPad(label, done) {
     var W = window.innerWidth, H = window.innerHeight, rot = H > W, lw = rot ? H : W, lh = rot ? W : H, dpr = window.devicePixelRatio || 1;
     host.innerHTML = '<div id="pad"><div class="prot" style="width:' + lw + 'px;height:' + lh + 'px;' + (rot ? 'transform:translateX(' + W + 'px) rotate(90deg)' : '') + '"><canvas style="width:' + lw + 'px;height:' + lh + 'px"></canvas><div class="plb">' + esc(label) + '</div><div class="pbts"><button data-p="clear">Clear</button><button data-p="cancel">Cancel</button><button class="d" data-p="done">Done</button></div><div class="phint">Sign here</div><div class="pline"></div></div></div>';
     var cv = host.querySelector('canvas'), ctx = cv.getContext('2d'); cv.width = lw * dpr; cv.height = lh * dpr; ctx.scale(dpr, dpr);
-    ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#111';
+    ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = isDark() ? '#F2F5F7' : '#111';
     function redraw() {
       ctx.clearRect(0, 0, lw, lh); host.querySelector('.phint').hidden = strokes.length > 0;
       strokes.forEach(function (s) { ctx.beginPath(); s.forEach(function (p, i) { if (i) ctx.lineTo(p[0] * lw, p[1] * lh); else ctx.moveTo(p[0] * lw, p[1] * lh); }); if (s.length === 1) ctx.lineTo(s[0][0] * lw + .1, s[0][1] * lh); ctx.stroke(); });
@@ -1318,7 +1434,7 @@ function stageHtml() {
   if (STAGE === 'loading') return '<div class="card empty">Loading…</div>';
   if (STAGE === 'login') return '<div style="text-align:center"><img src="icons/logo.png" alt="Shift Welfare" width="220" style="max-width:70%;height:auto"></div><div class="card"><h2>Sign in</h2><p class="muted" style="margin-top:0">Enter the email you were invited with. We send you a sign-in link; open it on this phone.</p>' +
     '<div class="f"><label>Email</label><input id="lg-email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" value="' + esc(SENT) + '"></div>' +
-    '<button class="btn block" data-act="sendlogin">Send sign-in link</button><div id="lg-msg" class="muted" style="margin-top:10px"></div></div>';
+    '<button class="btn block" data-act="sendlogin">Send sign-in link</button><div id="lg-msg" class="muted" style="margin-top:10px"></div></div>' + instBtn();
   if (STAGE === 'noaccess') return '<div class="card"><h2>Something went wrong</h2><p>The app could not check access for ' + esc(EMAIL) + '. Check your connection and sign in again.</p><button class="btn sec block" data-act="signout">Sign out</button></div>';
   if (STAGE === 'request') return requestHtml();
   if (STAGE === 'setup') return '<div class="card"><h2>Waiting for set-up</h2><p>The owner has not set the app up yet. Try again in a moment.</p><button class="btn sec block" data-act="signout">Sign out</button></div>';
@@ -1350,11 +1466,12 @@ function render() {
   var sh = SH(), ready = STAGE === 'ready';
   $('#nav').hidden = !ready; $('#hist').hidden = !ready; $('#prof').hidden = !ready; $('#menu').hidden = !ready; $('#bell').hidden = !ready;
   if (ready) {
-    $('#hdr').innerHTML = '<span class="dot" style="background:' + ({Red:'var(--s-red)',Blue:'var(--s-blue)',White:'#fff',Black:'var(--s-black)'}[sh.name] || '#888') + '"></span>' + esc(sh.name) + ' shift<small>' + esc(sh.date) + ' ' + esc(HL(sh.half)) + ' · ' + esc(myName()) + (navigator.onLine ? '' : ' · OFFLINE') + '</small>';
-    document.querySelectorAll('#nav button').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === tab); });
+    var cs = currentShift();   /* the header always shows the shift working NOW, from the phone's own clock */
+    $('#hdr').innerHTML = '<span class="dot" style="background:' + ({Red:'var(--s-red)',Blue:'var(--s-blue)',White:'#fff',Black:'var(--s-black)'}[cs.name] || '#888') + '"></span>' + esc(cs.name) + ' shift<small>' + esc(cs.date) + ' ' + esc(HL(cs.half)) + ' · ' + esc(myName()) + (navigator.onLine ? '' : ' · OFFLINE') + '</small>' + (shKey(sh) !== shKey(cs) ? '<small style="color:#FFD27A;opacity:1;font-weight:600">recording on ' + esc(sh.name) + ' ' + esc(HL(sh.half)) + ' ' + esc(sh.date) + '</small>' : '');
+    document.querySelectorAll('#nav button').forEach(function (b) { var on = b.dataset.tab === tab; b.classList.toggle('on', on); var q = b.querySelector('.qb'); if (on && !q && !helpOff()) { b.style.position = 'relative'; b.insertAdjacentHTML('beforeend', '<i class="qb">?</i>'); } else if ((!on || helpOff()) && q) q.remove(); });
   } else $('#hdr').innerHTML = 'Shift Welfare';
   var focus = document.activeElement && document.activeElement.id;
-  $('#main').innerHTML = ready ? banner() + reqCard() + VIEWS[tab]() : stageHtml();
+  $('#main').innerHTML = ready ? banner() + srCard() + reqCard() + VIEWS[tab]() : stageHtml();
   if (ready && viewOnly()) document.querySelectorAll('#main input:not(#c-q):not([data-b]):not([data-bl])').forEach(function (el) { el.disabled = true; });
   if (focus && $('#' + focus)) $('#' + focus).focus();
   vv(); hsync();
@@ -1420,10 +1537,13 @@ function evRow(e, cancelable) {
   else if (e.type === 'remove') { ic = '🚫'; tx = 'Item removed: ' + e.name; sub = e.note; }
   else if (e.type === 'edit') { ic = '✏️'; tx = 'Item changed: ' + e.name; sub = e.note; }
   else if (e.type === 'costfill') { ic = '🧮'; tx = 'Cost filled in: ' + e.name; sub = e.note; }
+  else if (e.type === 'shiftrec') { ic = '🕘'; tx = 'Shift for the changes'; sub = e.note; }
+  else if (e.type === 'watchchg') { ic = '🔄'; tx = 'Watch changed'; sub = e.note; }
   else if (e.type === 'cageadj') { ic = '🔒'; tx = 'Cage count changed: ' + e.name + ' (' + (e.qty > 0 ? '+' : '') + e.qty + ' cases)'; }
   else { ic = '✏️'; tx = 'Count changed: ' + e.name + ' (' + (e.qty > 0 ? '+' : '') + e.qty + ')'; }
+  if (e.corr) sub = (sub ? sub + ' · ' : '') + 'Correction by ' + e.corr;
   HEV[e.id] = e;
-  return '<div' + (e.type === 'buy' || e.type === 'other' ? ' data-act="buyview" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'stockedit' ? ' data-act="editview" data-id="' + e.id + '" style="cursor:pointer;background:var(--exp-bg);border-left:4px solid var(--exp);padding-left:8px;border-radius:8px"' : '') + '><span style="font-size:18px">' + ic + '</span><div class="grow"><b>' + esc(tx) + '</b><div class="muted">' + hhmm(e.t) + (sub ? ' · ' + esc(sub) : '') + (e.byName ? ' · by ' + esc(e.byName) : '') + '</div></div>' + (e.receipt ? '<img data-act="rcv" src="' + e.receipt + '" alt="receipt" style="width:44px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">' : '') + '<b style="color:' + col + '">' + amt + '</b>' + (CM && cancelable && ['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix'].indexOf(e.type) < 0 ? '<button class="btn red sm" data-act="cancelask" data-id="' + e.id + '">Cancel</button>' : '') + '</div>';
+  return '<div' + (e.type === 'buy' || e.type === 'other' ? ' data-act="buyview" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'stockedit' ? ' data-act="editview" data-id="' + e.id + '" style="cursor:pointer;background:var(--exp-bg);border-left:4px solid var(--exp);padding-left:8px;border-radius:8px"' : '') + '><span style="font-size:18px">' + ic + '</span><div class="grow"><b>' + esc(tx) + '</b><div class="muted">' + hhmm(e.t) + (sub ? ' · ' + esc(sub) : '') + (e.byName ? ' · by ' + esc(e.byName) : '') + '</div></div>' + (e.receipt ? '<img data-act="rcv" src="' + e.receipt + '" alt="receipt" style="width:44px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">' : '') + '<b style="color:' + col + '">' + amt + '</b>' + (CM && cancelable && ['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'shiftrec', 'watchchg'].indexOf(e.type) < 0 ? '<button class="btn red sm" data-act="cancelask" data-id="' + e.id + '">Cancel</button>' : '') + '</div>';
 }
 function histHtml(ev, day) {
   var sum = function (f) { return ev.filter(f).reduce(function (a, e) { return a + e.amt; }, 0); }, sid = SH().sid;
@@ -1629,13 +1749,14 @@ function rqList(q) {
   var l = S.names.filter(function (p) { return !q || p.name.toLowerCase().indexOf(q.toLowerCase().trim()) >= 0; }).slice(0, 40);
   return l.length ? l.map(function (p) { return '<div data-act="rqpick" data-id="' + p.id + '" style="cursor:pointer"><div class="grow"><b>' + esc(p.name) + '</b></div>' + wsw(p.watch) + '</div>'; }).join('') : '<div class="empty">No match.</div>';
 }
+function instBtn() { return isStandalone() ? '' : '<button class="btn sec block" data-act="instapp" style="margin-bottom:14px">📲 Install the app on your phone</button>'; }
 function requestHtml() {
   var logo = '<div style="text-align:center"><img src="icons/logo.png" alt="Shift Welfare" width="160" style="max-width:55%;height:auto"></div>';
   if (MYREQ === undefined) return '<div class="card empty">Loading…</div>';
-  if (MYREQ) return logo + '<div class="card"><h2>Awaiting access from Admin</h2><p class="muted" style="margin-top:0">Your request was sent. An Admin will let you in. You can close the app and come back later.</p>' +
+  if (MYREQ) return logo + instBtn() + '<div class="card"><h2>Awaiting access from Admin</h2><p class="muted" style="margin-top:0">Your request was sent. An Admin will let you in. You can close the app and come back later.</p>' +
     '<div class="card sum" style="box-shadow:none;padding:0"><div><span>Name</span><b>' + esc(MYREQ.name) + '</b></div><div><span>Watch</span><b>' + esc(MYREQ.watch || '') + '</b></div><div><span>Email</span><b>' + esc(EMAIL) + '</b></div></div>' +
     '<button class="btn sec block" data-act="rqcancel" style="margin-top:12px">Cancel request</button><button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>';
-  var picked = RQ.pick ? S.names.filter(function (n) { return n.id === RQ.pick; })[0] : null, h = logo + '<div class="card"><h2>Request access</h2><p class="muted" style="margin-top:0">Find your name. If it is not on the list, add it. An Admin then lets you in.</p>';
+  var picked = RQ.pick ? S.names.filter(function (n) { return n.id === RQ.pick; })[0] : null, h = logo + instBtn() + '<div class="card"><h2>Request access</h2><p class="muted" style="margin-top:0">Find your name. If it is not on the list, add it. An Admin then lets you in.</p>';
   if (picked) h += '<div class="card sum" style="box-shadow:none;padding:0"><div><span>You are</span><b>' + esc(picked.name) + '</b></div><div><span>Watch</span><b>' + esc(picked.watch || '') + '</b></div></div><button class="btn sec block" data-act="rqchange" style="margin-top:10px">Choose a different name</button><button class="btn block" data-act="rqsend" style="margin-top:10px">Send request</button>';
   else if (RQ.mode === 'new') h += '<div class="f"><label>Full name</label><input data-rq="name" autocomplete="off" value="' + esc(RQ.name) + '"></div><div class="f"><label>Service number</label><input data-rq="no" inputmode="numeric" autocomplete="off" value="' + esc(RQ.no) + '"></div><div class="f"><label>Rank (optional)</label><input data-rq="rank" autocomplete="off" value="' + esc(RQ.rank) + '"></div>' +
     '<div class="f"><label>Watch</label><div class="seg" style="grid-template-columns:repeat(4,1fr)">' + WATCHES.map(function (w) { return '<button type="button" data-act="rqwatch" data-v="' + w + '" class="' + (RQ.watch === w ? 'on' : '') + '">' + w + '</button>'; }).join('') + '</div></div>' +
@@ -1820,7 +1941,7 @@ function rxAccept() {
   var h = RX; if (!h || !S.state || !S.state.pending) return;
   if (!M || !M.signature) return toast('Please sign first');
   var hd = String(h.shift.date || '').split('/'), sday = hd.length === 3 ? hd[2] + '-' + hd[1] + '-' + hd[0] : '';   /* the shortage belongs to the shift that handed over, on that shift's date */
-  var diffs = [], RI = {}, cashC = num($('#rx-cash').value), c0 = currentShift(), ns = newShift(c0, cashC), b = writeBatch(DB); DAYQ = [];
+  var diffs = [], RI = {}, cashC = num($('#rx-cash').value), c0 = currentShift(), ns = newShift(c0, cashC), b = writeBatch(DB); DAYQ = []; ns.prevEmail = h.fromEmail || ''; ns.prevName = h.fromName || '';
   h.items.forEach(function (i, k) {
     var it = item(i.id); if (!it) return;
     var c = Math.max(0, Math.floor(num($('#rx-c' + k).value))), g = i.shelf ? 0 : Math.max(0, Math.floor(num($('#rx-g' + k).value)));
@@ -2035,6 +2156,8 @@ function settings() {
     '<button class="btn sec block" data-act="notices" style="margin-bottom:14px">🔔 Notifications' + ((S.notices || []).filter(function (x) { return !x.read; }).length ? ' (' + (S.notices || []).filter(function (x) { return !x.read; }).length + ' new)' : '') + '</button>' +
     sigCard('My signature') +
     (isStandalone() ? '' : '<div class="card"><h2>Install on this phone</h2><p class="muted" style="margin-top:0">Add Shift Welfare to your home screen so it opens like an app.</p><button class="btn block" data-act="install">⬇ Install app</button></div>') +
+    '<div class="card"><h2>How to use</h2><button class="btn sec block" data-act="helplist">📖 Help and how-to guides</button></div>' +
+    '<div class="card"><h2>Appearance</h2><div class="seg" id="th-seg" style="grid-template-columns:repeat(3,1fr)">' + [['light', 'Light'], ['dark', 'Dark'], ['auto', 'Automatic']].map(function (x) { return '<button data-act="theme" data-v="' + x[0] + '" class="' + (THEME === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div><p class="muted" style="margin:8px 0 0">Automatic follows your phone\'s light or dark setting.</p></div>' +
     '<div class="card"><h2>People &amp; access</h2><div class="row"><button class="btn grow" data-act="people">People (' + S.people.length + ')</button>' + (canApprove() ? '<button class="btn grow" data-act="access">Access (' + S.members.length + ')' + (S.requests.length ? ' · ' + S.requests.length + ' new' : '') + '</button>' : '') + '</div>' +
     (canAdmin() ? '<div class="row" style="margin-top:10px"><button class="btn sec grow" data-act="guests">Saved names</button><button class="btn sec grow" data-act="cancelled">Cancelled entries</button></div>' : '') + '</div>' +
     (isPres() ? '<div class="card"><h2>Previous handover</h2><p class="muted" style="margin-top:0">Owner only. Enter or correct the opening cash, stock counts and credit owed by hand.</p><button class="btn sec block" data-act="opopen">📝 Enter previous handover</button></div>' : '') +
@@ -2099,6 +2222,52 @@ function cancelledModal() {
     }).join('') : '<div class="empty">Nothing cancelled.</div>') + '</div><button class="btn sec block" data-act="settings" style="margin-top:10px">Back</button>';
   });
 }
+
+/* ---------- help: a ? badge on the active tab; tap the active tab again (or the badge) to read the help for that tab ---------- */
+var HELP = {
+  sell: { t: 'Count', steps: ['Tap an item.', 'Type what is really in the fridge (or on the shelf) now. The app works out how many were sold: the last count minus yours.', 'Press <b>Save count</b>.', 'Taking cases from the cage? Press <b>Add from cage</b> first, then count.', 'Some items sold on credit or spoiled? Add a note (<b>On credit to…</b> or <b>Spoiled</b>) before you save, so they are not counted as cash.', 'Cash taken for the station? Use the dashed <b>Use cash</b> button at the top and give a reason.'],
+    fix: ['Wrong count on one item: tap <b>Undo</b> on the message straight after, or open History (the clock) and use <b>Cancel an item</b>.', 'Several counts wrong: <b>Start over</b> (top of this page) cancels your counts only, or everything on the shift.', 'Credit or spoiled bigger than what was sold? The app warns you. Fix the note or the count.', 'On a different watch from the one working? You are asked once which shift to record on (see Which shift am I on?).'] },
+  stock: { t: 'Stock', steps: ['Tap an item to move a case from the cage to the fridge, record spoiled items, or edit its name, price and cost.', '<b>+ Add a new item</b>: give it a name, the selling price, how many are in a case and how many you have now. The same name cannot be added twice.', 'Cost is optional. When a receipt gives an item its first cost, the app fills in the cost of its earlier sales for you.'],
+    fix: ['Moved the wrong number: open History and <b>Cancel an item</b>.', 'Wrong price or name: edit the item. New sales use the new price; past sales keep the old one.', '<b>Edit stock by hand</b> only fixes a real error. It asks for a reason and shows in red in History and in the handover.'] },
+  buy: { t: 'Add stock', steps: ['Enter who it was bought from and the total on the bill, with the tax if there is any.', 'Add each item and how many cases (or items for the shelf). With several items, enter the cost of each so they add up to the bill.', 'Say how much cash was taken from the cash. If you keep no change, it is the bill total.', 'Take a photo of the receipt. It is recommended and is kept with the purchase.', 'Press <b>Save</b>. The stock goes into the cage or onto the shelf.'],
+    fix: ['Entered the wrong bill: open History and <b>Cancel an item</b>. It can only be cancelled if that stock has not already been moved or sold.', 'Item not on the list: choose <b>New item</b> in the picker.', 'The bill total must match what you entered. The app tells you what does not add up.'] },
+  credit: { t: 'Credit', steps: ['To put something on credit: go to <b>Count</b>, tap the item, and press <b>On credit to…</b>.', '<b>Lend cash</b> records money taken from the cash and lent to someone.', 'When someone pays, tap their name and enter the amount.', '<b>People owing</b> and <b>Credit + loans this shift</b> show who owes what. Credit stays on the list from shift to shift until it is paid.'],
+    fix: ['Wrong person or amount: cancel it from History, then enter it again.', 'Ask a President or the Owner for write-offs and other corrections.'] },
+  handover: { t: 'Handover', steps: ['<b>Giving:</b> count everything on the Count tab, then count the cash and enter it (this is required).', 'Choose the handover type: <b>To a person</b> (only people registered in the app) or <b>Locked</b> (fridge and cage locked, not handed to a person).', 'Sign, then press <b>Prepare handover</b>, check the summary and send it.', '<b>Receiving:</b> open the waiting handover, count the cash and every item, sign and accept. Anything short is recorded against the watch that was on duty.', '<b>View previous handover</b> shows the one you received and the one you handed over, read only.', '<b>Switch operator</b> gives the app to someone else on the same shift without a handover.'],
+    fix: ['Sent to the wrong person: cancel the handover before it is taken.', 'Counted wrong after sending: the receiver counts again; differences are recorded when it is accepted.', 'Handing over early or late? You may be asked which shift to record on (see Which shift am I on?).'] },
+  ranks: { t: 'Ranks and access', steps: ['<b>Owner</b>: does everything. Other people see the Owner as a normal user.', '<b>President</b>: has the admin tools (People, Cancelled entries, corrections) and can manage Admins and Users.', '<b>Admin</b>: can accept or decline access requests, as User.', '<b>User</b>: counts, sells and hands over.', '<b>New people</b> sign in, pick their name (or add it), and press <b>Send request</b>. They see <b>Awaiting access from Admin</b> until someone lets them in.', 'Admins and above see a card at the top of every tab for each request: <b>Accept</b> (choose the rank), <b>Maybe later</b>, or open Settings → <b>Access</b> to accept or decline.'], fix: [] },
+  shift: { t: 'Which shift am I on?', steps: ['The header always shows the shift working now, from your phone clock.', 'Your records stay on the shift record until a handover is accepted. If it differs from the clock, the header says <b>recording on</b> …', 'On a different watch from the working one, you are asked once which shift to record on:', '<b>Record on my watch</b>: the next shift of your watch, for example when you took a handover early.', '<b>Record on the working shift</b>: the person who handed over to you must approve it.', '<b>My watch has changed</b>: moves your name to the new watch. History shows the change.', '<b>Making a correction</b> (Admin and above): records on the working shift; every entry is marked <b>Correction by</b> your name.', 'Your choice lasts until the shift on the clock changes.'], fix: [] }
+};
+var HELPORDER = ['sell', 'stock', 'buy', 'credit', 'handover', 'ranks', 'shift'];
+function helpOpen(k, back) {
+  var h = HELP[k]; if (!h) return;
+  modal('<h2>Help · ' + h.t + '</h2><div class="card helpc"><h2>' + (k === 'ranks' || k === 'shift' ? 'Good to know' : 'How to use it') + '</h2><ol>' + h.steps.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ol></div>' +
+    (h.fix.length ? '<div class="card helpc"><h2>Made a mistake?</h2><ul>' + h.fix.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul></div>' : '') +
+    (back ? '<div class="row"><button class="btn sec grow" data-act="helplist">Back</button><button class="btn sec grow" data-act="close">Close</button></div>' : '<button class="btn sec block" data-act="close">Close</button>'));
+}
+function helpList() {
+  modal('<h2>How to use</h2><div class="card"><div class="list">' + HELPORDER.map(function (k) { return '<div data-act="helpopen" data-id="' + k + '" style="cursor:pointer"><div class="grow"><b>' + HELP[k].t + '</b></div><span class="muted">›</span></div>'; }).join('') + '</div></div>' +
+    '<button class="btn sec block" data-act="helphints">Show the tips again</button><button class="btn sec block" data-act="close" style="margin-top:10px">Close</button>');
+}
+function helpOff() { try { return !!localStorage.getItem('sw.nohelp'); } catch (x) { return false; } }
+var HINTT = null;
+function tabHint() {   /* the first time someone opens a tab: a short, temporary tip. Never again on that tab. */
+  if (helpOff() || STAGE !== 'ready' || $('#modal').innerHTML) return;
+  var key = 'sw.hint.' + tab; try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); } catch (x) { return; }
+  var el = $('#hint'); if (!el) { el = document.createElement('div'); el.id = 'hint'; document.body.appendChild(el); }
+  el.textContent = 'Tap this tab again for help'; clearTimeout(HINTT); void el.offsetWidth; el.classList.add('show'); HINTT = setTimeout(function () { el.classList.remove('show'); }, 4500);
+}
+document.addEventListener('click', function () { var el = $('#hint'); if (el) el.classList.remove('show'); }, true);
+
+/* ---------- appearance: light, dark or automatic (follows the phone) ---------- */
+var THEME = 'auto'; try { THEME = localStorage.getItem('sw.theme') || 'auto'; } catch (x) {}
+if (['auto', 'light', 'dark'].indexOf(THEME) < 0) THEME = 'auto';
+function isDark() { return THEME === 'dark' || (THEME !== 'light' && !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)); }
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', THEME);
+  var m = document.querySelector('meta[name=color-scheme]'); if (m) m.content = THEME === 'auto' ? 'light dark' : THEME;
+}
+applyTheme();
 
 /* ---------- install as an app on the phone ---------- */
 var DIP = null;
@@ -2193,7 +2362,7 @@ document.addEventListener('touchmove', function (e) {
 
 document.addEventListener('click', function (e) {
   var nb = e.target.closest('#nav button');
-  if (nb) { closeModal(); tab = nb.dataset.tab; render(); window.scrollTo(0, 0); return; }
+  if (nb) { if (nb.dataset.tab === tab && !helpOff() && !$('#modal').innerHTML && HELP[tab]) return helpOpen(tab); closeModal(); tab = nb.dataset.tab; render(); window.scrollTo(0, 0); tabHint(); return; }
   var hbn = e.target.closest('.iconbtn'), hid = hbn ? hbn.id : e.target.id;
   if (hid === 'menu') return settings();
   if (hid === 'bell') return noticesModal();
@@ -2204,6 +2373,7 @@ document.addEventListener('click', function (e) {
   var b = e.target.closest('[data-act]'); if (!b) return;
   var a = b.dataset.act, id = b.dataset.id, it = id && item(id);
   if (viewOnly() && MUT[a]) return toast('View only: you are not in control');
+  if (MUT[a] && shiftGate(a, b)) return;
   if (a === 'wsel') { var wi = $('#' + b.dataset.for + '-where'); wi.value = b.dataset.v; b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); shelfFields(b.dataset.for); }
   else if (a === 'blwhere') { BUY.lines[+b.dataset.k].where = b.dataset.v; render(); }
   else if (a === 'pick') { sel = id; CN = { to: null, q: 1, mv: 1 }; countSheet(); }
@@ -2236,6 +2406,18 @@ document.addEventListener('click', function (e) {
   else if (a === 'cancelask') cancelAsk(id);
   else if (a === 'hovlist') hoViewList();
   else if (a === 'hovopen') hoViewShow(+b.dataset.i);
+  else if (a === 'helplist') helpList();
+  else if (a === 'helpopen') helpOpen(id, true);
+  else if (a === 'helphints') { try { Object.keys(localStorage).filter(function (k) { return k.indexOf('sw.hint.') === 0; }).forEach(function (k) { localStorage.removeItem(k); }); } catch (x) {} toast('The tips will show again'); }
+  else if (a === 'shown') shOwn();
+  else if (a === 'shwork') shWork();
+  else if (a === 'shcorr') shCorr();
+  else if (a === 'shwatch') shWatchPick();
+  else if (a === 'shwatchset') shWatchSet(b.dataset.v);
+  else if (a === 'shno') { shClose(); SHPEND = null; }
+  else if (a === 'shcancelreq') { if (SHWAIT) guard(deleteDoc(ref('shiftreqs/' + SHWAIT.id))); SHWAIT = null; shClose(); }
+  else if (a === 'shreqok') guard(updateDoc(ref('shiftreqs/' + id), { status: 'approved' }));
+  else if (a === 'shreqno') guard(updateDoc(ref('shiftreqs/' + id), { status: 'declined' }));
   else if (a === 'startover') startOverAsk();
   else if (a === 'sovgo') startOverGo(b.dataset.v === 'all');
   else if (a === 'cmtog') { CM = !CM; var bx = $('#modal .modal > div'); if (bx && LASTV) bx.innerHTML = LASTV(); }
@@ -2390,6 +2572,8 @@ document.addEventListener('click', function (e) {
   else if (a === 'gmerge') { var into = $('#g-into').value; if (!into) return toast('Choose who to merge into'); var gg = guest(id); askConfirm('Merge names?', '<b>' + esc(gg.name) + '</b> becomes <b>' + esc(plab(into)) + '</b>. What they owe is added together.', 'Yes, merge', function () { guard(updateDoc(ref('guests/' + id), { mergedInto: into })); guestsModal(); toast('Merged'); }); }
   else if (a === 'gdel') { if (balance(id) <= 0) askConfirm('Delete this name?', 'Delete <b>' + esc(guest(id).name) + '</b>? Old entries keep the name they were made with.', 'Yes, delete', function () { guard(deleteDoc(ref('guests/' + id))); guestsModal(); }); }
   else if (a === 'cancelled') cancelledModal();
+  else if (a === 'theme') { THEME = b.dataset.v; try { localStorage.setItem('sw.theme', THEME); } catch (x) {} applyTheme(); b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); }
+  else if (a === 'instapp') installApp();
   else if (a === 'access') accessModal();
   else if (a === 'rqpick') { RQ.pick = id; render(); }
   else if (a === 'rqchange') { RQ.pick = ''; render(); }
@@ -2499,7 +2683,7 @@ async function sendLogin() {
     msg.innerHTML = '✅ Link sent to <b>' + esc(em) + '</b>. Open the email on this phone and tap the link.';
   } catch (e) { msg.textContent = 'Could not send the link: ' + (e.code || e.message); }
 }
-function stopListeners() { subs.forEach(function (u) { u(); }); subs = []; if (unsubLog) unsubLog(); if (unsubHand) unsubHand(); unsubLog = unsubHand = null; logSid = handId = null; S.all = []; S.items = []; S.people = []; S.guests = []; S.requests = [];  S.suppliers = []; S.members = []; S.state = null; S.log = []; S.bal = {}; S.hand = null; }
+function stopListeners() { subs.forEach(function (u) { u(); }); subs = []; if (unsubLog) unsubLog(); if (unsubHand) unsubHand(); unsubLog = unsubHand = null; logSid = handId = null; S.all = []; S.items = []; S.people = []; S.guests = []; S.requests = []; S.shreqIn = []; S.shreqOut = [];  S.suppliers = []; S.members = []; S.state = null; S.log = []; S.bal = {}; S.hand = null; }
 function watch(q, fn) { subs.push(onSnapshot(q, fn, function (e) { console.error(e); toast(errText(e)); })); }
 function docs(s) { return s.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); }
 function migrate() {   /* items made by the earlier version counted the cage in single items; cases are the unit now */
@@ -2517,7 +2701,14 @@ function startListeners() {
   watch(query(collection(DB, 'notices'), where('toEmail', '==', EMAIL)), function (s) { S.notices = docs(s).sort(function (a, b) { return b.at - a.at; }); updateBell(); });
   watch(collection(DB, 'suppliers'), function (s) { S.suppliers = docs(s); scheduleRender(); });
   if (canApprove()) subs.push(onSnapshot(collection(DB, 'requests'), function (s) { S.requests = docs(s).sort(function (a, b) { return (a.at || 0) - (b.at || 0); }); scheduleRender(); refreshModal(); }, function (e) { console.error(e); }));
-  watch(collection(DB, 'members'), function (s) { S.members = s.docs.map(function (d) { return d.data(); }); var me = S.members.filter(function (m) { return m.email === EMAIL; })[0]; if (me) M = me; scheduleRender(); refreshModal(); });
+  subs.push(onSnapshot(query(collection(DB, 'shiftreqs'), where('toEmail', '==', EMAIL)), function (s) {
+    var before = S.shreqIn.filter(function (r) { return r.status === 'pending'; }).map(function (r) { return r.id; });
+    S.shreqIn = docs(s).sort(function (a, b) { return a.at - b.at; });
+    S.shreqIn.filter(function (r) { return r.status === 'pending' && before.indexOf(r.id) < 0; }).forEach(function (r) { controlPopup('Approval needed', '<b>' + esc(r.fromName) + '</b> wants to record on the <b>' + esc(shText(r.target)) + '</b>. They tried: ' + esc(r.what || 'a change') + '. Approve or decline at the top of any tab.'); });
+    scheduleRender();
+  }, function (e) { console.error(e); }));
+  subs.push(onSnapshot(query(collection(DB, 'shiftreqs'), where('fromEmail', '==', EMAIL)), function (s) { S.shreqOut = docs(s); shReqSeen(); }, function (e) { console.error(e); }));
+  watch(collection(DB, 'members'), function (s) { S.members = s.docs.map(function (d) { return d.data(); }); var ow = S.members.filter(function (m) { return m.email === PRESIDENT; })[0], legacy = !ow || ow.ranks !== 2; if (legacy) S.members = S.members.map(function (m) { return Object.assign({}, m, { role: m.email === PRESIDENT ? 'owner' : ({ president: 'president', admin: 'president', user: 'admin' }[m.role] || 'admin') }); }); var me = S.members.filter(function (m) { return m.email === EMAIL; })[0]; if (me) M = me;   /* until the owner converts the ranks, old roles are read as: admin = President, user = Admin */ scheduleRender(); refreshModal(); });
   watch(collection(DB, 'credit'), function (s) { S.bal = {}; s.docs.forEach(function (d) { S.bal[d.id] = d.data().bal || 0; }); scheduleRender(); });
   watch(ref('shop/state'), function (s) {
     if (!s.exists()) {
@@ -2624,6 +2815,8 @@ function updNow() {
   if (dirty) askConfirm('Update now?', 'The app reloads with the new version. Anything saved stays safe; a half-filled form is cleared.', 'Yes, update', doUpdate); else doUpdate();
 }
 setInterval(function () { if (document.visibilityState === 'visible' && STAGE === 'ready') checkUpdate(false); }, 5 * 60 * 1000);
+var LASTCS = ''; setTimeout(function () { tabHint(); }, 2500);
+setInterval(function () { var c = currentShift(), k = c.name + c.date + c.half; if (LASTCS && k !== LASTCS && STAGE === 'ready') render(); LASTCS = k; }, 30000);   /* the shift in the header changes by itself at 9am and 6pm */
 document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && STAGE === 'ready') checkUpdate(false); });
 setTimeout(function () { if (STAGE === 'ready') checkUpdate(false); }, 15000);
 try { var uf = localStorage.getItem('sw.updFrom'); if (uf) { localStorage.removeItem('sw.updFrom'); if (uf !== APP_VERSION) setTimeout(function () { toast('Updated to version ' + APP_VERSION); }, 1500); } } catch (x) {}
