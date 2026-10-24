@@ -123,6 +123,7 @@ textarea{font:inherit;width:100%;min-height:90px;border:1px solid var(--line);bo
 .pl>div{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line)}.pl>div:first-child,.pl>h2+div{border-top:0}.pl .big{font-size:14px;font-weight:600}.pl .sub{padding-left:14px;color:var(--muted);font-size:13px}
 .bar{height:10px;border-radius:5px;background:var(--ok)}.bar.neg{background:var(--exp)}.good{color:var(--ok)}.bad{color:var(--exp)}
 .modal.top{align-items:flex-start}.modal.top>div{margin-bottom:0;border-radius:0 0 18px 18px;max-height:calc(var(--vvh,100vh) - var(--navoff,68px));padding-top:calc(10px + env(safe-area-inset-top))}
+html:has(#mbg.top),body:has(#mbg.top){overflow:hidden;overscroll-behavior:none}.modal.top>div,.modal.top .list{overscroll-behavior:contain}   /* a search pop-up never lets the page behind it scroll */
 .modal.top>div:has(>.sq+.list){display:flex;flex-direction:column;overflow:hidden}.modal.top>div:has(>.sq+.list)>.list{flex:1;min-height:0;overflow:auto}   /* search pop-ups: title and search stay put, only the list scrolls, Cancel stays at the bottom */
 .sq{position:sticky;top:-10px;z-index:3;background:var(--bg);padding:6px 0 8px;margin:-6px 0 0}
 .stick{position:sticky;top:var(--hh,60px);z-index:4;background:var(--bg);padding:6px 0 10px;margin:-6px 0 0}
@@ -175,7 +176,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, connectAuthEmulator, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, connectFirestoreEmulator, doc, collection, onSnapshot, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, increment, Timestamp, query, where, orderBy, limit, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-var APP_VERSION = '1.29', RULES_VERSION = '1.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '1.30', RULES_VERSION = '1.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 var CYCLE = ['Red', 'Blue', 'White', 'Black'];   /* AM shift on consecutive days, from the 2026 Fire Service calendar */
 var ANCHOR = Date.UTC(2026, 9, 1) / 864e5;       /* 1 Oct 2026: AM = Red */
 var AM_START = 9, PM_START = 18;                 /* day shift 9am to 6pm, night shift 6pm to 9am */
@@ -1941,6 +1942,13 @@ function stepTo(cur, sign, lo, hi) { var n = cur + sign; return Math.max(lo, hi 
   new MutationObserver(function () { redMinus(document.body); }).observe(document.body, { childList: true, subtree: true, characterData: true });
   redMinus(document.body);
 })();
+/* ---------- search pop-ups: only the list scrolls; dragging the title, search box or buttons must not move the page behind ---------- */
+document.addEventListener('touchmove', function (e) {
+  var t = e.target; if (!t.closest || !t.closest('#mbg.top')) return;
+  var l = t.closest('.list'); if (l && l.scrollHeight > l.clientHeight) return;
+  if (t.closest('#mbg.top > div') && !t.closest('.list') && t.closest('#mbg.top > div').scrollHeight > t.closest('#mbg.top > div').clientHeight + 1 && !t.closest('.sq')) return;
+  e.preventDefault();
+}, { passive: false });
 /* ---------- pull a pop-up down to close it (like Cancel); asks first if something was typed ---------- */
 (function () {
   var st = null;
