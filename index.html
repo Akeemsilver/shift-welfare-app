@@ -2,8 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.googleusercontent.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.gstatic.com https://apis.google.com; frame-src https://*.firebaseapp.com https://accounts.google.com https://apis.google.com https://content.googleapis.com; object-src 'none'; base-uri 'self'">
-
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Shift Welfare</title>
 <meta name="theme-color" content="#0F4C68">
@@ -216,7 +214,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.00', RULES_VERSION = '2.06';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.01', RULES_VERSION = '2.07';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -230,8 +228,9 @@ var DEFAULT_CFG = {
 };
 var CFG = DEFAULT_CFG, WATCHES = [], WKC = {}, ANCHOR = 0, WSLUG = {};
 var lumOf = function (hex) { var h = String(hex || '#888888').replace('#', ''); if (h.length === 3) h = h.replace(/(.)/g, '$1$1'); var r = parseInt(h.substr(0, 2), 16) / 255, g = parseInt(h.substr(2, 2), 16) / 255, b = parseInt(h.substr(4, 2), 16) / 255; return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
-function shiftColor(n) { var f = CFG.shifts.filter(function (x) { return x.name === n; })[0]; return f ? f.color : '#888888'; }
-function swc(n) { return n ? 'c-' + (WSLUG[n] || 'x') : 'None'; }   /* the css class for a shift's colour */
+function canon(n) { var a = CFG.aliases || {}; return a[n] && a[n] !== n ? a[n] : n; }   /* a shift renamed later: old records still find its colour */
+function shiftColor(n) { n = canon(n); var f = CFG.shifts.filter(function (x) { return x.name === n; })[0]; return f ? f.color : '#888888'; }
+function swc(n) { return n ? 'c-' + (WSLUG[canon(n)] || 'x') : 'None'; }   /* the css class for a shift's colour */
 function cfgOk(c) {
   if (!c || !Array.isArray(c.shifts) || !c.shifts.length || !Array.isArray(c.periods) || !c.periods.length || !Array.isArray(c.cycle) || !c.cycle.length) return false;
   var names = c.shifts.map(function (x) { return x.name; });
@@ -2297,6 +2296,7 @@ function spRender() {
     (isStandalone() ? '' : spRow('📲', 'Install on this phone', 'Opens full screen like a normal app', 'install')) +
     spRow('📖', 'How to use', 'Help for every tab and topic', 'helplist') + '</div>' +
     (PLACES.length ? '<div class="sp-h">Workplace</div><div class="sp-card">' + (isPres() ? spRow('🏢', 'All workplaces', 'Look inside any of them, change their limits', 'opall') : spRow('🏢', esc(placeName() || 'Workplace'), PLACES.length > 1 ? 'Switch workplace, or join or start another' : 'Join or start another workplace', 'placessheet')) +
+      (canAdmin() && !OWNERVIEW ? spRow('⚙️', 'Workplace settings', 'Shifts, colours, the cycle, words, what people are asked', 'wsopen') : '') +
       (canAdmin() ? spRow('🔢', 'Join code', PLACE && PLACE.code ? 'Code ' + esc(PLACE.code) + '. Tap to share or change it' : 'Make a code so people can join', 'codesheet') : '') +
       (isPres() ? spRow('📨', 'Requests to start a workplace', pReqCount() ? pReqCount() + ' waiting' : 'None waiting', 'prlist') : '') + '</div>' : '') +
     (pcEnabled() && (sitPres() || pcCanVote() || pcLive()) ? '<div class="sp-h">President</div><div class="sp-card">' + (pcLive() ? spRow('🗳️', 'President change in progress' + (pcMine() ? ' · needs you' : ''), 'Tap to see it', 'pcview', pcMine() ? ' red' : '') : sitPres() ? spRow('👑', 'Hand over the president role', 'Choose who takes over. They must accept', 'pcoffer') : spRow('🗳️', 'Ask for a new president', 'If the president has gone or is not using the app', 'pcask')) + '</div>' : '') +
@@ -2993,6 +2993,100 @@ function opRename(id) {
 }
 function opRenSave() { var v = ($('#op-name').value || '').trim(); if (!v) return toast('Enter a name'); guard(updateDoc(doc(DB, 'places/' + OP.id), { name: v })).then(function () { toast('Renamed'); opAll(); }); }
 
+/* ---------- workplace settings: the president (or the owner) changes the shifts' names and colours, the cycle, the day parts, the words and the sign-up wording ---------- */
+var WS = null;
+function wsCopy() { return JSON.parse(JSON.stringify(CFG)); }
+function wsOpen() { WS = wsCopy(); wsMain(); }
+function wsMain() {
+  var P = WS.periods;
+  modal('<h2>Workplace settings</h2><p class="muted" style="margin-top:0">Changes apply to everyone as soon as you save them. Past records keep what they say.</p><div class="card" style="padding:0">' +
+    spRow('🎨', 'Shifts, names and colours', WS.shifts.map(function (x) { return esc(x.name); }).join(', '), 'wsshifts') +
+    spRow('📅', 'The shift cycle', WS.cycle.length + ' day' + (WS.cycle.length === 1 ? '' : 's') + ' · starts ' + esc(WS.anchor), 'wscycle') +
+    spRow('🕘', 'Parts of the day', P.map(function (p) { return esc(p.label) + ' ' + hr12(p.start); }).join(' · '), 'wsparts') +
+    spRow('🏷️', 'Names of the places and case size', esc(WS.labels.fridge) + ', ' + esc(WS.labels.storage) + ', ' + esc(WS.labels.shelf) + ' · ' + WS.perCase + ' to a case', 'wswords') +
+    spRow('🪪', 'What people are asked', (WS.signup.useNo ? esc(WS.signup.noLabel) : 'No number') + ' · ' + (WS.signup.useRank ? esc(WS.signup.rankLabel) : 'No rank'), 'wspeople') + '</div>' +
+    '<p class="muted">The number of shifts (' + WS.shifts.length + ') and of day parts (' + P.length + ') cannot be changed here, because the people limit depends on them. Ask the app\'s creator.</p><button class="btn sec block" data-act="close">Close</button>');
+}
+function wsPal(i, col) { return '<div class="pal">' + PALETTE.map(function (c) { return '<button type="button" data-act="wscol" data-i="' + i + '" data-v="' + c[1] + '" title="' + c[0] + '" class="' + (String(col).toLowerCase() === c[1].toLowerCase() ? 'on' : '') + '" style="background:' + c[1] + '"></button>'; }).join('') + '</div>'; }
+function wsShifts() {
+  modal('<h2>Shifts, names and colours</h2><p class="muted" style="margin-top:0">If you rename a shift, the people on it move to the new name. Old records keep the old name.</p>' + WS.shifts.map(function (x, i) {
+    return '<div class="card" style="box-shadow:none;background:var(--soft)"><div class="f" style="margin-bottom:8px"><label>Shift ' + (i + 1) + '</label><input data-ws="sname" data-i="' + i + '" maxlength="20" value="' + esc(x.name) + '"></div>' + wsPal(i, x.color) + '</div>';
+  }).join('') + '<div id="ws-msg" class="muted" style="color:var(--exp);margin:6px 0"></div><button class="btn block" data-act="wssave">Save</button><button class="btn sec block" data-act="wsback" style="margin-top:10px">Back</button>'); REFRESH = null;
+}
+function wsCycle() {
+  var d0 = new Date(WS.anchor + 'T12:00:00'), P = WS.periods, names = WS.shifts.map(function (x) { return x.name; });
+  modal('<h2>The shift cycle</h2><p class="muted" style="margin-top:0">Tap a block to change which shift works that part of the day. When the last day is done, the cycle starts again from the first.</p>' +
+    '<div class="f"><label>The first day of the cycle is</label><input type="date" data-ws="anchor" value="' + esc(WS.anchor) + '"></div>' +
+    WS.cycle.map(function (day, k) {
+      var d = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + k);
+      return '<div class="row" style="align-items:center;margin-bottom:6px"><div style="width:84px;font-size:13px">' + d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }) + '</div><div class="grow" style="display:grid;gap:6px;grid-template-columns:repeat(' + P.length + ',1fr)">' + day.s.map(function (nm, j) {
+        var x = WS.shifts.filter(function (y) { return y.name === nm; })[0] || WS.shifts[0], l = lumOf(x.color);
+        return '<button type="button" data-act="wscell" data-i="' + k + '" data-j="' + j + '" style="min-height:44px;border-radius:10px;border:2px solid var(--secb);background:' + x.color + ';color:' + (l > 0.55 ? '#14181C' : '#fff') + ';font:inherit;font-size:12px;font-weight:700;padding:0 4px"><span style="display:block;font-size:10px;font-weight:500;opacity:.85">' + esc(P[j].label) + '</span>' + esc(x.name) + '</button>';
+      }).join('') + '</div></div>';
+    }).join('') + '<div class="row" style="margin-top:10px"><button class="btn sec grow" data-act="wsday" data-v="1">+ Add a day</button><button class="btn sec grow" data-act="wsday" data-v="-1"' + (WS.cycle.length <= 1 ? ' disabled' : '') + '>− Remove a day</button></div>' +
+    '<div id="ws-msg" class="muted" style="color:var(--exp);margin:8px 0"></div><button class="btn block" data-act="wssave">Save</button><button class="btn sec block" data-act="wsback" style="margin-top:10px">Back</button>'); REFRESH = null;
+}
+function wsParts() {
+  modal('<h2>Parts of the day</h2><p class="muted" style="margin-top:0">When does each part start? The last part runs on until the first starts again.</p>' + WS.periods.map(function (x, i) {
+    return '<div class="row f" style="align-items:flex-end"><div class="grow"><label>Part ' + (i + 1) + '</label><input data-ws="plabel" data-i="' + i + '" maxlength="14" value="' + esc(x.label) + '"></div><div style="width:110px"><label>Starts</label><select data-ws="pstart" data-i="' + i + '">' + Array.apply(null, Array(24)).map(function (_, hh) { return '<option value="' + hh + '"' + (hh === x.start ? ' selected' : '') + '>' + hr12(hh) + '</option>'; }).join('') + '</select></div></div>';
+  }).join('') + '<div id="ws-msg" class="muted" style="color:var(--exp);margin:8px 0"></div><button class="btn block" data-act="wssave">Save</button><button class="btn sec block" data-act="wsback" style="margin-top:10px">Back</button>'); REFRESH = null;
+}
+function wsWords() {
+  modal('<h2>Names of the places and case size</h2>' +
+    '<div class="f"><label>Where cold drinks are sold from</label><input data-ws="lfridge" maxlength="20" value="' + esc(WS.labels.fridge) + '"></div>' +
+    '<div class="f"><label>Where other items are sold from</label><input data-ws="lshelf" maxlength="20" value="' + esc(WS.labels.shelf) + '"></div>' +
+    '<div class="f"><label>Where stock is kept in cases</label><input data-ws="lstorage" maxlength="20" value="' + esc(WS.labels.storage) + '"></div>' +
+    '<div class="f"><label>Items in a case (the usual number)</label><input data-ws="percase" type="number" inputmode="numeric" min="1" value="' + WS.perCase + '"><div class="muted" style="font-size:12px">Each item can still have its own number.</div></div>' +
+    '<div id="ws-msg" class="muted" style="color:var(--exp);margin:8px 0"></div><button class="btn block" data-act="wssave">Save</button><button class="btn sec block" data-act="wsback" style="margin-top:10px">Back</button>'); REFRESH = null;
+}
+function wsPeople() {
+  var S2 = WS.signup, three = function (act, cur) { return '<div class="seg" style="grid-template-columns:repeat(3,1fr)">' + [['off', 'Not used'], ['opt', 'Optional'], ['req', 'Required']].map(function (o) { return '<button type="button" data-act="' + act + '" data-v="' + o[0] + '" class="' + (cur === o[0] ? 'on' : '') + '">' + o[1] + '</button>'; }).join('') + '</div>'; };
+  modal('<h2>What people are asked</h2><p class="muted" style="margin-top:0">A number or a rank is how two people with the same name are told apart.</p>' +
+    '<div class="f"><label>What to call a person\'s name</label><input data-ws="namelabel" maxlength="20" value="' + esc(S2.nameLabel) + '"></div>' +
+    '<div class="f"><label>The number</label><input data-ws="nolabel" maxlength="24" value="' + esc(S2.noLabel) + '" placeholder="e.g. Service number, Staff ID">' + three('wsno', !S2.useNo ? 'off' : S2.requireNo ? 'req' : 'opt') + '</div>' +
+    '<div class="f"><label>The rank or title</label><input data-ws="ranklabel" maxlength="24" value="' + esc(S2.rankLabel) + '">' + three('wsrank', !S2.useRank ? 'off' : S2.requireRank ? 'req' : 'opt') + '</div>' +
+    (S2.useRank ? '<div class="f"><label>Ranks people can choose from (separated by commas)</label><input data-ws="ranks" maxlength="300" value="' + esc(WS.ranks.join(', ')) + '"></div>' : '') +
+    '<div id="ws-msg" class="muted" style="color:var(--exp);margin:8px 0"></div><button class="btn block" data-act="wssave">Save</button><button class="btn sec block" data-act="wsback" style="margin-top:10px">Back</button>'); REFRESH = null;
+}
+function wsInput(t) {
+  var k = t.dataset.ws, i = +t.dataset.i, v = t.value;
+  if (k === 'sname') WS.shifts[i].name = v; else if (k === 'anchor') { if (/^\d{4}-\d{2}-\d{2}$/.test(v)) WS.anchor = v; }
+  else if (k === 'plabel') WS.periods[i].label = v; else if (k === 'pstart') WS.periods[i].start = +v;
+  else if (k === 'lfridge') WS.labels.fridge = v; else if (k === 'lshelf') WS.labels.shelf = v; else if (k === 'lstorage') WS.labels.storage = v; else if (k === 'percase') WS.perCase = num(v);
+  else if (k === 'namelabel') WS.signup.nameLabel = v; else if (k === 'nolabel') WS.signup.noLabel = v; else if (k === 'ranklabel') WS.signup.rankLabel = v;
+  else if (k === 'ranks') WS.ranks = v.split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+}
+function wsCheck() {
+  var nm = WS.shifts.map(function (x) { return x.name.trim().toLowerCase(); });
+  if (nm.some(function (n) { return !n; })) return 'Every shift needs a name.';
+  if (nm.some(function (n, i) { return nm.indexOf(n) !== i; })) return 'Two shifts have the same name.';
+  var ss = WS.periods.map(function (x) { return x.start; }); for (var i = 1; i < ss.length; i++) if (ss[i] <= ss[i - 1]) return 'Each part must start later in the day than the one before.';
+  if (WS.periods.some(function (x) { return !x.label.trim(); })) return 'Every part needs a name.';
+  if (!WS.labels.fridge.trim() || !WS.labels.shelf.trim() || !WS.labels.storage.trim()) return 'Give all three places a name.';
+  if (!(WS.perCase >= 1)) return 'Items in a case must be at least 1.';
+  var used = {}; WS.cycle.forEach(function (d) { d.s.forEach(function (n) { used[n] = 1; }); }); if (Object.keys(used).length < WS.shifts.length) return 'Every shift must work at least one part of the cycle.';
+  if (!WS.signup.nameLabel.trim()) return 'Say what to call a name.';
+  if (WS.signup.useNo && !WS.signup.noLabel.trim()) return 'Say what to call the number.';
+  return '';
+}
+function wsSave() {
+  var err = wsCheck(), msg = $('#ws-msg'); if (err) { if (msg) msg.textContent = err; return; }
+  var old = CFG.shifts.map(function (x) { return x.name; }), ren = {}, i;
+  WS.shifts.forEach(function (x, k) { x.name = x.name.trim(); if (old[k] && old[k] !== x.name) ren[old[k]] = x.name; });
+  WS.cycle.forEach(function (d) { d.s = d.s.map(function (n) { return ren[n] || n; }); });   /* the cycle follows a renamed shift */
+  WS.periods.forEach(function (x) { x.label = x.label.trim(); });
+  WS.labels = { fridge: WS.labels.fridge.trim(), storage: WS.labels.storage.trim(), shelf: WS.labels.shelf.trim() };
+  WS.perCase = Math.floor(WS.perCase); if (WS.signup.useRank && !WS.ranks.length) WS.ranks = ['Member'];
+  var al = Object.assign({}, WS.aliases || {}); Object.keys(ren).forEach(function (o) { al[o] = ren[o]; }); WS.aliases = al;
+  var ops = [], b = null, n = 0, flush = function () { if (b) ops.push(b.commit()); b = null; n = 0; }, add = function (fn, w) { if (!b) b = writeBatch(DB); fn(b); n += w || 1; if (n >= 400) flush(); };
+  add(function (bb) { bb.set(ref('config/main'), Object.assign(cfgDoc(WS), { aliases: WS.aliases })); });
+  if (PID !== 'coover') add(function (bb) { bb.update(doc(DB, 'places/' + PID), { shifts: WS.shifts, signup: WS.signup }); });
+  else if (isPres()) add(function (bb) { bb.set(doc(DB, 'places/' + PID), { signup: WS.signup }, { merge: true }); });
+  if (Object.keys(ren).length) { S.people.forEach(function (p) { if (ren[p.watch]) add(function (bb) { bb.update(ref('people/' + p.id), { watch: ren[p.watch] }); bb.set(ref('names/' + p.id), { name: p.name, watch: ren[p.watch] }); }, 2); }); }
+  flush();
+  Promise.all(ops).then(function () { setCfg(WS); SU = WS.signup; toast('Saved'); WS = wsCopy(); wsMain(); render(); }, function (e) { console.error(e); toast(errText(e)); });
+}
+
 /* ---------- a workplace that calls the three places something else: the words are swapped on screen (Couva keeps its own, nothing runs) ---------- */
 var relabel = (function () {
   var done = new WeakMap(), busy = false;
@@ -3453,6 +3547,19 @@ document.addEventListener('click', function (e) {
   else if (a === 'resetgo') resetApp();
   else if (a === 'sendlogin') sendLogin();
   else if (a === 'googlelogin') googleLogin();
+  else if (a === 'wsopen') { closeModal(); spClose(); wsOpen(); }
+  else if (a === 'wsshifts') wsShifts();
+  else if (a === 'wscycle') wsCycle();
+  else if (a === 'wsparts') wsParts();
+  else if (a === 'wswords') wsWords();
+  else if (a === 'wspeople') wsPeople();
+  else if (a === 'wsback') wsMain();
+  else if (a === 'wssave') wsSave();
+  else if (a === 'wscol') { WS.shifts[+b.dataset.i].color = b.dataset.v; wsShifts(); }
+  else if (a === 'wscell') { var wi = +b.dataset.i, wj = +b.dataset.j, nm0 = WS.shifts.map(function (x) { return x.name; }), cur = nm0.indexOf(WS.cycle[wi].s[wj]); WS.cycle[wi].s[wj] = nm0[(cur + 1) % nm0.length]; wsCycle(); }
+  else if (a === 'wsday') { if (+b.dataset.v > 0) { var lst = WS.cycle[WS.cycle.length - 1].s, nm1 = WS.shifts.map(function (x) { return x.name; }); WS.cycle.push({ s: lst.map(function (x) { return nm1[(nm1.indexOf(x) + 1) % nm1.length]; }) }); } else if (WS.cycle.length > 1) WS.cycle.pop(); wsCycle(); }
+  else if (a === 'wsno') { WS.signup.useNo = b.dataset.v !== 'off'; WS.signup.requireNo = b.dataset.v === 'req'; wsPeople(); }
+  else if (a === 'wsrank') { WS.signup.useRank = b.dataset.v !== 'off'; WS.signup.requireRank = b.dataset.v === 'req'; wsPeople(); }
   else if (a === 'opall') { closeModal(); spClose(); opAll(); }
   else if (a === 'opmenu') opMenu(id);
   else if (a === 'opview') opView(id);
@@ -3533,6 +3640,7 @@ function wzInput(t) {
 document.addEventListener('input', function (e) {
   var t = e.target;
   if (t.dataset && t.dataset.wz && WZ) { wzInput(t); return; }
+  if (t.dataset && t.dataset.ws && WS) { wsInput(t); return; }
   if (t.dataset && t.dataset.step === 'cn') { var ci2 = item(sel), v2 = Math.floor(num(t.value)); if (ci2 && t.value !== '' && v2 >= 0 && v2 <= ci2.stock) { CN.to = v2; $('#cn-prev').innerHTML = cnPreview(ci2); } return; }
   if (t.id === 'rs-in') { var g = $('#rs-go'); if (g) g.disabled = t.value.trim().toUpperCase() !== 'RESET'; }
   else if (t.id === 'pk-q') $('#pk-list').innerHTML = pickerList(t.value);
@@ -3563,6 +3671,7 @@ document.addEventListener('input', function (e) {
 });
 document.addEventListener('change', function (e) {
   if (e.target.dataset && e.target.dataset.wz && WZ) { wzInput(e.target); return; }
+  if (e.target.dataset && e.target.dataset.ws && WS) { wsInput(e.target); return; }
   var t = e.target;
   if ((t.id === 'br-cam' || t.id === 'br-pick') && t.files && t.files[0]) { shrink(t.files[0], function (img) { BUY.receipt = img; render(); }); return; }
   if ((t.id === 'uc-cam' || t.id === 'uc-pick') && t.files && t.files[0]) { shrink(t.files[0], function (img) { UC.receipt = img; UC.none = false; ucForm(); }); return; }
