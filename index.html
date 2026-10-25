@@ -206,7 +206,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, connectAuthEmulator, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, updatePassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, connectFirestoreEmulator, doc, collection, onSnapshot, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, increment, Timestamp, query, where, orderBy, limit, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-var APP_VERSION = '1.56', RULES_VERSION = '1.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '1.59', RULES_VERSION = '1.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 var CYCLE = ['Red', 'Blue', 'White', 'Black'];   /* AM shift on consecutive days, from the 2026 Fire Service calendar */
 var ANCHOR = Date.UTC(2026, 9, 1) / 864e5;       /* 1 Oct 2026: AM = Red */
 var AM_START = 9, PM_START = 18;                 /* day shift 9am to 6pm, night shift 6pm to 9am */
@@ -305,6 +305,8 @@ function dupName(p) {   /* two people with the same name: show the service numbe
   return (DUPC.map[nkey(p.name)] || 0) > 1;
 }
 function plabel(p) { return !p ? '' : p.kind === 'g' ? p.name : p.name + (p.no && dupName(p) ? ' (' + p.no + ')' : ''); }
+function plabelNo(p) { return !p ? '' : p.kind === 'g' ? p.name : p.name + (p.no ? ' (' + p.no + ')' : ''); }   /* handovers always show the service number, since two people can share a name */
+function hnl(name, email) { var m = email ? S.members.filter(function (x) { return x.email === email; })[0] : null, p = m && m.personId ? person(m.personId) : null; return (name || '') + (p && p.no && String(name || '').indexOf('(' + p.no + ')') < 0 ? ' (' + p.no + ')' : ''); }
 function plab(id) { return plabel(party(id)) || '(removed name)'; }
 function myName() { var p = myPerson(); return p ? plabel(p) : 'A member'; }   /* never an email */
 function nameOfEmail(em) {   /* a name for an email address, for anything shown on screen */
@@ -628,7 +630,7 @@ function seg(arr, act, cur, cols, extra) { return '<div class="seg" style="grid-
 function stepper(act, v, extra) { return '<div class="stepper"><button data-act="' + act + '-" ' + (extra || '') + ' aria-label="Less">−</button><input class="stepin" type="number" inputmode="numeric" min="0" data-step="' + act + '" ' + (extra || '') + ' value="' + v + '" aria-label="Number"><button data-act="' + act + '+" ' + (extra || '') + ' aria-label="More">+</button></div>'; }
 
 /* ---------- Count ---------- */
-var CN = { to: null, q: 1, mv: 1 };
+var CN = { to: null, q: 0, mv: 0 };
 function cnum(id) {   /* what has been counted / noted for one item this shift */
   var r = { sold: 0, cr: 0, sp: 0, counted: false };
   S.log.forEach(function (e) { if (e.item !== id) return; if (e.type === 'count') { r.sold += e.qty; r.counted = true; } else if (e.type === 'sale') r.sold += e.qty; else if (e.type === 'cnote') r.cr += e.qty; else if (e.type === 'snote') r.sp += e.qty; });
@@ -673,25 +675,25 @@ function countSave(force) {
   if (!force && (c.cr > Math.max(0, c.sold + miss - c.sp) || c.sp > c.sold + miss)) return askConfirm('More notes than items sold', 'Credit ' + c.cr + ' and spoiled ' + c.sp + ' do not fit the ' + (c.sold + miss) + ' items gone. You will not be able to hand over until this matches.', 'Save the count anyway', function () { countSave(true); });
   var b = writeBatch(DB), id = newEv(); if (miss > 0) itemInc(b, it.id, { stock: -miss });
   mkEvent(b, 'count', it, miss, it.price * miss, { cogs: r2((it.cost || 0) * miss), nc: miss > 0 && !it.cost ? 1 : 0, from: it.stock, to: to, price: it.price, dly: miss > 0 ? 1 : 0 }); commit(b);
-  CN.to = null; CN.q = 1; closeModal(); toast(it.name + ' counted: ' + (miss ? miss + ' sold' : 'none sold'), id);
+  CN.to = null; CN.q = 0; closeModal(); toast(it.name + ' counted: ' + (miss ? miss + ' sold' : 'none sold'), id);
 }
 function countMove() {
-  var mv = item(sel), n = CN.mv; if (!mv || mv.cage < n) return toast('Only ' + (mv ? mv.cage : 0) + ' in the cage');
+  var mv = item(sel), n = CN.mv; if (mv && n < 1) return toast('Set how many cases first'); if (!mv || mv.cage < n) return toast('Only ' + (mv ? mv.cage : 0) + ' in the cage');
   askConfirm('Add from the cage?', '<b>' + n + ' case' + (n === 1 ? '' : 's') + '</b> of ' + esc(mv.name) + ' = ' + n * per(mv) + ' items go into the fridge. The cage goes down by ' + n + '.', 'Yes, add', function () {
-    var mb = writeBatch(DB), mid = newEv(); itemInc(mb, mv.id, { stock: n * per(mv), cage: -n }); mkEvent(mb, 'move', mv, n * per(mv), 0, { cases: n }); commit(mb); CN.to = null; CN.mv = 1; closeModal(); toast(n + ' case' + (n === 1 ? '' : 's') + ' added to the fridge', mid);
+    var mb = writeBatch(DB), mid = newEv(); itemInc(mb, mv.id, { stock: n * per(mv), cage: -n }); mkEvent(mb, 'move', mv, n * per(mv), 0, { cases: n }); commit(mb); CN.to = null; CN.mv = 0; closeModal(); toast(n + ' case' + (n === 1 ? '' : 's') + ' added to the fridge', mid);
     setTimeout(function () { if (tab === 'sell' && item(sel) && !$('#modal').children.length) { CN.to = null; countSheet(); } }, 450);
   });
 }
 function creditNote(pid) {
-  var it = item(sel); if (!it) return closeModal(); var q = CN.q;
+  var it = item(sel); if (!it) return closeModal(); var q = CN.q; if (q < 1) return toast('Set how many items first');
   var b = writeBatch(DB), id = newEv(); ngBatch(b);
   mkEvent(b, 'cnote', it, q, it.price * q, { cogs: r2((it.cost || 0) * q), cr: pid, person: pid, cid: rootOf(pid), crName: PK.ng ? PK.ng.name : plab(pid) }); balInc(b, rootOf(pid), it.price * q); commit(b);
-  var msg = q + ' × ' + it.name + ' put on credit to ' + (PK.ng ? PK.ng.name : plab(pid)); CN.q = 1; closeModal(); toast(msg, id);
+  var msg = q + ' × ' + it.name + ' put on credit to ' + (PK.ng ? PK.ng.name : plab(pid)); CN.q = 0; closeModal(); toast(msg, id);
 }
 function spoilNote() {
-  var it = item(sel); if (!it) return closeModal(); var q = CN.q;
+  var it = item(sel); if (!it) return closeModal(); var q = CN.q; if (q < 1) return toast('Set how many items first');
   askConfirm('Spoiled note?', '<b>' + q + ' × ' + esc(it.name) + '</b> were spoiled or damaged.<br><span class="muted">This does not change the number. It explains part of the items sold and is counted as a loss at cost.</span>', 'Yes, add the note', function () {
-    var b = writeBatch(DB), id = newEv(); mkEvent(b, 'snote', it, q, it.price * q, { cogs: r2((it.cost || 0) * q) }); commit(b); CN.q = 1; closeModal(); toast('Spoiled note added', id);
+    var b = writeBatch(DB), id = newEv(); mkEvent(b, 'snote', it, q, it.price * q, { cogs: r2((it.cost || 0) * q) }); commit(b); CN.q = 0; closeModal(); toast('Spoiled note added', id);
   });
 }
 function infoBox(title, html) { $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div><h2>' + title + '</h2><p style="margin-top:0">' + html + '</p><button class="btn block" data-act="cno">OK</button></div></div>'); }
@@ -1292,9 +1294,9 @@ function hoRows() {   /* the handover leaves out items that were 0 at the start 
 }
 function tags(r, mode) {
   var cage = mode === 'cage', t = [], g = function (n, txt, cls) { if (n) t.push('<span class="tag ' + cls + '">' + txt + '</span>'); };
-  if (mode === 'shelf') { g(r.edit, '⚠ edited by hand ' + (r.edit > 0 ? '+' : '') + r.edit, 'neg'); g(r.sold, r.sold + ' sold', 'pos'); g(r.crQ, r.crQ + ' on credit', 'cr'); g(r.spQ, r.spQ + ' spoiled (note)', 'neg'); g(r.bought, '+' + r.bought + ' bought', 'pos'); g(r.spoil, '−' + r.spoil + ' spoiled', 'neg'); g(r.adj, (r.adj > 0 ? '+' : '') + r.adj + ' count', ''); }
+  if (mode === 'shelf') { g(r.edit, '⚠ edited by hand ' + (r.edit > 0 ? '+' : '') + r.edit, 'neg'); g(r.sold - Math.min(r.sold, r.crQ), (r.sold - Math.min(r.sold, r.crQ)) + ' sold', 'pos'); g(r.crQ, r.crQ + ' sold on credit', 'cr'); g(r.spQ, r.spQ + ' spoiled', 'neg'); g(r.bought, '+' + r.bought + ' bought', 'pos'); g(r.spoil, '−' + r.spoil + ' spoiled', 'neg'); g(r.adj, (r.adj > 0 ? '+' : '') + r.adj + ' count', ''); }
   else if (cage) { g(r.cedit, '⚠ edited by hand ' + (r.cedit > 0 ? '+' : '') + r.cedit, 'neg'); g(r.bought, '+' + r.bought + ' bought', 'pos'); g(r.movedCases, '−' + r.movedCases + ' to fridge', 'neg'); g(r.cadj, (r.cadj > 0 ? '+' : '') + r.cadj + ' count', ''); }
-  else { g(r.edit, '⚠ edited by hand ' + (r.edit > 0 ? '+' : '') + r.edit, 'neg'); g(r.sold, r.sold + ' sold', 'pos'); g(r.crQ, r.crQ + ' on credit', 'cr'); g(r.spQ, r.spQ + ' spoiled (note)', 'neg'); g(r.moved, '+' + r.moved + ' from cage', 'pos'); g(r.spoil, '−' + r.spoil + ' spoiled', 'neg'); g(r.adj, (r.adj > 0 ? '+' : '') + r.adj + ' count', ''); }
+  else { g(r.edit, '⚠ edited by hand ' + (r.edit > 0 ? '+' : '') + r.edit, 'neg'); g(r.sold - Math.min(r.sold, r.crQ), (r.sold - Math.min(r.sold, r.crQ)) + ' sold', 'pos'); g(r.crQ, r.crQ + ' sold on credit', 'cr'); g(r.spQ, r.spQ + ' spoiled', 'neg'); g(r.moved, '+' + r.moved + ' from cage', 'pos'); g(r.spoil, '−' + r.spoil + ' spoiled', 'neg'); g(r.adj, (r.adj > 0 ? '+' : '') + r.adj + ' count', ''); }
   return t.join('');
 }
 function soldRows(rows) {
@@ -1304,7 +1306,7 @@ function soldRows(rows) {
   });
 }
 function soldNotes(x) {
-  var r = x.r, t = (r.crQ ? '<span class="tag cr" style="margin-left:0">' + r.crQ + ' on credit</span>' : '') + (r.spQ ? '<span class="tag neg">' + r.spQ + ' spoiled (note)</span>' : '') + (x.minus ? '<span class="tag neg">− ' + x.minus + ' spoiled / edited</span>' : '') + (x.bad ? '<span class="tag neg">⚠ notes more than sold</span>' : '') + (x.diff ? '<span class="tag neg">⚠ ' + (x.diff > 0 ? '+' : '') + x.diff + ' not explained</span>' : '');
+  var r = x.r, t = (r.crQ ? '<span class="tag cr" style="margin-left:0">' + r.crQ + ' sold on credit</span>' : '') + (r.spQ ? '<span class="tag neg">' + r.spQ + ' spoiled</span>' : '') + (x.minus ? '<span class="tag neg">− ' + x.minus + ' spoiled / edited</span>' : '') + (x.bad ? '<span class="tag neg">⚠ notes more than sold</span>' : '') + (x.diff ? '<span class="tag neg">⚠ ' + (x.diff > 0 ? '+' : '') + x.diff + ' not explained</span>' : '');
   return t;
 }
 function soldCard(rows) {
@@ -1487,8 +1489,8 @@ function banner() {
   if (h && h.status === 'open') {
     var to = h.locked ? 'Locked: no one in particular' : esc((h.toLabels || []).join(', '));
     if (h.fromEmail === EMAIL) return box('🔒 Handed over', 'To ' + to + ' at ' + hhmm(h.at) + '. Waiting for someone to take it.', '<div class="row"><button class="btn sm grow" data-act="shareapp">Notify (WhatsApp…)</button><button class="btn sec sm grow" data-act="cancelho">Cancel handover</button></div>');
-    if (eligible(h)) return box('📋 Handover waiting for you', 'From ' + esc(h.fromName) + ' · ' + esc(h.shift.name) + ' shift · cash ' + money(h.cash), '<button class="btn green sm" data-act="openrx">Open handover &amp; take control</button>');
-    return box('Waiting for the handover to be taken', 'Handed to ' + to + ' by ' + esc(h.fromName) + ' at ' + hhmm(h.at) + '.', isPres() ? tc : '');
+    if (eligible(h)) return box('📋 Handover waiting for you', 'From ' + esc(hnl(h.fromName, h.fromEmail)) + ' · ' + esc(h.shift.name) + ' shift · cash ' + money(h.cash), '<button class="btn green sm" data-act="openrx">Open handover &amp; take control</button>');
+    return box('Waiting for the handover to be taken', 'Handed to ' + to + ' by ' + esc(hnl(h.fromName, h.fromEmail)) + ' at ' + hhmm(h.at) + '.', isPres() ? tc : '');
   }
   return box('Nobody is in control', 'The president can take control.', isPres() ? tc : '');
 }
@@ -1501,7 +1503,7 @@ function render() {
   if (ready) {
     var cs = currentShift();   /* the header always shows the shift working NOW, from the phone's own clock */
     var mp = myPerson(), WC = { Red: 'var(--s-red)', Blue: 'var(--s-blue)', White: '#fff', Black: 'var(--s-black)' };
-    $('#hdr').innerHTML = '<span style="white-space:nowrap"><span class="dot" style="background:' + (WC[cs.name] || '#888') + '"></span>' + esc(cs.name) + ' watch</span><span class="hp w' + esc(cs.name) + '">On duty</span><small>' + esc(myName()) + (mp && mp.watch ? '<span class="hp w' + esc(mp.watch) + '">' + esc(mp.watch) + '</span>' : '') + (navigator.onLine ? '' : ' · OFFLINE') + '</small>' + (shKey(sh) !== shKey(cs) ? '<small class="rec" style="color:#FFD27A;opacity:1;font-weight:600">recording for ' + esc(sh.name) + ' watch</small>' : '');
+    $('#hdr').innerHTML = '<span style="white-space:nowrap"><span class="dot" style="background:' + (WC[cs.name] || '#888') + '"></span>' + esc(cs.name) + ' shift</span><span class="hp w' + esc(cs.name) + '">On duty</span><small>' + esc(myName()) + (mp && mp.watch ? '<span class="hp w' + esc(mp.watch) + '">' + esc(mp.watch) + '</span>' : '') + (navigator.onLine ? '' : ' · OFFLINE') + '</small>' + (shKey(sh) !== shKey(cs) ? '<small class="rec" style="color:#FFD27A;opacity:1;font-weight:600">recording for ' + esc(sh.name) + ' shift</small>' : '');
     document.querySelectorAll('#nav button').forEach(function (b) { var on = b.dataset.tab === tab; b.classList.toggle('on', on); var q = b.querySelector('.qb'); if (on && !q && !helpOff()) { b.style.position = 'relative'; b.insertAdjacentHTML('beforeend', '<i class="qb">?</i>'); } else if ((!on || helpOff()) && q) q.remove(); });
   } else $('#hdr').innerHTML = 'Shift Welfare';
   var focus = document.activeElement && document.activeElement.id;
@@ -1932,9 +1934,9 @@ function doHandover() {
   var t = totals(), sh = SH(), locked = sh.mode === 'locked', id = newId('handovers'), rows = hoRows();
   var toEmails = locked ? [] : (sh.tos || []).map(function (pid) { return S.members.filter(function (m) { return m.personId === pid; })[0]; }).filter(Boolean).map(function (m) { return m.email; });
   var trl = ctlTrail(), ctl = [EMAIL]; trl.forEach(function (x) { [x.fe, x.te].forEach(function (em) { if (em && ctl.indexOf(em) < 0) ctl.push(em); }); });
-  var h = { status: 'open', at: Date.now(), fromEmail: EMAIL, fromName: myName(), fromWatch: whoOf(EMAIL).wk, trail: trl, ctl: ctl, locked: locked, tos: locked ? [] : (sh.tos || []).slice(), toLabels: locked ? [] : tosList().map(plabel), toEmails: toEmails, nw: nextWatch(),
+  var h = { status: 'open', at: Date.now(), fromEmail: EMAIL, fromName: myName(), fromWatch: whoOf(EMAIL).wk, trail: trl, ctl: ctl, locked: locked, tos: locked ? [] : (sh.tos || []).slice(), toLabels: locked ? [] : tosList().map(plabelNo), toEmails: toEmails, nw: nextWatch(),
     shift: { name: sh.name, half: sh.half, date: sh.date, sid: sh.sid }, cash: sh.counted === '' ? t.cash : num(sh.counted), computed: t.cash, sales: t.sales, cr: t.crN, loans: t.loans, used: t.used, paid: t.paidN, purch: t.purch, received: sh.received, notes: sh.notes, text: handoverText(), sig: M.signature, expireAt: EXP(),
-    items: rows.map(function (r) { return { id: r.id, shelf: r.shelf, name: r.name, price: r.price, per: r.per, open: r.open, stock: r.stock, sold: r.sold, credit: r.crQ, spoiled: r.spQ, cageOpen: r.cageOpen, cage: r.cage }; }),
+    items: rows.map(function (r) { return { id: r.id, shelf: r.shelf, name: r.name, price: r.price, per: r.per, open: r.open, stock: r.stock, sold: r.sold, credit: r.crQ, spoiled: r.spQ, cageOpen: r.cageOpen, cage: r.cage, gone: r.gone, moved: r.moved, movedCases: r.movedCases || 0, bought: r.bought, edit: r.edit, cedit: r.cedit, adj: r.adj, cadj: r.cadj, spoil: r.spoil, soldAmt: r.soldAmt, crAmt: r.crAmt, spAmt: r.spAmt }; }),
     edits: S.log.filter(function (e) { return e.type === 'stockedit'; }).map(editInfo),
     crShift: t.crN, owedTotal: owing().reduce(function (a, x) { return a + x.bal; }, 0) };
   var hd = String(sh.date || '').split('/'), cashRows = soldRows(rows).map(function (x) { return { n: x.r.name, o: x.r.open, a: x.plus, s: x.r.sold, c: x.cash, w: x.r.stock, cr: x.r.crQ, sp: x.r.spQ }; });
@@ -1966,14 +1968,14 @@ function showRx(keep) {
   if (keep) rxKeep(); else RXV = null;
   RX = h; var v = RXV || { cash: h.cash, c: {}, g: {} };
   modal('<h2>' + (h.locked ? '🔒 Locked handover' : 'Handover received') + '</h2>' + (h.locked ? '<div class="card" style="background:var(--soon-bg)"><b>Fridge and cage were locked.</b> Open them and check everything below before accepting.</div>' : '') +
-    '<div class="card sum"><div><span>From</span><b>' + esc(h.fromName) + (h.fromWatch ? '<div class="muted" style="font-weight:500">' + esc(h.fromWatch) + ' watch' + (h.fromWatch !== h.shift.name ? ' · visiting, the ' + esc(h.shift.name) + ' watch was on duty' : '') + '</div>' : '') + '</b></div><div><span>Handed over</span><b>' + new Date(h.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (no one in particular)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Shift</span><b>' + esc(h.shift.name) + ' · ' + esc(h.shift.date) + ' ' + esc(HL(h.shift.half)) + '</b></div><div><span>Sales</span><b>' + money(h.sales) + '</b></div></div>' +
+    '<div class="card sum"><div><span>From</span><b>' + esc(hnl(h.fromName, h.fromEmail)) + (h.fromWatch ? '<div class="muted" style="font-weight:500">' + esc(h.fromWatch) + ' watch' + (h.fromWatch !== h.shift.name ? ' · visiting, the ' + esc(h.shift.name) + ' watch was on duty' : '') + '</div>' : '') + '</b></div><div><span>Handed over</span><b>' + new Date(h.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (no one in particular)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Shift</span><b>' + esc(h.shift.name) + ' · ' + esc(h.shift.date) + ' ' + esc(HL(h.shift.half)) + '</b></div><div><span>Sales</span><b>' + money(h.sales) + '</b></div></div>' +
     '<div class="card"><h2>Check the cash</h2><table><tr><th>Item</th><th>Handover</th><th>You count</th></tr><tr><td>Cash</td><td style="font-size:17px;font-weight:600">' + money(h.cash) + '</td><td><div class="ig" style="width:112px;margin-left:auto;height:40px"><i>$</i><input id="rx-cash" type="number" inputmode="decimal" value="' + esc(v.cash) + '" style="text-align:right"></div></td></tr></table></div>' +
     '<div class="card"><h2>Check the fridge</h2><table><tr><th>Item</th><th>Handover</th><th>You count</th></tr>' + h.items.map(function (i, k) { return i.shelf ? '' : '<tr><td>' + esc(i.name) + '</td><td>' + i.stock + '</td><td><input id="rx-c' + k + '" type="number" inputmode="numeric" min="0" value="' + esc(v.c[k] != null ? v.c[k] : i.stock) + '" style="width:76px;height:38px;text-align:right"></td></tr>'; }).join('') + '</table></div>' +
     (h.items.some(function (i) { return i.shelf; }) ? '<div class="card"><h2>Check the shelf</h2><table><tr><th>Item</th><th>Handover</th><th>You count</th></tr>' + h.items.map(function (i, k) { return !i.shelf ? '' : '<tr><td>' + esc(i.name) + '</td><td>' + i.stock + '</td><td><input id="rx-c' + k + '" type="number" inputmode="numeric" min="0" value="' + esc(v.c[k] != null ? v.c[k] : i.stock) + '" style="width:76px;height:38px;text-align:right"></td></tr>'; }).join('') + '</table></div>' : '') +
     '<div class="card"><h2>Check the cage (cases)</h2><table><tr><th>Item</th><th>Handover</th><th>You count</th></tr>' + h.items.map(function (i, k) { return i.shelf ? '' : '<tr><td>' + esc(i.name) + '</td><td>' + i.cage + '</td><td><input id="rx-g' + k + '" type="number" inputmode="numeric" min="0" value="' + esc(v.g[k] != null ? v.g[k] : i.cage) + '" style="width:76px;height:38px;text-align:right"></td></tr>'; }).join('') + '</table></div>' +
     ((h.trail || []).length ? trailHtml(h.trail, h.shift.name, h.fromName, h.fromWatch) : '') + editsCard(h.edits) + (h.owing ? '<div class="card"><h2>Credit owing</h2>' + (h.owing.length ? '<div class="list">' + h.owing.map(function (x) { return '<div><div class="grow">' + esc(x.label) + '</div><b>' + money(x.bal) + '</b></div>'; }).join('') + '</div>' : '<div class="muted">Nobody owes anything.</div>') + '</div>' : '<div class="card sum"><h2>Credit</h2><div><span>Credit given this shift</span><b>' + money(h.crShift || 0) + '</b></div>' + (h.paid ? '<div><span>Paid back this shift</span><b style="color:var(--ok)">' + money(h.paid) + '</b></div>' : '') + '<div class="t"><span>Total owed</span><span>' + money(h.owedTotal || 0) + '</span></div></div>') +
     (h.notes ? '<div class="card"><label>Remarks</label>' + esc(h.notes) + '</div>' : '') +
-    (h.sig ? '<div class="card"><label>Signed by ' + esc(h.fromName) + '</label><img class="sigimg" src="' + h.sig + '" alt="signature"></div>' : '') +
+    (h.sig ? '<div class="card"><label>Signed by ' + esc(hnl(h.fromName, h.fromEmail)) + '</label><img class="sigimg" src="' + h.sig + '" alt="signature"></div>' : '') +
     sigCard('Your signature (receiving)') +
     '<button class="btn green block" data-act="rxaccept">Accept &amp; take control</button><button class="btn sec block" data-act="close" style="margin-top:10px">Not now</button>');
 }
@@ -2247,7 +2249,7 @@ function hoViewList() {
     var list = canAdmin() ? all.filter(function (h) { return h.status !== 'cancelled'; }) : [all.filter(mineRx)[0], all.filter(mineTx)[0]].filter(Boolean);
     S._hv = list;
     modal('<h2>Previous handover</h2><p class="muted" style="margin-top:0">' + (canAdmin() ? 'Recent handovers (about the last month).' : 'The last handover you received and the last one you handed over.') + ' Read only.</p><div class="list">' + (list.length ? list.map(function (h, i) {
-      var sh = h.shift || {}, tag = mineRx(h) ? 'Received by you' : h.fromEmail === EMAIL ? 'Handed over by you' : esc(h.fromName) + ' → ' + (h.locked ? 'Locked' : esc((h.toLabels || []).join(', ')));
+      var sh = h.shift || {}, tag = mineRx(h) ? 'Received by you' : h.fromEmail === EMAIL ? 'Handed over by you' : esc(hnl(h.fromName, h.fromEmail)) + ' → ' + (h.locked ? 'Locked' : esc((h.toLabels || []).join(', ')));
       return '<div data-act="hovopen" data-i="' + i + '"><div class="grow"><b>' + esc(sh.name || '') + '</b> · ' + esc(sh.date || '') + ' ' + esc(HL(sh.half)) + '<div class="muted">' + tag + ' · ' + new Date(h.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' · ' + esc(h.status) + '</div></div><span class="muted">›</span></div>';
     }).join('') : '<div class="empty">No handover to show yet.<br><span class="muted">Handovers are kept for about a month.</span></div>') + '</div><button class="btn sec block" data-act="close" style="margin-top:10px">Close</button>');
   }).catch(function (e) { closeModal(); toast(errText(e)); });
@@ -2255,22 +2257,27 @@ function hoViewList() {
 function hoViewShow(i) {
   var h = (S._hv || [])[i]; if (!h) return;
   var sh = h.shift || {}, ri = h.receivedItems || null, its = (h.items || []).filter(function (x) { return x.open || x.stock || x.cageOpen || x.cage; }), when = function (t) { return t ? new Date(t).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''; };
+  var RM = {}, vrows = (h.items || []).map(function (x) {   /* the same numbers as "Sold this shift"; older handovers only kept sold, credit and spoiled, so the rest is worked out */
+    var old = x.gone == null, gone = old ? (x.sold || 0) + (x.spoiled || 0) : x.gone, pr = x.price || 0, mv = old ? Math.max(0, x.stock - x.open + gone) : x.moved, r = { id: x.id, shelf: !!x.shelf, name: x.name, price: pr, per: x.per, open: x.open || 0, stock: x.stock, cageOpen: x.cageOpen || 0, cage: x.cage || 0, gone: gone, sold: x.sold || 0, crQ: x.credit || 0, spQ: x.spoiled || 0,
+      moved: x.shelf ? 0 : mv, bought: x.shelf ? (old ? mv : x.bought || 0) : (old ? 0 : x.bought || 0), movedCases: x.movedCases || 0, edit: old ? 0 : x.edit || 0, cedit: old ? 0 : x.cedit || 0, adj: old ? 0 : x.adj || 0, cadj: old ? 0 : x.cadj || 0, spoil: old ? 0 : x.spoil || 0,
+      soldAmt: old ? gone * pr : x.soldAmt || 0, crAmt: old ? (x.credit || 0) * pr : x.crAmt || 0, spAmt: old ? (x.spoiled || 0) * pr : x.spAmt || 0 }; RM[x.id] = r; return r; }).filter(function (r) { return r.open || r.stock || r.cageOpen || r.cage; });
   var table = function (title, list, cage) {
     if (!list.length) return '';
+    var cols = 3 + (ri ? 1 : 0);
     return '<div class="card"><h2>' + title + '</h2><table><tr><th>Item</th><th>Was</th><th>Handed over</th>' + (ri ? '<th>Counted</th>' : '') + '</tr>' + list.map(function (x) {
-      var r = ri && ri[x.id], now = cage ? x.cage : x.stock, got = r ? (cage ? r.cage : r.stock) : null;
-      return '<tr><td>' + esc(x.name) + '</td><td>' + (cage ? x.cageOpen : x.open) + '</td><td><b>' + now + '</b></td>' + (ri ? '<td' + (got != null && got !== now ? ' style="color:var(--exp)"><b>' + got + '</b>' : '>' + (got == null ? '' : got)) + '</td>' : '') + '</tr>';
+      var r = ri && ri[x.id], now = cage ? x.cage : x.stock, got = r ? (cage ? r.cage : r.stock) : null, tg = RM[x.id] ? tags(RM[x.id], cage ? 'cage' : x.shelf ? 'shelf' : 'fridge') : '';
+      return '<tr><td>' + esc(x.name) + '</td><td>' + (cage ? x.cageOpen : x.open) + '</td><td><b>' + now + '</b></td>' + (ri ? '<td' + (got != null && got !== now ? ' style="color:var(--exp)"><b>' + got + '</b>' : '>' + (got == null ? '' : got)) + '</td>' : '') + '</tr>' + (tg ? '<tr><td colspan="' + cols + '" style="border:0;text-align:left;padding-top:0">' + tg + '</td></tr>' : '');
     }).join('') + '</table></div>';
   };
   var diffs = diffsOf(h), sig = function (src, who, t) { return src ? '<div style="margin-top:8px"><img class="sigimg" src="' + src + '" alt="signature"><div class="muted">' + esc(who || '') + (t ? ' · ' + when(t) : '') + '</div></div>' : ''; };
   var cashRow = '<div><span>Cash handed over</span><b>' + money(h.cash) + '</b></div>' + (h.receivedCash != null ? '<div><span>Cash counted by receiver</span><b>' + money(h.receivedCash) + '</b></div>' + (h.receivedCash !== h.cash ? '<div><span>' + (h.receivedCash < h.cash ? 'Short' : 'Over') + '</span><b style="color:var(--exp)">' + money(Math.abs(h.receivedCash - h.cash)) + '</b></div>' : '') : '');
   modal('<h2><span class="sw ' + esc(sh.name || '') + '">' + esc(sh.name || '') + '</span> shift · ' + esc(sh.date || '') + ' ' + esc(HL(sh.half)) + '</h2>' +
-    '<div class="card sum"><div><span>From</span><b>' + esc(h.fromName || '') + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (not handed to a person)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Sent</span><b>' + when(h.at) + '</b></div>' +
-    (h.receivedName ? '<div><span>Received by</span><b>' + esc(h.receivedName) + ' · ' + when(h.acceptedAt) + '</b></div>' : '<div><span>Status</span><b>' + (h.status === 'open' ? 'Waiting to be taken' : esc(h.status)) + '</b></div>') + cashRow +
+    '<div class="card sum"><div><span>From</span><b>' + esc(hnl(h.fromName, h.fromEmail)) + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (not handed to a person)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Sent</span><b>' + when(h.at) + '</b></div>' +
+    (h.receivedName ? '<div><span>Received by</span><b>' + esc(hnl(h.receivedName, h.acceptedBy)) + ' · ' + when(h.acceptedAt) + '</b></div>' : '<div><span>Status</span><b>' + (h.status === 'open' ? 'Waiting to be taken' : esc(h.status)) + '</b></div>') + cashRow +
     (h.owedTotal != null ? '<div><span>Owed by people at the time</span><b>' + money(h.owedTotal) + '</b></div>' : '') + '</div>' +
-    table('Fridge', its.filter(function (x) { return !x.shelf && (x.open || x.stock); }), false) + table('Shelf', its.filter(function (x) { return x.shelf; }), false) + table('Cage (cases)', its.filter(function (x) { return !x.shelf && (x.cageOpen || x.cage); }), true) +
+    editsCard(h.edits || []) + soldCard(vrows) + table('Fridge', its.filter(function (x) { return !x.shelf && (x.open || x.stock); }), false) + table('Shelf', its.filter(function (x) { return x.shelf; }), false) + table('Cage (cases)', its.filter(function (x) { return !x.shelf && (x.cageOpen || x.cage); }), true) +
     (h.status === 'accepted' && ri ? '<div class="card"><h2>Check when it was received</h2>' + (diffs.length ? diffs.map(function (d) { return '<div style="color:var(--exp)">' + esc(d) + '</div>'; }).join('') : '<div style="color:var(--ok)"><b>✓ Everything matched</b></div>') + '</div>' : '') +
-    '<div class="card"><h2>Signatures</h2>' + sig(h.sig, h.fromName, h.at) + sig(h.receivedSig, h.receivedName, h.acceptedAt) + '</div>' +
+    '<div class="card"><h2>Signatures</h2>' + sig(h.sig, hnl(h.fromName, h.fromEmail), h.at) + sig(h.receivedSig, hnl(h.receivedName, h.acceptedBy), h.acceptedAt) + '</div>' +
     '<div class="row"><button class="btn sec grow" data-act="hovlist">Back</button><button class="btn sec grow" data-act="close">Close</button></div>');
 }
 
@@ -2457,15 +2464,15 @@ document.addEventListener('click', function (e) {
   if (MUT[a] && shiftGate(a, b)) return;
   if (a === 'wsel') { var wi = $('#' + b.dataset.for + '-where'); wi.value = b.dataset.v; b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); shelfFields(b.dataset.for); }
   else if (a === 'blwhere') { BUY.lines[+b.dataset.k].where = b.dataset.v; render(); }
-  else if (a === 'pick') { sel = id; CN = { to: null, q: 1, mv: 1 }; countSheet(); }
+  else if (a === 'pick') { sel = id; CN = { to: null, q: 0, mv: 0 }; countSheet(); }
   else if (a === 'editfromsell') { var ei = item(sel); if (ei) { ST = { id: ei.id, fridge: ei.stock, cage: ei.cage, move: 1, spoil: 1 }; stockSheet(); } }
   else if (a === 'cn+' || a === 'cn-') { var ci = item(sel); CN.to = stepTo(CN.to == null ? ci.stock : CN.to, a === 'cn+' ? 1 : -1, 0, ci.stock); countSheet(); }
-  else if (a === 'cm+' || a === 'cm-') { var cmi = item(sel); CN.mv = stepTo(CN.mv, a === 'cm+' ? 1 : -1, 1, Math.max(1, cmi.cage)); countSheet(); }
-  else if (a === 'cq+' || a === 'cq-') { CN.q = stepTo(CN.q, a === 'cq+' ? 1 : -1, 1, 999); countSheet(); }
+  else if (a === 'cm+' || a === 'cm-') { var cmi = item(sel); CN.mv = stepTo(CN.mv, a === 'cm+' ? 1 : -1, 0, Math.max(0, cmi.cage)); countSheet(); }
+  else if (a === 'cq+' || a === 'cq-') { CN.q = stepTo(CN.q, a === 'cq+' ? 1 : -1, 0, 999); countSheet(); }
   else if (a === 'cnsave') countSave();
   else if (a === 'cnmove') countMove();
-  else if (a === 'cnote') openPicker('cnote');
-  else if (a === 'snote') spoilNote();
+  else if (a === 'cnote') { if (CN.q < 1) toast('Set how many items first'); else openPicker('cnote'); }
+  else if (a === 'snote') { if (CN.q < 1) toast('Set how many items first'); else spoilNote(); }
   else if (a === 'ucopen') ucOpen();
   else if (a === 'uccam') $('#uc-cam').click();
   else if (a === 'ucpick') $('#uc-pick').click();
@@ -2767,8 +2774,8 @@ document.addEventListener('change', function (e) {
   if (t.classList && t.classList.contains('stepin')) {   /* a number typed straight into a +/- box */
     var n = Math.floor(num(t.value)), a2 = t.dataset.step, ch2;
     if (a2 === 'cn') { var qi = item(sel), nv = Math.max(0, Math.min(isNaN(n) ? 0 : n, qi ? qi.stock : n)); if (nv !== CN.to) { CN.to = nv; countSheet(); } else t.value = nv; }
-    else if (a2 === 'cm') { var cmi2 = item(sel); CN.mv = Math.max(1, Math.min(n || 1, Math.max(1, cmi2.cage))); countSheet(); }
-    else if (a2 === 'cq') { CN.q = Math.max(1, Math.min(n || 1, 999)); countSheet(); }
+    else if (a2 === 'cm') { var cmi2 = item(sel); CN.mv = Math.max(0, Math.min(n || 0, Math.max(0, cmi2.cage))); countSheet(); }
+    else if (a2 === 'cq') { CN.q = Math.max(0, Math.min(n || 0, 999)); countSheet(); }
     else if (a2 === 'sf') { ST.fridge = Math.max(0, n); stRender(); }
     else if (a2 === 'sg') { ST.cage = Math.max(0, n); stRender(); }
     else if (a2 === 'sm') { var mi2 = item(ST.id); ST.move = Math.max(1, Math.min(n || 1, Math.max(1, mi2.cage))); stockSheet(); }
