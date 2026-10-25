@@ -108,7 +108,7 @@ nav button.on{color:var(--link);background:var(--soft)}
 .modal>div{transition:transform .18s ease}.modal>div.pulling{transition:none}
 .seg{display:grid;gap:8px}
 .seg button{border:2px solid var(--secb);border-radius:10px;min-height:44px;background:var(--field);color:var(--ink);font:inherit;font-weight:600;padding:0 6px}
-.seg button.on{border-color:var(--brand);background:var(--soft)}
+.seg button.on{border-color:var(--link);background:var(--link);color:var(--surface)}.seg button.on::before{content:"✓ "}
 .chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px}
 .chips button{flex:none;border:2px solid var(--secb);border-radius:18px;height:34px;padding:0 12px;background:var(--field);color:var(--ink);font:inherit;font-size:12px;font-weight:600}
 .chips button.on{border-color:var(--brand);background:var(--soft)}
@@ -206,7 +206,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, connectAuthEmulator, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, updatePassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, connectFirestoreEmulator, doc, collection, onSnapshot, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, increment, Timestamp, query, where, orderBy, limit, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-var APP_VERSION = '1.61', RULES_VERSION = '1.16';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '1.63', RULES_VERSION = '1.16';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 var CYCLE = ['Red', 'Blue', 'White', 'Black'];   /* AM shift on consecutive days, from the 2026 Fire Service calendar */
 var ANCHOR = Date.UTC(2026, 9, 1) / 864e5;       /* 1 Oct 2026: AM = Red */
 var AM_START = 9, PM_START = 18;                 /* day shift 9am to 6pm, night shift 6pm to 9am */
@@ -621,6 +621,7 @@ async function startOverRun(list) {
     try { await b.commit(); } catch (x) { console.error(x); err = errText(x); break; }
     done++; await new Promise(function (r) { setTimeout(r, 120); });
   }
+  if (!err) { try { SH().counted = ''; await setShift({ counted: '' }); } catch (x) { console.error(x); } }   /* the cash that was counted goes too: the count starts again from nothing */
   toast(err ? 'Stopped after ' + done + ': ' + err : 'Started over: ' + done + ' entr' + (done === 1 ? 'y' : 'ies') + ' cancelled'); render();
 }
 
@@ -2217,6 +2218,7 @@ function spRender() {
     (isPres() && viewOnlyText() ? spRow('🛡️', 'Take control now', 'Someone else is in control or a handover is stuck', 'ptake') : '') + '</div>' +
     '<div class="sp-h">App</div><div class="sp-card">' +
     spRow('⬆️', 'App version ' + APP_VERSION, 'Needs rules ' + RULES_VERSION + '. Tap to check for updates', 'updcheck') +
+    (isPres() ? spRow('💾', 'Back up all data', 'Owner only. Saves everything into one file on this phone', 'backup') : '') +
     (isPres() ? spRow('⚠️', 'Reset app to default', 'Clears stock, sales, handovers, credit and profit history', 'resetask', ' red') : '') + '</div></div>';
   pg.innerHTML = h; var nb = pg.querySelector('.sp-body'); if (nb) nb.scrollTop = st;
 }
@@ -2293,6 +2295,53 @@ function cancelledModal() {
       var e = c.event || {}; return '<div><div class="grow"><b>' + esc(e.type === 'sale' || e.type === 'cnote' || e.type === 'snote' ? e.qty + ' × ' + e.name : e.type === 'count' ? 'Count of ' + e.name : e.type === 'buy' ? 'Purchase ' + buyText(e) : e.type === 'loan' ? 'Cash loan' : e.name || e.type) + '</b><div class="muted">' + new Date(c.at).toLocaleString() + ' · cancelled by ' + esc(nameOfEmail(c.by) !== 'A member' ? nameOfEmail(c.by) : (c.byName || 'a member')) + (c.reason ? ' · ' + esc(c.reason) : '') + '</div></div><b>' + (e.amt ? money(e.amt) : '') + '</b></div>';
     }).join('') : '<div class="empty">Nothing cancelled.</div>') + '</div><button class="btn sec block" data-act="settings" style="margin-top:10px">Back</button>';
   });
+}
+
+/* ---------- the owner's backup: every collection saved into one file on the phone ---------- */
+var BK_COLS = ['shop', 'members', 'people', 'names', 'items', 'events', 'credit', 'handovers', 'shifts', 'shortages', 'cancelled', 'daily', 'guests', 'notices', 'repayments', 'requests', 'shiftreqs', 'suppliers', 'resets'], BK = null;
+var bkCol = function (c) { return collection(DB, c); };
+function bkValue(v) {   /* Firestore values that JSON cannot hold */
+  if (v && typeof v === 'object') {
+    if (typeof v.toMillis === 'function') return { __ts: v.toMillis() };
+    if (Array.isArray(v)) return v.map(bkValue);
+    var o = {}; Object.keys(v).forEach(function (k) { o[k] = bkValue(v[k]); }); return o;
+  }
+  return v;
+}
+function backupSheet() {
+  modal('<h2>Back up all data</h2><div class="card"><p class="muted" style="margin-top:0">This saves everything in the app (items, stock, sales, credit, people, handovers and history) into one file on this phone. Keep the file somewhere safe, such as Google Drive or WhatsApp to yourself. Only you, the owner, can do this. The file holds names and emails, so do not share it with anyone else.</p><div id="bk-msg" class="muted" style="margin-bottom:8px"></div><button class="btn block" id="bk-go" data-act="bkgo">Start the backup</button></div><button class="btn sec block" data-act="close">Close</button>');
+}
+async function backupRun() {
+  var msg = $('#bk-msg'), go = $('#bk-go'), say = function (t) { if (msg) msg.textContent = t; };
+  if (go) go.disabled = true;
+  var out = { app: 'Shift Welfare', appVersion: APP_VERSION, workplace: 'main', exportedAt: new Date().toISOString(), collections: {}, problems: {} }, total = 0;
+  for (var i = 0; i < BK_COLS.length; i++) {
+    var c = BK_COLS[i]; say('Reading ' + c + '…');
+    try {
+      var sn = await getDocs(bkCol(c));
+      out.collections[c] = sn.docs.map(function (d) { return { id: d.id, data: bkValue(d.data()) }; }); total += sn.size;
+    } catch (e) { out.collections[c] = []; out.problems[c] = e.code || e.message; }
+  }
+  var bad = Object.keys(out.problems);
+  var json = JSON.stringify(out), name = 'shift-welfare-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+  BK = { json: json, name: name };
+  var lines = BK_COLS.map(function (c) { return '<div><span>' + c + '</span><b>' + out.collections[c].length + (out.problems[c] ? ' (could not read)' : '') + '</b></div>'; }).join('');
+  modal('<h2>Backup ready</h2><div class="card"><p style="margin-top:0"><b>' + total + ' records</b> from ' + BK_COLS.length + ' lists, ' + Math.round(json.length / 1024) + ' KB.' + (bad.length ? ' <span style="color:var(--exp)">Some lists could not be read: ' + esc(bad.join(', ')) + '.</span>' : '') + '</p><div class="card sum" style="box-shadow:none;padding:0;max-height:40vh;overflow:auto">' + lines + '</div></div>' +
+    '<button class="btn block" data-act="bksave">Save the file</button><button class="btn sec block" data-act="bkshare" style="margin-top:10px">Share the file…</button><button class="btn sec block" data-act="close" style="margin-top:10px">Close</button>');
+}
+function backupSave() {
+  if (!BK) return;
+  var blob = new Blob([BK.json], { type: 'application/json' }), a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = BK.name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+  toast('Saved as ' + BK.name);
+}
+function backupShare() {
+  if (!BK) return;
+  try {
+    var f = new File([BK.json], BK.name, { type: 'application/json' });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) { navigator.share({ files: [f], title: BK.name }).catch(function () {}); return; }
+  } catch (x) {}
+  toast('Sharing is not available here. Use Save the file');
 }
 
 /* ---------- never show an email address on screen (only on the sign-in page, and in the box when inviting someone) ---------- */
@@ -2729,6 +2778,10 @@ document.addEventListener('click', function (e) {
   else if (a === 'resetgo') resetApp();
   else if (a === 'sendlogin') sendLogin();
   else if (a === 'googlelogin') googleLogin();
+  else if (a === 'backup') backupSheet();
+  else if (a === 'bkgo') backupRun();
+  else if (a === 'bksave') backupSave();
+  else if (a === 'bkshare') backupShare();
   else if (a === 'pwlogin') pwLogin();
   else if (a === 'pwcreate') pwCreate();
   else if (a === 'pwforgot') pwForgot();
