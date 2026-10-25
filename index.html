@@ -146,6 +146,8 @@ input:disabled{background:var(--dis);color:var(--muted)}
 #hint.show{opacity:1}
 .helpc ol,.helpc ul{margin:0;padding-left:18px;line-height:1.55}.helpc li{margin-bottom:3px}
 .sp-top{display:flex;align-items:center;gap:12px;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;background:var(--surface);border-bottom:1px solid var(--line);flex:none}
+.pp-chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}.pp-chips button{border:2px solid var(--secb);background:var(--surface);color:var(--ink);border-radius:20px;padding:7px 12px;font:inherit;font-size:13px}.pp-chips button.on{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.pp-l{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#5b6670);margin:10px 0 4px}.pp-i{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:9px 11px;min-height:38px;font-size:13px}.pp-i span{opacity:.55}
 .sp-top button{width:40px;height:40px;border-radius:50%;border:0;background:var(--soft);color:var(--link);font-size:24px;line-height:1;font-weight:600}
 .sp-top b{flex:1;text-align:center;font-size:18px;font-weight:700;margin-right:40px}
 #spage{position:fixed;inset:0;z-index:15;background:var(--bg);display:flex;flex-direction:column}
@@ -214,7 +216,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.01', RULES_VERSION = '2.07';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.02', RULES_VERSION = '2.08';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -692,17 +694,21 @@ function cnum(id) {   /* what has been counted / noted for one item this shift *
   S.log.forEach(function (e) { if (e.item !== id) return; if (e.type === 'count') { r.sold += e.qty; r.counted = true; } else if (e.type === 'sale') r.sold += e.qty; else if (e.type === 'cnote') r.cr += e.qty; else if (e.type === 'snote') r.sp += e.qty; });
   return r;
 }
+/* an item with nothing left (fridge and cage both 0) leaves the Count page, unless it was sold, counted or noted this shift; it stays at the bottom of Stock */
+function gone0(i) { return !(i.stock > 0 || i.cage > 0); }
+function liveItem(i) { if (!gone0(i)) return true; var c = cnum(i.id); return c.counted || c.sold || c.cr || c.sp; }
 function vCount() {
-  var t = totals(), h = '', n = S.items.filter(function (i) { return cnum(i.id).counted; }).length;
+  var LI = S.items.filter(liveItem), t = totals(), h = '', n = LI.filter(function (i) { return cnum(i.id).counted; }).length;
   h += '<div class="tiles"><div class="tile wide"><div class="l">Sales this shift</div><div class="v">' + money(t.sales) + '</div></div>' +
        '<div class="tile"><div class="l">Items sold</div><div class="v">' + t.sold + '</div></div>' +
        '<div class="tile"><div class="l">Cash on hand</div><div class="v">' + money(t.cash) + '</div></div></div>';
   h += '<button class="btn sec block" data-act="ucopen" style="margin-bottom:14px;border:2px dashed var(--brand);height:50px">💵 Use cash <span style="font-weight:500;font-size:12px">· station supplies, etc.</span></button>';
   if (!S.items.length) return h + '<div class="card empty">No items yet.<br>Go to <b>Stock</b> and add your items and prices.</div>';
+  if (!LI.length) return h + '<div class="card empty">Nothing in stock right now.<br>Items that ran out are at the bottom of <b>Stock</b>.</div>';
   if (inControl() && !(S.state && S.state.pending) && soList(true).length) h += '<button class="btn sec sm" data-act="startover" style="margin:-6px 0 12px;float:right">↺ Start over</button><div style="clear:both"></div>';
-  h += '<div class="card" style="padding:10px 14px;margin-bottom:12px"><div class="row"><b class="grow" style="color:var(--cnt)">Counted so far ' + n + ' of ' + S.items.length + '</b><span class="muted" style="font-size:12px">tap an item to count it</span></div><div class="cprog"><div style="width:' + Math.round(100 * n / S.items.length) + '%"></div></div></div>';
+  h += '<div class="card" style="padding:10px 14px;margin-bottom:12px"><div class="row"><b class="grow" style="color:var(--cnt)">Counted so far ' + n + ' of ' + LI.length + '</b><span class="muted" style="font-size:12px">tap an item to count it</span></div><div class="cprog"><div style="width:' + Math.round(100 * n / LI.length) + '%"></div></div></div>';
   h += '<div class="muted" style="margin:-4px 4px 12px">What you see is what was handed over to you. At the end of your shift, count so it shows what you are handing over.</div>';
-  return h + '<div class="cgrid">' + S.items.map(function (i) {
+  return h + '<div class="cgrid">' + LI.map(function (i) {
     var c = cnum(i.id), cl = c.counted ? ' done' : i.stock <= 0 ? ' out' : i.stock <= 6 ? ' low' : '';
     return '<button class="cc' + cl + '" data-act="pick" data-id="' + i.id + '"><div class="cn">' + esc(i.name) + '</div><div class="cv">' + i.stock + '</div><div class="cs">' + (i.shelf ? '🧁 On the shelf' : '🔒 Cage: ' + i.cage + (i.cage === 1 ? ' case' : ' cases')) + '</div>' + (c.counted ? '<div class="cs" style="margin-top:3px"><span class="pill">Sold ' + Math.max(0, c.sold - c.sp) + '</span>' + (c.cr ? ' <span class="pill low">Credit ' + c.cr + '</span>' : '') + (c.sp ? ' <span class="pill out">Spoiled ' + c.sp + '</span>' : '') + '</div><span class="ck">✓ −' + c.sold + '</span>' : '') + '</button>';
   }).join('') + '</div>';
@@ -1061,8 +1067,9 @@ function ucReview() {
 function vStock() {
   var h = '<button class="btn block" data-act="newitem" style="margin-bottom:14px">+ Add a new item</button>';
   if (!S.items.length) return h + '<div class="card empty">Your items will show here.</div>';
-  h += '<div class="grid">' + S.items.map(function (i) {
-    return '<button class="bub" data-act="stockitem" data-id="' + i.id + '"><span class="n">' + esc(i.name) + '</span><span class="p">' + i.stock + '</span> <span class="s">' + (i.shelf ? 'on shelf' : 'in fridge') + '</span>' + (i.shelf ? '<div class="s">🧁 Shelf item</div>' : '<div class="s">🔒 ' + i.cage + ' case' + (i.cage === 1 ? '' : 's') + ' (' + per(i) + ' each)</div>') + '</button>';
+  var SI = S.items.filter(function (i) { return !gone0(i); }).concat(S.items.filter(gone0));   /* what ran out goes to the bottom */
+  h += '<div class="grid">' + SI.map(function (i) {
+    return '<button class="bub"' + (gone0(i) ? ' style="opacity:.6"' : '') + ' data-act="stockitem" data-id="' + i.id + '"><span class="n">' + esc(i.name) + '</span><span class="p">' + i.stock + '</span> <span class="s">' + (i.shelf ? 'on shelf' : 'in fridge') + '</span>' + (i.shelf ? '<div class="s">🧁 Shelf item</div>' : '<div class="s">🔒 ' + i.cage + ' case' + (i.cage === 1 ? '' : 's') + ' (' + per(i) + ' each)</div>') + '</button>';
   }).join('') + '</div><p class="muted">Tap an item to count it, move a case to the fridge, or record spoilage.</p>';
   return h;
 }
@@ -1805,7 +1812,7 @@ function pedit(id) {
   PE = { id: id, watch: p.watch };
   var b = id ? balance(id) : 0;
   modal('<h2>' + (id ? 'Edit person' : 'Add person') + '</h2><div class="card"><label>Watch</label><div class="seg" id="pe-w" style="grid-template-columns:repeat(' + (WATCHES.length + 1) + ',1fr)">' + WATCHES.concat(['']).map(function (w) { return '<button data-act="pewatch" data-w="' + w + '" class="' + (w === p.watch ? 'on' : '') + '" style="font-size:12px">' + (w || 'None') + '</button>'; }).join('') + '</div>' +
-    '<div class="row f" style="margin-top:10px">' + (useNo() ? '<div style="width:110px"><label>' + esc(SU.noLabel) + '</label><input id="pe-no" inputmode="numeric" value="' + esc(p.no) + '"></div>' : '') + (useRank() ? '<div class="grow"><label>' + esc(SU.rankLabel) + '</label><input id="pe-rank" list="ranks" value="' + esc(p.rank) + '"><datalist id="ranks">' + RANKS.map(function (r) { return '<option value="' + r + '">'; }).join('') + '</datalist></div>' : '') + '</div>' +
+    '<div class="row f" style="margin-top:10px">' + (useNo() ? '<div style="width:110px"><label>' + esc(SU.noLabel) + '</label><input id="pe-no" inputmode="numeric" value="' + esc(p.no) + '"></div>' : '') + (useRank() ? '<div class="grow"><label>' + esc(SU.rankLabel) + '</label><input id="pe-rank" list="ranks" value="' + esc(p.rank) + '"><datalist id="ranks">' + (PID === 'coover' ? RANKS : []).map(function (r) { return '<option value="' + r + '">'; }).join('') + '</datalist></div>' : '') + '</div>' +
     '<div class="f"><label>Name</label><input id="pe-name" value="' + esc(p.name) + '" autocomplete="off"></div></div>' +
     '<button class="btn block" data-act="pesave">Save</button>' +
     (id ? '<button class="btn red block" data-act="pedel" style="margin-top:10px"' + (b > 0 ? ' disabled' : '') + '>Delete person</button>' + (b > 0 ? '<p class="muted">Cannot delete: owes ' + money(b) + '.</p>' : '') : '') +
@@ -2002,7 +2009,7 @@ function prepare() {
   if (sh.counted === '' || isNaN(num(sh.counted))) return toast('Count the cash and enter it first');
   var over = rows.filter(function (r) { return r.crQ > r.sold || r.spQ > r.gone; });
   if (over.length) return infoBox('The notes do not match the count', over.map(function (r) { return '<b>' + esc(r.name) + '</b>: sold ' + r.sold + ', but credit ' + r.crQ + ', spoiled ' + r.spQ + ', gone ' + r.gone + '.'; }).join('<br>') + '<br><span class="muted">Credit and spoiled notes can only explain items that are sold. Count the item again or cancel a note in History.</span>');
-  var unc = rows.filter(function (r) { return !r.counted; });
+  var unc = rows.filter(function (r) { return !r.counted && (r.stock > 0 || r.cage > 0); });   /* nothing left = nothing to count */
   if (unc.length) return askConfirm('Not counted this shift', unc.length + ' item' + (unc.length === 1 ? ' has' : 's have') + ' not been counted:<br><b>' + unc.slice(0, 15).map(function (r) { return esc(r.name) + (r.crQ || r.spQ ? ' (has credit / spoiled notes)' : ''); }).join(', ') + (unc.length > 15 ? ' …' : '') + '</b><br><span class="muted">Their sales are not in the totals.</span>', 'Hand over anyway', prepareShow);
   prepareShow();
 }
@@ -2280,12 +2287,14 @@ async function resetApp() {
 /* ---------- settings ---------- */
 /* ---------- Settings: a full page. The account bubble on top, everything else as rows below it; each row opens its own page or sheet ---------- */
 function spRow(ic, title, sub, act, extra) { return '<div class="sp-row' + (extra || '') + '" data-act="' + act + '"><i class="sp-ic">' + ic + '</i><div class="grow"><b>' + title + '</b><div class="muted">' + sub + '</div></div><span class="sp-ch">›</span></div>'; }
+var SPMODE = '';   /* 'places' = the full Workplaces page inside the settings page */
 function spOpen() { $('#spage').hidden = false; document.body.classList.add('spo'); spRender(); hsync(); }
-function spClose() { $('#spage').hidden = true; document.body.classList.remove('spo'); $('#spage').innerHTML = ''; hsync(); }
+function spClose() { SPMODE = ''; $('#spage').hidden = true; document.body.classList.remove('spo'); $('#spage').innerHTML = ''; hsync(); }
 function spRender() {
   var pg = $('#spage'); if (pg.hidden) return;
+  if (SPMODE === 'places') return wpRender();
   var old = pg.querySelector('.sp-body'), st = old ? old.scrollTop : 0, unread = (S.notices || []).filter(function (x) { return !x.read; }).length;
-  var h = '<div class="sp-top"><button data-act="close" aria-label="Back">‹</button><b>Settings</b></div><div class="sp-body">' +
+  var h = '<div class="sp-top"><button data-act="close" aria-label="Back">‹</button><b style="margin-right:0">Settings</b><button data-act="wpopen" aria-label="Workplaces" style="width:auto;height:38px;border-radius:19px;padding:0 14px;background:var(--brand);color:#fff;font-size:14px;font-weight:700;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.25)">🏢 Workplaces</button></div><div class="sp-body">' +
     '<div class="card"><div class="sp-row" style="padding:0 0 8px;cursor:default"><div class="grow"><b>Account</b></div></div><div><b>' + esc(myPerson() ? myName() : isPres() ? 'Owner' : 'Your name is not set') + '</b></div><div class="muted">' + esc(roleLabel(myRole())) + ' (<span class="myem">' + esc(EMAIL || '') + '</span>)</div>' + (M && !M.personId ? '<p class="muted">Your email is not linked to a name yet. Ask a President or an Admin to link it under Access.</p>' : '') + '<div class="f" style="margin:12px 0 0"><label>App link to share</label><div class="row"><input readonly id="sp-link" value="' + esc(location.origin + location.pathname) + '" style="font-size:12px"><button class="btn sm" data-act="copylink">Copy</button></div><button class="btn sec block" data-act="sharelink" style="margin-top:8px">↗ Share the app link</button></div><button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>' +
     '<div class="sp-h">Me</div><div class="sp-card">' +
     (M && !M.personId ? spRow('🪪', 'My name', 'Not set yet. Tap to choose your name', 'whoopen') : '') +
@@ -2295,7 +2304,7 @@ function spRender() {
     spRow('🔔', 'Notifications', unread ? unread + ' new' : 'Nothing new', 'notices') +
     (isStandalone() ? '' : spRow('📲', 'Install on this phone', 'Opens full screen like a normal app', 'install')) +
     spRow('📖', 'How to use', 'Help for every tab and topic', 'helplist') + '</div>' +
-    (PLACES.length ? '<div class="sp-h">Workplace</div><div class="sp-card">' + (isPres() ? spRow('🏢', 'All workplaces', 'Look inside any of them, change their limits', 'opall') : spRow('🏢', esc(placeName() || 'Workplace'), PLACES.length > 1 ? 'Switch workplace, or join or start another' : 'Join or start another workplace', 'placessheet')) +
+    (PLACES.length ? '<div class="sp-h">Workplace</div><div class="sp-card">' + (isPres() ? spRow('🏢', 'All workplaces', 'Look inside any of them, change their limits', 'wpopen') : spRow('🏢', esc(placeName() || 'Workplace'), PLACES.length > 1 ? 'Switch workplace, or join or start another' : 'Join or start another workplace', 'wpopen')) +
       (canAdmin() && !OWNERVIEW ? spRow('⚙️', 'Workplace settings', 'Shifts, colours, the cycle, words, what people are asked', 'wsopen') : '') +
       (canAdmin() ? spRow('🔢', 'Join code', PLACE && PLACE.code ? 'Code ' + esc(PLACE.code) + '. Tap to share or change it' : 'Make a code so people can join', 'codesheet') : '') +
       (isPres() ? spRow('📨', 'Requests to start a workplace', pReqCount() ? pReqCount() + ' waiting' : 'None waiting', 'prlist') : '') + '</div>' : '') +
@@ -2425,10 +2434,11 @@ async function choosePlace() {   /* false = a screen is showing (welcome, pick a
   if (PLACE && Array.isArray(PLACE.shifts) && PLACE.shifts.length) setCfg({ shifts: PLACE.shifts, periods: DEFAULT_CFG.periods, cycle: [{ s: DEFAULT_CFG.periods.map(function () { return PLACE.shifts[0].name; }) }], anchor: DEFAULT_CFG.anchor, signup: SU });   /* the sign-up page lists this workplace's own shifts */   /* what the sign-up asks, known before someone is a member (the card is readable, the settings are not) */
   return true;
 }
-function memberLimit() { return PLACE && PLACE.perShiftLimit > 0 ? PLACE.perShiftLimit * CFG.shifts.length : 0; }   /* 0 = no limit (Couva) */
+function perLimit(p) { return p && p.perShiftLimit > 0 ? p.perShiftLimit : 3; }   /* every workplace, Couva too, starts at 3 for each shift; only the app's owner raises it */
+function memberLimit() { return PLACE ? perLimit(PLACE) * CFG.shifts.length : 0; }
 function memberCount() { return S.members.filter(function (m) { return m.email !== PRESIDENT && m.role !== 'president' && m.role !== 'owner'; }).length; }
 function atLimit() { var L = memberLimit(); return L > 0 && memberCount() >= L; }
-function limitMsg() { return 'This workplace has reached its limit of ' + memberLimit() + ' people (' + PLACE.perShiftLimit + ' for each of its ' + CFG.shifts.length + ' shifts). Ask the app\'s creator if you need more.'; }
+function limitMsg() { return 'This workplace has reached its limit of ' + memberLimit() + ' people (' + perLimit(PLACE) + ' for each of its ' + CFG.shifts.length + ' shifts). Ask the app\'s creator if you need more.'; }
 function placeName() { return (PLACE && PLACE.name) || (PLACES.filter(function (x) { return x.id === PID; })[0] || {}).name || ''; }
 function openPlace(id) { lsSet('sw.place', id); lsSet('sw.joining', ''); location.reload(); }
 function welcomeHtml(more) {
@@ -2515,7 +2525,7 @@ function wzDefaultCycle() {
 }
 function wzStart() {
   var n = 3;
-  WZ = { step: 0, shifts: [{ name: 'Alpha', color: '#C7361F' }, { name: 'Bravo', color: '#1F6FA8' }, { name: 'Charlie', color: '#2E9E6B' }], parts: [{ label: 'Day', start: 9 }, { label: 'Night', start: 18 }], labels: { fridge: 'Fridge', storage: 'Storage', shelf: 'Shelf' }, perCase: 24, ranks: 'Member', noLabel: 'Staff number', useRank: false, cycle: null, myName: '', myNo: '', myRank: '', myShift: 0, msg: '' };
+  WZ = { step: 0, shifts: [{ name: 'Alpha', color: '#C7361F' }, { name: 'Bravo', color: '#1F6FA8' }, { name: 'Charlie', color: '#2E9E6B' }], parts: [{ label: 'Day', start: 9 }, { label: 'Night', start: 18 }], labels: { fridge: 'Fridge', storage: 'Storage', shelf: 'Shelf' }, perCase: 24, ranks: '', signup: { nameLabel: '', noLabel: '', rankLabel: '', useNo: true, requireNo: false, useRank: false, requireRank: false }, cycle: null, myName: '', myNo: '', myRank: '', myShift: 0, msg: '' };
   WZ.cycle = wzDefaultCycle(); STAGE = 'wizard'; render();
 }
 function wzSetCount(n) {
@@ -2528,7 +2538,7 @@ function wzSetParts(n) {
   WZ.parts = n === 3 ? [{ label: 'Morning', start: 6 }, { label: 'Afternoon', start: 14 }, { label: 'Night', start: 22 }] : [{ label: 'Day', start: 9 }, { label: 'Night', start: 18 }];
   WZ.cycle = wzDefaultCycle();
 }
-var WZ_TITLES = ['How many shifts?', 'Name your shifts', 'Parts of the day', 'Names of the places', 'Numbers and ranks', 'The shift cycle', 'You'];
+var WZ_TITLES = ['How many shifts?', 'Name your shifts', 'Parts of the day', 'Names of the places', 'The sign-up form', 'The shift cycle', 'You'];
 function wizardHtml() {
   var W = WZ, st = W.step, h = '<div class="card"><div class="muted" style="margin-bottom:4px">Step ' + (st + 1) + ' of ' + WZ_TITLES.length + ' · ' + esc(placeName() || 'New workplace') + '</div><h2 style="margin-top:0">' + WZ_TITLES[st] + '</h2>', hr = function (v) { return hr12(v); };
   if (st === 0) {
@@ -2550,11 +2560,7 @@ function wizardHtml() {
       '<div class="f"><label>Where stock is kept in cases</label><input data-wz="lstorage" id="wz-lc" maxlength="20" value="' + esc(W.labels.storage) + '"><div class="muted" style="font-size:12px">For example: Cage, Storeroom</div></div>' +
       '<div class="f"><label>Items in a case (the usual number)</label><input data-wz="percase" id="wz-pc" type="number" inputmode="numeric" min="1" value="' + W.perCase + '"><div class="muted" style="font-size:12px">You can set a different number for any item when you add it.</div></div>';
   } else if (st === 4) {
-    h += '<p class="muted" style="margin-top:0">Two people can share a name. A number or a rank is how the app tells them apart, so people are never listed twice.</p>' +
-      '<div class="f"><label>What do you call the number that tells people apart?</label><input data-wz="nolabel" id="wz-nl" maxlength="24" value="' + esc(W.noLabel) + '" placeholder="e.g. Service number, Staff ID, Badge"><div class="muted" style="font-size:12px">Leave it empty if people do not have one.</div></div>' +
-      '<div class="f"><label>Do you use ranks or titles?</label><div class="seg" style="grid-template-columns:1fr 1fr"><button type="button" data-act="wzrank" data-v="1" class="' + (W.useRank ? 'on' : '') + '">Yes</button><button type="button" data-act="wzrank" data-v="0" class="' + (!W.useRank ? 'on' : '') + '">No</button></div></div>' +
-      (W.useRank ? '<div class="f"><label>The ranks people can choose from (separated by commas)</label><input data-wz="ranks" id="wz-rk" maxlength="200" value="' + esc(W.ranks) + '"></div>' : '') +
-      (!W.noLabel.trim() && !W.useRank ? '<div class="card" style="box-shadow:none;background:var(--soft)"><div class="muted">With neither a number nor a rank, two people with the same name cannot both be added. The second one will be asked to change the name, for example by adding an initial.</div></div>' : '');
+    h += peopleForm(W.signup, W.ranks, 'wz') + (!W.signup.useNo && !W.signup.useRank ? '<div class="card" style="box-shadow:none;background:var(--soft)"><div class="muted">With neither a number nor a rank, two people with the same name cannot both be added. The second one will be asked to change the name, for example by adding an initial.</div></div>' : '');
   } else if (st === 5) {
     var days = W.cycle.length, d0 = new Date();
     h += '<p class="muted" style="margin-top:0">Fill in the days of one full cycle, starting today. Tap a block to change which shift works that part of the day. When the last day is done, the cycle starts again.</p>' +
@@ -2570,7 +2576,7 @@ function wizardHtml() {
   } else {
     h += '<p class="muted" style="margin-top:0">You are the first President. Add yourself to the list of people.</p>' +
       '<div class="f"><label>Your name *</label><input data-wz="myname" id="wz-mn" maxlength="60" value="' + esc(W.myName) + '"></div>' +
-      ((W.noLabel.trim() || W.useRank) ? '<div class="row f">' + (W.noLabel.trim() ? '<div style="width:130px"><label>' + esc(W.noLabel.trim()) + ' (optional)</label><input data-wz="myno" id="wz-mo" inputmode="numeric" maxlength="20" value="' + esc(W.myNo) + '"></div>' : '') + (W.useRank ? '<div class="grow"><label>Rank (optional)</label><input data-wz="myrank" id="wz-mr" maxlength="30" value="' + esc(W.myRank) + '"></div>' : '') + '</div>' : '') +
+      ((W.signup.useNo || W.signup.useRank) ? '<div class="row f">' + (W.signup.useNo ? '<div style="width:130px"><label>' + esc(W.signup.noLabel.trim() || 'Number') + ' (optional)</label><input data-wz="myno" id="wz-mo" inputmode="numeric" maxlength="20" value="' + esc(W.myNo) + '"></div>' : '') + (W.signup.useRank ? '<div class="grow"><label>' + esc(W.signup.rankLabel.trim() || 'Rank') + ' (optional)</label><input data-wz="myrank" id="wz-mr" maxlength="30" value="' + esc(W.myRank) + '"></div>' : '') + '</div>' : '') +
       '<div class="f"><label>Your shift</label><div class="seg" style="grid-template-columns:repeat(' + Math.min(4, W.shifts.length) + ',1fr)">' + W.shifts.map(function (x, i) { return '<button type="button" data-act="wzmy" data-v="' + i + '" class="' + (W.myShift === i ? 'on' : '') + '">' + esc(x.name) + '</button>'; }).join('') + '</div></div>';
   }
   h += '<div id="wz-msg" class="muted" style="margin:8px 0;color:var(--exp)">' + esc(W.msg || '') + '</div><div class="row">' + (st > 0 ? '<button class="btn sec grow" data-act="wzback">Back</button>' : '') + '<button class="btn grow' + (st === WZ_TITLES.length - 1 ? ' green' : '') + '" data-act="wznext">' + (st === WZ_TITLES.length - 1 ? 'Finish set-up' : 'Next') + '</button></div></div>';
@@ -2592,8 +2598,8 @@ async function wzFinish() {
     cycle: W.cycle.map(function (d) { return { s: d.map(function (si) { return names[si]; }) }; }),
     anchor: (function () { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); })(),
     labels: { fridge: W.labels.fridge.trim(), storage: W.labels.storage.trim(), shelf: W.labels.shelf.trim() }, perCase: Math.floor(W.perCase),
-    ranks: W.useRank ? W.ranks.split(',').map(function (x) { return x.trim(); }).filter(Boolean) : ['Member'],
-    signup: { nameLabel: 'Name', noLabel: W.noLabel.trim() || 'Number', rankLabel: 'Rank or title', requireNo: false, requireRank: false, useNo: !!W.noLabel.trim(), useRank: !!W.useRank, rankHint: '' }
+    ranks: W.signup.useRank ? W.ranks.split(',').map(function (x) { return x.trim(); }).filter(Boolean) : ['Member'],
+    signup: { nameLabel: W.signup.nameLabel.trim() || 'Name', noLabel: W.signup.noLabel.trim() || 'Number', rankLabel: W.signup.rankLabel.trim() || 'Rank', requireNo: !!(W.signup.useNo && W.signup.requireNo), requireRank: !!(W.signup.useRank && W.signup.requireRank), useNo: !!W.signup.useNo, useRank: !!W.signup.useRank, rankHint: RANK_EG }
   };
   if (!cfg.ranks.length) cfg.ranks = ['Member'];
   try {
@@ -2928,6 +2934,28 @@ function receiptsSync() {   /* receipts already inside the entries of the last 3
   }).catch(function (e) { console.error(e); toast(errText(e)); });
 }
 
+/* ---------- the tidy-up: old records go (sales and handovers about a month, receipts a year). Done by the president / owner opening the app, at most once a day; no Firebase billing needed ---------- */
+var TIDY = false;
+function tidyUp() {
+  if (TIDY || OWNERVIEW || !canAdmin()) return;
+  var key = 'sw.tidy.' + PID, day = new Date().toISOString().slice(0, 10);
+  if (lsGet(key) === day) return;
+  TIDY = true;
+  var cols = ['events', 'cancelled', 'handovers', 'receiptimgs', 'receipts'];
+  (async function () {
+    try {
+      for (var c = 0; c < cols.length; c++) {
+        for (var round = 0; round < 20; round++) {
+          var sn = await getDocs(query(col(cols[c]), where('expireAt', '<', Timestamp.now()), limit(200)));
+          if (sn.empty) break;
+          var b = writeBatch(DB); sn.docs.forEach(function (d) { b.delete(d.ref); }); await b.commit();
+          if (sn.size < 200) break;
+        }
+      }
+      lsSet(key, day);
+    } catch (e) { console.error('tidy-up', e); }
+  })();
+}
 /* ---------- the owner: every workplace in one list, look inside any of them (view only), change a workplace's people limit ---------- */
 var OP = { list: null, id: '', per: 3 };
 function ssGet(k) { try { return sessionStorage.getItem(k) || ''; } catch (x) { return ''; } }
@@ -2936,27 +2964,54 @@ function ownerBar() {
   if (!OWNERVIEW) return '';
   return '<div class="card" style="background:var(--soon-bg);border:2px solid var(--soon);margin-bottom:12px"><b>👁 Looking inside ' + esc(placeName()) + '</b><div class="muted" style="margin:4px 0 10px">View only. You can look at everything but cannot change anything, and the people here cannot see that you are looking.</div><button class="btn sm" data-act="viewleave">Leave</button></div>';
 }
-function opAll() {
-  OP.list = null; opAllModal();
-  getDocs(collection(DB, 'places')).then(function (sn) {
+function opLoad() {   /* the owner: every workplace with its people count */
+  return getDocs(collection(DB, 'places')).then(function (sn) {
     var ps = docs(sn).filter(function (p) { return p.migrated !== false || p.id === 'coover'; });
     return Promise.all(ps.map(function (p) {
       return Promise.all([getDocs(collection(DB, 'places/' + p.id + '/members')).catch(function () { return { docs: [] }; }), p.shifts ? Promise.resolve(null) : getDoc(doc(DB, 'places/' + p.id + '/config/main')).catch(function () { return null; })]).then(function (r) {
         p.people = r[0].docs.map(function (d) { return d.data(); }).filter(function (m) { return m.email !== PRESIDENT && m.role !== 'president' && m.role !== 'owner'; }).length;
-        p.pres = r[0].docs.map(function (d) { return d.data(); }).filter(function (m) { return m.role === 'president'; }).length;
         p.nshifts = p.shifts ? p.shifts.length : r[1] && r[1].exists() && r[1].data().shifts ? r[1].data().shifts.length : 0;
         return p;
       });
     }));
-  }).then(function (ps) { OP.list = ps.sort(function (a, b) { return String(a.name || '').localeCompare(String(b.name || '')); }); opAllModal(); }).catch(function (e) { console.error(e); OP.list = []; opAllModal(); });
+  }).then(function (ps) { OP.list = ps.sort(function (a, b) { return String(a.name || '').localeCompare(String(b.name || '')); }); }).catch(function (e) { console.error(e); OP.list = []; });
 }
-function opAllModal() {
-  var l = OP.list;
-  modal('<h2>Workplaces</h2><p class="muted" style="margin-top:0">You are the app\'s owner. Open any workplace to look around (view only), or tap ⋮ for more.</p>' + (l === null ? '<div class="card empty">Loading…</div>' : '<div class="card" style="padding:0">' + (l.length ? l.map(function (p) {
-    var lim = p.perShiftLimit > 0 && p.nshifts ? p.perShiftLimit * p.nshifts : 0, badge = p.setupDone === false ? '<span class="pill low">Setting up</span>' : !lim ? '<span class="pill">No limit</span>' : p.people >= lim ? '<span class="pill out">Full</span>' : '<span class="pill ' + (p.perShiftLimit > 3 ? 'low' : '') + '">' + lim + ' max</span>';
-    return '<div class="sp-row" style="cursor:default"><i class="sp-ic">🏢</i><div class="grow" data-act="opview" data-id="' + esc(p.id) + '" style="cursor:pointer"><b>' + esc(p.name || p.id) + '</b><div class="muted">' + (p.setupDone === false ? 'Waiting for set-up' : (p.nshifts ? p.nshifts + ' shift' + (p.nshifts === 1 ? '' : 's') + ' · ' : '') + p.people + (lim ? ' of ' + lim : '') + ' people with access') + '</div></div>' + badge + '<button class="dots" data-act="opmenu" data-id="' + esc(p.id) + '" aria-label="More">⋮</button></div>';
-  }).join('') : '<div class="empty">No workplaces yet.</div>') + '</div>') + '<button class="btn sec block" data-act="close" style="margin-top:10px">Close</button>');
-  REFRESH = null;
+function opAll() { wpOpen(true); }   /* back to the Workplaces page (every Back / Cancel of the owner's pop-ups comes here) */
+function wpOpen(reload) {
+  closeModal(); SPMODE = 'places';
+  if ($('#spage').hidden) spOpen(); else spRender();
+  if (isPres() && (reload || OP.list === null)) { OP.list = null; spRender(); opLoad().then(function () { if (SPMODE === 'places') spRender(); }); }
+}
+function wpCard(o) {   /* o: id, name, sub, badge, buttons[[act,label,cls]] */
+  return '<div class="card" style="margin-bottom:12px"><div class="row" style="align-items:center;gap:12px"><i class="sp-ic">🏢</i><div class="grow"><b style="font-size:16px">' + esc(o.name) + '</b><div class="muted">' + o.sub + '</div></div>' + (o.badge || '') + '</div>' +
+    (o.buttons.length ? '<div class="row" style="flex-wrap:wrap;gap:8px;margin-top:12px">' + o.buttons.map(function (x) { return '<button class="btn ' + (x[2] || 'sec') + ' sm" style="flex:1 1 130px" data-act="' + x[0] + '" data-id="' + esc(o.id) + '">' + x[1] + '</button>'; }).join('') + '</div>' : '') + '</div>';
+}
+function wpRender() {
+  var pg = $('#spage'), h = '<div class="sp-top"><button data-act="wpback" aria-label="Back">‹</button><b>Workplaces</b></div><div class="sp-body">';
+  if (OWNERVIEW) h += ownerBar();
+  if (isPres()) {
+    var l = OP.list;
+    h += '<p class="muted" style="margin-top:0">You are the app\'s owner. Open any workplace to look around (view only), or change its limit, code or name.</p>';
+    if (l === null) h += '<div class="card empty">Loading…</div>';
+    else if (!l.length) h += '<div class="card empty">No workplaces yet.</div>';
+    else h += l.map(function (p) {
+      var lim = p.nshifts ? perLimit(p) * p.nshifts : 0, mine = p.id === 'coover', here = p.id === PID, bt = [];
+      var badge = p.setupDone === false ? '<span class="pill low">Setting up</span>' : !lim ? '' : p.people >= lim ? '<span class="pill out">Full</span>' : '<span class="pill ' + (perLimit(p) > 3 ? 'low' : '') + '">' + lim + ' max</span>';
+      if (!here) bt.push(['opview', mine ? '🏠 Open' : '👁 Look inside', 'sec']); else bt.push(['wpnone', here && OWNERVIEW ? '👁 Looking now' : '✔ Open now', 'sec']);
+      if (here && canAdmin() && !OWNERVIEW) bt.push(['wsopen', '⚙️ Workplace settings', '']);
+      bt.push(['oplimit', '👥 People limit'], ['opcode', '🔢 Join code'], ['oprename', '✏️ Rename']);
+      return wpCard({ id: p.id, name: p.name || p.id, sub: (p.setupDone === false ? 'Waiting for set-up' : (p.nshifts ? p.nshifts + ' shift' + (p.nshifts === 1 ? '' : 's') + ' · ' : '') + p.people + (lim ? ' of ' + lim : '') + ' people with access'), badge: badge, buttons: bt });
+    }).join('');
+  } else {
+    h += '<p class="muted" style="margin-top:0">The workplaces you belong to.</p>' + PLACES.map(function (x) {
+      var here = x.id === PID, bt = [];
+      if (here) { bt.push(['wpnone', '✔ Open now', 'sec']); if (canAdmin() && !OWNERVIEW) { bt.push(['wsopen', '⚙️ Workplace settings', '']); bt.push(['codesheet', '🔢 Join code']); } }
+      else bt.push(['goplace', 'Switch to this workplace', '']);
+      return wpCard({ id: x.id, name: x.name, sub: here ? 'You are in this workplace now' : 'Tap Switch to open it', buttons: bt });
+    }).join('');
+  }
+  h += '<button class="btn sec block" data-act="wmore" style="margin-top:4px">Join or start another workplace</button></div>';
+  var old = pg.querySelector('.sp-body'), st = old ? old.scrollTop : 0; pg.innerHTML = h; var nb = pg.querySelector('.sp-body'); if (nb) nb.scrollTop = st;
 }
 function opPlace(id) { return (OP.list || []).filter(function (p) { return p.id === id; })[0]; }
 function opMenu(id) {
@@ -2964,13 +3019,13 @@ function opMenu(id) {
   var same = id === 'coover';
   shShow('<h2>' + esc(p.name || id) + '</h2><div class="list">' +
     '<div data-act="opview" data-id="' + esc(id) + '"><div class="grow">' + (same ? '🏠 Open (your own workplace)' : '👁 Open (view only)') + '</div></div>' +
-    (same ? '' : '<div data-act="oplimit" data-id="' + esc(id) + '"><div class="grow">👥 Change the people limit</div></div>') +
+    ('<div data-act="oplimit" data-id="' + esc(id) + '"><div class="grow">👥 Change the people limit</div></div>') +
     '<div data-act="opcode" data-id="' + esc(id) + '"><div class="grow">🔢 Show its join code</div></div>' +
     '<div data-act="oprename" data-id="' + esc(id) + '"><div class="grow">✏️ Rename</div></div></div><button class="btn sec block" data-act="dgcancel" style="margin-top:10px">Close</button>');
 }
 function opView(id) { shClose(); ssSet('sw.viewas', id === 'coover' ? '' : id); location.reload(); }
 function opLimit(id) {
-  var p = opPlace(id); if (!p) return; OP.id = id; OP.per = p.perShiftLimit > 0 ? p.perShiftLimit : 3; shClose(); opLimitSheet();
+  var p = opPlace(id); if (!p) return; OP.id = id; OP.per = perLimit(p); shClose(); opLimitSheet();
 }
 function opLimitSheet() {
   var p = opPlace(OP.id); if (!p) return; var n = p.nshifts || 0, tot = OP.per * n;
@@ -3039,13 +3094,32 @@ function wsWords() {
     '<div class="f"><label>Items in a case (the usual number)</label><input data-ws="percase" type="number" inputmode="numeric" min="1" value="' + WS.perCase + '"><div class="muted" style="font-size:12px">Each item can still have its own number.</div></div>' +
     '<div id="ws-msg" class="muted" style="color:var(--exp);margin:8px 0"></div><button class="btn block" data-act="wssave">Save</button><button class="btn sec block" data-act="wsback" style="margin-top:10px">Back</button>'); REFRESH = null;
 }
+/* "What people are asked": the same form in the workplace settings (ns ws) and in the set-up wizard (ns wz) */
+function peoplePreview(S2) {   /* what the person asking for access will see */
+  var star = function (req) { return req ? ' *' : ' (optional)'; }, f = function (l, ph) { return '<div class="pp-l">' + esc(l) + '</div><div class="pp-i">' + (ph ? '<span>' + esc(ph) + '</span>' : '&nbsp;') + '</div>'; };
+  return '<div style="font-weight:700;margin-bottom:2px">👁 What a person asking for access will see</div>' + f(((S2.nameLabel || '').trim() || 'Name') + ' *') +
+    (S2.useNo ? f((S2.noLabel.trim() || 'Number') + star(S2.requireNo)) : '') + (S2.useRank ? f((S2.rankLabel.trim() || 'Rank') + star(S2.requireRank), RANK_EG) : '') + '<div class="pp-l">Shift *</div><div class="muted">(they pick their shift)</div>';
+}
+var RANK_EG = 'Manager, FF, Sergeant, etc.';
+function peopleForm(S2, ranksVal, ns) {
+  var three = function (act, cur) { return '<div class="seg" style="grid-template-columns:repeat(3,1fr)">' + [['off', 'Not asked'], ['opt', 'Optional'], ['req', 'Required']].map(function (o) { return '<button type="button" data-act="' + act + '" data-v="' + o[0] + '" class="' + (cur === o[0] ? 'on' : '') + '">' + o[1] + '</button>'; }).join('') + '</div>'; }, sm = ' style="font-size:14px"';
+  return (ns === 'ws' ? '<h2>The sign-up form</h2>' : '') + '<p class="muted" style="margin-top:0">Tap a choice to fill the box, or type your own wording. The preview underneath shows exactly what a person asking for access will see.</p>' +
+    '<div class="f"><label>Question 1: Name (always asked)</label>' + ppChips(ns, 'nameLabel', S2, ['First name', 'Surname', 'Full name']) + '<input data-' + ns + '="namelabel" maxlength="24"' + sm + ' value="' + esc(S2.nameLabel) + '" placeholder="Surname, First Name Or Full Name"></div>' +
+    '<div class="f"><label>Question 2: Number</label>' + ppChips(ns, 'noLabel', S2, ['Service number', 'Badge', 'Employee ID']) + '<input data-' + ns + '="nolabel" maxlength="30"' + sm + ' value="' + esc(S2.noLabel) + '" placeholder="Service Number, Badge Or Employee ID, etc.">' + three(ns + 'no', !S2.useNo ? 'off' : S2.requireNo ? 'req' : 'opt') + '</div>' +
+    '<div class="f"><label>Question 3: Rank, title or position</label>' + ppChips(ns, 'rankLabel', S2, ['Rank', 'Title', 'Position']) + '<input data-' + ns + '="ranklabel" maxlength="30"' + sm + ' value="' + esc(S2.rankLabel) + '" placeholder="Rank, Title Or Position">' + three(ns + 'rank', !S2.useRank ? 'off' : S2.requireRank ? 'req' : 'opt') + '</div>' +
+    '<div class="card" id="pp-prev" style="border:2px dashed var(--secb);box-shadow:none">' + peoplePreview(S2) + '</div>';
+}
+function ppRefresh(S2) {
+  var e = $('#pp-prev'); if (e) e.innerHTML = peoplePreview(S2);
+  document.querySelectorAll('[data-act=ppick]').forEach(function (c) { c.classList.toggle('on', String(S2[c.dataset.k] || '').trim().toLowerCase() === c.dataset.v.toLowerCase()); });
+}
+function ppPick(b) {   /* a quick pick fills the field; the field can still be typed in */
+  var ns = b.dataset.ns, k = b.dataset.k, S2 = ns === 'ws' ? WS.signup : WZ.signup, inp = document.querySelector('[data-' + ns + '="' + k.toLowerCase() + '"]');
+  S2[k] = b.dataset.v; if (inp) inp.value = b.dataset.v; ppRefresh(S2);
+}
+function ppChips(ns, key, S2, opts) { return '<div class="pp-chips">' + opts.map(function (o) { return '<button type="button" data-act="ppick" data-ns="' + ns + '" data-k="' + key + '" data-v="' + o + '" class="' + (String(S2[key] || '').trim().toLowerCase() === o.toLowerCase() ? 'on' : '') + '">' + o + '</button>'; }).join('') + '</div>'; }
 function wsPeople() {
-  var S2 = WS.signup, three = function (act, cur) { return '<div class="seg" style="grid-template-columns:repeat(3,1fr)">' + [['off', 'Not used'], ['opt', 'Optional'], ['req', 'Required']].map(function (o) { return '<button type="button" data-act="' + act + '" data-v="' + o[0] + '" class="' + (cur === o[0] ? 'on' : '') + '">' + o[1] + '</button>'; }).join('') + '</div>'; };
-  modal('<h2>What people are asked</h2><p class="muted" style="margin-top:0">A number or a rank is how two people with the same name are told apart.</p>' +
-    '<div class="f"><label>What to call a person\'s name</label><input data-ws="namelabel" maxlength="20" value="' + esc(S2.nameLabel) + '"></div>' +
-    '<div class="f"><label>The number</label><input data-ws="nolabel" maxlength="24" value="' + esc(S2.noLabel) + '" placeholder="e.g. Service number, Staff ID">' + three('wsno', !S2.useNo ? 'off' : S2.requireNo ? 'req' : 'opt') + '</div>' +
-    '<div class="f"><label>The rank or title</label><input data-ws="ranklabel" maxlength="24" value="' + esc(S2.rankLabel) + '">' + three('wsrank', !S2.useRank ? 'off' : S2.requireRank ? 'req' : 'opt') + '</div>' +
-    (S2.useRank ? '<div class="f"><label>Ranks people can choose from (separated by commas)</label><input data-ws="ranks" maxlength="300" value="' + esc(WS.ranks.join(', ')) + '"></div>' : '') +
+  modal(peopleForm(WS.signup, WS.ranks.join(', '), 'ws') +
     '<div id="ws-msg" class="muted" style="color:var(--exp);margin:8px 0"></div><button class="btn block" data-act="wssave">Save</button><button class="btn sec block" data-act="wsback" style="margin-top:10px">Back</button>'); REFRESH = null;
 }
 function wsInput(t) {
@@ -3053,7 +3127,7 @@ function wsInput(t) {
   if (k === 'sname') WS.shifts[i].name = v; else if (k === 'anchor') { if (/^\d{4}-\d{2}-\d{2}$/.test(v)) WS.anchor = v; }
   else if (k === 'plabel') WS.periods[i].label = v; else if (k === 'pstart') WS.periods[i].start = +v;
   else if (k === 'lfridge') WS.labels.fridge = v; else if (k === 'lshelf') WS.labels.shelf = v; else if (k === 'lstorage') WS.labels.storage = v; else if (k === 'percase') WS.perCase = num(v);
-  else if (k === 'namelabel') WS.signup.nameLabel = v; else if (k === 'nolabel') WS.signup.noLabel = v; else if (k === 'ranklabel') WS.signup.rankLabel = v;
+  else if (k === 'namelabel') WS.signup.nameLabel = v; else if (k === 'nolabel') WS.signup.noLabel = v; else if (k === 'ranklabel') WS.signup.rankLabel = v; if (/label$/.test(k)) ppRefresh(WS.signup);
   else if (k === 'ranks') WS.ranks = v.split(',').map(function (x) { return x.trim(); }).filter(Boolean);
 }
 function wsCheck() {
@@ -3065,8 +3139,7 @@ function wsCheck() {
   if (!WS.labels.fridge.trim() || !WS.labels.shelf.trim() || !WS.labels.storage.trim()) return 'Give all three places a name.';
   if (!(WS.perCase >= 1)) return 'Items in a case must be at least 1.';
   var used = {}; WS.cycle.forEach(function (d) { d.s.forEach(function (n) { used[n] = 1; }); }); if (Object.keys(used).length < WS.shifts.length) return 'Every shift must work at least one part of the cycle.';
-  if (!WS.signup.nameLabel.trim()) return 'Say what to call a name.';
-  if (WS.signup.useNo && !WS.signup.noLabel.trim()) return 'Say what to call the number.';
+  WS.signup.nameLabel = WS.signup.nameLabel.trim() || 'Name'; WS.signup.noLabel = WS.signup.noLabel.trim() || 'Number'; WS.signup.rankLabel = WS.signup.rankLabel.trim() || 'Rank'; if (WS.signup.useRank && !WS.signup.rankHint) WS.signup.rankHint = RANK_EG;
   return '';
 }
 function wsSave() {
@@ -3221,6 +3294,21 @@ document.addEventListener('touchmove', function (e) {
   if (t.closest('#mbg.top > div') && !t.closest('.list') && t.closest('#mbg.top > div').scrollHeight > t.closest('#mbg.top > div').clientHeight + 1 && !t.closest('.sq')) return;
   e.preventDefault();
 }, { passive: false });
+/* ---------- pull the screen down to refresh it (the phone's own pull-to-refresh is switched off, so the app does it) ---------- */
+(function () {
+  var st = null, ind = null;
+  function top() { var se = document.scrollingElement || document.documentElement; return (se.scrollTop || 0) <= 0; }
+  function blocked(t) { return !!document.querySelector('#mbg') || !!$('#cf') || !!(t.closest && t.closest('input,textarea,select,canvas,.sp-body,#spage')) || (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName)); }
+  function bar() { if (!ind) { ind = document.createElement('div'); ind.style.cssText = 'position:fixed;left:50%;top:0;transform:translate(-50%,-60px);z-index:99;background:var(--brand,#245);color:#fff;padding:8px 16px;border-radius:0 0 14px 14px;font-weight:600;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.25);pointer-events:none;transition:transform .12s'; document.body.appendChild(ind); } return ind; }
+  document.addEventListener('touchstart', function (e) { st = null; if (e.touches.length !== 1 || !top() || blocked(e.target)) return; st = { y0: e.touches[0].clientY, x0: e.touches[0].clientX, on: false, dy: 0 }; }, { passive: true });
+  document.addEventListener('touchmove', function (e) {
+    if (!st) return; var dy = e.touches[0].clientY - st.y0, dx = Math.abs(e.touches[0].clientX - st.x0);
+    if (!st.on) { if (dy < 10 && Math.abs(dy) < 10) return; if (dx > dy || dy < 0 || !top()) { st = null; return; } st.on = true; }
+    st.dy = dy; var b = bar(), go = dy > 110; b.textContent = go ? '↻ Let go to refresh' : '↓ Pull down to refresh'; b.style.transform = 'translate(-50%,' + Math.min(0, Math.min(dy, 120) - 60) + 'px)';
+  }, { passive: true });
+  function end() { if (!st) return; var go = st.on && st.dy > 110; st = null; if (!ind) return; if (go) { ind.textContent = 'Refreshing…'; ind.style.transform = 'translate(-50%,0)'; setTimeout(function () { location.reload(); }, 150); } else ind.style.transform = 'translate(-50%,-60px)'; }
+  document.addEventListener('touchend', end, { passive: true }); document.addEventListener('touchcancel', end, { passive: true });
+})();
 /* ---------- pull a pop-up down to close it (like Cancel); asks first if something was typed ---------- */
 (function () {
   var st = null;
@@ -3558,9 +3646,13 @@ document.addEventListener('click', function (e) {
   else if (a === 'wscol') { WS.shifts[+b.dataset.i].color = b.dataset.v; wsShifts(); }
   else if (a === 'wscell') { var wi = +b.dataset.i, wj = +b.dataset.j, nm0 = WS.shifts.map(function (x) { return x.name; }), cur = nm0.indexOf(WS.cycle[wi].s[wj]); WS.cycle[wi].s[wj] = nm0[(cur + 1) % nm0.length]; wsCycle(); }
   else if (a === 'wsday') { if (+b.dataset.v > 0) { var lst = WS.cycle[WS.cycle.length - 1].s, nm1 = WS.shifts.map(function (x) { return x.name; }); WS.cycle.push({ s: lst.map(function (x) { return nm1[(nm1.indexOf(x) + 1) % nm1.length]; }) }); } else if (WS.cycle.length > 1) WS.cycle.pop(); wsCycle(); }
+  else if (a === 'ppick') ppPick(b);
   else if (a === 'wsno') { WS.signup.useNo = b.dataset.v !== 'off'; WS.signup.requireNo = b.dataset.v === 'req'; wsPeople(); }
   else if (a === 'wsrank') { WS.signup.useRank = b.dataset.v !== 'off'; WS.signup.requireRank = b.dataset.v === 'req'; wsPeople(); }
-  else if (a === 'opall') { closeModal(); spClose(); opAll(); }
+  else if (a === 'opall') opAll();
+  else if (a === 'wpopen') wpOpen(true);
+  else if (a === 'wpback') { SPMODE = ''; spRender(); }
+  else if (a === 'wpnone') { }
   else if (a === 'opmenu') opMenu(id);
   else if (a === 'opview') opView(id);
   else if (a === 'oplimit') opLimit(id);
@@ -3615,7 +3707,8 @@ document.addEventListener('click', function (e) {
   else if (a === 'wzcell') { var ci = +b.dataset.i, cj = +b.dataset.j; WZ.cycle[ci][cj] = (WZ.cycle[ci][cj] + 1) % WZ.shifts.length; render(); }
   else if (a === 'wzday') { if (+b.dataset.v > 0) { var ls = WZ.cycle[WZ.cycle.length - 1]; WZ.cycle.push(ls.map(function (x) { return (x + 1) % WZ.shifts.length; })); } else if (WZ.cycle.length > 1) WZ.cycle.pop(); render(); }
   else if (a === 'wzmy') { WZ.myShift = +b.dataset.v; render(); }
-  else if (a === 'wzrank') { WZ.useRank = b.dataset.v === '1'; render(); }
+  else if (a === 'wzno') { WZ.signup.useNo = b.dataset.v !== 'off'; WZ.signup.requireNo = b.dataset.v === 'req'; render(); }
+  else if (a === 'wzrank') { WZ.signup.useRank = b.dataset.v !== 'off'; WZ.signup.requireRank = b.dataset.v === 'req'; render(); }
   else if (a === 'wzback') { WZ.msg = ''; WZ.step = Math.max(0, WZ.step - 1); render(); }
   else if (a === 'wznext') { var wm = wzCheck(); WZ.msg = wm; if (wm) { render(); return; } if (WZ.step >= WZ_TITLES.length - 1) wzFinish(); else { WZ.step++; render(); window.scrollTo(0, 0); } }
   else if (a === 'recheck') { location.reload(); }
@@ -3634,7 +3727,7 @@ function wzInput(t) {
   var k = t.dataset.wz, i = +t.dataset.i, v = t.value;
   if (k === 'sname') WZ.shifts[i].name = v; else if (k === 'plabel') WZ.parts[i].label = v; else if (k === 'pstart') WZ.parts[i].start = +v;
   else if (k === 'lfridge') WZ.labels.fridge = v; else if (k === 'lshelf') WZ.labels.shelf = v; else if (k === 'lstorage') WZ.labels.storage = v;
-  else if (k === 'percase') WZ.perCase = num(v); else if (k === 'ranks') WZ.ranks = v; else if (k === 'nolabel') WZ.noLabel = v;
+  else if (k === 'percase') WZ.perCase = num(v); else if (k === 'ranks') WZ.ranks = v; else if (k === 'namelabel') WZ.signup.nameLabel = v; else if (k === 'nolabel') WZ.signup.noLabel = v; else if (k === 'ranklabel') WZ.signup.rankLabel = v; if (/label$/.test(k)) ppRefresh(WZ.signup);
   else if (k === 'myname') WZ.myName = v; else if (k === 'myno') WZ.myNo = v; else if (k === 'myrank') WZ.myRank = v;
 }
 document.addEventListener('input', function (e) {
@@ -3810,7 +3903,7 @@ function startListeners() {
       if (isPres()) { bootstrap(); } else { STAGE = 'setup'; render(); }
       return;
     }
-    var prevS = S.state, wasCtl = prevS ? prevS.controlEmail : undefined; S.state = s.data(); STAGE = 'ready';
+    var prevS = S.state, wasCtl = prevS ? prevS.controlEmail : undefined; S.state = s.data(); STAGE = 'ready'; tidyUp();
     if (prevS && wasCtl !== S.state.controlEmail && Date.now() - SELF > 5000) {   /* someone else moved control: tell this person at once, no reopening needed */
       if (S.state.controlEmail === EMAIL) controlPopup('Control received', '<b>' + esc(prevS.controlName || 'The previous operator') + '</b> has handed over operation to you. You are now in control.');
       else if (wasCtl === EMAIL) controlPopup('Control moved', '<b>' + esc(S.state.controlName || 'Someone') + '</b> has taken over operation from you. You are now view only.');
