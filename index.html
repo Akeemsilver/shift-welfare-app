@@ -206,7 +206,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, connectAuthEmulator, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, updatePassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, connectFirestoreEmulator, doc, collection, onSnapshot, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, increment, Timestamp, query, where, orderBy, limit, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-var APP_VERSION = '1.59', RULES_VERSION = '1.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '1.61', RULES_VERSION = '1.16';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 var CYCLE = ['Red', 'Blue', 'White', 'Black'];   /* AM shift on consecutive days, from the 2026 Fire Service calendar */
 var ANCHOR = Date.UTC(2026, 9, 1) / 864e5;       /* 1 Oct 2026: AM = Red */
 var AM_START = 9, PM_START = 18;                 /* day shift 9am to 6pm, night shift 6pm to 9am */
@@ -1488,7 +1488,7 @@ function banner() {
   if (st.controlEmail) return box('🔒 View only', 'In control: <b>' + esc(st.controlName || st.controlEmail) + '</b>. Only the person in control can sell or change anything.', tc);
   if (h && h.status === 'open') {
     var to = h.locked ? 'Locked: no one in particular' : esc((h.toLabels || []).join(', '));
-    if (h.fromEmail === EMAIL) return box('🔒 Handed over', 'To ' + to + ' at ' + hhmm(h.at) + '. Waiting for someone to take it.', '<div class="row"><button class="btn sm grow" data-act="shareapp">Notify (WhatsApp…)</button><button class="btn sec sm grow" data-act="cancelho">Cancel handover</button></div>');
+    if (h.fromEmail === EMAIL) return box('🔒 Handed over', 'To ' + to + ' at ' + hhmm(h.at) + '. Waiting for someone to take it.', '<div class="row"><button class="btn sm grow" data-act="shareapp">Notify (WhatsApp…)</button><button class="btn sec sm grow" data-act="cancelho">Cancel handover, I\'m staying on</button></div>');
     if (eligible(h)) return box('📋 Handover waiting for you', 'From ' + esc(hnl(h.fromName, h.fromEmail)) + ' · ' + esc(h.shift.name) + ' shift · cash ' + money(h.cash), '<button class="btn green sm" data-act="openrx">Open handover &amp; take control</button>');
     return box('Waiting for the handover to be taken', 'Handed to ' + to + ' by ' + esc(hnl(h.fromName, h.fromEmail)) + ' at ' + hhmm(h.at) + '.', isPres() ? tc : '');
   }
@@ -1552,8 +1552,8 @@ function evRow(e, cancelable) {
   var ic, tx, sub = '', amt = '', col = 'var(--ink)';
   if (e.type === 'sale') { ic = e.cr ? '💳' : '🛒'; tx = e.qty + ' × ' + e.name; sub = e.cr ? 'On credit · ' + (e.crName || plab(e.cr)) : 'Cash sale'; amt = money(e.amt); col = e.cr ? 'var(--soon)' : 'var(--ink)'; }
   else if (e.type === 'count') { ic = '🧮'; tx = 'Counted ' + e.name + ': ' + e.from + ' → ' + e.to; sub = e.qty ? e.qty + ' sold' : 'none sold'; amt = e.qty ? money(e.amt) : ''; }
-  else if (e.type === 'cnote') { ic = '💳'; tx = 'Credit note: ' + e.qty + ' × ' + e.name; sub = (e.crName || plab(e.cr)) + ' · the number was not changed'; amt = money(e.amt); col = 'var(--soon)'; }
-  else if (e.type === 'snote') { ic = '🗑'; tx = 'Spoiled note: ' + e.qty + ' × ' + e.name; sub = 'a note only, the number was not changed'; }
+  else if (e.type === 'cnote') { ic = '💳'; tx = 'Credit note: ' + e.qty + ' × ' + e.name; sub = (e.crName || plab(e.cr)) + ' · ' + e.qty + (e.qty === 1 ? ' of the items counted was' : ' of the items counted were') + ' on credit'; amt = money(e.amt); col = 'var(--soon)'; }
+  else if (e.type === 'snote') { ic = '🗑'; tx = 'Spoiled note: ' + e.qty + ' × ' + e.name; sub = e.qty + (e.qty === 1 ? ' of the items counted was' : ' of the items counted were') + ' spoiled'; }
   else if (e.type === 'loan') { ic = '🤝'; tx = 'Cash loan'; sub = (e.crName || plab(e.cr)) + (e.note ? ' · ' + e.note : ''); amt = '− ' + money(e.amt); col = 'var(--soon)'; }
   else if (e.type === 'pay') { ic = '💵'; tx = 'Payment collected'; sub = e.crName || plab(e.person); amt = '+ ' + money(e.amt); col = 'var(--ok)'; }
   else if (e.type === 'buy') { ic = '🧾'; tx = 'Bought ' + buyText(e); sub = (e.supplier || '') + (e.tax ? ' · tax ' + money(e.tax) : '') + (e.writeoff ? ' · change not kept ' + money(e.writeoff) : ''); amt = '− ' + money(e.amt); }
