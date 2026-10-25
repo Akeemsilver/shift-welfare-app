@@ -23,7 +23,7 @@
 :root[data-theme=dark]{--bg:#10181F;--surface:#212E3A;--ink:#E8EEF2;--muted:#9FAEBA;--line:#2E3B46;--soft:#243542;--ok:#4FC48C;--ok-bg:#163428;--soon:#E2AB2B;--soon-bg:#3B3011;--exp:#F2705C;--exp-bg:#3C1E19;--sh:0 1px 2px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.35);--cnt:#5DAEE6;--cnt-bg:#17324A;--s-red:#D9533D;--s-blue:#3C8BCB;--s-white:#9FAEBA;--s-black:#05080A;--field:#222E38;--link:#86C7EA;--dis:#26323C;--toast:#2B3A47;--pop:#18232D;--ov:rgba(0,0,0,.72);--secb:#58798D;--ib:#4A5E70;color-scheme:dark}
 :root[data-theme=dark] .sigimg{filter:invert(1)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;overscroll-behavior-y:none;background:var(--bg);color:var(--ink);font:13px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,Lato,sans-serif}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,Lato,sans-serif}
 body{padding-bottom:calc(var(--bar) + 24px + env(safe-area-inset-bottom))}
 header{position:sticky;top:0;z-index:5;background:var(--brand);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:10px}
 header h1{font-size:14px;margin:0;flex:1}
@@ -133,7 +133,7 @@ textarea{font:inherit;width:100%;min-height:90px;border:1px solid var(--ib);bord
 .pl>div{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line)}.pl>div:first-child,.pl>h2+div{border-top:0}.pl .big{font-size:14px;font-weight:600}.pl .sub{padding-left:14px;color:var(--muted);font-size:13px}
 .bar{height:10px;border-radius:5px;background:var(--ok)}.bar.neg{background:var(--exp)}.good{color:var(--ok)}.bad{color:var(--exp)}
 .modal.top{align-items:flex-start}.modal.top>div{margin-bottom:0;border-radius:0 0 18px 18px;max-height:calc(var(--vvh,100vh) - var(--navoff,68px));padding-top:calc(10px + env(safe-area-inset-top))}
-html:has(#mbg.top),body:has(#mbg.top){overflow:hidden;overscroll-behavior:none}.modal.top>div,.modal.top .list{overscroll-behavior:contain}   /* a search pop-up never lets the page behind it scroll */
+html:has(#mbg.top),body:has(#mbg.top){overflow:hidden;overscroll-behavior:none}html:has(#mbg),body:has(#mbg),html:has(#cf),body:has(#cf){overscroll-behavior:none}   /* no pull-to-refresh while a pop-up is open */.modal.top>div,.modal.top .list{overscroll-behavior:contain}   /* a search pop-up never lets the page behind it scroll */
 .modal.top>div:has(>.sq+.list){display:flex;flex-direction:column;overflow:hidden}.modal.top>div:has(>.sq+.list)>.list{flex:1;min-height:0;overflow:auto}   /* search pop-ups: title and search stay put, only the list scrolls, Cancel stays at the bottom */
 .sq{position:sticky;top:-10px;z-index:3;background:var(--pop);padding:6px 0 8px;margin:-6px 0 0}
 .stick{position:sticky;top:var(--hh,60px);z-index:4;background:var(--bg);padding:6px 0 10px;margin:-6px 0 0}
@@ -216,7 +216,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.02', RULES_VERSION = '2.08';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.03', RULES_VERSION = '2.08';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2287,11 +2287,29 @@ async function resetApp() {
 /* ---------- settings ---------- */
 /* ---------- Settings: a full page. The account bubble on top, everything else as rows below it; each row opens its own page or sheet ---------- */
 function spRow(ic, title, sub, act, extra) { return '<div class="sp-row' + (extra || '') + '" data-act="' + act + '"><i class="sp-ic">' + ic + '</i><div class="grow"><b>' + title + '</b><div class="muted">' + sub + '</div></div><span class="sp-ch">›</span></div>'; }
+var WPS = [];   /* the pages opened one on top of the other inside the full-screen page, like a phone's back stack */
+function wpPage(fn, args, html) {   /* show a full-screen page; going back returns to the page before it */
+  var m = /^<h2[^>]*>([\s\S]*?)<\/h2>/.exec(html), title = m ? m[1] : 'Settings', body = m ? html.slice(m[0].length) : html, pg = $('#spage');
+  if ($('#modal').innerHTML) closeModal();
+  var at = -1; WPS.forEach(function (e, i) { if (e.mode === 'page' && e.fn === fn) at = i; });
+  if (at >= 0) { WPS.length = at + 1; WPS[at].args = args; } else WPS.push({ mode: 'page', fn: fn, args: args });
+  SPMODE = 'page'; if (pg.hidden) { pg.hidden = false; document.body.classList.add('spo'); }
+  pg.innerHTML = '<div class="sp-top"><button data-act="wpback" aria-label="Back">‹</button><b>' + title + '</b></div><div class="sp-body">' + body + '</div>';
+  var sb = pg.querySelector('.sp-body'); if (sb) sb.scrollTop = 0;
+  hsync();
+}
+function wpBack() {
+  if (WPS.length <= 1) { spClose(); return; }
+  WPS.pop(); var e = WPS[WPS.length - 1];
+  if (e.mode === 'page') { e.fn.apply(null, e.args || []); return; }
+  SPMODE = e.mode === 'places' ? 'places' : ''; spRender(); hsync();
+}
 var SPMODE = '';   /* 'places' = the full Workplaces page inside the settings page */
-function spOpen() { $('#spage').hidden = false; document.body.classList.add('spo'); spRender(); hsync(); }
-function spClose() { SPMODE = ''; $('#spage').hidden = true; document.body.classList.remove('spo'); $('#spage').innerHTML = ''; hsync(); }
+function spOpen() { WPS = [{ mode: 'settings' }]; $('#spage').hidden = false; document.body.classList.add('spo'); spRender(); hsync(); }
+function spClose() { SPMODE = ''; WPS = []; $('#spage').hidden = true; document.body.classList.remove('spo'); $('#spage').innerHTML = ''; hsync(); }
 function spRender() {
   var pg = $('#spage'); if (pg.hidden) return;
+  if (SPMODE === 'page') return;   /* a workplace page keeps what it shows until you move on */
   if (SPMODE === 'places') return wpRender();
   var old = pg.querySelector('.sp-body'), st = old ? old.scrollTop : 0, unread = (S.notices || []).filter(function (x) { return !x.read; }).length;
   var h = '<div class="sp-top"><button data-act="close" aria-label="Back">‹</button><b style="margin-right:0">Settings</b><button data-act="wpopen" aria-label="Workplaces" style="width:auto;height:38px;border-radius:19px;padding:0 14px;background:var(--brand);color:#fff;font-size:14px;font-weight:700;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.25)">🏢 Workplaces</button></div><div class="sp-body">' +
@@ -2619,9 +2637,9 @@ async function wzFinish() {
 /* join code and workplaces, from Settings */
 function codeModal() {
   var code = PLACE && PLACE.code;
-  modal('<h2>Join code</h2><div class="card"><p class="muted" style="margin-top:0">Give this code to someone who should join <b>' + esc(placeName()) + '</b>. They open the app, choose <b>Join a workplace</b> and type it. You still approve them under Access.</p>' +
+  wpPage(codeModal, [], '<h2>Join code</h2><div class="card"><p class="muted" style="margin-top:0">Give this code to someone who should join <b>' + esc(placeName()) + '</b>. They open the app, choose <b>Join a workplace</b> and type it. You still approve them under Access.</p>' +
     (code ? '<div style="text-align:center;font-size:32px;font-weight:700;letter-spacing:6px;margin:8px 0" id="jc-show">' + esc(code) + '</div><div class="row"><button class="btn grow" data-act="codecopy">Copy</button><button class="btn sec grow" data-act="codeshare">Share</button></div>' : '<p>There is no code yet.</p>') +
-    '<button class="btn sec block" data-act="codenew" style="margin-top:10px">' + (code ? 'Make a new code (the old one stops working)' : 'Make a code') + '</button></div><button class="btn sec block" data-act="close">Close</button>');
+    '<button class="btn sec block" data-act="codenew" style="margin-top:10px">' + (code ? 'Make a new code (the old one stops working)' : 'Make a code') + '</button></div>');
 }
 async function codeMake() {
   var nc = newCode(), b = writeBatch(DB), old = PLACE && PLACE.code;
@@ -2976,10 +2994,16 @@ function opLoad() {   /* the owner: every workplace with its people count */
     }));
   }).then(function (ps) { OP.list = ps.sort(function (a, b) { return String(a.name || '').localeCompare(String(b.name || '')); }); }).catch(function (e) { console.error(e); OP.list = []; });
 }
-function opAll() { wpOpen(true); }   /* back to the Workplaces page (every Back / Cancel of the owner's pop-ups comes here) */
+function opAll() { wpToPlaces(); }   /* back to the Workplaces page (every Back / Cancel of the owner's pop-ups comes here) */
+function wpToPlaces() {   /* back to the Workplaces page, with the list read again */
+  while (WPS.length > 1 && WPS[WPS.length - 1].mode !== 'places') WPS.pop();
+  wpOpen(true);
+}
 function wpOpen(reload) {
   closeModal(); SPMODE = 'places';
-  if ($('#spage').hidden) spOpen(); else spRender();
+  if ($('#spage').hidden) spOpen();
+  var top = WPS[WPS.length - 1]; if (!top || top.mode !== 'places') WPS.push({ mode: 'places' });
+  spRender(); hsync();
   if (isPres() && (reload || OP.list === null)) { OP.list = null; spRender(); opLoad().then(function () { if (SPMODE === 'places') spRender(); }); }
 }
 function wpCard(o) {   /* o: id, name, sub, badge, buttons[[act,label,cls]] */
@@ -3029,7 +3053,7 @@ function opLimit(id) {
 }
 function opLimitSheet() {
   var p = opPlace(OP.id); if (!p) return; var n = p.nshifts || 0, tot = OP.per * n;
-  modal('<h2>People limit</h2><div class="muted" style="margin-bottom:8px">' + esc(p.name) + ' · ' + n + ' shift' + (n === 1 ? '' : 's') + '</div><div class="card"><label>People with access for each shift</label><div class="row" style="align-items:center;justify-content:center;gap:14px;margin:8px 0"><button class="btn sm" data-act="opper" data-v="-1"' + (OP.per <= 3 ? ' disabled style="opacity:.45"' : '') + '>−</button><b style="font-size:30px;min-width:44px;text-align:center">' + OP.per + '</b><button class="btn sm" data-act="opper" data-v="1">+</button></div><div class="muted" style="text-align:center">' + (OP.per <= 3 ? '3 is the lowest it can go. That is the standard limit.' : 'Raised from the standard 3. The lowest it can go is 3.') + '</div></div>' +
+  wpPage(opLimitSheet, [], '<h2>People limit</h2><div class="muted" style="margin-bottom:8px">' + esc(p.name) + ' · ' + n + ' shift' + (n === 1 ? '' : 's') + '</div><div class="card"><label>People with access for each shift</label><div class="row" style="align-items:center;justify-content:center;gap:14px;margin:8px 0"><button class="btn sm" data-act="opper" data-v="-1"' + (OP.per <= 3 ? ' disabled style="opacity:.45"' : '') + '>−</button><b style="font-size:30px;min-width:44px;text-align:center">' + OP.per + '</b><button class="btn sm" data-act="opper" data-v="1">+</button></div><div class="muted" style="text-align:center">' + (OP.per <= 3 ? '3 is the lowest it can go. That is the standard limit.' : 'Raised from the standard 3. The lowest it can go is 3.') + '</div></div>' +
     '<div class="card sum" style="box-shadow:none"><div><span>' + n + ' shifts × ' + OP.per + ' people</span><b>' + tot + ' people</b></div><div><span>People with access now</span><b>' + p.people + '</b></div></div><button class="btn block" data-act="opsave">Save</button><button class="btn sec block" data-act="opall" style="margin-top:10px">Cancel</button>');
 }
 function opSave() {
@@ -3040,11 +3064,11 @@ function opSave() {
 }
 function opCode(id) {
   var p = opPlace(id); if (!p) return; shClose();
-  modal('<h2>Join code</h2><div class="card"><div class="muted" style="margin-bottom:6px">' + esc(p.name) + '</div>' + (p.code ? '<div style="text-align:center;font-size:32px;font-weight:700;letter-spacing:6px;margin:8px 0">' + esc(p.code) + '</div>' : '<p>This workplace has no join code yet. Its president makes one in Settings.</p>') + '</div><button class="btn sec block" data-act="opall">Back</button>');
+  wpPage(opCode, [id], '<h2>Join code</h2><div class="card"><div class="muted" style="margin-bottom:6px">' + esc(p.name) + '</div>' + (p.code ? '<div style="text-align:center;font-size:32px;font-weight:700;letter-spacing:6px;margin:8px 0">' + esc(p.code) + '</div>' : '<p>This workplace has no join code yet. Its president makes one in Settings.</p>') + '</div><button class="btn sec block" data-act="opall">Back</button>');
 }
 function opRename(id) {
   var p = opPlace(id); if (!p) return; OP.id = id; shClose();
-  modal('<h2>Rename</h2><div class="card"><div class="f"><label>Name of the workplace</label><input id="op-name" maxlength="60" value="' + esc(p.name || '') + '" autocomplete="off"></div></div><button class="btn block" data-act="oprensave">Save</button><button class="btn sec block" data-act="opall" style="margin-top:10px">Cancel</button>');
+  wpPage(opRename, [id], '<h2>Rename</h2><div class="card"><div class="f"><label>Name of the workplace</label><input id="op-name" maxlength="60" value="' + esc(p.name || '') + '" autocomplete="off"></div></div><button class="btn block" data-act="oprensave">Save</button><button class="btn sec block" data-act="opall" style="margin-top:10px">Cancel</button>');
 }
 function opRenSave() { var v = ($('#op-name').value || '').trim(); if (!v) return toast('Enter a name'); guard(updateDoc(doc(DB, 'places/' + OP.id), { name: v })).then(function () { toast('Renamed'); opAll(); }); }
 
@@ -3054,23 +3078,23 @@ function wsCopy() { return JSON.parse(JSON.stringify(CFG)); }
 function wsOpen() { WS = wsCopy(); wsMain(); }
 function wsMain() {
   var P = WS.periods;
-  modal('<h2>Workplace settings</h2><p class="muted" style="margin-top:0">Changes apply to everyone as soon as you save them. Past records keep what they say.</p><div class="card" style="padding:0">' +
+  wpPage(wsMain, [], '<h2>Workplace settings</h2><p class="muted" style="margin-top:0">Changes apply to everyone as soon as you save them. Past records keep what they say.</p><div class="card" style="padding:0">' +
     spRow('🎨', 'Shifts, names and colours', WS.shifts.map(function (x) { return esc(x.name); }).join(', '), 'wsshifts') +
     spRow('📅', 'The shift cycle', WS.cycle.length + ' day' + (WS.cycle.length === 1 ? '' : 's') + ' · starts ' + esc(WS.anchor), 'wscycle') +
     spRow('🕘', 'Parts of the day', P.map(function (p) { return esc(p.label) + ' ' + hr12(p.start); }).join(' · '), 'wsparts') +
     spRow('🏷️', 'Names of the places and case size', esc(WS.labels.fridge) + ', ' + esc(WS.labels.storage) + ', ' + esc(WS.labels.shelf) + ' · ' + WS.perCase + ' to a case', 'wswords') +
     spRow('🪪', 'What people are asked', (WS.signup.useNo ? esc(WS.signup.noLabel) : 'No number') + ' · ' + (WS.signup.useRank ? esc(WS.signup.rankLabel) : 'No rank'), 'wspeople') + '</div>' +
-    '<p class="muted">The number of shifts (' + WS.shifts.length + ') and of day parts (' + P.length + ') cannot be changed here, because the people limit depends on them. Ask the app\'s creator.</p><button class="btn sec block" data-act="close">Close</button>');
+    '<p class="muted">The number of shifts (' + WS.shifts.length + ') and of day parts (' + P.length + ') cannot be changed here, because the people limit depends on them. Ask the app\'s creator.</p>');
 }
 function wsPal(i, col) { return '<div class="pal">' + PALETTE.map(function (c) { return '<button type="button" data-act="wscol" data-i="' + i + '" data-v="' + c[1] + '" title="' + c[0] + '" class="' + (String(col).toLowerCase() === c[1].toLowerCase() ? 'on' : '') + '" style="background:' + c[1] + '"></button>'; }).join('') + '</div>'; }
 function wsShifts() {
-  modal('<h2>Shifts, names and colours</h2><p class="muted" style="margin-top:0">If you rename a shift, the people on it move to the new name. Old records keep the old name.</p>' + WS.shifts.map(function (x, i) {
+  wpPage(wsShifts, [], '<h2>Shifts, names and colours</h2><p class="muted" style="margin-top:0">If you rename a shift, the people on it move to the new name. Old records keep the old name.</p>' + WS.shifts.map(function (x, i) {
     return '<div class="card" style="box-shadow:none;background:var(--soft)"><div class="f" style="margin-bottom:8px"><label>Shift ' + (i + 1) + '</label><input data-ws="sname" data-i="' + i + '" maxlength="20" value="' + esc(x.name) + '"></div>' + wsPal(i, x.color) + '</div>';
   }).join('') + '<div id="ws-msg" class="muted" style="color:var(--exp);margin:6px 0"></div><button class="btn block" data-act="wssave">Save</button><button class="btn sec block" data-act="wsback" style="margin-top:10px">Back</button>'); REFRESH = null;
 }
 function wsCycle() {
   var d0 = new Date(WS.anchor + 'T12:00:00'), P = WS.periods, names = WS.shifts.map(function (x) { return x.name; });
-  modal('<h2>The shift cycle</h2><p class="muted" style="margin-top:0">Tap a block to change which shift works that part of the day. When the last day is done, the cycle starts again from the first.</p>' +
+  wpPage(wsCycle, [], '<h2>The shift cycle</h2><p class="muted" style="margin-top:0">Tap a block to change which shift works that part of the day. When the last day is done, the cycle starts again from the first.</p>' +
     '<div class="f"><label>The first day of the cycle is</label><input type="date" data-ws="anchor" value="' + esc(WS.anchor) + '"></div>' +
     WS.cycle.map(function (day, k) {
       var d = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + k);
@@ -3082,12 +3106,12 @@ function wsCycle() {
     '<div id="ws-msg" class="muted" style="color:var(--exp);margin:8px 0"></div><button class="btn block" data-act="wssave">Save</button><button class="btn sec block" data-act="wsback" style="margin-top:10px">Back</button>'); REFRESH = null;
 }
 function wsParts() {
-  modal('<h2>Parts of the day</h2><p class="muted" style="margin-top:0">When does each part start? The last part runs on until the first starts again.</p>' + WS.periods.map(function (x, i) {
+  wpPage(wsParts, [], '<h2>Parts of the day</h2><p class="muted" style="margin-top:0">When does each part start? The last part runs on until the first starts again.</p>' + WS.periods.map(function (x, i) {
     return '<div class="row f" style="align-items:flex-end"><div class="grow"><label>Part ' + (i + 1) + '</label><input data-ws="plabel" data-i="' + i + '" maxlength="14" value="' + esc(x.label) + '"></div><div style="width:110px"><label>Starts</label><select data-ws="pstart" data-i="' + i + '">' + Array.apply(null, Array(24)).map(function (_, hh) { return '<option value="' + hh + '"' + (hh === x.start ? ' selected' : '') + '>' + hr12(hh) + '</option>'; }).join('') + '</select></div></div>';
   }).join('') + '<div id="ws-msg" class="muted" style="color:var(--exp);margin:8px 0"></div><button class="btn block" data-act="wssave">Save</button><button class="btn sec block" data-act="wsback" style="margin-top:10px">Back</button>'); REFRESH = null;
 }
 function wsWords() {
-  modal('<h2>Names of the places and case size</h2>' +
+  wpPage(wsWords, [], '<h2>Names of the places and case size</h2>' +
     '<div class="f"><label>Where cold drinks are sold from</label><input data-ws="lfridge" maxlength="20" value="' + esc(WS.labels.fridge) + '"></div>' +
     '<div class="f"><label>Where other items are sold from</label><input data-ws="lshelf" maxlength="20" value="' + esc(WS.labels.shelf) + '"></div>' +
     '<div class="f"><label>Where stock is kept in cases</label><input data-ws="lstorage" maxlength="20" value="' + esc(WS.labels.storage) + '"></div>' +
@@ -3119,7 +3143,7 @@ function ppPick(b) {   /* a quick pick fills the field; the field can still be t
 }
 function ppChips(ns, key, S2, opts) { return '<div class="pp-chips">' + opts.map(function (o) { return '<button type="button" data-act="ppick" data-ns="' + ns + '" data-k="' + key + '" data-v="' + o + '" class="' + (String(S2[key] || '').trim().toLowerCase() === o.toLowerCase() ? 'on' : '') + '">' + o + '</button>'; }).join('') + '</div>'; }
 function wsPeople() {
-  modal(peopleForm(WS.signup, WS.ranks.join(', '), 'ws') +
+  wpPage(wsPeople, [], peopleForm(WS.signup, WS.ranks.join(', '), 'ws') +
     '<div id="ws-msg" class="muted" style="color:var(--exp);margin:8px 0"></div><button class="btn block" data-act="wssave">Save</button><button class="btn sec block" data-act="wsback" style="margin-top:10px">Back</button>'); REFRESH = null;
 }
 function wsInput(t) {
@@ -3294,21 +3318,6 @@ document.addEventListener('touchmove', function (e) {
   if (t.closest('#mbg.top > div') && !t.closest('.list') && t.closest('#mbg.top > div').scrollHeight > t.closest('#mbg.top > div').clientHeight + 1 && !t.closest('.sq')) return;
   e.preventDefault();
 }, { passive: false });
-/* ---------- pull the screen down to refresh it (the phone's own pull-to-refresh is switched off, so the app does it) ---------- */
-(function () {
-  var st = null, ind = null;
-  function top() { var se = document.scrollingElement || document.documentElement; return (se.scrollTop || 0) <= 0; }
-  function blocked(t) { return !!document.querySelector('#mbg') || !!$('#cf') || !!(t.closest && t.closest('input,textarea,select,canvas,.sp-body,#spage')) || (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName)); }
-  function bar() { if (!ind) { ind = document.createElement('div'); ind.style.cssText = 'position:fixed;left:50%;top:0;transform:translate(-50%,-60px);z-index:99;background:var(--brand,#245);color:#fff;padding:8px 16px;border-radius:0 0 14px 14px;font-weight:600;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.25);pointer-events:none;transition:transform .12s'; document.body.appendChild(ind); } return ind; }
-  document.addEventListener('touchstart', function (e) { st = null; if (e.touches.length !== 1 || !top() || blocked(e.target)) return; st = { y0: e.touches[0].clientY, x0: e.touches[0].clientX, on: false, dy: 0 }; }, { passive: true });
-  document.addEventListener('touchmove', function (e) {
-    if (!st) return; var dy = e.touches[0].clientY - st.y0, dx = Math.abs(e.touches[0].clientX - st.x0);
-    if (!st.on) { if (dy < 10 && Math.abs(dy) < 10) return; if (dx > dy || dy < 0 || !top()) { st = null; return; } st.on = true; }
-    st.dy = dy; var b = bar(), go = dy > 110; b.textContent = go ? '↻ Let go to refresh' : '↓ Pull down to refresh'; b.style.transform = 'translate(-50%,' + Math.min(0, Math.min(dy, 120) - 60) + 'px)';
-  }, { passive: true });
-  function end() { if (!st) return; var go = st.on && st.dy > 110; st = null; if (!ind) return; if (go) { ind.textContent = 'Refreshing…'; ind.style.transform = 'translate(-50%,0)'; setTimeout(function () { location.reload(); }, 150); } else ind.style.transform = 'translate(-50%,-60px)'; }
-  document.addEventListener('touchend', end, { passive: true }); document.addEventListener('touchcancel', end, { passive: true });
-})();
 /* ---------- pull a pop-up down to close it (like Cancel); asks first if something was typed ---------- */
 (function () {
   var st = null;
@@ -3635,13 +3644,13 @@ document.addEventListener('click', function (e) {
   else if (a === 'resetgo') resetApp();
   else if (a === 'sendlogin') sendLogin();
   else if (a === 'googlelogin') googleLogin();
-  else if (a === 'wsopen') { closeModal(); spClose(); wsOpen(); }
+  else if (a === 'wsopen') { closeModal(); wsOpen(); }
   else if (a === 'wsshifts') wsShifts();
   else if (a === 'wscycle') wsCycle();
   else if (a === 'wsparts') wsParts();
   else if (a === 'wswords') wsWords();
   else if (a === 'wspeople') wsPeople();
-  else if (a === 'wsback') wsMain();
+  else if (a === 'wsback') wpBack();
   else if (a === 'wssave') wsSave();
   else if (a === 'wscol') { WS.shifts[+b.dataset.i].color = b.dataset.v; wsShifts(); }
   else if (a === 'wscell') { var wi = +b.dataset.i, wj = +b.dataset.j, nm0 = WS.shifts.map(function (x) { return x.name; }), cur = nm0.indexOf(WS.cycle[wi].s[wj]); WS.cycle[wi].s[wj] = nm0[(cur + 1) % nm0.length]; wsCycle(); }
@@ -3649,9 +3658,9 @@ document.addEventListener('click', function (e) {
   else if (a === 'ppick') ppPick(b);
   else if (a === 'wsno') { WS.signup.useNo = b.dataset.v !== 'off'; WS.signup.requireNo = b.dataset.v === 'req'; wsPeople(); }
   else if (a === 'wsrank') { WS.signup.useRank = b.dataset.v !== 'off'; WS.signup.requireRank = b.dataset.v === 'req'; wsPeople(); }
-  else if (a === 'opall') opAll();
+  else if (a === 'opall') wpBack();
   else if (a === 'wpopen') wpOpen(true);
-  else if (a === 'wpback') { SPMODE = ''; spRender(); }
+  else if (a === 'wpback') wpBack();
   else if (a === 'wpnone') { }
   else if (a === 'opmenu') opMenu(id);
   else if (a === 'opview') opView(id);
@@ -4003,7 +4012,7 @@ if (CONFIGURED) {
 }
 /* ---------- phone back button: close the top pop-up, then go back to Sell, then ask before leaving ---------- */
 var HD = 1, SKIP = 0, LASTBACK = 0;
-function layers() { return 1 + ($('#padhost').children.length ? 1 : 0) + $('#modal').children.length + ($('#spage').hidden ? 0 : 1) + (tab !== 'sell' ? 1 : 0); }
+function layers() { return 1 + ($('#padhost').children.length ? 1 : 0) + $('#modal').children.length + ($('#spage').hidden ? 0 : Math.max(1, WPS.length)) + (tab !== 'sell' ? 1 : 0); }
 function hsync() {   /* keep one history entry per open layer, so the back button always has something to close */
   var n = layers();
   while (HD < n) { history.pushState({ sw: 1 }, ''); HD++; }
@@ -4017,7 +4026,7 @@ window.addEventListener('popstate', function () {
   else if (top && top.id === 'cf') { CONF = null; top.remove(); }
   else if (top && top.id === 'instp') { var l = top.querySelector('[data-act=instlater]'); if (l) l.click(); }
   else if (top) closeModal();
-  else if (!$('#spage').hidden) { $('#spage').hidden = true; document.body.classList.remove('spo'); $('#spage').innerHTML = ''; }
+  else if (!$('#spage').hidden) { wpBack(); }
   else if (tab !== 'sell') { tab = 'sell'; render(); window.scrollTo(0, 0); }
   else if (Date.now() - LASTBACK < 2500) { HD = 0; history.back(); return; }   /* second back press: leave the app */
   else { LASTBACK = Date.now(); toast('Press back again to leave the app'); }
