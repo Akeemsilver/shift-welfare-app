@@ -29,8 +29,11 @@ html,body{margin:0;overscroll-behavior-y:none;background:var(--bg);color:var(--i
 body{padding-bottom:calc(var(--bar) + 24px + env(safe-area-inset-bottom))}
 header{position:sticky;top:0;z-index:5;background:var(--brand);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:10px}
 header h1{font-size:14px;margin:0;flex:1}
-header small{display:block;font-weight:400;opacity:.8;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-header h1{min-width:0}
+header small{display:block;font-weight:400;color:rgba(255,255,255,.8);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header h1{min-width:0;white-space:normal}
+.hp{display:inline-block;font-size:9px;font-weight:700;line-height:13px;padding:0 6px;margin-left:6px;border-radius:999px;border:1px solid rgba(255,255,255,.55);vertical-align:2px;letter-spacing:.2px;color:#fff}.hp.on{background:#2E9E6B;border-color:#2E9E6B}.hp.wRed{background:#C7361F}.hp.wBlue{background:#1F6FA8}.hp.wWhite{background:#fff;color:#14181C;border-color:#14181C}.hp.wBlack{background:#14181C}
+@media (max-width:350px){.hp{padding:0 4px;margin-left:4px;font-size:8px}header h1{font-size:13px}}
+header small.rec,header small.who{white-space:normal}
 .dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px;border:2px solid #fff}
 .iconbtn{background:rgba(255,255,255,.15);border:0;color:#fff;border-radius:10px;height:38px;min-width:36px;font-size:16px;padding:0 7px;position:relative;display:inline-flex;align-items:center;justify-content:center}
 header{gap:7px!important}
@@ -203,7 +206,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, connectAuthEmulator, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, updatePassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, connectFirestoreEmulator, doc, collection, onSnapshot, getDoc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, increment, Timestamp, query, where, orderBy, limit, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-var APP_VERSION = '1.54', RULES_VERSION = '1.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '1.56', RULES_VERSION = '1.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 var CYCLE = ['Red', 'Blue', 'White', 'Black'];   /* AM shift on consecutive days, from the 2026 Fire Service calendar */
 var ANCHOR = Date.UTC(2026, 9, 1) / 864e5;       /* 1 Oct 2026: AM = Red */
 var AM_START = 9, PM_START = 18;                 /* day shift 9am to 6pm, night shift 6pm to 9am */
@@ -1497,7 +1500,8 @@ function render() {
   $('#nav').hidden = !ready; $('#hist').hidden = !ready; $('#prof').hidden = !ready; $('#menu').hidden = !ready; $('#bell').hidden = !ready;
   if (ready) {
     var cs = currentShift();   /* the header always shows the shift working NOW, from the phone's own clock */
-    $('#hdr').innerHTML = '<span class="dot" style="background:' + ({Red:'var(--s-red)',Blue:'var(--s-blue)',White:'#fff',Black:'var(--s-black)'}[cs.name] || '#888') + '"></span>' + esc(cs.name) + ' shift<small>' + esc(cs.date) + ' ' + esc(HL(cs.half)) + ' · ' + esc(myName()) + (navigator.onLine ? '' : ' · OFFLINE') + '</small>' + (shKey(sh) !== shKey(cs) ? '<small style="color:#FFD27A;opacity:1;font-weight:600">recording on ' + esc(sh.name) + ' ' + esc(HL(sh.half)) + ' ' + esc(sh.date) + '</small>' : '');
+    var mp = myPerson(), WC = { Red: 'var(--s-red)', Blue: 'var(--s-blue)', White: '#fff', Black: 'var(--s-black)' };
+    $('#hdr').innerHTML = '<span style="white-space:nowrap"><span class="dot" style="background:' + (WC[cs.name] || '#888') + '"></span>' + esc(cs.name) + ' watch</span><span class="hp w' + esc(cs.name) + '">On duty</span><small>' + esc(myName()) + (mp && mp.watch ? '<span class="hp w' + esc(mp.watch) + '">' + esc(mp.watch) + '</span>' : '') + (navigator.onLine ? '' : ' · OFFLINE') + '</small>' + (shKey(sh) !== shKey(cs) ? '<small class="rec" style="color:#FFD27A;opacity:1;font-weight:600">recording for ' + esc(sh.name) + ' watch</small>' : '');
     document.querySelectorAll('#nav button').forEach(function (b) { var on = b.dataset.tab === tab; b.classList.toggle('on', on); var q = b.querySelector('.qb'); if (on && !q && !helpOff()) { b.style.position = 'relative'; b.insertAdjacentHTML('beforeend', '<i class="qb">?</i>'); } else if ((!on || helpOff()) && q) q.remove(); });
   } else $('#hdr').innerHTML = 'Shift Welfare';
   var focus = document.activeElement && document.activeElement.id;
