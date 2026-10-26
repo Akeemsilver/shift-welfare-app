@@ -159,6 +159,20 @@ input:disabled{background:var(--dis);color:var(--muted)}
 .hsel{display:flex;align-items:center;gap:6px;margin-bottom:8px}.hsel .btn{width:40px;flex:none;padding:0}.hdate{position:relative;flex:1;border:2px solid var(--secb);border-radius:12px;background:var(--surface);display:flex;align-items:center;justify-content:center;min-height:40px;font-weight:700}.hdate.away span{padding-right:56px}.hdate.fut{opacity:.8;font-style:italic}.hdate u{text-decoration:underline dotted;text-underline-offset:3px}.hpick{position:absolute;left:0;top:0;height:100%;opacity:0;border:0;font-size:16px}.htoday{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:var(--brand);color:#fff;border:0;border-radius:9px;padding:4px 9px;font-size:12px;font-weight:700;z-index:2}
 .hsum{background:var(--surface);border-radius:12px;box-shadow:var(--sh);padding:6px 10px;margin-bottom:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px 6px}.hsum div{min-width:0}.hsum .l{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);white-space:nowrap}.hsum .v{font-size:14px;font-weight:700}
 .flab{margin:12px 0 4px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}.frow{display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid var(--line);cursor:pointer}.fbox{width:22px;height:22px;border-radius:6px;border:2px solid var(--secb);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex:none}.fbox.on{background:var(--brand);border-color:var(--brand)}
+.hochk{position:sticky;top:var(--hh,56px);z-index:4;background:var(--bg);display:flex;gap:6px;padding:8px 0 8px;margin-bottom:2px}.hochip{flex:none;border-radius:14px;padding:4px 9px;font-weight:700;font-size:12px;background:var(--surface);border:2px solid var(--secb);cursor:pointer}.hochip.ok{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}.hochip.no{background:var(--exp-bg);border-color:var(--exp);color:var(--exp)}.hochip.wn{background:var(--soon-bg);border-color:var(--soon);color:var(--soon)}
+.hoslim{display:flex;gap:6px;margin-bottom:10px}.hoslim button{flex:1;border:0;background:var(--surface);color:var(--link);border-radius:10px;padding:7px 8px;font-size:12px;font-weight:700;box-shadow:var(--sh)}
+.hot{width:100%;border-collapse:collapse}.hot th{font-size:10px;text-align:right;color:var(--muted);text-transform:uppercase;padding:3px 2px}.hot th:first-child,.hot td:first-child{text-align:left}.hot td{padding:7px 2px;border-bottom:1px solid var(--line);text-align:right}.hot tr.tot td{font-weight:700;border-bottom:0}.horow{cursor:pointer}.hoch{color:var(--cnt);font-size:11px}.hoch.red{color:var(--exp)}
+.hoopen{background:var(--cnt-bg);border-radius:10px;padding:7px 10px;font-size:12px;line-height:1.55;text-align:left}.hoopen.red{background:var(--exp-bg)}.hx.pos{color:var(--ok);font-weight:600}.hx.neg{color:var(--exp);font-weight:600}.hx.cr{color:var(--soon);font-weight:600}.hx{color:var(--cnt);font-weight:600}
+.hohint{display:flex;font-size:12px;color:var(--muted);margin:0 2px 6px}.hohint span{flex:1}.hohint a{color:var(--link);font-weight:700;cursor:pointer}
+.hosticky{position:sticky;bottom:calc(var(--navoff,0px) + 8px);z-index:4;padding-top:6px}.hosticky .btn.dis{background:#9aa7b2}
+.hosteps{display:flex;margin:8px 0 4px}.hosteps div{flex:1;text-align:center;font-size:10px;color:var(--muted)}.hosteps i{display:block;width:16px;height:16px;border-radius:50%;margin:0 auto 3px;background:var(--line);color:#fff;font-style:normal;font-size:10px;line-height:16px}.hosteps .d i{background:var(--ok)}.hosteps .n i{background:var(--cnt)}.hosteps .x i{background:var(--exp)}
+.warnbox{background:var(--exp-bg);border:2px solid var(--exp);border-radius:14px;padding:8px 12px;margin-bottom:12px;font-size:13px}.warnbox>b{color:var(--exp)}
+.rxt{width:100%;table-layout:fixed;border-collapse:collapse}.rxt th{font-size:10px;text-transform:uppercase;color:var(--muted);padding:3px 2px;text-align:right}.rxt th:first-child,.rxt td:first-child{text-align:left}.rxt td{padding:5px 2px;border-bottom:1px solid var(--line);text-align:right;vertical-align:middle}.rxin{display:flex;align-items:center;justify-content:flex-end;gap:6px}.rxd{font-weight:700;font-size:12px;color:var(--exp);white-space:nowrap;width:46px;text-align:left;flex:none}.rxt th:nth-child(3){padding-right:52px}.rxd.up{color:var(--soon)}
+.rxbar{position:sticky;top:0;z-index:4;background:var(--soon-bg);border-radius:10px;padding:6px 10px;font-size:12px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,.08)}.rxfoot{position:sticky;bottom:0;z-index:4;display:flex;align-items:center;gap:10px;background:var(--surface);border-top:1px solid var(--line);margin:12px -16px -28px;padding:8px 16px calc(8px + env(safe-area-inset-bottom))}.rxfoot span{font-size:12px;color:var(--muted)}.rxfoot .btn{flex:1.4}.rxfoot .btn.dis{background:#9aa7b2}
+.fold{display:flex;font-weight:600;padding:11px 0;cursor:pointer}.fold>span:first-child{flex:1}
+.rct{width:100%;table-layout:fixed;border-collapse:collapse}.rct th{font-size:10px;text-transform:uppercase;color:var(--muted);padding:3px 2px;text-align:right}.rct th:first-child,.rct td:first-child{text-align:left}.rct td{padding:6px 2px;border-bottom:1px solid var(--line);text-align:right}.rcb{color:var(--exp);font-weight:700}.rcu{color:var(--soon);font-weight:700}
+p.flab{margin:10px 0 2px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+@media print{body.prrec>*:not(#spage){display:none!important}body.prrec #spage{position:static!important;display:block!important}body.prrec #spage .sp-top,body.prrec .noprint{display:none!important}body.prrec .sp-body{overflow:visible!important;max-width:none}}
 .owestrip{display:flex;align-items:center;gap:10px;border:2px solid var(--exp);background:var(--exp-bg);color:var(--exp);border-radius:14px;padding:8px 12px;margin-bottom:12px}.owestrip small{display:block;color:var(--muted);font-size:11px}.owestrip>.grow{cursor:pointer}.vothin{background:var(--soon-bg);padding:6px 12px;margin-bottom:10px;font-size:13px;display:flex;align-items:center;gap:8px;box-shadow:none}
 .sp-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border-top:1px solid var(--line);cursor:pointer}.sp-row:first-child{border-top:0}
 .sp-ic{width:44px;height:44px;border-radius:12px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-size:20px;font-style:normal;flex:none}
@@ -222,7 +236,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.12', RULES_VERSION = '2.10';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.13', RULES_VERSION = '2.11';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1407,12 +1421,13 @@ function sheetRows() {
 function hoRows() {   /* the handover leaves out items that were 0 at the start and are 0 now (fridge and cage) */
   return sheetRows().filter(function (r) { return r.open || r.stock || r.cageOpen || r.cage; });
 }
-function tags(r, mode) {
-  var cage = mode === 'cage', t = [], g = function (n, txt, cls) { if (n) t.push('<span class="tag ' + cls + '">' + txt + '</span>'); };
+function tagList(r, mode) {   /* what happened to one item, as [colour class, text] */
+  var cage = mode === 'cage', t = [], g = function (n, txt, cls) { if (n) t.push([cls, txt]); };
   if (cage) { g(r.cedit, '⚠ edited by hand ' + (r.cedit > 0 ? '+' : '') + r.cedit, 'neg'); g(r.bought, '+' + r.bought + ' bought', 'pos'); g(r.movedCases, '−' + r.movedCases + ' to ' + (r.shelf ? 'shelf' : 'fridge'), 'neg'); g(r.cadj, (r.cadj > 0 ? '+' : '') + r.cadj + ' count', ''); }
   else { g(r.edit, '⚠ edited by hand ' + (r.edit > 0 ? '+' : '') + r.edit, 'neg'); g(r.sold - Math.min(r.sold, r.crQ), (r.sold - Math.min(r.sold, r.crQ)) + ' sold', 'pos'); g(r.crQ, r.crQ + ' sold on credit', 'cr'); g(r.spQ, r.spQ + ' spoiled', 'neg'); if (r.direct) g(r.bought, '+' + r.bought + ' bought', 'pos'); g(r.moved, '+' + r.moved + ' from cage', 'pos'); g(r.spoil, '−' + r.spoil + ' spoiled', 'neg'); g(r.adj, (r.adj > 0 ? '+' : '') + r.adj + ' count', ''); }
-  return t.join('');
+  return t;
 }
+function tags(r, mode) { return tagList(r, mode).map(function (x) { return '<span class="tag ' + x[0] + '">' + x[1] + '</span>'; }).join(''); }
 function soldRows(rows) {
   return rows.filter(function (r) { return r.gone || r.crQ || r.spQ || r.moved || r.edit || r.adj || r.spoil || (r.direct && r.bought) || r.open !== r.stock; }).map(function (r) {
     var plus = r.moved + (r.direct ? r.bought : 0) + Math.max(0, r.edit) + Math.max(0, r.adj), minus = r.spoil + Math.max(0, -r.edit) + Math.max(0, -r.adj);
@@ -1444,20 +1459,63 @@ function openShortList() {
     if (owed > 0.004) out.push({ wk: w, short: sh, repaid: rp, owed: owed });
   }); return out;
 }
-function handoverLists(ow, sl) {   /* undefined = an older handover that did not keep the lists */
-  var h = '';
-  if (Array.isArray(ow)) h += '<div class="card sum"><h2>Unpaid credit: who owes</h2><div class="muted" style="margin:-4px 0 6px">People who took items on credit and have not paid yet.</div>' + (ow.length ? ow.map(function (x) { return '<div><span>' + esc(x.label) + '</span><b>' + money(x.bal) + '</b></div>'; }).join('') + '<div class="t"><span>Total</span><span>' + money(ow.reduce(function (a, x) { return a + x.bal; }, 0)) + '</span></div>' : '<div class="muted">Nobody owes anything.</div>') + '</div>';
-  if (Array.isArray(sl)) h += '<div class="card sum"><h2>Shortages not yet repaid</h2><div class="muted" style="margin:-4px 0 6px">Cash or stock that was missing when a handover was counted. This is separate from credit. A shift clears it by repaying.</div>' + (sl.length ? sl.map(function (x) { return '<div><span>' + wsw(x.wk) + '<div class="muted">short ' + money(x.short) + ' · repaid ' + money(x.repaid) + '</div></span><b style="color:var(--exp)">' + money(x.owed) + '</b></div>'; }).join('') + '<div class="t"><span>Total</span><span>' + money(sl.reduce(function (a, x) { return a + x.owed; }, 0)) + '</span></div>' : '<div class="muted">No shortages are waiting to be repaid.</div>') + '</div>';
-  return h;
+function shortAllList() {   /* every shift and what it still owes for shortages, even $0: handed over every time, whoever worked the shift */
+  return WATCHES.map(function (w) {
+    var sh = r2((S.shAll || []).filter(function (x) { return x.wk === w; }).reduce(function (a, x) { return a + (x.total || 0); }, 0)), rp = r2((S.repAll || []).filter(function (x) { return x.wk === w; }).reduce(function (a, x) { return a + (x.amount || 0); }, 0));
+    return { wk: w, short: sh, repaid: rp, owed: Math.max(0, r2(sh - rp)) };
+  });
+}
+function handoverLists(ow, sl) {   /* undefined = an older handover that did not keep the lists. One card: the shifts' shortages on top (colour pills), the people who owe on credit below */
+  if (!Array.isArray(ow) && !Array.isArray(sl)) return '';
+  var h = '<div class="card sum"><h2>Still owed when it was handed over</h2><div class="muted" style="margin:-4px 0 4px">Every shift and everyone who owes, whoever worked the shift</div>';
+  if (Array.isArray(sl)) {
+    var st = r2(sl.reduce(function (a, x) { return a + x.owed; }, 0));
+    h += '<p class="flab">Shortages · by shift</p>' + sl.map(function (x) { return '<div><span>' + wsw(x.wk) + (x.short || x.repaid ? '<div class="muted">short ' + money(x.short) + ' · repaid ' + money(x.repaid) + '</div>' : '') + '</span><b style="color:' + (x.owed > 0 ? 'var(--exp)' : 'var(--ok)') + '">' + money(x.owed) + '</b></div>'; }).join('') + '<div class="t"><span>Total shortages</span><span style="color:' + (st > 0 ? 'var(--exp)' : 'var(--ok)') + '">' + money(st) + '</span></div>';
+  }
+  if (Array.isArray(ow)) {
+    h += '<p class="flab" style="margin-top:14px">Credit · people who owe</p>' + (ow.length ? ow.map(function (x) { return '<div><span>' + esc(x.label) + '</span><b style="color:var(--exp)">' + money(x.bal) + '</b></div>'; }).join('') + '<div class="t"><span>Total credit</span><span style="color:var(--exp)">' + money(ow.reduce(function (a, x) { return a + x.bal; }, 0)) + '</span></div>' : '<div class="muted">Nobody owes anything on credit.</div>');
+  }
+  return h + '</div>';
 }
 function creditCard(t) {
   var tot = owing().reduce(function (a, x) { return a + x.bal; }, 0);
   return '<div class="card sum"><h2>Credit</h2><div><span>Unpaid credit given this shift</span><b>' + money(t.crN) + '</b></div>' + (t.paidN ? '<div><span>Paid back this shift</span><b style="color:var(--ok)">' + money(t.paidN) + '</b></div>' : '') + '<div class="t"><span>Total still owed by everyone</span><span>' + money(tot) + '</span></div><div class="muted" style="margin-top:6px">The names are in the Credit tab.</div></div>';
 }
 var HT = 'fridge';
+/* ---------- the giver's Handover tab: one line of checks, a slim row of tools, two stock lists whose rows open to show what changed ---------- */
+var HOPEN = {}, HOALL = false;
+function hoUnc(rows) { return rows.filter(function (r) { return !r.counted && (r.stock > 0 || r.cage > 0); }); }
+function hoChecks(rows, counted) {
+  var sh = SH(), locked = sh.mode === 'locked', unc = hoUnc(rows).length, tot = rows.filter(function (r) { return r.stock > 0 || r.cage > 0; }).length, chip = function (on, txt, v) { return '<span class="hochip ' + (on ? 'ok' : 'no') + '" data-act="hochip" data-v="' + v + '">' + (on ? '✓ ' : '✗ ') + txt + '</span>'; };
+  return '<div class="hochk">' + chip(counted !== null, 'Cash', 'cash') + (locked ? '<span class="hochip ok">✓ Locked</span>' : chip(tosList().length > 0, 'Who to', 'who')) + chip(!!(M && M.signature), 'Signed', 'sig') + (unc ? '<span class="hochip wn" data-act="hochip" data-v="items">Counted ' + (tot - unc) + '/' + tot + '</span>' : '<span class="hochip ok">✓ Counted' + (tot ? ' ' + tot + '/' + tot : '') + '</span>') + '</div>';
+}
+function hoSlim() { return '<div class="hoslim">' + (inControl() ? '<button data-act="swopen">🔁 Switch operator</button>' : '') + '<button data-act="hovlist">📄 Previous handover</button></div>'; }
+function hoRow(r, mode, edFn) {
+  var cage = mode === 'cage', key = (cage ? 'g' : 'c') + (r.id || r.name), tl = tagList(r, mode), extra = tl.filter(function (t) { return !/^\d+ sold$/.test(t[1]) && !/^⚠ edited/.test(t[1]); }), ed = cage ? r.cedit : r.edit;
+  var edi = ed ? (edFn ? edFn(r) : S.log.filter(function (e) { return e.type === 'stockedit' && e.item === r.id; }).map(editInfo)) : [], more = extra.length > 0, open = (more || ed) && (ed || HOALL || HOPEN[key]);
+  var name = cage ? cageName(r.name, r.unit) : (r.shelf ? '🧁 ' : '🧊 ') + esc(r.name);
+  var mk = ed ? ' <span class="hoch red">▴</span>' : more ? ' <span class="hoch">' + (open ? '▴' : '▾') + '</span>' : '';
+  var cells = cage ? '<td>' + r.cageOpen + '</td><td>' + (r.movedCases ? '− ' + r.movedCases : '') + '</td><td><b>' + r.cage + '</b></td>' : '<td>' + r.open + '</td><td>' + (r.sold || '') + '</td><td><b>' + r.stock + '</b></td>';
+  var out = '<tr' + (more && !ed ? ' class="horow" data-act="hoopen" data-id="' + esc(key) + '"' : '') + '><td>' + name + mk + '</td>' + cells + '</tr>';
+  if (open) out += '<tr><td colspan="4" style="border:0;padding:0 0 6px"><div class="hoopen' + (ed ? ' red' : '') + '">' + edi.map(function (x) { return '<div class="hx neg"><b>⚠ Edited by hand</b> · ' + esc(x.text) + (x.reason ? ' · ' + esc(x.reason) : '') + (x.by ? ' · by ' + esc(x.by) : '') + '</div>'; }).join('') + tl.filter(function (t) { return !/^⚠ edited/.test(t[1]); }).map(function (t) { return '<div class="hx ' + t[0] + '">' + t[1] + '</div>'; }).join('') + '</div></td></tr>';
+  return out;
+}
+function hoStock(rows) { return hoLists(rows, {}); }
+function hoLists(rows, o) {   /* In the shop and In storage: on the giver's tab and on the receiver's first page (o.ed finds the hand edits of a row, o.fold folds the storage list) */
+  var shop = rows.filter(function (r) { return r.open || r.stock || r.gone || r.moved || r.spoil || r.edit; }), stor = rows.filter(function (r) { return r.store && (r.cageOpen || r.cage || r.movedCases || r.cedit || r.cadj || r.bought); });
+  var ch = function (r, m) { var t = tagList(r, m).filter(function (x) { return !/^\d+ sold$/.test(x[1]); }); return t.length ? 1 : 0; }, nShop = shop.reduce(function (a, r) { return a + ch(r, 'fridge'); }, 0), nSt = stor.reduce(function (a, r) { return a + ch(r, 'cage'); }, 0);
+  var edS = shop.filter(function (r) { return r.edit; }).length, edT = stor.filter(function (r) { return r.cedit; }).length, nAll = nShop + nSt;
+  var hintOf = function (n, ed, link) { return n ? '<div class="hohint"><span>' + (ed ? ed + ' edited by hand' + (n - ed ? ' · ' + (n - ed) + (n - ed === 1 ? ' other change' : ' other changes') : '') : n + (n === 1 ? ' item has changes' : ' items have changes') + ' · tap a row to read') + '</span>' + (link ? '<a data-act="hoall">' + (HOALL ? 'Close all' : 'Open all') + '</a>' : '') + '</div>' : ''; };
+  var hint = hintOf(nShop, edS, nAll > 0), hintSt = hintOf(nSt, edT, !nShop && nSt > 0);
+  var added = shop.reduce(function (a, r) { return a + r.moved + (r.direct ? r.bought : 0) + Math.max(0, r.edit) + Math.max(0, r.adj); }, 0), spoiled = shop.reduce(function (a, r) { return a + r.spoil + r.spQ; }, 0), sold = shop.reduce(function (a, r) { return a + r.sold; }, 0), money0 = shop.reduce(function (a, r) { return a + r.soldAmt; }, 0);
+  var out = '<div class="card"><h2>In the shop <span class="muted" style="font-size:11px;font-weight:500">🧊 fridge · 🧁 shelf</span></h2>' + hint + (shop.length ? '<table class="hot"><tr><th>Item</th><th>Was</th><th>Sold</th><th>Now</th></tr>' + shop.map(function (r) { return hoRow(r, 'fridge', o.ed); }).join('') + '<tr class="tot"><td>Total</td><td></td><td>' + sold + '</td><td></td></tr></table><div class="muted" style="margin-top:4px">' + (added ? 'Added <b style="color:var(--ink)">' + added + '</b> · ' : '') + (spoiled ? 'Spoiled <b style="color:var(--exp)">' + spoiled + '</b> · ' : '') + 'Sold <b style="color:var(--ink)">' + sold + '</b> · ' + money(money0) + '</div>' : '<div class="muted">No items.</div>') + '</div>';
+  var stt = hintSt + '<table class="hot"><tr><th>Item</th><th>Was</th><th>Moved out</th><th>Now</th></tr>' + stor.map(function (r) { return hoRow(r, 'cage', o.ed); }).join('') + '</table>';
+  if (stor.length) out += o.fold ? rxFold('stor', '<b>In storage</b> <span class="muted" style="font-size:11px">🔒 cage · ' + stor.length + (stor.length === 1 ? ' item' : ' items') + '</span>', '<div class="card">' + stt + '</div>') : '<div class="card"><h2>In storage <span class="muted" style="font-size:11px;font-weight:500">🔒 cage</span></h2>' + stt + '</div>';
+  return out;
+}
 function vHandover() {
   var cs0 = currentShift(), t = totals(), sh = SH(), rows = hoRows(), counted = sh.counted === '' ? null : num(sh.counted);
-  var h = '<button class="btn sec block" data-act="hovlist" style="margin-bottom:12px">📄 View previous handover</button>' + (inControl() ? '<div class="card"><b>🔁 Switch operator</b><div class="muted" style="margin:4px 0 10px">Give the app to someone else on this shift without a handover. You become view only.</div><button class="btn sec block" data-act="swopen">Switch operator</button></div>' : '') + (isPres() && S.state && !S.state.openingDone ? '<div class="card" style="border:2px dashed var(--brand)"><b>First time using the app?</b><div class="muted" style="margin:4px 0 10px">President only. Enter the previous handover by hand: the cash received, the stock counted, and who owes.</div><button class="btn block" data-act="opopen">📝 Enter previous handover</button><button class="btn sec sm block" data-act="ophide" style="margin-top:8px">Not needed, hide this</button></div>' : '') +
+  var h = hoChecks(rows, counted) + hoSlim() + (isPres() && S.state && !S.state.openingDone ? '<div class="card" style="border:2px dashed var(--brand)"><b>First time using the app?</b><div class="muted" style="margin:4px 0 10px">President only. Enter the previous handover by hand: the cash received, the stock counted, and who owes.</div><button class="btn block" data-act="opopen">📝 Enter previous handover</button><button class="btn sec sm block" data-act="ophide" style="margin-top:8px">Not needed, hide this</button></div>' : '') +
     '<div class="card sum"><h2><span class="sw ' + swc(cs0.name) + '">' + cs0.name + '</span> shift · ' + cs0.date + ' ' + HL(cs0.half) + '</h2>' + (cs0.name + cs0.date + cs0.half !== sh.name + sh.date + sh.half ? '<div class="muted" style="margin:-4px 0 6px">The records below are still on the ' + esc(sh.name) + ' shift of ' + esc(sh.date) + ' ' + esc(HL(sh.half)) + ' until a handover is accepted.</div>' : '') +
     '<div><span>Received from previous handover</span><b>' + money(sh.received) + '</b></div>' +
     '<div><span>Sales</span><b>+ ' + money(t.sales) + '</b></div>' +
@@ -1472,24 +1530,17 @@ function vHandover() {
     (counted === null ? '<div class="muted" style="color:var(--exp)">Count the cash and enter it. Required to hand over.</div>' : '') +
     (counted !== null && counted !== t.cash ? '<div><span>' + (counted < t.cash ? 'Cash short' : 'Cash over') + '</span><b style="color:' + (counted < t.cash ? 'var(--exp)' : 'var(--soon)') + '">' + money(Math.abs(counted - t.cash)) + '</b></div>' : '') + '</div>';
   if (ctlTrail().length) h += trailHtml(ctlTrail(), sh.name);
-  h += editsCard(S.log.filter(function (e) { return e.type === 'stockedit'; }).map(editInfo));
-  var hasShelf = rows.some(function (r) { return r.shelf; });
-  if (HT === 'shelf' && !hasShelf) HT = 'fridge';
-  var cg = HT === 'cage', vrows = cg ? rows.filter(function (r) { return r.store; }) : rows.filter(function (r) { return HT === 'shelf' ? r.shelf : !r.shelf; });
-  var vsold = vrows.reduce(function (a, r) { return a + r.sold; }, 0), vmoney = vrows.reduce(function (a, r) { return a + r.soldAmt; }, 0);   /* what was really charged, even if the price changed mid-shift */
+  h += hoStock(rows);
   h += soldCards(rows, { shift: { name: sh.name, date: sh.date, half: sh.half } }, 'Sold this shift');
-  h += '<div class="card"><h2>Stock</h2><div class="seg" style="grid-template-columns:repeat(' + (hasShelf ? 3 : 2) + ',1fr);margin-bottom:10px"><button data-act="htab" data-v="fridge" class="' + (HT === 'fridge' ? 'on' : '') + '">🧊 Fridge</button><button data-act="htab" data-v="cage" class="' + (cg ? 'on' : '') + '">🔒 Cage</button>' + (hasShelf ? '<button data-act="htab" data-v="shelf" class="' + (HT === 'shelf' ? 'on' : '') + '">🧁 Shelf</button>' : '') + '</div>' +
-    (cg ? cageCmp(vrows.map(function (r) { return { n: r.name, unit: r.unit, shelf: r.shelf, m: r.movedCases || 0, was: r.cageOpen, now: r.cage, tg: tags(r, 'cage') }; })) + '</div>' : (vrows.length ? '<table class="cmp">' + CMPCOLS + '<tr><th>Item</th><th>Sold</th><th>Was</th><th></th><th>Now</th></tr>' + vrows.map(function (r) {
-      return '<tr><td>' + esc(r.name) + '</td><td>' + (r.sold || '') + '</td><td>' + r.open + '</td><td>' + (r.open !== r.stock ? '→' : '') + '</td><td><b>' + r.stock + '</b></td></tr>' + (tags(r, HT) ? '<tr><td colspan="5" style="border:0;text-align:left;padding-top:0">' + tags(r, HT) + '</td></tr>' : '');   /* an arrow only where the number changed */
-    }).join('') + '<tr class="tot"><td>Total</td><td>' + vsold + '</td><td colspan="3">' + money(vmoney) + '</td></tr></table>' : '<div class="muted">No items.</div>') + '</div>');
-  h += creditCard(t) + handoverLists(owingList(), openShortList());
+  h += creditCard(t) + handoverLists(owingList(), shortAllList());
   h += '<div class="card"><label>Remarks</label><input data-sh="notes" value="' + esc(sh.notes) + '" placeholder="e.g. 2 Solo spoiled"></div>';
   var locked = sh.mode === 'locked';
-  h += '<div class="card"><label>Handover type</label><div class="seg" style="grid-template-columns:1fr 1fr"><button data-act="mode" data-m="person" class="' + (locked ? '' : 'on') + '">👤 To a person</button><button data-act="mode" data-m="locked" class="' + (locked ? 'on' : '') + '">🔒 Locked</button></div>' +
+  h += '<div class="card"><label>Handover type <b style="color:var(--exp)">*</b></label><div class="seg" style="grid-template-columns:1fr 1fr"><button data-act="mode" data-m="person" class="' + (locked ? '' : 'on') + '">👤 To a person</button><button data-act="mode" data-m="locked" class="' + (locked ? 'on' : '') + '">🔒 Locked</button></div>' +
     (locked ? '<p class="muted" style="margin-bottom:0">Fridge and cage locked with the stock inside. Not handed to anyone; the next person opens the handover and checks the stock.</p>'
-            : '<div class="row" style="margin-top:12px"><div class="grow">' + (tosList().length ? tosList().map(function (p) { return '<div><b>' + esc(plabel(p)) + '</b> ' + wsw(p.watch) + '</div>'; }).join('') : '<b>Not chosen</b>') + '<div class="muted">Pick one or more. Whoever takes it first is in control. If nobody takes it, the next watch can.</div></div><button class="btn sec sm" data-act="chooseto">' + (tosList().length ? 'Change' : 'Choose') + '</button></div>') + '</div>';
-  h += sigCard('Your signature');
-  return h + '<button class="btn block" data-act="prepare">Prepare handover</button>';
+            : '<div class="row" id="ho-who" style="margin-top:12px' + (tosList().length ? '' : ';border:2px solid var(--exp);border-radius:12px;padding:8px 10px') + '"><div class="grow">' + (tosList().length ? tosList().map(function (p) { return '<div><b>' + esc(plabel(p)) + '</b> ' + wsw(p.watch) + '</div>'; }).join('') : '<b>Not chosen</b>') + '<div class="muted">Pick one or more. Whoever takes it first is in control. If nobody takes it, the next watch can.</div></div><button class="btn sec sm" data-act="chooseto">' + (tosList().length ? 'Change' : 'Choose') + '</button></div>') + '</div>';
+  h += '<div id="ho-sig">' + sigCard('Your signature <b style="color:var(--exp)">*</b>') + '</div>';
+  var miss = (counted === null ? 1 : 0) + (!locked && !tosList().length ? 1 : 0) + (M && M.signature ? 0 : 1);
+  return h + '<div class="hosticky"><button class="btn block' + (miss ? ' dis' : '') + '" data-act="prepare">Prepare handover' + (miss ? ' · ' + miss + (miss === 1 ? ' thing' : ' things') + ' left' : '') + '</button></div>';
 }
 function editInfo(e) {   /* one hand-made stock change, as plain text */
   var parts = []; if (e.fridgeFrom !== e.fridgeTo) parts.push((e.shelf ? 'shelf ' : 'fridge ') + e.fridgeFrom + ' → ' + e.fridgeTo); if ((!e.shelf || e.store) && e.cageFrom !== e.cageTo) parts.push('cage ' + e.cageFrom + ' → ' + e.cageTo);
@@ -1526,6 +1577,8 @@ function handoverText() {
   if (eds.length) { L.push('', '⚠ STOCK EDITED BY HAND (check carefully)'); eds.forEach(function (x) { L.push(x.name + ': ' + x.text + ' (' + x.reason + ') by ' + x.by); }); }
   var srs = rows.filter(function (r) { return r.gone || r.crQ || r.spQ; });
   if (srs.length) { L.push('', 'SOLD THIS SHIFT (item: was → now, sold, cash)'); srs.forEach(function (r) { L.push(r.name + ': ' + r.open + ' → ' + r.stock + ', sold ' + r.sold + ', cash ' + Math.max(0, r.sold - r.crQ) + (r.crQ ? ' (credit ' + r.crQ + ')' : '') + (r.spQ ? ' (spoiled ' + r.spQ + ')' : '')); }); }
+  L.push('', 'SHORTAGES NOT YET REPAID (every shift)'); shortAllList().forEach(function (x) { L.push(x.wk + ': ' + money(x.owed) + (x.short ? ' (short ' + money(x.short) + ', repaid ' + money(x.repaid) + ')' : '')); });
+  L.push('', 'WHO OWES ON CREDIT'); if (owingList().length) owingList().forEach(function (x) { L.push(x.label + ': ' + money(x.bal)); }); else L.push('Nobody owes anything.');
   L.push('', 'UNPAID CREDIT GIVEN THIS SHIFT: ' + money(t.crN)); if (t.paidN) L.push('PAID BACK THIS SHIFT: ' + money(t.paidN)); L.push('TOTAL STILL OWED BY EVERYONE: ' + money(owing().reduce(function (a, x) { return a + x.bal; }, 0)));
   if (sh.notes) L.push('', 'Remarks: ' + sh.notes);
   return lbl(L.join('\n'));
@@ -1618,14 +1671,26 @@ function eligible(h) {
   var mp = myPerson();
   return isPres() || h.locked === true || (h.toEmails || []).indexOf(EMAIL) >= 0 || !!(mp && mp.watch === h.nw);
 }
+function hoGot() { try { return JSON.parse(localStorage.getItem('sw.gotit') || '{}') || {}; } catch (e) { return {}; } }
+function hoGotIt(id) {
+  var g = hoGot(); g[id] = 1; try { localStorage.setItem('sw.gotit', JSON.stringify(g)); } catch (e) {}
+  if (DB && id) { var b = writeBatch(DB); b.update(ref('notices/' + id), { read: true }); b.commit().catch(function () {}); }
+  render();
+}
+function hoResult() {   /* after you hand over: what the next person found when they counted, until you tap Got it */
+  var got = hoGot(), n = (S.notices || []).filter(function (x) { return (x.kind === 'received' || x.kind === 'shortage') && !got[x.id] && Date.now() - x.at < 36 * 36e5; })[0];
+  if (!n) return '';
+  var short = n.kind === 'shortage', who = esc(n.byName || 'The next person');
+  return '<div class="card" style="background:var(--' + (short ? 'exp' : 'ok') + '-bg)"><b style="color:var(--' + (short ? 'exp' : 'ok') + ')">' + who + (short ? ' counted ' + money(n.total) + ' short' : ' counted it: all matched ✓') + '</b><div class="hosteps"><div class="d"><i>✓</i>Handed over<br>' + esc(n.shiftDate || '') + ' ' + esc(HL(n.shiftHalf)) + '</div><div class="d"><i>✓</i>Taken<br>' + hhmm(n.at) + '</div><div class="' + (short ? 'x' : 'd') + '"><i>' + (short ? '!' : '✓') + '</i>Counted<br>' + (short ? '<b style="color:var(--exp)">' + money(n.total) + ' short</b>' : 'all matched') + '</div></div><div style="margin-top:6px">' + (n.sid || (n.s && n.s.sid) ? '<a data-act="shopen2" data-id="' + esc(n.sid || n.s.sid) + '" style="color:var(--link);font-weight:700;cursor:pointer">View the handover record ›</a> &nbsp;·&nbsp; ' : short ? '<a data-act="ntview" data-id="' + esc(n.id) + '" style="color:var(--link);font-weight:700;cursor:pointer">View details ›</a> &nbsp;·&nbsp; ' : '') + '<a data-act="hogot" data-id="' + esc(n.id) + '" style="color:var(--link);font-weight:700;cursor:pointer">Got it</a></div></div>';
+}
 function banner() {
   var st = S.state; if (!st || inControl() || OWNERVIEW) return '';
   var h = S.hand, box = function (title, body, btns) { return '<div class="card" style="background:var(--soon-bg)"><b>' + title + '</b><div class="muted" style="margin:4px 0 ' + (btns ? '10' : '0') + 'px">' + body + '</div>' + (btns || '') + '</div>'; };
   var tc = (isPres() || (canAdmin() && st.controlEmail)) ? '<button class="btn red sm" data-act="tcask">🛡 Take control</button>' : '';
-  if (st.controlEmail) return '<div class="card vothin"><span class="grow">🔒 <b>View only</b> · ' + esc(st.controlName || st.controlEmail) + ' is in control</span>' + tc + '</div>';
+  if (st.controlEmail) return hoResult() + '<div class="card vothin"><span class="grow">🔒 <b>View only</b> · ' + esc(st.controlName || st.controlEmail) + ' is in control</span>' + tc + '</div>';
   if (h && h.status === 'open') {
     var to = h.locked ? 'Locked: no one in particular' : esc((h.toLabels || []).join(', '));
-    if (h.fromEmail === EMAIL) return box('🔒 Handed over', 'To ' + to + ' at ' + hhmm(h.at) + '. Waiting for someone to take it.', '<div class="row"><button class="btn sm grow" data-act="shareapp">Notify (WhatsApp…)</button><button class="btn sec sm grow" data-act="cancelho">Cancel handover, I\'m staying on</button></div>');
+    if (h.fromEmail === EMAIL) return box('🔒 Handed over', '<div class="hosteps"><div class="d"><i>✓</i>Handed over<br>' + hhmm(h.at) + '</div><div class="n"><i>2</i>Waiting<br>to be taken</div><div><i>3</i>Counted</div></div>To ' + to + '. Waiting for someone to take it.', '<div class="row"><button class="btn sm grow" data-act="shareapp">Notify (WhatsApp…)</button><button class="btn sec sm grow" data-act="cancelho">Cancel handover, I\'m staying on</button></div>' + (h.same ? '' : '<div style="margin-top:8px"><a data-act="shopen2" data-id="' + esc(h.shift.sid) + '" style="color:var(--link);font-weight:700;cursor:pointer">View what I handed over ›</a></div>'));
     if (eligible(h)) return box('📋 Handover waiting for you', 'From ' + esc(hnl(h.fromName, h.fromEmail)) + ' · ' + esc(h.shift.name) + ' shift · cash ' + money(h.cash), '<button class="btn green sm" data-act="openrx">Open handover &amp; take control</button>');
     return box('Waiting for the handover to be taken', 'Handed to ' + to + ' by ' + esc(hnl(h.fromName, h.fromEmail)) + ' at ' + hhmm(h.at) + '.', isPres() ? tc : '');
   }
@@ -1666,7 +1731,7 @@ function toast(m, undoId) {
 var REFRESH = null;
 function refreshModal() { var a = document.activeElement; if (REFRESH && !(a && /INPUT|SELECT|TEXTAREA/.test(a.tagName) && $('#modal').contains(a))) REFRESH(); }
 var LASTV = null;
-function closeModal() { REFRESH = null; CONF = null; RX = null; LASTV = null; if (UNSUB) { UNSUB(); UNSUB = null; } $('#modal').innerHTML = ''; }
+function closeModal() { REFRESH = null; CONF = null; RX = null; HOVI = -1; LASTV = null; if (UNSUB) { UNSUB(); UNSUB = null; } $('#modal').innerHTML = ''; }
 function modal(html, top) { REFRESH = null; CONF = null; if (UNSUB) { UNSUB(); UNSUB = null; } $('#modal').innerHTML = '<div class="modal' + (top ? ' top' : '') + '" id="mbg"><div>' + html + '</div></div>'; }   /* top: pop-ups with a search box stay at the top so the keyboard never covers the results */
 function liveModal(qs, build) {   /* a pop-up that stays in step with the database */
   if (!Array.isArray(qs)) qs = [qs];
@@ -1724,7 +1789,7 @@ var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['lo
 function hgroup(e) { for (var i = 0; i < HGROUPS.length; i++) if (HGROUPS[i][2].indexOf(e.type) >= 0) return HGROUPS[i][0]; return 'Stock edits by hand'; }
 function histNoon(d) { var x = new Date(d); x.setHours(12, 0, 0, 0); return x; }
 function histReset() { CM = false; HY.tab = 'all'; HY.per = 'day'; HY.dt = histNoon(new Date()); HY.types = {}; HY.short = false; HY.wk = ''; HY.cv = 'score'; HY.sy = 0; HY.back = false; HEVS = null; }
-function histStop() { if (HUN) { HUN(); HUN = null; } }
+function histStop() { if (HUN) { HUN(); HUN = null; } HSHDRAW = null; }
 function histPer() { return HY.tab === 'charts' ? 'month' : HY.tab === 'all' && HY.per === 'year' ? 'month' : HY.per; }
 function histRange() {   /* the start and end of what is on show, in ms */
   var d = HY.dt, y = d.getFullYear(), m = d.getMonth(), p = histPer();
@@ -1821,17 +1886,81 @@ function histGo() { if (HY.tab === 'all') histPage(); else histDraw(); }
 function histOpen() { histReset(); histStop(); WPS = []; histPage(); }
 function histIsOpen() { var c = WPS[WPS.length - 1]; return !$('#spage').hidden && c && c.fn === histPage; }
 function histShift(id) {   /* a shift's own page, on top of History; back returns to the list as it was */
-  if ($('#spage').hidden) { histReset(); WPS = [{ mode: 'page', fn: histPage, args: [] }]; }
+  if ($('#spage').hidden) { histReset(); WPS = []; }   /* opened from the Count page: back returns to it */
   else if (histIsOpen()) { var sb = $('#spage .sp-body'); HY.sy = sb ? sb.scrollTop : 0; HY.back = true; }
   histShiftPage(id);
 }
+/* ---------- the handover record: both sides of one handover on one page, kept in the permanent shift summary ---------- */
+var RCF = {}, HSHDRAW = null, HHO = {}, HREC = null;
+var ITK = ['id', 'name', 'shelf', 'store', 'unit', 'price', 'per', 'open', 'stock', 'cageOpen', 'cage', 'sold', 'credit', 'spoiled', 'gone', 'moved', 'movedCases', 'bought', 'edit', 'cedit', 'adj', 'cadj', 'spoil', 'soldAmt', 'crAmt', 'spAmt'];
+function packItems(items) { return JSON.stringify((items || []).map(function (i) { return ITK.map(function (k) { return i[k] === undefined ? null : i[k]; }); })); }
+function unpackItems(str) { try { return (JSON.parse(str) || []).map(function (a) { var o = {}; ITK.forEach(function (k, n) { if (a[n] !== null && a[n] !== undefined) o[k] = a[n]; }); return o; }); } catch (e) { return null; } }
+function recRows(d, h) {   /* every item with the giver's number and the receiver's count (rs shop, rg storage; null = not counted yet) */
+  var items = d.its ? unpackItems(d.its) : h && h.items ? h.items : null; if (!items) return null;
+  var rc = Array.isArray(d.rc) && d.rc.length ? d.rc : h && h.receivedItems ? [].concat.apply([], items.map(function (i) { var q = h.receivedItems[i.id]; return q ? [q.stock, q.cage] : [null, null]; })) : null, out = [];
+  items.forEach(function (x, k) { var r = docRows({ items: [x] })[0]; if (!r) return; r.rs = rc && rc[2 * k] != null ? rc[2 * k] : null; r.rg = rc && rc[2 * k + 1] != null ? rc[2 * k + 1] : null; out.push(r); });
+  return out;
+}
+function rctbl(rows) {   /* [label, giver, receiver or null, formatter] */
+  return '<table class="rct"><colgroup><col><col style="width:66px"><col style="width:72px"><col style="width:54px"></colgroup><tr><th>Item</th><th>Giver</th><th>Receiver</th><th>Diff</th></tr>' + rows.map(function (x) {
+    var f = x[3] || String, df = x[2] == null ? 0 : r2(x[2] - x[1]);
+    return '<tr><td>' + x[0] + '</td><td>' + f(x[1]) + '</td><td>' + (x[2] == null ? '–' : f(x[2])) + '</td><td class="' + (df < 0 ? 'rcb' : df > 0 ? 'rcu' : '') + '">' + (df ? (df < 0 ? '−' : '+') + f(Math.abs(df)) : '') + '</td></tr>';
+  }).join('') + '</table>';
+}
+function recordHtml(d, evs, h) {
+  var rows = recRows(d, h); if (!rows) return shiftDetailHtml(d, evs);   /* an older shift: the summary page */
+  var acc = d.status === 'accepted', fold = function (k, t, html) { return rxFold(k, t, html, RCF, 'rcfold'); }, at2 = d.receivedAt || (h && h.acceptedAt) || 0, wk = d.wk;
+  var res = !acc ? '<b style="color:var(--cnt)">Waiting to be taken</b>' : d.short > 0 ? '<b style="color:var(--exp)">Short ' + money(d.short) + '</b>' : d.over > 0 ? '<b style="color:var(--soon)">Over ' + money(d.over) + '</b>' : '<b style="color:var(--ok)">✓ Matched</b>';
+  var to = d.receivedByName ? esc(d.receivedByName) : esc((d.toLabels || []).join(', ')) || 'the next shift';
+  var head = '<div class="card"><div class="row" style="align-items:center"><b class="grow" style="font-size:15px">' + wsw(wk) + ' ' + esc(d.date) + ' ' + esc(HL(d.half)) + '</b>' + res + '</div><div class="muted" style="margin-top:2px">' + esc(d.fromName || '') + (d.fromWatch && d.fromWatch !== wk ? ' (' + esc(d.fromWatch) + ', visiting)' : '') + ' → ' + to + '</div><div class="hosteps"><div class="d"><i>✓</i>Handed over<br>' + (d.at ? hhmm(d.at) : '') + '</div>' + (acc ? '<div class="' + (d.short > 0 ? 'x' : 'd') + '"><i>' + (d.short > 0 ? '!' : '✓') + '</i>Accepted &amp; counted<br>' + (at2 ? hhmm(at2) : '') + '</div>' : '<div class="n"><i>2</i>Waiting<br>to be taken</div>') + '</div></div>';
+  var gs = Math.max(0, r2((d.expected || 0) - (d.counted || 0))), ex = acc ? r2((d.shortCash || 0) - gs) : 0;
+  var cashNote = acc && d.shortCash > 0 ? 'Cash short ' + money(d.shortCash) + (gs > 0 && ex > 0 ? ': ' + money(gs) + ' the giver counted short, ' + money(ex) + ' more when the receiver counted.' : gs > 0 ? ': the giver counted it short.' : ': found when the receiver counted.') : acc && d.over > 0 ? 'Cash over ' + money(d.over) + '.' : '';
+  var cash = '<div class="card"><h2>Cash</h2>' + rctbl([['Cash expected', d.expected || 0, acc ? d.expected || 0 : null, money], ['Cash counted', d.counted || 0, acc ? d.receivedCash || 0 : null, money]]) + (cashNote ? '<div class="muted" style="margin-top:4px">' + cashNote + '</div>' : '') + '</div>';
+  var shop = rows.filter(function (r) { return r.stock > 0 || r.rs > 0; }), stor = rows.filter(function (r) { return r.store && (r.cage > 0 || r.rg > 0); });
+  var shorts = [], ups = [];
+  shop.forEach(function (r) { if (r.rs != null && r.rs < r.stock) shorts.push(esc(r.name) + ' −' + (r.stock - r.rs) + ' = ' + money(r2((r.stock - r.rs) * r.price))); else if (r.rs != null && r.rs > r.stock) ups.push(esc(r.name) + ' +' + (r.rs - r.stock)); });
+  stor.forEach(function (r) { if (r.rg != null && r.rg < r.cage) shorts.push(esc(r.name) + ' (' + esc(r.unit || 'case') + ') −' + (r.cage - r.rg) + ' = ' + money(r2((r.cage - r.rg) * (r.per || 1) * r.price))); else if (r.rg != null && r.rg > r.cage) ups.push(esc(r.name) + ' (' + esc(r.unit || 'case') + ') +' + (r.rg - r.cage)); });
+  var itNote = acc && (shorts.length || ups.length) ? '<div class="muted" style="margin-top:4px">' + (shorts.length ? shorts.join(', ') + ' short.' : '') + (ups.length ? ' ' + ups.join(', ') + ' is noted, not a shortage.' : '') + '</div>' : '';
+  var shopC = '<div class="card"><h2>In the shop <span class="muted" style="font-size:11px;font-weight:500">🧊 fridge · 🧁 shelf</span></h2>' + (shop.length ? rctbl(shop.map(function (r) { return [(r.shelf ? '🧁 ' : '🧊 ') + esc(r.name), r.stock, acc ? r.rs : null]; })) + itNote : '<div class="muted">No items.</div>') + '</div>';
+  var storC = stor.length ? '<div class="card"><h2>In storage <span class="muted" style="font-size:11px;font-weight:500">🔒 cage</span></h2>' + rctbl(stor.map(function (r) { return [cageName(r.name, r.unit), r.cage, acc ? r.rg : null]; })) + '</div>' : '';
+  var sold = rows.filter(function (r) { return r.sold > 0; }), tcash = sold.reduce(function (a, r) { return a + Math.max(0, r.soldAmt - r.crAmt - r.spAmt); }, 0);
+  var soldF = fold('sold', 'Sold on the shift <span class="muted" style="font-size:11px">' + sold.length + (sold.length === 1 ? ' item' : ' items') + ' · ' + money(tcash) + '</span>', soldCards(rows, { shift: { name: wk, date: d.date, half: d.half } }, 'Sold on the shift'));
+  var line = function (l, v, c) { return '<div><span>' + l + '</span><b' + (c ? ' style="color:' + c + '"' : '') + '>' + v + '</b></div>'; };
+  var sum = '<div class="card sum"><h2>How the cash adds up</h2>' + line('Received from previous handover', money(d.received)) + line('Sales', '+ ' + money(d.sales)) + (d.cr ? line('Sold on credit (not paid)', '− ' + money(d.cr)) : '') + (d.paid ? line('Credit payments received', '+ ' + money(d.paid)) : '') + (d.loans ? line('Cash lent out', '− ' + money(d.loans)) : '') + (d.purch ? line('Purchases', '− ' + money(d.purch)) : '') + (d.used ? line('Cash used', '− ' + money(d.used)) : '') + '<div class="t"><span>Expected</span><span>' + money(d.expected) + '</span></div></div>';
+  var tr = (d.trail || []).length || (d.fromWatch && d.fromWatch !== wk) ? fold('ctl', 'Who held control', trailHtml(d.trail || [], wk)) : '';
+  var eds = d.edits || (h && h.edits) || [], edC = eds.length ? editsCard(eds) : '';
+  var ent = (evs || []).slice().sort(function (a, b) { return b.t - a.t; }), entF = ent.length ? fold('ent', 'Entries <span class="muted" style="font-size:11px">' + ent.length + ' · kept about 31 days</span>', '<div class="card"><div class="list">' + ent.map(function (e) { return evRow(e, false); }).join('') + '</div></div>') : '';
+  var sg = function (img, nm, t) { return '<div style="flex:1">' + (img ? '<img class="sigimg" src="' + img + '" alt="signature" style="max-height:60px">' : '<div style="height:34px"></div>') + '<div style="border-top:2px solid var(--ink);padding-top:2px" class="muted">' + esc(nm || '') + (t ? ' · ' + hhmm(t) : '') + '</div></div>'; };
+  var sigs = '<div class="card"><h2>Signatures</h2><div class="row" style="gap:14px;align-items:flex-end">' + sg(h && h.sig, d.fromName, d.at) + (acc ? sg(h && h.receivedSig, d.receivedByName, at2) : '<div style="flex:1" class="muted">Not signed yet</div>') + '</div>' + (h ? '' : '<div class="muted" style="margin-top:6px">The drawn signatures are kept for about 31 days. The names and times stay.</div>') + '</div>';
+  var so = shortAllList().filter(function (x) { return x.wk === wk; })[0] || { owed: 0, repaid: 0 };
+  var result = acc ? '<div class="card sum"><h2>Result</h2>' + line('Shortage from this handover', money(d.short || 0), d.short > 0 ? 'var(--exp)' : 'var(--ok)') + line('Repaid so far (all shortages)', money(so.repaid), 'var(--ok)') + '<div><span>' + wsw(wk) + ' still owes (all shortages)</span><b style="color:' + (so.owed > 0 ? 'var(--exp)' : 'var(--ok)') + '">' + money(so.owed) + '</b></div></div>' : '';
+  HREC = { d: d, h: h, rows: rows };
+  return '<h2>Handover record</h2>' + head + cash + shopC + storC + soldF + fold('sum', 'How the cash adds up', sum) + handoverLists(d.owedBy, d.openShort) + tr + edC + (d.notes ? '<div class="card"><label>Remarks</label>' + esc(d.notes) + '</div>' : '') + entF + sigs + result + '<div class="row noprint" style="gap:8px"><button class="btn grow" data-act="rccopy">Copy</button><button class="btn grow" data-act="rcshare">Share</button><button class="btn grow" data-act="rcprint">Print</button></div>';
+}
+function recordText() {
+  if (!HREC) return ''; var d = HREC.d, h = HREC.h, rows = HREC.rows, acc = d.status === 'accepted', L = [];
+  L.push('HANDOVER RECORD', d.wk + ' shift · ' + d.date + ' ' + HL(d.half), 'From: ' + (d.fromName || '') + ' → ' + (d.receivedByName || (d.toLabels || []).join(', ') || 'the next shift'), 'Handed over: ' + (d.at ? new Date(d.at).toLocaleString() : '') + (acc ? ' · Accepted: ' + (d.receivedAt || (h && h.acceptedAt) ? new Date(d.receivedAt || h.acceptedAt).toLocaleString() : '') : ' · Waiting to be taken'));
+  if (acc) L.push('Result: ' + (d.short > 0 ? 'SHORT ' + money(d.short) : d.over > 0 ? 'over ' + money(d.over) : 'matched'));
+  L.push('', 'CASH', 'Expected: ' + money(d.expected), 'Counted by the giver: ' + money(d.counted)); if (acc) L.push('Counted by the receiver: ' + money(d.receivedCash));
+  L.push('', 'IN THE SHOP (giver → receiver)'); rows.filter(function (r) { return r.stock > 0 || r.rs > 0; }).forEach(function (r) { L.push(r.name + ': ' + r.stock + (acc && r.rs != null ? ' → ' + r.rs + (r.rs !== r.stock ? ' (' + (r.rs < r.stock ? '−' : '+') + Math.abs(r.rs - r.stock) + ')' : '') : '')); });
+  var st = rows.filter(function (r) { return r.store && (r.cage > 0 || r.rg > 0); }); if (st.length) { L.push('', 'IN STORAGE (giver → receiver)'); st.forEach(function (r) { L.push(r.name + ' (' + (r.unit || 'case') + '): ' + r.cage + (acc && r.rg != null ? ' → ' + r.rg : '')); }); }
+  if (Array.isArray(d.openShort)) { L.push('', 'SHORTAGES NOT YET REPAID (every shift)'); d.openShort.forEach(function (x) { L.push(x.wk + ': ' + money(x.owed)); }); }
+  if (Array.isArray(d.owedBy)) { L.push('', 'WHO OWES ON CREDIT'); if (d.owedBy.length) d.owedBy.forEach(function (x) { L.push(x.label + ': ' + money(x.bal)); }); else L.push('Nobody owes anything.'); }
+  if (d.notes) L.push('', 'Remarks: ' + d.notes);
+  return L.join('\n');
+}
+function recShare(copyOnly) {
+  var txt = recordText();
+  if (!copyOnly && navigator.share) { navigator.share({ text: txt }).catch(function () {}); return; }
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { toast('Copied'); }, function () { toast('Copy failed'); }); else toast('Copy not supported here');
+}
 function histShiftPage(id) {
   histStop();
-  var evs = null, gone = false, draw = function () { var d = HSD[id]; wpPage(histShiftPage, [id], d ? shiftDetailHtml(d, evs || []) : '<h2>Shift</h2><div class="empty">' + (gone ? 'This shift was not found.' : 'Loading…') + '</div>', true); };
-  draw();
-  var u1 = onSnapshot(ref('shifts/' + id), function (sn) { if (sn.exists()) { var x = sn.data(); x.id = id; HSD[id] = x; } else gone = true; draw(); }, function (e) { toast(errText(e)); });
+  var evs = null, gone = false, hsub = null, draw = function () { var d = HSD[id]; wpPage(histShiftPage, [id], d ? recordHtml(d, evs || [], d.handoverId ? HHO[d.handoverId] : null) : '<h2>Handover record</h2><div class="empty">' + (gone ? 'This shift was not found.' : 'Loading…') + '</div>', true); };
+  HSHDRAW = draw; draw();
+  var u1 = onSnapshot(ref('shifts/' + id), function (sn) { if (sn.exists()) { var x = sn.data(); x.id = id; HSD[id] = x; if (x.handoverId && !hsub) hsub = onSnapshot(ref('handovers/' + x.handoverId), function (hs) { if (hs.exists()) HHO[x.handoverId] = hs.data(); draw(); }, function () {}); } else gone = true; draw(); }, function (e) { toast(errText(e)); });
   var u2 = onSnapshot(query(col('events'), where('sid', '==', id)), function (snap) { evs = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); draw(); }, function () { });
-  HUN = function () { u1(); u2(); };
+  HUN = function () { u1(); u2(); if (hsub) hsub(); };
 }
 function histSheetHtml() {
   var all = HY.tab === 'all', pers = all ? [['day', 'Day'], ['month', 'Month']] : [['day', 'Day'], ['month', 'Month'], ['year', 'Year']], p = histPer(), n, body;
@@ -2164,6 +2293,7 @@ function prepare() {
 function prepareShow() {
   var t = totals(), sh = SH(), rows = hoRows(), locked = sh.mode === 'locked';
   modal('<h2>' + (locked ? '🔒 Locked handover ready' : sameShiftHo(sh) ? 'Handover within the shift ready' : 'Handover ready') + '</h2>' + (sameShiftHo(sh) ? '<div class="card" style="background:var(--soon-bg);box-shadow:none"><b>Same shift</b><div style="margin-top:4px">The ' + esc(sh.name) + ' shift keeps going. The next person counts what is here and carries on.</div></div>' : '') + '<div class="card sum"><div><span>Shift</span><b>' + sh.name + ' · ' + sh.date + ' ' + HL(sh.half) + '</b></div><div><span>From</span><b>' + esc(myName()) + '</b></div><div><span>To</span><b>' + (locked ? 'Locked: no one in particular' : esc(tosText())) + '</b></div><div><span>Received</span><b>' + money(sh.received) + '</b></div><div><span>Sales</span><b>' + money(t.sales) + '</b></div><div><span>Total items sold</span><b>' + t.sold + '</b></div>' + (t.crN ? '<div><span>Unpaid credit given</span><b>' + money(t.crN) + '</b></div>' : '') + (t.loans ? '<div><span>Cash lent out</span><b>' + money(t.loans) + '</b></div>' : '') + (t.purch ? '<div><span>Purchases</span><b>' + money(t.purch) + '</b></div>' : '') + (t.used ? '<div><span>Cash used</span><b>' + money(t.used) + '</b></div>' : '') + '<div class="t"><span>Cash to hand over</span><span>' + money(sh.counted === '' ? t.cash : num(sh.counted)) + '</span></div></div>' +
+    handoverLists(owingList(), shortAllList()) +
     '<div class="card"><table><tr><th>Fridge</th><th>Sold</th><th>Now</th><th>Cases</th></tr>' + rows.map(function (r) { return '<tr><td>' + esc(r.name) + '</td><td>' + r.sold + '</td><td><b>' + r.stock + '</b></td><td><b>' + (r.store ? r.cage + ' ' + unitPl(r.unit, r.cage) : '–') + '</b></td></tr>'; }).join('') + '</table>' + (sh.notes ? '<p class="muted">Remarks: ' + esc(sh.notes) + '</p>' : '') + '</div>' +
     '<div class="card"><label>Signed</label><img class="sigimg" src="' + M.signature + '" alt="signature"><div class="muted">' + esc(myName()) + '</div></div>' +
     '<div class="noprint"><button class="btn green block" data-act="hoask">Hand over now</button>' +
@@ -2179,11 +2309,11 @@ function doHandover2() {
     shift: { name: sh.name, half: sh.half, date: sh.date, sid: sh.sid }, cash: sh.counted === '' ? t.cash : num(sh.counted), computed: t.cash, sales: t.sales, sold: t.sold, cr: t.crN, loans: t.loans, used: t.used, paid: t.paidN, purch: t.purch, received: sh.received, notes: sh.notes, text: handoverText(), sig: M.signature, expireAt: EXP(),
     items: rows.map(function (r) { return { id: r.id, shelf: r.shelf, store: r.store, unit: r.unit, name: r.name, price: r.price, per: r.per, open: r.open, stock: r.stock, sold: r.sold, credit: r.crQ, spoiled: r.spQ, cageOpen: r.cageOpen, cage: r.cage, gone: r.gone, moved: r.moved, movedCases: r.movedCases || 0, bought: r.bought, edit: r.edit, cedit: r.cedit, adj: r.adj, cadj: r.cadj, spoil: r.spoil, soldAmt: r.soldAmt, crAmt: r.crAmt, spAmt: r.spAmt }; }),
     edits: S.log.filter(function (e) { return e.type === 'stockedit'; }).map(editInfo),
-    crShift: t.crN, owedTotal: owing().reduce(function (a, x) { return a + x.bal; }, 0), owedBy: owingList(), openShort: openShortList() };
+    crShift: t.crN, owedTotal: owing().reduce(function (a, x) { return a + x.bal; }, 0), owedBy: owingList(), openShort: shortAllList() };
   var hd = String(sh.date || '').split('/'), cashRows = soldRows(rows).map(function (x) { return { n: x.r.name, o: x.r.open, a: x.plus, s: x.r.sold, c: x.cash, w: x.r.stock, cr: x.r.crQ, sp: x.r.spQ }; });
   h.sum = !same;
   var b = writeBatch(DB); b.set(ref('handovers/' + id), h);
-  if (!same) b.set(ref('shifts/' + sh.sid), { sid: sh.sid, wk: sh.name, date: sh.date, half: sh.half, day: hd.length === 3 ? hd[2] + '-' + hd[1] + '-' + hd[0] : '', status: 'open', handoverId: id, fromEmail: EMAIL, fromName: myName(), fromWatch: whoOf(EMAIL).wk, trail: ctlTrail(), toLabels: h.toLabels, locked: locked, received: sh.received, sales: t.sales, cr: t.crN, paid: t.paidN, loans: t.loans, purch: t.purch, used: t.used, expected: t.cash, counted: h.cash, sold: t.sold, rows: cashRows, owedBy: h.owedBy, openShort: h.openShort, notes: sh.notes || '', at: Date.now() }); b.update(ref('shop/state'), { controlEmail: '', controlName: '', pending: id });
+  if (!same) b.set(ref('shifts/' + sh.sid), { sid: sh.sid, wk: sh.name, date: sh.date, half: sh.half, day: hd.length === 3 ? hd[2] + '-' + hd[1] + '-' + hd[0] : '', status: 'open', handoverId: id, fromEmail: EMAIL, fromName: myName(), fromWatch: whoOf(EMAIL).wk, trail: ctlTrail(), toLabels: h.toLabels, locked: locked, received: sh.received, sales: t.sales, cr: t.crN, paid: t.paidN, loans: t.loans, purch: t.purch, used: t.used, expected: t.cash, counted: h.cash, sold: t.sold, rows: cashRows, owedBy: h.owedBy, openShort: h.openShort, its: packItems(h.items), edits: h.edits, notes: sh.notes || '', at: Date.now() }); b.update(ref('shop/state'), { controlEmail: '', controlName: '', pending: id });
   commit(b); sel = null; qty = 1; tab = 'sell'; closeModal(); toast('Handed over. You are now view only.');
 }
 function cancelHandover() {
@@ -2223,30 +2353,48 @@ function docRows(h, RM) {   /* the rows of a handover, in the same shape as the 
 }
 function itStore(i) { return i.store != null ? i.store : !i.shelf; }   /* older handovers did not say: fridge items had a cage, shelf items did not */
 var RXTAB = 'fridge';
-function soldCards(rows, h, title) {   /* only what was sold: one block per item, the big numbers first and the small print underneath */
-  var xs = rows.filter(function (r) { return r.sold > 0; });
-  var chip = function (t, c) { return '<span class="tag ' + c + '">' + t + '</span>'; };
-  var tq = xs.reduce(function (a, r) { return a + r.sold; }, 0), tc = xs.reduce(function (a, r) { return a + Math.max(0, r.soldAmt - r.crAmt - r.spAmt); }, 0);
-  return '<div class="card"><h2>' + (title || 'Sold on the shift that handed over') + '</h2><div class="muted" style="margin:-4px 0 6px">' + esc(h.shift.name) + ' shift · ' + esc(h.shift.date) + ' ' + esc(HL(h.shift.half)) + '</div>' +
+var SOPEN = {}, SALL = false, HOVI = -1;   /* the sold list: which items are open, and Open all */
+function soldCards(rows, h, title) {   /* what was sold: a clean list; tap an item with something to explain and its details drop down */
+  var xs = rows.filter(function (r) { return r.sold > 0; }), key = function (r) { return 's' + (r.id || r.name); };
+  var plus = function (r) { return r.moved + (r.direct ? r.bought : 0); }, sp = function (r) { return r.spQ + r.spoil; };
+  var more = function (r) { return r.crQ || sp(r) || plus(r) || r.edit || r.adj; };
+  var tq = xs.reduce(function (a, r) { return a + r.sold; }, 0), tc = xs.reduce(function (a, r) { return a + Math.max(0, r.soldAmt - r.crAmt - r.spAmt); }, 0), nm = xs.filter(more).length;
+  return '<div class="card"><h2>' + (title || 'Sold on the shift that handed over') + '</h2><div class="muted" style="margin:-4px 0 4px">' + esc(h.shift.name) + ' shift · ' + esc(h.shift.date) + ' ' + esc(HL(h.shift.half)) + '</div>' +
+    (nm ? '<div class="hohint"><span>' + nm + (nm === 1 ? ' item has details' : ' items have details') + ' · tap a row to read</span><a data-act="soldall">' + (SALL ? 'Close all' : 'Open all') + '</a></div>' : '') +
     (xs.length ? xs.map(function (r) {
-      var cash = Math.max(0, r.soldAmt - r.crAmt - r.spAmt), ex = [];
-      if (r.crQ) ex.push(chip(r.crQ + ' on credit', 'cr')); if (r.spQ) ex.push(chip(r.spQ + ' spoiled', 'neg'));
-      if (r.moved) ex.push(chip(r.moved + ' added from the cage', 'pos')); if (r.direct && r.bought) ex.push(chip(r.bought + ' bought', 'pos')); if (r.edit) ex.push(chip('edited by hand ' + (r.edit > 0 ? '+' : '') + r.edit, 'neg'));
-      return '<div style="border-top:1px solid var(--line);padding:10px 0"><div class="row" style="align-items:center"><b class="grow" style="font-size:15px">' + esc(r.name) + '</b><b style="font-size:15px">' + r.sold + ' sold</b><b style="color:var(--ok);margin-left:12px;min-width:52px;text-align:right">' + money(cash) + '</b></div><div class="muted" style="margin-top:2px">' + (r.shelf ? 'On the shelf' : 'In the fridge') + ': ' + r.open + ' → <b style="color:var(--ink)">' + r.stock + '</b></div>' + (ex.length ? '<div style="margin-top:4px">' + ex.join('') + '</div>' : '') + '</div>';
+      var cash = Math.max(0, r.soldAmt - r.crAmt - r.spAmt), m = more(r), open = m && (SALL || SOPEN[key(r)]), L = [], eq = [r.open];
+      if (open) {
+        if (r.crQ) L.push('<div class="hx pos">' + (r.sold - r.crQ) + ' sold for cash</div>', '<div class="hx cr">' + r.crQ + ' sold on credit · ' + money(r.crAmt) + ' not paid yet</div>');
+        if (r.spQ) L.push('<div class="hx neg">' + r.spQ + ' spoiled · not sold, no money</div>');
+        if (r.spoil) L.push('<div class="hx neg">' + r.spoil + ' spoiled from stock · no money</div>');
+        if (r.moved) L.push('<div class="hx pos">+ ' + r.moved + ' added from storage' + (r.movedCases ? ' (' + r.movedCases + ' ' + unitPl(r.unit || 'case', r.movedCases) + ')' : '') + '</div>');
+        if (r.direct && r.bought) L.push('<div class="hx pos">+ ' + r.bought + ' bought</div>');
+        if (r.edit) L.push('<div class="hx neg">⚠ edited by hand ' + (r.edit > 0 ? '+' : '') + r.edit + '</div>');
+        if (r.adj) L.push('<div class="hx">' + (r.adj > 0 ? '+' : '') + r.adj + ' count change</div>');
+        var t = '' + r.open; if (plus(r)) t += ' + ' + plus(r); t += ' − ' + r.sold + ' sold'; if (sp(r)) t += ' − ' + sp(r) + ' spoiled'; if (r.edit) t += (r.edit > 0 ? ' + ' : ' − ') + Math.abs(r.edit) + ' edit'; if (r.adj) t += (r.adj > 0 ? ' + ' : ' − ') + Math.abs(r.adj) + ' count'; var df = r.stock - (r.open + plus(r) - r.sold - sp(r) + r.edit + r.adj); if (df) t += ' <b style="color:var(--exp)">' + (df > 0 ? '+ ' : '− ') + Math.abs(df) + ' not explained</b>'; t += ' = ' + r.stock + ' left';
+        L.push('<div class="hx" style="color:var(--muted);font-weight:500;border-top:1px dashed var(--secb);margin-top:4px;padding-top:4px">' + t + '</div>');
+      }
+      return '<div style="border-top:1px solid var(--line);padding:10px 0"' + (m ? ' class="horow" data-act="soldopen" data-id="' + esc(key(r)) + '"' : '') + '><div class="row" style="align-items:center"><b class="grow" style="font-size:15px">' + esc(r.name) + (m ? ' <span class="hoch">' + (open ? '▴' : '▾') + '</span>' : '') + '</b><b style="font-size:15px">' + r.sold + ' sold</b><b style="color:var(--ok);margin-left:12px;min-width:52px;text-align:right">' + money(cash) + '</b></div><div class="muted" style="margin-top:2px">' + (r.shelf ? 'On the shelf' : 'In the fridge') + ': ' + r.open + ' → <b style="color:var(--ink)">' + r.stock + '</b></div>' + (open ? '<div class="hoopen" style="margin-top:6px">' + L.join('') + '</div>' : '') + '</div>';
     }).join('') + '<div class="row" style="border-top:2px solid var(--ink);padding-top:8px"><b class="grow">Total</b><b>' + tq + ' items</b><b style="color:var(--ok);margin-left:12px">' + money(tc) + ' cash</b></div>' : '<div class="muted">Nothing was sold.</div>') + '</div>';
 }
 function rxCredit(h) { return '<div class="card sum"><h2>Credit</h2><div><span>Unpaid credit given this shift</span><b>' + money(h.crShift || 0) + '</b></div>' + (h.paid ? '<div><span>Paid back this shift</span><b style="color:var(--ok)">' + money(h.paid) + '</b></div>' : '') + '<div class="t"><span>Total still owed by everyone</span><span>' + money(h.owedTotal || 0) + '</span></div></div>'; }
-function rxDetail(h) {   /* the first page: what was sold on the shift that handed over, and the stock in tabs, so the page stays short */
+var RXF = {}, RXOK = false;   /* RXF: which folded parts of the receiver's first page are open */
+function rxFold(key, title, html, st, act) {
+  var open = !!(st || RXF)[key];
+  return '<div class="card" style="padding:0 14px"><div class="fold" data-act="' + (act || 'rxfold') + '" data-v="' + key + '"><span>' + title + '</span><span style="flex:none;color:var(--muted)">' + (open ? '▴' : '▾') + '</span></div></div>' + (open ? html : '');
+}
+function rxWarn(h) {   /* what the receiver should know before counting */
+  var L = [], eds = h.edits || [];
+  eds.forEach(function (x) { L.push('Stock edited by hand: <b>' + esc(x.name) + '</b> ' + esc(x.text) + (x.reason ? ' (' + esc(x.reason) + ')' : '')); });
+  if (typeof h.computed === 'number' && r2(h.computed - h.cash) > 0) L.push('Cash was counted <b>' + money(r2(h.computed - h.cash)) + ' short</b> by ' + esc(hnl(h.fromName, h.fromEmail)));
+  var ow = r2((h.owedBy || []).reduce(function (a, x) { return a + (x.bal || 0); }, 0)); if (ow > 0) L.push('Unpaid credit: <b>' + money(ow) + '</b>');
+  var sl = (h.openShort || []).filter(function (x) { return x.owed > 0; }); if (sl.length) L.push(sl.map(function (x) { return esc(x.wk); }).join(', ') + (sl.length === 1 ? ' shift owes ' : ' shifts owe ') + '<b>' + money(r2(sl.reduce(function (a, x) { return a + x.owed; }, 0))) + '</b> for shortages');
+  return L.length ? '<div class="warnbox"><b>⚠ Check these first</b><div style="margin-top:3px">' + L.map(function (x) { return '• ' + x; }).join('<br>') + '</div></div>' : '';
+}
+function rxDetail(h) {   /* the first page: the two stock lists (tap a row to read what changed), and the rest folded so the page stays short */
   if (!rxHasDetail(h)) return '';
-  var rows = docRows(h), hasShelf = rows.some(function (r) { return r.shelf; }), hasCageT = rows.some(function (r) { return r.store; });
-  if (RXTAB === 'shelf' && !hasShelf) RXTAB = 'fridge'; if (RXTAB === 'cage' && !hasCageT) RXTAB = 'fridge';
-  var tabs = [['fridge', '🧊 Fridge']].concat(hasCageT ? [['cage', '🔒 Cage']] : []).concat(hasShelf ? [['shelf', '🧁 Shelf']] : []);
-  var body;
-  if (RXTAB === 'cage') body = cageCmp(rows.filter(function (r) { return r.store; }).map(function (r) { return { n: r.name, unit: r.unit, shelf: r.shelf, m: r.movedCases || 0, was: r.cageOpen, now: r.cage, tg: tags(r, 'cage') }; }));
-  else { var list = rows.filter(function (r) { return RXTAB === 'shelf' ? r.shelf : !r.shelf; });
-    body = list.length ? '<table class="cmp">' + CMPCOLS + '<tr><th>Item</th><th>Sold</th><th>Was</th><th></th><th>Now</th></tr>' + list.map(function (r) { return '<tr><td>' + esc(r.name) + '</td><td>' + (r.sold || '') + '</td><td>' + r.open + '</td><td>' + (r.open !== r.stock ? '→' : '') + '</td><td><b>' + r.stock + '</b></td></tr>'; }).join('') + '</table>' : '<div class="muted">No items.</div>'; }
-  return soldCards(rows, h) +
-    '<div class="card"><h2>Stock handed over</h2><div class="seg" style="grid-template-columns:repeat(' + tabs.length + ',1fr);margin-bottom:10px">' + tabs.map(function (t) { return '<button data-act="rxtab" data-v="' + t[0] + '" class="' + (RXTAB === t[0] ? 'on' : '') + '">' + t[1] + '</button>'; }).join('') + '</div>' + body + '<div class="muted" style="margin-top:6px">Every item shows Was → Now. You count them on the next page.</div></div>' + rxCredit(h);
+  var rows = docRows(h), ed = function (r) { return (h.edits || []).filter(function (x) { return x.name === r.name; }); }, ns = rows.filter(function (r) { return r.sold > 0; }).length, tcash = rows.reduce(function (a, r) { return a + Math.max(0, r.soldAmt - r.crAmt - r.spAmt); }, 0);
+  return hoLists(rows, { ed: ed, fold: true }) + rxFold('sold', 'Sold on the shift that handed over <span class="muted" style="font-size:11px">' + ns + (ns === 1 ? ' item' : ' items') + ' · ' + money(tcash) + '</span>', soldCards(rows, h)) + rxFold('cred', 'Credit', rxCredit(h));
 }
 function rxMissing() {   /* the first count box that is still empty; every count is required */
   var ids = ['rx-cash']; (RX.items || []).forEach(function (i, k) { ids.push('rx-c' + k); if (itStore(i)) ids.push('rx-g' + k); });
@@ -2255,14 +2403,47 @@ function rxMissing() {   /* the first count box that is still empty; every count
   return bad.length ? $('#' + bad[0]) : null;
 }
 function rxShow(v, p, k, i) { return (p === 'g' ? i.cage : i.stock) > 0 || !!(v.x && v.x[p + k]); }   /* an item handed over as 0 is not counted, unless the receiver found some */
-function rxCard(h, v, kind) {   /* the fridge, shelf or cage count boxes */
+function rxTbl(title, rows) { return '<div class="card"><h2>' + title + ' <b style="color:var(--exp)">*</b></h2><table class="rxt"><colgroup><col><col style="width:70px"><col style="width:136px"></colgroup><tr><th>Item</th><th>Handed over</th><th>Your count</th></tr>' + rows + '</table></div>'; }
+function rxCell(id, exp, val) { return '<div class="rxin"><input id="' + id + '" data-exp="' + exp + '" enterkeyhint="next" type="number" inputmode="numeric" min="0" value="' + esc(val) + '" placeholder="count" style="width:76px;height:38px;text-align:right"><span class="rxd" id="d-' + id + '"></span></div>'; }
+function rxCard(h, v, kind) {   /* the count boxes: In the shop (fridge and shelf together) and In storage */
   var g = kind === 'cage', p = g ? 'g' : 'c', vals = g ? v.g : v.c;
   var rows = h.items.map(function (i, k) {
-    if (g ? !itStore(i) : (kind === 'shelf') !== !!i.shelf) return '';
+    if (g && !itStore(i)) return '';
     if (!rxShow(v, p, k, i)) return '';
-    return '<tr><td>' + (g ? cageName(i.name, i.unit) : esc(i.name)) + '</td><td>' + (g ? i.cage : i.stock) + '</td><td><input id="rx-' + p + k + '" enterkeyhint="next" type="number" inputmode="numeric" min="0" value="' + esc(vals[k] != null ? vals[k] : '') + '" placeholder="count" style="width:76px;height:38px;text-align:right"></td></tr>';
+    return '<tr><td>' + (g ? cageName(i.name, i.unit) : (i.shelf ? '🧁 ' : '🧊 ') + esc(i.name)) + '</td><td>' + (g ? i.cage : i.stock) + '</td><td>' + rxCell('rx-' + p + k, g ? i.cage : i.stock, vals[k] != null ? vals[k] : '') + '</td></tr>';
   }).join('');
-  return rows ? '<div class="card"><h2>Check the ' + kind + ' <b style="color:var(--exp)">*</b></h2><table><tr><th>Item</th><th>Handed over</th><th>Your count</th></tr>' + rows + '</table></div>' : '';
+  return rows ? rxTbl(g ? 'In storage <span class="muted" style="font-size:11px;font-weight:500">🔒 cage</span>' : 'In the shop <span class="muted" style="font-size:11px;font-weight:500">🧊 fridge · 🧁 shelf</span>', rows) : '';
+}
+function rxCashCard(h, v) { return rxTbl('Cash', '<tr><td>Cash</td><td style="font-size:16px;font-weight:600">' + money(h.cash) + '</td><td><div class="rxin"><div class="ig" style="width:112px;height:40px"><i>$</i><input id="rx-cash" data-exp="' + h.cash + '" enterkeyhint="next" type="number" inputmode="decimal" value="' + esc(v.cash) + '" style="text-align:right"></div><span class="rxd" id="d-rx-cash"></span></div></td></tr>'); }
+function rxProg() {   /* the pinned bars: how many are counted, the differences so far, and what is left before Accept */
+  var pg = $('#spage'); if (!pg || !RX || !$('#rx-bar')) return;
+  var n = 0, d = 0, tot = 0;
+  pg.querySelectorAll('input[id^=rx-]:not([id^=rxx-])').forEach(function (e) {
+    var has = String(e.value).trim() !== '', dv = has ? num(e.value) - num(e.dataset.exp) : 0, sp = pg.querySelector('#d-' + e.id), box = e.closest('.ig') || e; tot++;
+    if (has) { n++; if (dv !== 0) d++; }
+    if (sp) { sp.textContent = has && dv ? (dv < 0 ? '−' : '+') + (e.id === 'rx-cash' ? money(Math.abs(dv)) : Math.abs(dv)) : ''; sp.className = 'rxd' + (dv > 0 ? ' up' : ''); }
+    box.style.borderColor = has && dv < 0 ? 'var(--exp)' : '';
+  });
+  var left = tot - n;
+  $('#rx-bar').innerHTML = 'Counted <b>' + n + ' of ' + tot + '</b>' + (d ? ' · <b style="color:var(--exp)">' + d + (d === 1 ? ' difference' : ' differences') + '</b> so far' : left ? ' · counting is required' : ' · everything matches so far');
+  var sg = !!(M && M.signature), ok = !left && sg;
+  if ($('#rx-left')) $('#rx-left').textContent = left ? left + ' left to count' : !sg ? 'Sign below, then accept' : 'Ready to accept';
+  var bt = $('#rx-foot button'); if (bt) bt.classList.toggle('dis', !ok);
+}
+function rxReview() {   /* before accepting: the differences, and what is recorded as a shortage. False = nothing to show, go ahead */
+  var h = RX; if (!h || !S.state || !S.state.pending) return false;
+  if (rxMissing() || !(M && M.signature)) return false;
+  var cashC = num($('#rx-cash').value), expC = typeof h.computed === 'number' ? h.computed : h.cash, L = [], ups = [], sVal = 0;
+  if (cashC !== h.cash) L.push('Cash: counted <b>' + money(cashC) + '</b>, handed over ' + money(h.cash) + ' → <b style="color:var(--exp)">' + (cashC < h.cash ? '−' : '+') + money(Math.abs(cashC - h.cash)) + '</b>');
+  h.items.forEach(function (i, k) {
+    var ce = $('#rx-c' + k), ge = $('#rx-g' + k), c = ce ? Math.max(0, Math.floor(num(ce.value))) : 0, g = itStore(i) && ge ? Math.max(0, Math.floor(num(ge.value))) : 0;
+    if (c !== i.stock) { var v1 = c < i.stock ? r2((i.stock - c) * i.price) : 0; sVal += v1; L.push(esc(i.name) + ': counted ' + c + ', handed over ' + i.stock + ' → <b style="color:var(--' + (c < i.stock ? 'exp' : 'soon') + ')">' + (c < i.stock ? '−' : '+') + Math.abs(c - i.stock) + '</b>' + (v1 ? ' (' + money(v1) + ')' : '')); if (c > i.stock) ups.push(esc(i.name) + ' +' + (c - i.stock)); }
+    if (itStore(i) && g !== i.cage) { var v2 = g < i.cage ? r2((i.cage - g) * (i.per || 1) * i.price) : 0; sVal += v2; L.push(esc(i.name) + ' (' + esc(i.unit || 'case') + '): counted ' + g + ', handed over ' + i.cage + ' → <b style="color:var(--' + (g < i.cage ? 'exp' : 'soon') + ')">' + (g < i.cage ? '−' : '+') + Math.abs(g - i.cage) + '</b>' + (v2 ? ' (' + money(v2) + ')' : '')); if (g > i.cage) ups.push(esc(i.name) + ' (' + esc(i.unit || 'case') + ') +' + (g - i.cage)); }
+  });
+  var tot = r2((cashC < expC ? expC - cashC : 0) + sVal);
+  if (!L.length && tot <= 0) return false;
+  askConfirm('Accept this handover?', (L.length ? '<b style="color:var(--exp)">' + L.length + (L.length === 1 ? ' difference' : ' differences') + '</b><br>' + L.join('<br>') + '<br><br>' : '') + '<span class="muted">' + (tot > 0 ? 'This is recorded as a <b>' + money(tot) + ' shortage</b> against the ' + esc(h.shift.name) + ' shift.' + (expC > h.cash ? ' It includes ' + money(r2(expC - h.cash)) + ' the giver already counted short.' : '') : 'No shortage is recorded.') + (ups.length ? ' ' + ups.join(', ') + ' is noted but is not a shortage.' : '') + '</span>', 'Yes, accept & take control', function () { RXOK = true; rxAccept(); });
+  return true;
 }
 function rxHidden(h, v) {   /* the places that were handed over as 0 and are not listed */
   var out = []; h.items.forEach(function (i, k) { if (!rxShow(v, 'c', k, i)) out.push(['c' + k, esc(i.name) + (i.shelf ? ' (shelf)' : ' (fridge)')]); if (itStore(i) && !rxShow(v, 'g', k, i)) out.push(['g' + k, esc(i.name) + ' (cage)']); });
@@ -2275,21 +2456,21 @@ function rxExtraCard(h, v) {
 }
 function showRx(keep) {
   var h = S.hand; if (!h) return;
-  if (keep) rxKeep(); else { RXV = null; RXSTEP = 0; RXTAB = 'fridge'; }
+  if (keep) rxKeep(); else { RXV = null; RXSTEP = 0; RXTAB = 'fridge'; RXF = {}; }
   RX = h; var v = RXV || { cash: '', c: {}, g: {}, x: {}, xo: false };
   var stay = keep === true && !RXFLIP; RXFLIP = false;
   wpPage(showRx, [true], '<h2>' + (h.locked ? '🔒 Locked handover' : h.same ? 'Handover within the shift' : 'Handover received') + '</h2>' + (h.same ? '<div class="card" style="background:var(--soon-bg);box-shadow:none"><b>Same shift</b><div style="margin-top:4px">This hand over is inside the ' + esc(h.shift.name) + ' shift, so the shift keeps going. Count what is here. Any difference is recorded against the shift, and the sales, credit and totals carry on until the shift is handed over to the next one.</div></div>' : '') + (h.locked ? '<div class="card" style="background:var(--soon-bg)"><b>Fridge and cage were locked.</b> Open them and check everything below before accepting.</div>' : '') +
-    '<div class="card sum"><div><span>From</span><b>' + esc(hnl(h.fromName, h.fromEmail)) + (h.fromWatch ? '<div class="muted" style="font-weight:500">' + esc(h.fromWatch) + ' watch' + (h.fromWatch !== h.shift.name ? ' · visiting, the ' + esc(h.shift.name) + ' watch was on duty' : '') + '</div>' : '') + '</b></div><div><span>Handed over</span><b>' + new Date(h.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (no one in particular)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Shift</span><b>' + esc(h.shift.name) + ' · ' + esc(h.shift.date) + ' ' + esc(HL(h.shift.half)) + '</b></div><div><span>Sales</span><b>' + money(h.sales) + '</b></div>' + (typeof h.sold === 'number' ? '<div><span>Total items sold</span><b>' + h.sold + '</b></div>' : '') + (typeof h.computed === 'number' && r2(h.computed - h.cash) > 0 ? '<div><span>Cash short when counted</span><b style="color:var(--exp)">' + money(r2(h.computed - h.cash)) + '</b></div>' : '') + (typeof h.computed === 'number' && r2(h.cash - h.computed) > 0 ? '<div><span>Cash over when counted</span><b style="color:var(--soon)">' + money(r2(h.cash - h.computed)) + '</b></div>' : '') + '</div>' +
-    (rxOnList(h) ? rxDetail(h) + '<button class="btn block" data-act="rxcheck">Check items</button><button class="btn sec block" data-act="close" style="margin-top:10px">Not now</button>' : (rxHasDetail(h) ? '<button class="btn sec sm" data-act="rxlist" style="margin-bottom:10px">‹ See what was sold again</button>' : '') + '<div class="card" style="background:var(--soon-bg);box-shadow:none"><b><span style="color:var(--exp)">*</span> Counting is required</b><div class="muted" style="color:inherit">Count the cash and every item below. You can accept once everything is counted.</div></div>' +
-    '<div class="card"><h2>Check the cash <b style="color:var(--exp)">*</b></h2><table><tr><th>Item</th><th>Handed over</th><th>Your count</th></tr><tr><td>Cash</td><td style="font-size:17px;font-weight:600">' + money(h.cash) + '</td><td><div class="ig" style="width:112px;margin-left:auto;height:40px"><i>$</i><input id="rx-cash" enterkeyhint="next" type="number" inputmode="decimal" value="' + esc(v.cash) + '" style="text-align:right"></div></td></tr></table></div>' +
-    rxCard(h, v, 'fridge') + rxCard(h, v, 'shelf') + rxCard(h, v, 'cage') + rxExtraCard(h, v) +
-    ((h.trail || []).length ? trailHtml(h.trail, h.shift.name, h.fromName, h.fromWatch) : '') + editsCard(h.edits) + (rxHasDetail(h) ? '' : rxCredit(h)) + handoverLists(h.owedBy, h.openShort) +
+    (rxOnList(h) || !rxHasDetail(h) ? rxWarn(h) : '') + '<div class="card sum"><div><span>From</span><b>' + esc(hnl(h.fromName, h.fromEmail)) + (h.fromWatch ? '<div class="muted" style="font-weight:500">' + esc(h.fromWatch) + ' watch' + (h.fromWatch !== h.shift.name ? ' · visiting, the ' + esc(h.shift.name) + ' watch was on duty' : '') + '</div>' : '') + '</b></div><div><span>Handed over</span><b>' + new Date(h.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (no one in particular)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Shift</span><b>' + esc(h.shift.name) + ' · ' + esc(h.shift.date) + ' ' + esc(HL(h.shift.half)) + '</b></div><div><span>Sales</span><b>' + money(h.sales) + '</b></div>' + (typeof h.sold === 'number' ? '<div><span>Total items sold</span><b>' + h.sold + '</b></div>' : '') + '<div><span>Cash handed over</span><b>' + money(h.cash) + '</b></div>' + (typeof h.computed === 'number' && r2(h.computed - h.cash) > 0 ? '<div><span>Cash short when counted</span><b style="color:var(--exp)">' + money(r2(h.computed - h.cash)) + '</b></div>' : '') + (typeof h.computed === 'number' && r2(h.cash - h.computed) > 0 ? '<div><span>Cash over when counted</span><b style="color:var(--soon)">' + money(r2(h.cash - h.computed)) + '</b></div>' : '') + '</div>' +
+    (rxOnList(h) ? rxDetail(h) + '<button class="btn block" data-act="rxcheck">Check items</button><button class="btn sec block" data-act="close" style="margin-top:10px">Back to Count</button>' : (rxHasDetail(h) ? '<button class="btn sec sm" data-act="rxlist" style="margin-bottom:10px">‹ See what was sold again</button>' : '') + '<div class="rxbar" id="rx-bar"></div>' + rxCashCard(h, v) +
+    rxCard(h, v, 'shop') + rxCard(h, v, 'cage') + rxExtraCard(h, v) +
+    editsCard(h.edits) + (rxHasDetail(h) ? '' : rxCredit(h)) + handoverLists(h.owedBy, h.openShort) + ((h.trail || []).length ? trailHtml(h.trail, h.shift.name, h.fromName, h.fromWatch) : '') +
     (h.notes ? '<div class="card"><label>Remarks</label>' + esc(h.notes) + '</div>' : '') +
     (h.sig ? '<div class="card"><label>Signed by ' + esc(hnl(h.fromName, h.fromEmail)) + '</label><img class="sigimg" src="' + h.sig + '" alt="signature"></div>' : '') +
     sigCard('Your signature (receiving)') +
-    '<button class="btn green block" data-act="rxaccept">Accept &amp; take control</button><button class="btn sec block" data-act="close" style="margin-top:10px">Not now</button>'), stay);
+    '<button class="btn sec block" data-act="close" style="margin-top:10px">Not now</button><div class="rxfoot" id="rx-foot"><span id="rx-left" class="grow"></span><button class="btn green" data-act="rxaccept">Accept &amp; take control</button></div>'), stay);
+  rxProg();
 }
-function rxAccept() { try { rxAccept2(); } catch (e) { console.error(e); toast('Could not accept: ' + (e && e.message ? e.message : e)); } }
+function rxAccept() { try { if (!RXOK && rxReview()) return; RXOK = false; rxAccept2(); } catch (e) { console.error(e); toast('Could not accept: ' + (e && e.message ? e.message : e)); } }
 function rxAccept2() {
   SELF = Date.now();
   var h = RX; if (!h || !S.state || !S.state.pending) return;
@@ -2298,12 +2479,13 @@ function rxAccept2() {
   var hd = String(h.shift.date || '').split('/'), sday = hd.length === 3 ? hd[2] + '-' + hd[1] + '-' + hd[0] : '';   /* the shortage belongs to the shift that handed over, on that shift's date */
   var diffs = [], RI = {}, cashC = num($('#rx-cash').value), c0 = currentShift(), same = h.same === true, cur = S.state.shift, expC0 = typeof h.computed === 'number' ? h.computed : h.cash,
     ns = same ? Object.assign({}, cur, { received: r2((cur.received || 0) + cashC - expC0), counted: '', mode: 'person', tos: [] }) : newShift(c0, cashC), b = writeBatch(DB); DAYQ = []; ns.prevEmail = h.fromEmail || ''; ns.prevName = h.fromName || '';   /* a same-shift handover keeps the shift: same id, the cash count difference goes into what the shift started with */
+  var rcf = [];
   h.items.forEach(function (i, k) {
     var it = item(i.id); if (!it) return;
     var c = $('#rx-c' + k) ? Math.max(0, Math.floor(num($('#rx-c' + k).value))) : 0, g = itStore(i) && $('#rx-g' + k) ? Math.max(0, Math.floor(num($('#rx-g' + k).value))) : 0;   /* an item handed over as 0 has no box: counted as 0 */
     if (c !== i.stock) { diffs.push(i.name + ': counted ' + c + ', handover said ' + i.stock); rawEv(b, { t: Date.now(), type: 'adjust', item: i.id, items: [i.id], name: i.name, qty: c - i.stock, amt: 0, sid: ns.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: h.shift.name, ho: true, dly: 1, day: sday, cogs: c < i.stock ? r2((i.stock - c) * (it.cost || 0)) : 0 }); }
     if (g !== i.cage) { diffs.push(i.name + ' (cage): counted ' + g + ' ' + unitPl(i.unit || 'case', 2) + ', handover said ' + i.cage); rawEv(b, { t: Date.now(), type: 'cageadj', item: i.id, items: [i.id], name: i.name, qty: g - i.cage, amt: 0, sid: ns.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: h.shift.name, ho: true, dly: 1, day: sday, cogs: g < i.cage ? r2((i.cage - g) * per(it) * (it.cost || 0)) : 0 }); }
-    RI[i.id] = { stock: c, cage: g };
+    RI[i.id] = { stock: c, cage: g }; rcf[2 * k] = c; rcf[2 * k + 1] = g;
     b.update(ref('items/' + i.id), same ? { stock: c, cage: g } : { stock: c, cage: g, open: c, cageOpen: g });
   });
   if (cashC !== h.cash) diffs.push('Cash: counted ' + money(cashC) + ', handover said ' + money(h.cash));
@@ -2321,11 +2503,12 @@ function rxAccept2() {
     if (em && em !== EMAIL) b.set(ref('notices/' + S.state.pending + '_' + k), { toEmail: em, handoverId: S.state.pending, at: Date.now(), read: false, kind: 'shortage', byName: myName(), wk: h.shift.name, shiftDate: h.shift.date, shiftHalf: h.shift.half, total: sTot, s: shDoc });
   });
   if (!(shDoc && sTot > 0)) (h.ctl && h.ctl.length ? h.ctl : [h.fromEmail]).forEach(function (em, k) {   /* nothing short: still tell the giver it was received */
-    if (em && em !== EMAIL) b.set(ref('notices/' + S.state.pending + '_' + k), { toEmail: em, handoverId: S.state.pending, at: Date.now(), read: false, kind: 'received', byName: myName(), wk: h.shift.name, shiftDate: h.shift.date, shiftHalf: h.shift.half });
+    if (em && em !== EMAIL) b.set(ref('notices/' + S.state.pending + '_' + k), { toEmail: em, handoverId: S.state.pending, at: Date.now(), read: false, kind: 'received', byName: myName(), wk: h.shift.name, shiftDate: h.shift.date, shiftHalf: h.shift.half, sid: h.shift.sid });
   });
   if (cShort > 0) rawEv(b, { t: Date.now(), type: 'cashshort', item: '', items: [], name: 'Cash short', qty: 0, amt: cShort, sid: ns.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: h.shift.name, dly: 1, day: sday });
   if (diffs.length) ns.notes = (same && cur.notes ? cur.notes + ' · ' : '') + 'Received with differences: ' + diffs.join('; ');
-  if (h.sum) b.update(ref('shifts/' + h.shift.sid), { status: 'accepted', receivedBy: EMAIL, receivedByName: myName(), receivedCash: cashC, shortCash: cShort, shortItems: r2(sVal), over: cOver, short: sTot });
+  h.items.forEach(function (i, k) { if (rcf[2 * k] == null) { rcf[2 * k] = i.stock; rcf[2 * k + 1] = i.cage || 0; } });   /* an item that was removed: counted as handed over */
+  if (h.sum) b.update(ref('shifts/' + h.shift.sid), { status: 'accepted', receivedBy: EMAIL, receivedByName: myName(), receivedCash: cashC, shortCash: cShort, shortItems: r2(sVal), over: cOver, short: sTot, receivedAt: Date.now(), rc: rcf });
   b.update(ref('handovers/' + S.state.pending), { status: 'accepted', acceptedBy: EMAIL, acceptedAt: Date.now(), check: diffs.length ? diffs.join('\n') : 'everything matched', receivedSig: M.signature, receivedName: myName(), receivedItems: RI, receivedCash: cashC });
   b.update(ref('shop/state'), { controlEmail: EMAIL, controlName: myName(), pending: '', shift: ns, openingDone: true });
   commit(b); RX = null; RXSTEP = 0; sel = null; qty = 1; tab = 'sell'; closeModal(); spClose(); toast(diffs.length ? 'Accepted, differences noted' : 'Accepted, all matched');
@@ -2604,8 +2787,9 @@ function hoViewList() {
     }).join('') : '<div class="empty">No handover to show yet.<br><span class="muted">Handovers are kept for about a month.</span></div>') + '</div><button class="btn sec block" data-act="close" style="margin-top:10px">Close</button>');
   }).catch(function (e) { closeModal(); toast(errText(e)); });
 }
+function soldRedraw() { var wc = WPS[WPS.length - 1]; if (wc && wc.fn === histShiftPage && !$('#spage').hidden && HSHDRAW) HSHDRAW(); else if (RX && !$('#spage').hidden && S.hand) showRx(true); else if (HOVI >= 0 && $('#modal').innerHTML) hoViewShow(HOVI); else render(); }
 function hoViewShow(i) {
-  var h = (S._hv || [])[i]; if (!h) return;
+  HOVI = i; var h = (S._hv || [])[i]; if (!h) return;
   var sh = h.shift || {}, ri = h.receivedItems || null, its = (h.items || []).filter(function (x) { return x.open || x.stock || x.cageOpen || x.cage; }), when = function (t) { return t ? new Date(t).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''; };
   var RM = {}, vrows = docRows(h, RM);
   var table = function (title, list, cage) {
@@ -3619,6 +3803,11 @@ document.addEventListener('click', function (e) {
   else if (a === 'owedetail') owedDetail(id);
   else if (a === 'rpwk') { var ox = openShortList().filter(function (x) { return x.wk === b.dataset.v; })[0]; if (!ox || !RP) return; RP.wk = ox.wk; RP.amount = String(ox.owed); b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); $('#rp-amt').value = RP.amount; $('#rp-owes').textContent = money(ox.owed); }
   else if (a === 'rpgo') repayGo();
+  else if (a === 'rcfold') { RCF[b.dataset.v] = !RCF[b.dataset.v]; if (HSHDRAW) HSHDRAW(); }
+  else if (a === 'rccopy') recShare(true);
+  else if (a === 'rcshare') recShare(false);
+  else if (a === 'rcprint') { document.body.classList.add('prrec'); window.print(); setTimeout(function () { document.body.classList.remove('prrec'); }, 600); }
+  else if (a === 'rxfold') { RXF[b.dataset.v] = !RXF[b.dataset.v]; showRx(true); }
   else if (a === 'rxxopen') { rxKeep(); if (RXV) RXV.xo = true; showRx(true); }
   else if (a === 'rxxno') { rxKeep(); if (RXV) RXV.xo = false; showRx(true); }
   else if (a === 'rxxadd') { var xk = $('#rxx-sel') ? $('#rxx-sel').value : '', xn = Math.floor(num($('#rxx-n') ? $('#rxx-n').value : 0)); if (!xk) return; if (!(xn > 0)) return toast('Enter how many you found'); rxKeep(); RXV.x[xk] = true; RXV.xo = false; (xk[0] === 'g' ? RXV.g : RXV.c)[xk.slice(1)] = String(xn); showRx(true); }
@@ -3771,6 +3960,12 @@ document.addEventListener('click', function (e) {
     askConfirm('Save this purchase?', '<b>' + esc(BUY.sup.trim()) + '</b><br>' + BUY.lines.map(function (l) { var li = item(l.item); return l.cases + ' × ' + esc(li ? li.name : l.name); }).join('<br>') + '<br><br>Bill total <b>' + money(tot) + '</b> · cash taken <b>' + money(paidAmt()) + '</b>' + (woAmt() > 0 ? '<br>Change not kept: <b>' + money(woAmt()) + '</b>' + (woAmt() > 5 ? '<br><b style="color:var(--exp)">This writes off ' + money(woAmt()) + '. Is that right?</b>' : '') : '') + '<br>' + cs + ' unit' + (cs === 1 ? '' : 's') + ' are added to the stock.<br><span class="muted">' + (BUY.receipt ? '📎 Receipt photo attached.' : 'No receipt photo attached.') + '</span>', 'Yes, save purchase', buySave);
   }
   else if (a === 'htab') { HT = b.dataset.v; render(); }
+  else if (a === 'hoopen') { HOPEN[id] = !HOPEN[id]; render(); }
+  else if (a === 'soldopen') { SOPEN[id] = !SOPEN[id]; soldRedraw(); }
+  else if (a === 'soldall') { SALL = !SALL; SOPEN = {}; soldRedraw(); }
+  else if (a === 'hoall') { HOALL = !HOALL; HOPEN = {}; render(); }
+  else if (a === 'hochip') { var hv = b.dataset.v; if (hv === 'items') { tab = 'sell'; render(); window.scrollTo(0, 0); return; } var hel = hv === 'cash' ? $('[data-sh=counted]') : $(hv === 'who' ? '#ho-who' : '#ho-sig'); if (hel) { hel.scrollIntoView({ block: 'center' }); if (hv === 'cash') hel.focus(); } }
+  else if (a === 'hogot') hoGotIt(id);
   else if (a === 'mode') setShift({ mode: b.dataset.m });
   else if (a === 'sign') doSign();
   else if (a === 'signtype') doSignType();
@@ -3983,6 +4178,7 @@ function wzInput(t) {
 }
 document.addEventListener('input', function (e) {
   var t = e.target;
+  if (t.id && /^rx-(cash|c\d+|g\d+)$/.test(t.id)) rxProg();
   if (t.id === 'ni-unit' || t.id === 'sd-unit') { unitSync(t.id.slice(0, 2)); return; }
   if (t.dataset && t.dataset.wz && WZ) { wzInput(t); return; }
   if (t.dataset && t.dataset.ws && WS) { wsInput(t); return; }
