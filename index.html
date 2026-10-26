@@ -173,6 +173,7 @@ input:disabled{background:var(--dis);color:var(--muted)}
 .rct{width:100%;table-layout:fixed;border-collapse:collapse}.rct th{font-size:10px;text-transform:uppercase;color:var(--muted);padding:3px 2px;text-align:right}.rct th:first-child,.rct td:first-child{text-align:left}.rct td{padding:6px 2px;border-bottom:1px solid var(--line);text-align:right}.rcb{color:var(--exp);font-weight:700}.rcu{color:var(--soon);font-weight:700}
 p.flab{margin:10px 0 2px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
 @media print{body.prrec>*:not(#spage){display:none!important}body.prrec #spage{position:static!important;display:block!important}body.prrec #spage .sp-top,body.prrec .noprint{display:none!important}body.prrec .sp-body{overflow:visible!important;max-width:none}}
+body,#main{overflow-anchor:none}
 .owestrip{display:flex;align-items:center;gap:10px;border:2px solid var(--exp);background:var(--exp-bg);color:var(--exp);border-radius:14px;padding:8px 12px;margin-bottom:12px}.owestrip small{display:block;color:var(--muted);font-size:11px}.owestrip>.grow{cursor:pointer}.vothin{background:var(--soon-bg);padding:6px 12px;margin-bottom:10px;font-size:13px;display:flex;align-items:center;gap:8px;box-shadow:none}
 .sp-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border-top:1px solid var(--line);cursor:pointer}.sp-row:first-child{border-top:0}
 .sp-ic{width:44px;height:44px;border-radius:12px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-size:20px;font-style:normal;flex:none}
@@ -236,7 +237,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.13', RULES_VERSION = '2.11';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.14', RULES_VERSION = '2.11';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -425,7 +426,7 @@ function wsw(w) { return '<span class="sw ' + swc(w) + '">' + esc(w || 'Saved') 
 function per(i) { return i.per || CFG.perCase; }
 /* storage: every fridge item has it; a shelf item has it when it comes in packs (more than 1 in a pack). The unit word (case, pack, box...) belongs to each item */
 function hasCage(i) { return !i.shelf || (i.per > 1); }
-function unitName(i) { return String((i && i.unit) || 'case').toLowerCase(); }
+function unitName(i) { return String((i && i.unit) || (i && i.shelf ? 'pack' : 'case')).toLowerCase(); }
 function unitPl(u, n) { return n === 1 ? u : (/(s|x|ch|sh)$/.test(u) ? u + 'es' : u + 's'); }
 function uLab(i, n) { return n + ' ' + unitPl(unitName(i), n); }
 function sellFrom(i) { return i.shelf ? 'the shelf' : 'the fridge'; }
@@ -1568,11 +1569,10 @@ function handoverText() {
   if (t.used) L.push('Cash used: ' + money(t.used) + ' (' + S.log.filter(function (e) { return e.type === 'usecash'; }).map(function (e) { return e.note + ' ' + money(e.amt); }).join('; ') + ')');
   L.push('CASH HANDING OVER: ' + money(t.cash));
   if (counted !== null && counted !== t.cash) L.push((counted < t.cash ? 'Short: ' : 'Over: ') + money(Math.abs(counted - t.cash)) + ' (counted ' + money(counted) + ')');
-  L.push('', 'FRIDGE (was → now)');
-  rows.filter(function (r) { return !r.shelf; }).forEach(function (r) { L.push(r.name + ': ' + r.open + ' → ' + r.stock + (r.sold ? ' (sold ' + r.sold + ')' : '') + (r.moved ? ' (+' + r.moved + ' from cage)' : '') + (r.spoil ? ' (spoiled ' + r.spoil + ')' : '')); });
-  L.push('', 'CAGE (was → now)');
-  rows.filter(function (r) { return r.store; }).forEach(function (r) { L.push(r.name + ': ' + r.cageOpen + ' → ' + r.cage + ' ' + unitPl(r.unit, 2) + (r.movedCases ? ' (' + r.movedCases + ' moved to ' + (r.shelf ? 'shelf' : 'fridge') + ')' : '')); });
-  if (rows.some(function (r) { return r.shelf; })) { L.push('', 'SHELF (was → now)'); rows.filter(function (r) { return r.shelf; }).forEach(function (r) { L.push(r.name + ': ' + r.open + ' → ' + r.stock + (r.sold ? ' (sold ' + r.sold + ')' : '') + (r.moved ? ' (+' + r.moved + ' from cage)' : '') + (r.direct && r.bought ? ' (+' + r.bought + ' bought)' : '') + (r.spoil ? ' (spoiled ' + r.spoil + ')' : '')); }); }
+  L.push('', 'IN THE SHOP (was → now)');
+  rows.filter(function (r) { return r.open || r.stock || r.gone || r.moved || r.spoil || r.edit; }).forEach(function (r) { L.push(r.name + ': ' + r.open + ' → ' + r.stock + (r.sold ? ' (sold ' + r.sold + ')' : '') + (r.moved ? ' (+' + r.moved + ' from storage)' : '') + (r.spoil ? ' (spoiled ' + r.spoil + ')' : '') + (r.shelf ? ' [shelf]' : '')); });
+  var stl = rows.filter(function (r) { return r.store && (r.cageOpen || r.cage || r.movedCases || r.cedit || r.cadj || r.bought); });
+  if (stl.length) { L.push('', 'IN STORAGE (was → now)'); stl.forEach(function (r) { L.push(r.name + ': ' + r.cageOpen + ' → ' + r.cage + ' ' + unitPl(r.unit, 2) + (r.movedCases ? ' (' + r.movedCases + ' moved to ' + (r.shelf ? 'shelf' : 'fridge') + ')' : '')); }); }
   var eds = S.log.filter(function (e) { return e.type === 'stockedit'; }).map(editInfo);
   if (eds.length) { L.push('', '⚠ STOCK EDITED BY HAND (check carefully)'); eds.forEach(function (x) { L.push(x.name + ': ' + x.text + ' (' + x.reason + ') by ' + x.by); }); }
   var srs = rows.filter(function (r) { return r.gone || r.crQ || r.spQ; });
@@ -1709,7 +1709,9 @@ function render() {
     document.querySelectorAll('#nav button').forEach(function (b) { var on = b.dataset.tab === tab; b.classList.toggle('on', on); var q = b.querySelector('.qb'); if (on && !q && !helpOff()) { b.style.position = 'relative'; b.insertAdjacentHTML('beforeend', '<i class="qb">?</i>'); } else if ((!on || helpOff()) && q) q.remove(); });
   } else $('#hdr').innerHTML = 'Shift Welfare';
   var focus = document.activeElement && document.activeElement.id;
+  var sy0 = window.pageYOffset, same0 = RTAB === tab; RTAB = tab;
   $('#main').innerHTML = ready ? ownerBar() + banner() + srCard() + reqCard() + pcCard() + VIEWS[tab]() : stageHtml();
+  if (same0 && sy0 > 0 && Math.abs(window.pageYOffset - sy0) > 2) window.scrollTo(0, sy0);   /* a live update or the keyboard closing must not move the page */
   if (ready && viewOnly()) document.querySelectorAll('#main input:not(#c-q):not([data-b]):not([data-bl])').forEach(function (el) { el.disabled = true; });
   if (focus && $('#' + focus)) $('#' + focus).focus();
   vv(); hsync(); if (ready) spRender();
@@ -1717,7 +1719,7 @@ function render() {
   else if (ready && autoRx()) showRx();
   else if (ready && M && !M.personId && !WHO_DONE && !$('#modal').innerHTML) { WHO_DONE = true; whoModal(); }
 }
-var rt = 0;
+var rt = 0, RTAB = '';
 function scheduleRender() {   /* live updates must not wipe what someone is typing */
   var a = document.activeElement;
   if (a && /INPUT|SELECT|TEXTAREA/.test(a.tagName) && $('#main').contains(a)) { rt = 1; return; }
@@ -2290,12 +2292,17 @@ function prepare() {
   if (unc.length) return askConfirm('Not counted this shift', unc.length + ' item' + (unc.length === 1 ? ' has' : 's have') + ' not been counted:<br><b>' + unc.slice(0, 15).map(function (r) { return esc(r.name) + (r.crQ || r.spQ ? ' (has credit / spoiled notes)' : ''); }).join(', ') + (unc.length > 15 ? ' …' : '') + '</b><br><span class="muted">Their sales are not in the totals.</span>', 'Hand over anyway', prepareShow);
   prepareShow();
 }
+function sheetLists(rows) {   /* the "Handover ready" sheet: In the shop, then only what is really in storage (each in its own unit) */
+  var shop = rows.filter(function (r) { return r.open || r.stock || r.gone || r.moved || r.spoil || r.edit; }), stor = rows.filter(function (r) { return r.store && (r.cageOpen || r.cage || r.movedCases || r.cedit || r.cadj || r.bought); });
+  var out = '<div class="card"><h2>In the shop <span class="muted" style="font-size:11px;font-weight:500">🧊 fridge · 🧁 shelf</span></h2>' + (shop.length ? '<table class="hot"><tr><th>Item</th><th>Was</th><th>Sold</th><th>Now</th></tr>' + shop.map(function (r) { return '<tr><td>' + (r.shelf ? '🧁 ' : '🧊 ') + esc(r.name) + '</td><td>' + r.open + '</td><td>' + (r.sold || '') + '</td><td><b>' + r.stock + '</b></td></tr>'; }).join('') + '</table>' : '<div class="muted">No items.</div>') + '</div>';
+  if (stor.length) out += '<div class="card"><h2>In storage <span class="muted" style="font-size:11px;font-weight:500">🔒 cage</span></h2><table class="hot"><tr><th>Item</th><th>Was</th><th>Moved out</th><th>Now</th></tr>' + stor.map(function (r) { return '<tr><td>' + cageName(r.name, r.unit) + '</td><td>' + r.cageOpen + '</td><td>' + (r.movedCases ? '− ' + r.movedCases : '') + '</td><td><b>' + r.cage + '</b></td></tr>'; }).join('') + '</table></div>';
+  return out;
+}
 function prepareShow() {
   var t = totals(), sh = SH(), rows = hoRows(), locked = sh.mode === 'locked';
-  modal('<h2>' + (locked ? '🔒 Locked handover ready' : sameShiftHo(sh) ? 'Handover within the shift ready' : 'Handover ready') + '</h2>' + (sameShiftHo(sh) ? '<div class="card" style="background:var(--soon-bg);box-shadow:none"><b>Same shift</b><div style="margin-top:4px">The ' + esc(sh.name) + ' shift keeps going. The next person counts what is here and carries on.</div></div>' : '') + '<div class="card sum"><div><span>Shift</span><b>' + sh.name + ' · ' + sh.date + ' ' + HL(sh.half) + '</b></div><div><span>From</span><b>' + esc(myName()) + '</b></div><div><span>To</span><b>' + (locked ? 'Locked: no one in particular' : esc(tosText())) + '</b></div><div><span>Received</span><b>' + money(sh.received) + '</b></div><div><span>Sales</span><b>' + money(t.sales) + '</b></div><div><span>Total items sold</span><b>' + t.sold + '</b></div>' + (t.crN ? '<div><span>Unpaid credit given</span><b>' + money(t.crN) + '</b></div>' : '') + (t.loans ? '<div><span>Cash lent out</span><b>' + money(t.loans) + '</b></div>' : '') + (t.purch ? '<div><span>Purchases</span><b>' + money(t.purch) + '</b></div>' : '') + (t.used ? '<div><span>Cash used</span><b>' + money(t.used) + '</b></div>' : '') + '<div class="t"><span>Cash to hand over</span><span>' + money(sh.counted === '' ? t.cash : num(sh.counted)) + '</span></div></div>' +
-    handoverLists(owingList(), shortAllList()) +
-    '<div class="card"><table><tr><th>Fridge</th><th>Sold</th><th>Now</th><th>Cases</th></tr>' + rows.map(function (r) { return '<tr><td>' + esc(r.name) + '</td><td>' + r.sold + '</td><td><b>' + r.stock + '</b></td><td><b>' + (r.store ? r.cage + ' ' + unitPl(r.unit, r.cage) : '–') + '</b></td></tr>'; }).join('') + '</table>' + (sh.notes ? '<p class="muted">Remarks: ' + esc(sh.notes) + '</p>' : '') + '</div>' +
-    '<div class="card"><label>Signed</label><img class="sigimg" src="' + M.signature + '" alt="signature"><div class="muted">' + esc(myName()) + '</div></div>' +
+  modal('<h2>' + (locked ? '🔒 Locked handover ready' : sameShiftHo(sh) ? 'Handover within the shift ready' : 'Handover ready') + '</h2>' + (sameShiftHo(sh) ? '<div class="card" style="background:var(--soon-bg);box-shadow:none"><b>Same shift</b><div style="margin-top:4px">The ' + esc(sh.name) + ' shift keeps going. The next person counts what is here and carries on.</div></div>' : '') + '<div class="card sum"><div><span>Shift</span><b>' + sh.name + ' · ' + sh.date + ' ' + HL(sh.half) + '</b></div><div><span>From</span><b>' + esc(myName()) + '</b></div><div><span>To</span><b>' + (locked ? 'Locked: no one in particular' : esc(tosText())) + '</b></div><div><span>Received</span><b>' + money(sh.received) + '</b></div><div><span>Sales</span><b>' + money(t.sales) + '</b></div><div><span>Total items sold</span><b>' + t.sold + '</b></div>' + (t.crN ? '<div><span>Unpaid credit given</span><b>' + money(t.crN) + '</b></div>' : '') + (t.loans ? '<div><span>Cash lent out</span><b>' + money(t.loans) + '</b></div>' : '') + (t.purch ? '<div><span>Purchases</span><b>' + money(t.purch) + '</b></div>' : '') + (t.used ? '<div><span>Cash used</span><b>' + money(t.used) + '</b></div>' : '') + '<div class="t"><span>Cash expected</span><span>' + money(t.cash) + '</span></div><div><span>Cash counted</span><b>' + money(sh.counted === '' ? t.cash : num(sh.counted)) + '</b></div>' + (sh.counted !== '' && num(sh.counted) !== t.cash ? '<div><span>' + (num(sh.counted) < t.cash ? 'Cash short' : 'Cash over') + '</span><b style="color:var(--' + (num(sh.counted) < t.cash ? 'exp' : 'soon') + ')">' + money(Math.abs(num(sh.counted) - t.cash)) + '</b></div><div class="muted" style="color:var(--exp)">The next person checks this. A shortage is recorded against the ' + esc(sh.name) + ' shift.</div>' : '') + '</div>' +
+    handoverLists(owingList(), shortAllList()) + sheetLists(rows) + (sh.notes ? '<div class="card"><label>Remarks</label>' + esc(sh.notes) + '</div>' : '') +
+    '<div class="card"><label>Signed</label><img class="sigimg" src="' + M.signature + '" alt="signature"><div class="muted">' + esc(myName()) + ' · ' + hhmm(Date.now()) + '</div></div>' +
     '<div class="noprint"><button class="btn green block" data-act="hoask">Hand over now</button>' +
     '<div class="row" style="margin:10px 0"><button class="btn sec grow" data-act="copy">Copy text</button><button class="btn sec grow" data-act="print">Print</button></div><button class="btn sec block" data-act="close">Close</button></div>');
 }
@@ -2347,7 +2354,7 @@ function rxOnList(h) { return RXSTEP === 0 && rxHasDetail(h); }
 function docRows(h, RM) {   /* the rows of a handover, in the same shape as the Handover tab: older handovers only kept sold, credit and spoiled, so the rest is worked out */
   RM = RM || {};
   return (h.items || []).map(function (x) {   /* the same numbers as "Sold this shift"; older handovers only kept sold, credit and spoiled, so the rest is worked out */
-    var old = x.gone == null, gone = old ? (x.sold || 0) + (x.spoiled || 0) : x.gone, pr = x.price || 0, mv = old ? Math.max(0, x.stock - x.open + gone) : x.moved, r = { id: x.id, shelf: !!x.shelf, store: itStore(x), direct: !itStore(x), unit: x.unit || 'case', name: x.name, price: pr, per: x.per, open: x.open || 0, stock: x.stock, cageOpen: x.cageOpen || 0, cage: x.cage || 0, gone: gone, sold: x.sold || 0, crQ: x.credit || 0, spQ: x.spoiled || 0,
+    var old = x.gone == null, gone = old ? (x.sold || 0) + (x.spoiled || 0) : x.gone, pr = x.price || 0, mv = old ? Math.max(0, x.stock - x.open + gone) : x.moved, r = { id: x.id, shelf: !!x.shelf, store: itStore(x), direct: !itStore(x), unit: x.unit || (x.shelf ? 'pack' : 'case'), name: x.name, price: pr, per: x.per, open: x.open || 0, stock: x.stock, cageOpen: x.cageOpen || 0, cage: x.cage || 0, gone: gone, sold: x.sold || 0, crQ: x.credit || 0, spQ: x.spoiled || 0,
       moved: !itStore(x) ? 0 : mv, bought: !itStore(x) ? (old ? mv : x.bought || 0) : (old ? 0 : x.bought || 0), movedCases: x.movedCases || 0, edit: old ? 0 : x.edit || 0, cedit: old ? 0 : x.cedit || 0, adj: old ? 0 : x.adj || 0, cadj: old ? 0 : x.cadj || 0, spoil: old ? 0 : x.spoil || 0,
       soldAmt: old ? gone * pr : x.soldAmt || 0, crAmt: old ? (x.credit || 0) * pr : x.crAmt || 0, spAmt: old ? (x.spoiled || 0) * pr : x.spAmt || 0 }; RM[x.id] = r; return r; }).filter(function (r) { return r.open || r.stock || r.cageOpen || r.cage; });
 }
@@ -4211,8 +4218,8 @@ document.addEventListener('input', function (e) {
   else if (t.dataset.bl !== undefined && t.dataset.f !== 'item') { BUY.lines[+t.dataset.bl][t.dataset.f] = t.value; buyLive(); }
 });
 document.addEventListener('keydown', function (e) {   /* the Enter key on the phone keyboard saves the cash count and closes the keyboard */
-  var t = e.target; if (e.key !== 'Enter' || !t) return;
-  if (t.dataset && t.dataset.sh === 'counted') { e.preventDefault(); t.blur(); return; }
+  var t = e.target; if ((e.key !== 'Enter' && e.keyCode !== 13) || !t) return;
+  if (t.dataset && t.dataset.sh === 'counted') { e.preventDefault(); var sy1 = window.pageYOffset; t.blur(); setTimeout(function () { if (Math.abs(window.pageYOffset - sy1) > 2) window.scrollTo(0, sy1); }, 0); setTimeout(function () { if (Math.abs(window.pageYOffset - sy1) > 2) window.scrollTo(0, sy1); }, 350); return; }
   if (/^rx-(cash|c\d+|g\d+)$/.test(t.id || '')) {   /* receiving a handover: Enter goes to the next count box, and closes the keyboard after the last one */
     e.preventDefault(); var all = Array.prototype.slice.call(document.querySelectorAll('#spage input[id^="rx-"]')), nx = all[all.indexOf(t) + 1];
     if (nx) { nx.focus(); try { nx.select(); } catch (x) {} nx.scrollIntoView({ block: 'center' }); } else t.blur();
