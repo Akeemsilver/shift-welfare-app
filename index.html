@@ -217,7 +217,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.05', RULES_VERSION = '2.09';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.06', RULES_VERSION = '2.09';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1450,7 +1450,7 @@ function vHandover() {
   if (HT === 'shelf' && !hasShelf) HT = 'fridge';
   var cg = HT === 'cage', vrows = cg ? rows.filter(function (r) { return r.store; }) : rows.filter(function (r) { return HT === 'shelf' ? r.shelf : !r.shelf; });
   var vsold = vrows.reduce(function (a, r) { return a + r.sold; }, 0), vmoney = vrows.reduce(function (a, r) { return a + r.soldAmt; }, 0);   /* what was really charged, even if the price changed mid-shift */
-  h += soldCard(rows);
+  h += soldCards(rows, { shift: { name: sh.name, date: sh.date, half: sh.half } }, 'Sold this shift');
   h += '<div class="card"><h2>Stock</h2><div class="seg" style="grid-template-columns:repeat(' + (hasShelf ? 3 : 2) + ',1fr);margin-bottom:10px"><button data-act="htab" data-v="fridge" class="' + (HT === 'fridge' ? 'on' : '') + '">🧊 Fridge</button><button data-act="htab" data-v="cage" class="' + (cg ? 'on' : '') + '">🔒 Cage</button>' + (hasShelf ? '<button data-act="htab" data-v="shelf" class="' + (HT === 'shelf' ? 'on' : '') + '">🧁 Shelf</button>' : '') + '</div>' +
     (cg ? cageCmp(vrows.map(function (r) { return { n: r.name, unit: r.unit, shelf: r.shelf, m: r.movedCases || 0, was: r.cageOpen, now: r.cage, tg: tags(r, 'cage') }; })) + '</div>' : (vrows.length ? '<table class="cmp">' + CMPCOLS + '<tr><th>Item</th><th>Sold</th><th>Was</th><th></th><th>Now</th></tr>' + vrows.map(function (r) {
       return '<tr><td>' + esc(r.name) + '</td><td>' + (r.sold || '') + '</td><td>' + r.open + '</td><td>' + (r.open !== r.stock ? '→' : '') + '</td><td><b>' + r.stock + '</b></td></tr>' + (tags(r, HT) ? '<tr><td colspan="5" style="border:0;text-align:left;padding-top:0">' + tags(r, HT) + '</td></tr>' : '');   /* an arrow only where the number changed */
@@ -2109,11 +2109,11 @@ function docRows(h, RM) {   /* the rows of a handover, in the same shape as the 
 }
 function itStore(i) { return i.store != null ? i.store : !i.shelf; }   /* older handovers did not say: fridge items had a cage, shelf items did not */
 var RXTAB = 'fridge';
-function soldCards(rows, h) {   /* only what was sold: one block per item, the big numbers first and the small print underneath */
+function soldCards(rows, h, title) {   /* only what was sold: one block per item, the big numbers first and the small print underneath */
   var xs = rows.filter(function (r) { return r.sold > 0; });
   var chip = function (t, c) { return '<span class="tag ' + c + '">' + t + '</span>'; };
   var tq = xs.reduce(function (a, r) { return a + r.sold; }, 0), tc = xs.reduce(function (a, r) { return a + Math.max(0, r.soldAmt - r.crAmt - r.spAmt); }, 0);
-  return '<div class="card"><h2>Sold on the shift that handed over</h2><div class="muted" style="margin:-4px 0 6px">' + esc(h.shift.name) + ' shift · ' + esc(h.shift.date) + ' ' + esc(HL(h.shift.half)) + '</div>' +
+  return '<div class="card"><h2>' + (title || 'Sold on the shift that handed over') + '</h2><div class="muted" style="margin:-4px 0 6px">' + esc(h.shift.name) + ' shift · ' + esc(h.shift.date) + ' ' + esc(HL(h.shift.half)) + '</div>' +
     (xs.length ? xs.map(function (r) {
       var cash = Math.max(0, r.soldAmt - r.crAmt - r.spAmt), ex = [];
       if (r.crQ) ex.push(chip(r.crQ + ' on credit', 'cr')); if (r.spQ) ex.push(chip(r.spQ + ' spoiled', 'neg'));
@@ -2486,7 +2486,7 @@ function hoViewShow(i) {
     '<div class="card sum"><div><span>From</span><b>' + esc(hnl(h.fromName, h.fromEmail)) + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (not handed to a person)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Sent</span><b>' + when(h.at) + '</b></div>' +
     (h.receivedName ? '<div><span>Received by</span><b>' + esc(hnl(h.receivedName, h.acceptedBy)) + ' · ' + when(h.acceptedAt) + '</b></div>' : '<div><span>Status</span><b>' + (h.status === 'open' ? 'Waiting to be taken' : esc(h.status)) + '</b></div>') + cashRow +
     (h.owedTotal != null ? '<div><span>Owed by people at the time</span><b>' + money(h.owedTotal) + '</b></div>' : '') + '</div>' +
-    editsCard(h.edits || []) + soldCard(vrows) + table('Fridge', its.filter(function (x) { return !x.shelf && (x.open || x.stock); }), false) + table('Shelf', its.filter(function (x) { return x.shelf; }), false) + table('Cage', its.filter(function (x) { return itStore(x) && (x.cageOpen || x.cage); }), true) +
+    editsCard(h.edits || []) + soldCards(vrows, h, 'Sold this shift') + table('Fridge', its.filter(function (x) { return !x.shelf && (x.open || x.stock); }), false) + table('Shelf', its.filter(function (x) { return x.shelf; }), false) + table('Cage', its.filter(function (x) { return itStore(x) && (x.cageOpen || x.cage); }), true) +
     (h.status === 'accepted' && ri ? '<div class="card"><h2>Check when it was received</h2>' + (diffs.length ? diffs.map(function (d) { return '<div style="color:var(--exp)">' + esc(d) + '</div>'; }).join('') : '<div style="color:var(--ok)"><b>✓ Everything matched</b></div>') + '</div>' : '') +
     '<div class="card"><h2>Signatures</h2>' + sig(h.sig, hnl(h.fromName, h.fromEmail), h.at) + sig(h.receivedSig, hnl(h.receivedName, h.acceptedBy), h.acceptedAt) + '</div>' +
     '<div class="row"><button class="btn sec grow" data-act="hovlist">Back</button><button class="btn sec grow" data-act="close">Close</button></div>');
