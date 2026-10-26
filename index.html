@@ -155,6 +155,11 @@ input:disabled{background:var(--dis);color:var(--muted)}
 .sp-body{flex:1;overflow:auto;padding:14px 16px calc(28px + env(safe-area-inset-bottom));max-width:640px;margin:0 auto;width:100%;overscroll-behavior:contain}
 .sp-h{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:18px 6px 8px}
 .sp-card{background:var(--surface);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.sp-top.hasr b{text-align:left;margin-right:0}.sp-top .spr{width:auto;height:36px;border-radius:18px;padding:0 12px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px;background:var(--soft);color:var(--link)}.sp-top .spr.act{background:var(--brand);color:#fff}
+.hsel{display:flex;align-items:center;gap:6px;margin-bottom:8px}.hsel .btn{width:40px;flex:none;padding:0}.hdate{position:relative;flex:1;border:2px solid var(--secb);border-radius:12px;background:var(--surface);display:flex;align-items:center;justify-content:center;min-height:40px;font-weight:700}.hdate.away span{padding-right:56px}.hdate.fut{opacity:.8;font-style:italic}.hdate u{text-decoration:underline dotted;text-underline-offset:3px}.hpick{position:absolute;left:0;top:0;height:100%;opacity:0;border:0;font-size:16px}.htoday{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:var(--brand);color:#fff;border:0;border-radius:9px;padding:4px 9px;font-size:12px;font-weight:700;z-index:2}
+.hsum{background:var(--surface);border-radius:12px;box-shadow:var(--sh);padding:6px 10px;margin-bottom:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px 6px}.hsum div{min-width:0}.hsum .l{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);white-space:nowrap}.hsum .v{font-size:14px;font-weight:700}
+.flab{margin:12px 0 4px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}.frow{display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid var(--line);cursor:pointer}.fbox{width:22px;height:22px;border-radius:6px;border:2px solid var(--secb);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex:none}.fbox.on{background:var(--brand);border-color:var(--brand)}
+.owestrip{display:flex;align-items:center;gap:10px;border:2px solid var(--exp);background:var(--exp-bg);color:var(--exp);border-radius:14px;padding:8px 12px;margin-bottom:12px}.owestrip small{display:block;color:var(--muted);font-size:11px}.owestrip>.grow{cursor:pointer}.vothin{background:var(--soon-bg);padding:6px 12px;margin-bottom:10px;font-size:13px;display:flex;align-items:center;gap:8px;box-shadow:none}
 .sp-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border-top:1px solid var(--line);cursor:pointer}.sp-row:first-child{border-top:0}
 .sp-ic{width:44px;height:44px;border-radius:12px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-size:20px;font-style:normal;flex:none}
 .sp-row b{font-size:16px;font-weight:600;display:block}.sp-row .muted{font-size:13px;margin-top:2px}
@@ -217,7 +222,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.10', RULES_VERSION = '2.10';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.12', RULES_VERSION = '2.10';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -706,7 +711,7 @@ function cnum(id) {   /* what has been counted / noted for one item this shift *
 function gone0(i) { return !(i.stock > 0 || i.cage > 0); }
 function liveItem(i) { if (!gone0(i)) return true; var c = cnum(i.id); return c.counted || c.sold || c.cr || c.sp; }
 function vCount() {
-  var LI = S.items.filter(liveItem), t = totals(), h = '', n = LI.filter(function (i) { return cnum(i.id).counted; }).length;
+  var LI = S.items.filter(liveItem), t = totals(), h = owedStrip(), n = LI.filter(function (i) { return cnum(i.id).counted; }).length;
   h += '<div class="tiles"><div class="tile wide"><div class="l">Sales this shift</div><div class="v">' + money(t.sales) + '</div></div>' +
        '<div class="tile"><div class="l">Items sold</div><div class="v">' + t.sold + '</div></div>' +
        '<div class="tile"><div class="l">Cash on hand</div><div class="v">' + money(t.cash) + '</div></div></div>';
@@ -898,7 +903,7 @@ function shortView(mo, ms, mr, allS, allR) {
       return '<tr><td>' + wsw(r.w) + '</td><td>' + money(r.short) + '</td><td>' + money(r.repaid) + '</td><td' + (r.owed > 0 && r.owed === mx ? ' class="bad"><b>' : '>') + money(r.owed) + (r.owed > 0 && r.owed === mx ? '</b>' : '') + '</td></tr>';
     }).join('') + '<tr class="tot"><td>Total</td><td>' + money(tot('short')) + '</td><td>' + money(tot('repaid')) + '</td><td>' + money(tot('owed')) + '</td></tr></table>' +
     '<p class="muted" style="margin:8px 0 0"><b>Short</b>: cash and items the receiver found missing at that watch\'s handovers this month (items at selling price). <b>Owed now</b>: all shortages ever, minus repayments.' + (tot('over') ? ' Cash found over this month: ' + money(tot('over')) + ' (kept separate, it does not reduce what is owed).' : '') + '</p>' +
-    (canAdmin() ? '<button class="btn block" data-act="repayform" style="margin-top:10px">💵 Record a repayment</button>' : '') + '</div>' +
+    '<button class="btn block" data-act="payopen" style="margin-top:10px">💵 Pay for a shift</button>' + '</div>' +
     '<div class="card"><h2>Shortages this month (' + ms.length + ')</h2>' + (ms.length ? '<div class="list">' + ms.map(function (x) {
       return '<div data-act="shview" data-id="' + x.id + '" style="cursor:pointer"><div class="grow"><b>' + esc(x.shiftDate) + ' ' + esc(HL(x.shiftHalf)) + '</b> ' + wsw(x.wk) + '<div class="muted">handed over by ' + esc(x.fromName) + ' · received by ' + esc(x.toName) + '</div><div class="muted">' + (x.cashShort ? 'cash ' + money(x.cashShort) : '') + (x.cashShort && x.itemsValue ? ' · ' : '') + (x.itemsValue ? 'stock ' + money(x.itemsValue) : '') + (x.cashOver ? ' cash over ' + money(x.cashOver) : '') + '</div></div><b class="' + (x.total > 0 ? 'bad' : '') + '">' + money(x.total) + '</b></div>';
     }).join('') + '</div>' : '<div class="muted">No shortages recorded this month.</div>') + '</div>' +
@@ -947,18 +952,39 @@ function shFixGo(id) {
   });
 }
 var RP = null;
-function repayForm() {
-  if (!inControl()) return toast('A repayment goes into the cash, so it is recorded by the person in control');
-  if (!RP) RP = { wk: '', amount: '', note: '', by: '' };
-  modal('<h2>💵 Record a repayment</h2><p class="muted" style="margin-top:0">A watch has put money back into the cash to cover a shortage. It adds to the cash and lowers what that watch owes.</p><div class="card"><label>Which watch paid?</label>' + seg([['Black', 'Black'], ['White', 'White'], ['Blue', 'Blue'], ['Red', 'Red']], 'rpwk', RP.wk, 4) + '<div class="f" style="margin-top:10px"><label>Amount</label><input data-rp="amount" type="number" inputmode="decimal" min="0" value="' + esc(RP.amount) + '" placeholder="0"></div><div class="f"><label>Paid by (the person, or someone paying for them)</label><input data-rp="by" value="' + esc(RP.by || '') + '" placeholder="e.g. Ali, or Sgt Baptiste for Ali" autocomplete="off"></div><div class="f" style="margin-bottom:0"><label>Note (optional)</label><input data-rp="note" value="' + esc(RP.note) + '" placeholder="e.g. paid by Silverton" autocomplete="off"></div></div><button class="btn block" data-act="rpgo">Review</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>', true);
+function payOpen(wk) {   /* one Pay pop-up for every shift that still owes: pick the shift, the amount fills in */
+  if (!inControl()) return toast('A payment goes into the cash, so the person in control records it');
+  var o = openShortList(); if (!o.length) return toast('No shortages owed');
+  var cur = o.filter(function (x) { return x.wk === wk; })[0] || o[0];
+  RP = { wk: cur.wk, amount: String(cur.owed), note: '', by: '' };
+  modal('<h2>💵 Pay for a shift</h2><div class="card"><label>Which shift</label>' + seg(o.map(function (x) { return [x.wk, esc(x.wk)]; }), 'rpwk', RP.wk, Math.min(o.length, 4)) + '<div class="f" style="margin-top:10px"><label>Amount owes <b id="rp-owes" style="font-size:16px;color:var(--ink);letter-spacing:0">' + money(cur.owed) + '</b></label><input id="rp-amt" data-rp="amount" type="number" inputmode="decimal" min="0" step="any" value="' + esc(RP.amount) + '" placeholder="0"></div><div class="f"><label>Paid by (the person, or someone paying for them)</label><input data-rp="by" value="" placeholder="e.g. Ali, or Sgt Baptiste for Ali" autocomplete="off"></div><div class="f" style="margin-bottom:0"><label>Note (optional)</label><input data-rp="note" value="" placeholder="e.g. paid cash on Friday" autocomplete="off"></div></div><button class="btn block" data-act="rpgo">Continue</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>');
 }
 function repayGo() {
-  var amt = num(RP.amount); if (!RP.wk) return toast('Choose the watch'); if (amt <= 0) return toast('Enter the amount');
-  askConfirm('Record repayment?', '<b>' + esc(RP.wk) + '</b> watch repaid <b>' + money(amt) + '</b>.<br><span class="muted">It is added to the cash on hand and lowers what they owe.</span>', 'Yes, record ' + money(amt), function () {
+  var amt = num(RP.amount); if (!RP.wk) return toast('Choose the shift'); if (amt <= 0) return toast('Enter the amount');
+  var ow = openShortList().filter(function (x) { return x.wk === RP.wk; })[0], left = ow ? ow.owed : 0;
+  if (amt > left + 0.004) return toast('That is more than the ' + RP.wk + ' shift owes (' + money(left) + ')');
+  var after = r2(left - amt);
+  askConfirm('Record this payment?', '<b>' + esc(RP.wk) + '</b> shift pays <b>' + money(amt) + '</b>.' + ((RP.by || '').trim() ? '<br>Paid by <b>' + esc(RP.by.trim()) + '</b>' : '') + '<br>' + (after > 0.004 ? esc(RP.wk) + ' will still owe <b>' + money(after) + '</b>.' : esc(RP.wk) + ' will owe <b>$0</b> after this.') + '<br><span class="muted">It is added to the cash on hand.</span>', 'Yes, record ' + money(amt), function () {
     var b = writeBatch(DB), id = newEv(); mkEvent(b, 'repay', null, 1, amt, { name: 'Shortage repaid', forWk: RP.wk, note: ((RP.by || '').trim() ? 'paid by ' + RP.by.trim() + (RP.note.trim() ? ' · ' : '') : '') + RP.note.trim(), paidBy: (RP.by || '').trim() }); DAYQ = [];
     b.set(ref('repayments/' + newId('repayments')), { lastEvent: id, wk: RP.wk, amount: amt, note: RP.note.trim(), paidBy: (RP.by || '').trim(), by: EMAIL, byName: myName(), at: Date.now(), month: dkey(new Date()).slice(0, 7) });
     commit(b); RP = null; closeModal(); toast(money(amt) + ' repaid and added to the cash');
   });
+}
+/* what a shift owes: a strip on top of Count for the person in control, a card on the Credit tab for every shift, and the list behind the strip */
+function owedStrip() {
+  if (!inControl() || OWNERVIEW) return '';
+  var w = currentShift().name, o = openShortList().filter(function (x) { return x.wk === w; })[0]; if (!o) return '';
+  return '<div class="owestrip"><div class="grow" data-act="owedetail" data-id="' + esc(w) + '"><b>' + esc(w) + ' shift owes ' + money(o.owed) + '</b><small>Shortages not yet repaid ▾</small></div><button class="btn red sm" data-act="payopen" data-id="' + esc(w) + '">Pay</button></div>';
+}
+function owedCard() {
+  var o = openShortList(), by = {}; o.forEach(function (x) { by[x.wk] = x.owed; });
+  if (!o.length) return '<div class="card" style="background:var(--ok-bg);box-shadow:none"><b style="color:var(--ok)">✓ No shortages owed</b></div>';
+  return '<div class="card"><div class="row" style="align-items:center;margin-bottom:4px"><div class="grow"><h2 style="margin:0">Shifts owe for shortages</h2><div class="muted">Not yet repaid</div></div><button class="btn red sm" data-act="payopen">Pay</button></div><div class="list">' + WATCHES.map(function (w) { return '<div><div class="grow">' + wsw(w) + '</div><b style="color:' + (by[w] ? 'var(--exp)' : 'var(--ok)') + '">' + money(by[w] || 0) + '</b></div>'; }).join('') + '</div></div>';
+}
+function owedDetail(w) {
+  var sh = (S.shAll || []).filter(function (x) { return x.wk === w; }).sort(function (a, b) { return b.at - a.at; }), rp = (S.repAll || []).filter(function (x) { return x.wk === w; }).sort(function (a, b) { return b.at - a.at; });
+  var owed = r2(sh.reduce(function (a, x) { return a + (x.total || 0); }, 0) - rp.reduce(function (a, x) { return a + (x.amount || 0); }, 0));
+  modal('<h2>' + esc(w) + ' shift owes ' + money(owed) + '</h2><div class="card"><h2>Shortages</h2><div class="list">' + (sh.length ? sh.map(function (x) { return '<div><div class="grow"><b>' + esc(x.shiftDate || '') + ' ' + esc(HL(x.shiftHalf)) + '</b><div class="muted">' + esc(x.fromName || '') + '</div></div><b style="color:var(--exp)">' + money(x.total) + '</b></div>'; }).join('') : '<div class="muted">None.</div>') + '</div></div>' + (rp.length ? '<div class="card"><h2>Repaid</h2><div class="list">' + rp.map(function (x) { return '<div><div class="grow"><b>' + new Date(x.at).toLocaleDateString([], { day: 'numeric', month: 'short' }) + '</b>' + (x.paidBy ? '<div class="muted">paid by ' + esc(x.paidBy) + '</div>' : '') + '</div><b style="color:var(--ok)">' + money(x.amount) + '</b></div>'; }).join('') + '</div></div>' : '') + '<button class="btn block" data-act="payopen" data-id="' + esc(w) + '">Pay</button><button class="btn sec block" data-act="close" style="margin-top:10px">Close</button>');
 }
 
 function profitDay(day, docs) {
@@ -1310,7 +1336,7 @@ function creditList(q) {
 }
 function vCredit() {
   var o = owing(), tot = o.reduce(function (a, x) { return a + x.bal; }, 0), t = totals();
-  return '<div class="tiles"><div class="tile wide"><div class="l">Total owed on credit</div><div class="v">' + money(tot) + '</div></div>' +
+  return owedCard() + '<div class="tiles"><div class="tile wide"><div class="l">Total owed on credit</div><div class="v">' + money(tot) + '</div></div>' +
     '<button class="tile tbtn" data-act="cpeople"><div class="l">People owing ›</div><div class="v">' + o.length + '</div></button>' +
     '<button class="tile tbtn" data-act="cledger"><div class="l">Credit + loans this shift ›</div><div class="v">' + money(t.crN + t.loans) + '</div></button></div>' +
     '<button class="btn amber block" data-act="lend" style="margin-bottom:14px">🤝 Lend cash (borrowed from the cash)</button>' +
@@ -1596,7 +1622,7 @@ function banner() {
   var st = S.state; if (!st || inControl() || OWNERVIEW) return '';
   var h = S.hand, box = function (title, body, btns) { return '<div class="card" style="background:var(--soon-bg)"><b>' + title + '</b><div class="muted" style="margin:4px 0 ' + (btns ? '10' : '0') + 'px">' + body + '</div>' + (btns || '') + '</div>'; };
   var tc = (isPres() || (canAdmin() && st.controlEmail)) ? '<button class="btn red sm" data-act="tcask">🛡 Take control</button>' : '';
-  if (st.controlEmail) return box('🔒 View only', 'In control: <b>' + esc(st.controlName || st.controlEmail) + '</b>. Only the person in control can sell or change anything.', tc);
+  if (st.controlEmail) return '<div class="card vothin"><span class="grow">🔒 <b>View only</b> · ' + esc(st.controlName || st.controlEmail) + ' is in control</span>' + tc + '</div>';
   if (h && h.status === 'open') {
     var to = h.locked ? 'Locked: no one in particular' : esc((h.toLabels || []).join(', '));
     if (h.fromEmail === EMAIL) return box('🔒 Handed over', 'To ' + to + ' at ' + hhmm(h.at) + '. Waiting for someone to take it.', '<div class="row"><button class="btn sm grow" data-act="shareapp">Notify (WhatsApp…)</button><button class="btn sec sm grow" data-act="cancelho">Cancel handover, I\'m staying on</button></div>');
@@ -1692,53 +1718,143 @@ function evRow(e, cancelable) {
   HEV[e.id] = e;
   return '<div' + (e.type === 'buy' || e.type === 'other' ? ' data-act="buyview" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'stockedit' ? ' data-act="editview" data-id="' + e.id + '" style="cursor:pointer;background:var(--exp-bg);border-left:4px solid var(--exp);padding-left:8px;border-radius:8px"' : '') + '><span style="font-size:18px">' + ic + '</span><div class="grow"><b>' + esc(tx) + '</b><div class="muted">' + hhmm(e.t) + (sub ? ' · ' + esc(sub) : '') + (e.byName ? ' · by ' + esc(e.byName) : '') + '</div></div>' + (e.receipt ? '<img data-act="rcv" src="' + e.receipt + '" alt="receipt" style="width:44px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">' : '') + '<b style="color:' + col + '">' + amt + '</b>' + (CM && cancelable && ['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'shiftrec', 'watchchg'].indexOf(e.type) < 0 ? '<button class="btn red sm" data-act="cancelask" data-id="' + e.id + '">Cancel</button>' : '') + '</div>';
 }
-function histHtml(ev, day) {
-  var sum = function (f) { return ev.filter(f).reduce(function (a, e) { return a + e.amt; }, 0); }, sid = SH().sid;
-  ev = ev.slice().sort(function (x, y) { return y.t - x.t; });
-  var cr = sum(function (e) { return (e.type === 'sale' && e.cr) || e.type === 'cnote'; }), cash = sum(function (e) { return (e.type === 'sale' && !e.cr) || e.type === 'count'; }) - sum(function (e) { return e.type === 'snote' || e.type === 'cnote'; }), pay = sum(function (e) { return e.type === 'pay'; }), pu = sum(function (e) { return e.type === 'buy'; }), ln = sum(function (e) { return e.type === 'loan'; });
-  var can = inControl() && ev.some(function (e) { return e.sid === sid; });
-  return '<h2>History</h2>' + histTabs('day') + '<div class="row" style="margin-bottom:10px"><button class="btn sec sm" data-act="hprev"' + (HD >= 30 ? ' disabled' : '') + '>◀</button><b class="grow" style="text-align:center">' + (HD === 0 ? 'Today · ' : HD === 1 ? 'Yesterday · ' : '') + day.toLocaleDateString([], {weekday: 'long', day: 'numeric', month: 'short'}) + '</b><button class="btn sec sm" data-act="hnext"' + (HD === 0 ? ' disabled' : '') + '>▶</button></div>' +
-    '<div class="tiles"><div class="tile"><div class="l">Cash sales</div><div class="v">' + money(cash) + '</div></div><div class="tile"><div class="l">Credit sales</div><div class="v">' + money(cr) + '</div></div>' +
-    '<div class="tile"><div class="l">Collected from credit</div><div class="v">' + money(pay) + '</div></div><div class="tile"><div class="l">Purchases</div><div class="v">' + money(pu) + '</div></div><div class="tile"><div class="l">Cash lent out</div><div class="v">' + money(ln) + '</div></div></div>' +
-    (can ? '<button class="btn ' + (CM ? 'sec' : 'red') + ' block" data-act="cmtog" style="margin-bottom:12px">' + (CM ? 'Done cancelling' : 'Cancel an item') + '</button>' : '') + (CM ? '<div class="cancelbar">Tap Cancel next to the entry to remove. Only this shift can be cancelled.</div>' : '') +
-    '<div class="card"><h2>Timeline (' + ev.length + ')</h2><div class="muted" style="margin:-6px 0 6px">Records are kept for about 31 days.</div>' + (ev.length ? '<div class="list">' + ev.map(function (e) { return evRow(e, e.sid === sid); }).join('') + '</div>' : '<div class="empty">Nothing recorded this day.</div>') + '</div><button class="btn sec block" data-act="close">Close</button>';
+/* ---------- History: one full page. All = the entries of a day or a month, Shifts = the permanent shift summaries (a day, a month or a year), Charts. The Filter is in the top bar ---------- */
+var HY = { tab: 'all', per: 'day', dt: new Date(), types: {}, short: false, wk: '', cv: 'score', sy: 0, back: false }, HUN = null, HEVS = null, HSDOCS = null, HSD = {}, HYSIG = '';
+var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash']], ['Shortages and repayments', '⚠️', ['cashshort', 'shortfix', 'repay']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']]];
+function hgroup(e) { for (var i = 0; i < HGROUPS.length; i++) if (HGROUPS[i][2].indexOf(e.type) >= 0) return HGROUPS[i][0]; return 'Stock edits by hand'; }
+function histNoon(d) { var x = new Date(d); x.setHours(12, 0, 0, 0); return x; }
+function histReset() { CM = false; HY.tab = 'all'; HY.per = 'day'; HY.dt = histNoon(new Date()); HY.types = {}; HY.short = false; HY.wk = ''; HY.cv = 'score'; HY.sy = 0; HY.back = false; HEVS = null; }
+function histStop() { if (HUN) { HUN(); HUN = null; } }
+function histPer() { return HY.tab === 'charts' ? 'month' : HY.tab === 'all' && HY.per === 'year' ? 'month' : HY.per; }
+function histRange() {   /* the start and end of what is on show, in ms */
+  var d = HY.dt, y = d.getFullYear(), m = d.getMonth(), p = histPer();
+  return p === 'day' ? { a: new Date(y, m, d.getDate()).getTime(), b: new Date(y, m, d.getDate() + 1).getTime() } : p === 'month' ? { a: new Date(y, m, 1).getTime(), b: new Date(y, m + 1, 1).getTime() } : { a: new Date(y, 0, 1).getTime(), b: new Date(y + 1, 0, 1).getTime() };
 }
-/* ---------- History: a ledger of shifts (permanent summaries), one page per shift, and charts ---------- */
-var HV = { view: 'shifts', wk: '', id: null, cv: 'score', cm: 0 }, HSD = {};
-function histTabs(cur) {
-  return '<div class="seg" style="grid-template-columns:repeat(3,1fr);margin-bottom:12px">' + [['shifts', 'Shifts'], ['day', 'Day entries'], ['charts', 'Charts']].map(function (x) { return '<button data-act="hv" data-v="' + x[0] + '" class="' + (cur === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>';
+function histStep(n) { var d = HY.dt, y = d.getFullYear(), m = d.getMonth(), p = histPer(); HY.dt = p === 'day' ? histNoon(new Date(y, m, d.getDate() + n)) : p === 'month' ? histNoon(new Date(y, m + n, 1)) : histNoon(new Date(y + n, m, 1)); }
+function histLabel() {
+  var d = HY.dt, p = histPer(), mn = d.toLocaleDateString('en-GB', { month: 'long' });
+  return p === 'day' ? d.getDate() + ' <u>' + mn + '</u> ' + d.getFullYear() : p === 'month' ? '<u>' + mn + '</u> ' + d.getFullYear() : String(d.getFullYear());
 }
-function histOpen(view) {
-  if (view) { HV.view = view; HV.id = null; }
-  if (HV.view === 'day') { HD = 0; return histModal(); }
-  var qs = [query(col('shifts'), orderBy('at', 'desc'), limit(400))];
-  if (HV.id) qs.push(query(col('events'), where('sid', '==', HV.id)));
-  liveModal(qs, histShiftsHtml);
+function histPlain() { var d = HY.dt, p = histPer(), mn = d.toLocaleDateString('en-GB', { month: 'long' }); return p === 'day' ? d.getDate() + ' ' + mn + ' ' + d.getFullYear() : p === 'month' ? mn + ' ' + d.getFullYear() : String(d.getFullYear()); }
+function histFilterCount() { return Object.keys(HY.types).filter(function (k) { return HY.types[k]; }).length + (HY.short && HY.tab === 'shifts' ? 1 : 0); }
+function histHead() {
+  var r = histRange(), now = Date.now(), p = histPer(), here = now >= r.a && now < r.b, fut = r.a > now, y = HY.dt.getFullYear(), pick, st = ' style="width:' + (here ? '100%' : 'calc(100% - 66px)') + '"';
+  if (p === 'day') pick = '<input class="hpick"' + st + ' type="date" value="' + dkey(HY.dt) + '" aria-label="Pick a date">';
+  else if (p === 'month') pick = '<input class="hpick"' + st + ' type="month" value="' + dkey(HY.dt).slice(0, 7) + '" aria-label="Pick a month">';
+  else { var yo = ''; for (var q = y + 1; q >= y - 6; q--) yo += '<option' + (q === y ? ' selected' : '') + '>' + q + '</option>'; pick = '<select class="hpick"' + st + ' aria-label="Pick a year">' + yo + '</select>'; }
+  return '<div class="seg" style="grid-template-columns:repeat(3,1fr);margin-bottom:8px">' + [['all', 'All'], ['shifts', 'Shifts'], ['charts', 'Charts']].map(function (x) { return '<button data-act="hytab" data-v="' + x[0] + '" class="' + (HY.tab === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>' +
+    '<div class="hsel"><button class="btn sec sm" data-act="hstep" data-v="-1" aria-label="Back">◀</button><div class="hdate' + (fut ? ' fut' : '') + (here ? '' : ' away') + '"><span>' + histLabel() + '</span>' + pick + (here ? '' : '<button class="htoday" data-act="htoday">Today</button>') + '</div><button class="btn sec sm" data-act="hstep" data-v="1" aria-label="Forward">▶</button></div>';
+}
+function histFilterBtn() {
+  if (HY.tab === 'charts') return '';
+  var n = histFilterCount();
+  return '<button class="spr' + (n ? ' act' : '') + '" data-act="hfilter"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z" fill="currentColor"/></svg> Filter' + (n ? ' · ' + n : '') + '</button>';
+}
+function histShown() {   /* the entries on show after the type filter */
+  var ev = (HEVS || []).slice().sort(function (a, b) { return b.t - a.t; }), on = Object.keys(HY.types).filter(function (k) { return HY.types[k]; });
+  return on.length ? ev.filter(function (e) { return HY.types[hgroup(e)]; }) : ev;
+}
+function histEmptyWord() { var p = histPer(); return p === 'day' ? 'this day' : p === 'month' ? 'this month' : 'this year'; }
+function histAllHtml() {
+  if (!HEVS) return '<div class="empty">Loading…</div>';
+  var sh = histShown(), p = histPer(), can = p === 'day' && inControl() && HEVS.some(function (e) { return e.sid === SH().sid; });
+  if (!HEVS.length) return '<div class="empty">No records for ' + histEmptyWord() + '.</div>';
+  if (!sh.length) return '<div class="empty">No entries match this filter on ' + esc(histPlain()) + '.<br><button class="btn sec" data-act="hclear" style="margin-top:12px">Clear filter</button></div>';
+  var sm = function (f) { return HEVS.filter(f).reduce(function (a, e) { return a + e.amt; }, 0); };   /* the day's (or month's) totals, as before */
+  var cr = sm(function (e) { return (e.type === 'sale' && e.cr) || e.type === 'cnote'; }), cash = sm(function (e) { return (e.type === 'sale' && !e.cr) || e.type === 'count'; }) - sm(function (e) { return e.type === 'snote' || e.type === 'cnote'; });
+  var cell = function (l, v) { return '<div><div class="l">' + l + '</div><div class="v">' + money(v) + '</div></div>'; };
+  var tiles = '<div class="hsum">' + cell('Cash sales', cash) + cell('Credit sales', cr) + cell('Collected', sm(function (e) { return e.type === 'pay'; })) + cell('Purchases', sm(function (e) { return e.type === 'buy'; })) + cell('Cash lent out', sm(function (e) { return e.type === 'loan'; })) + '</div>';
+  var out = '', last = '';
+  sh.forEach(function (e) {
+    if (p !== 'day') { var k = new Date(e.t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); if (k !== last) { last = k; out += '<div class="sec-h">' + esc(k) + '</div>'; } }
+    out += evRow(e, e.sid === SH().sid);
+  });
+  return tiles + '<div class="list">' + out + '</div>' + (can ? '<button class="btn ' + (CM ? 'sec' : 'red') + ' block" data-act="cmtog" style="margin-top:12px">' + (CM ? 'Done cancelling' : 'Cancel an item') + '</button>' + (CM ? '<div class="cancelbar">Tap Cancel next to the entry to remove. Only this shift can be cancelled.</div>' : '') : '') + '<p class="muted">Entries are kept for about 31 days. Every shift keeps a permanent summary under Shifts.</p>';
+}
+function shDay(d) { var x = String(d.day || ''); if (x) return x; var q = String(d.date || '').split('/'); return q.length === 3 ? q[2] + '-' + q[1] + '-' + q[0] : ''; }
+function histShiftRow(d) {
+  return '<div data-act="shopen" data-id="' + esc(d.id) + '" style="cursor:pointer;flex-wrap:wrap;align-items:flex-start"><div class="grow"><div>' + wsw(d.wk) + ' <b>' + esc(d.date) + ' ' + esc(HL(d.half)) + '</b></div><div class="muted">' + esc(d.fromName || '') + (d.receivedByName ? ' → ' + esc(d.receivedByName) : d.toLabels && d.toLabels.length ? ' → ' + esc(d.toLabels.join(', ')) : '') + '</div><div class="muted">Sales ' + money(d.sales) + ' · cash ' + money(d.counted) + '</div></div><div style="text-align:right">' + shStatus(d) + '<div class="muted">›</div></div></div>';
+}
+function histShiftList() {   /* the shifts in the chosen day, month or year, after the shift chip and the shortage tick */
+  var p = histPer(), key = dkey(HY.dt), pre = p === 'day' ? key : p === 'month' ? key.slice(0, 7) : key.slice(0, 4);
+  return (HSDOCS || []).filter(function (d) { return (!HY.wk || d.wk === HY.wk) && (!HY.short || d.short > 0) && shDay(d).indexOf(pre) === 0 && (p !== 'day' || shDay(d) === pre); });
+}
+function histShiftsHtml() {
+  if (!HSDOCS) return '<div class="empty">Loading…</div>';
+  var p = histPer(), list = histShiftList(), sum = function (f) { return r2(list.reduce(function (a, d) { return a + (d[f] || 0); }, 0)); };
+  var chips = '<div class="chips" style="margin-bottom:10px">' + [['', 'All']].concat(WATCHES.map(function (w) { return [w, w]; })).map(function (c) { return '<button data-act="hwk" data-v="' + esc(c[0]) + '" class="' + (HY.wk === c[0] ? 'on' : '') + '">' + esc(c[1]) + '</button>'; }).join('') + '</div>';
+  if (!list.length) return chips + (histFilterCount() || HY.wk ? '<div class="empty">No shifts match this filter on ' + esc(histPlain()) + '.<br><button class="btn sec" data-act="hclear" style="margin-top:12px">Clear filter</button></div>' : '<div class="empty">No records for ' + histEmptyWord() + '.</div>');
+  var line = p === 'day' ? '' : '<div class="muted" style="margin:0 2px 8px">' + (HY.wk ? esc(HY.wk) : 'All shifts') + ' · ' + list.length + (list.length === 1 ? ' shift' : ' shifts') + ' · Sales ' + money(sum('sales')) + ' · Short <b style="color:' + (sum('short') > 0 ? 'var(--exp)' : 'var(--ok)') + '">' + money(sum('short')) + '</b></div>';
+  if (p === 'year') {
+    var by = {}; list.forEach(function (d) { var m = shDay(d).slice(0, 7); (by[m] = by[m] || []).push(d); });
+    return chips + '<div class="muted" style="margin:0 2px 8px">' + (HY.wk ? esc(HY.wk) : 'All shifts') + ' · Tap a month to open it</div><div class="card"><div class="list">' + Object.keys(by).sort().reverse().map(function (m) { var l = by[m], s = r2(l.reduce(function (a, d) { return a + (d.sales || 0); }, 0)), sh = r2(l.reduce(function (a, d) { return a + (d.short || 0); }, 0)); return '<div data-act="hmonth" data-id="' + m + '" style="cursor:pointer"><b style="width:44px">' + new Date(+m.slice(0, 4), +m.slice(5, 7) - 1, 1).toLocaleDateString('en-GB', { month: 'short' }) + '</b><div class="grow muted">' + l.length + ' shifts</div><span>Sales <b>' + money(s) + '</b></span><span style="margin-left:10px;color:' + (sh > 0 ? 'var(--exp)' : 'var(--ok)') + '">Short <b>' + money(sh) + '</b></span></div>'; }).join('') + '</div></div>';
+  }
+  return chips + line + '<div class="list">' + list.map(histShiftRow).join('') + '</div><p class="muted">Every shift keeps a permanent summary. The detailed entries are kept for about 31 days.</p>';
+}
+function histChartsHtml() { return HSDOCS ? chartsHtml(HSDOCS) : '<div class="empty">Loading…</div>'; }
+function histDraw(top) {
+  var body = HY.tab === 'all' ? histAllHtml() : HY.tab === 'shifts' ? histShiftsHtml() : histChartsHtml(), right = histFilterBtn(), pg = $('#spage'), cur = WPS[WPS.length - 1];
+  var topHtml = '<button data-act="wpback" aria-label="Back">‹</button><b>History</b>' + right, head = histHead(), html = '<div id="hhead">' + head + '</div><div id="hbody">' + body + '</div>';
+  if (!pg.hidden && cur && cur.fn === histPage && pg.querySelector('.sp-body')) {
+    var sb = pg.querySelector('.sp-body'), st = sb.scrollTop, tp = pg.querySelector('.sp-top');
+    tp.className = 'sp-top' + (right ? ' hasr' : ''); tp.innerHTML = topHtml;
+    if (HYSIG === head && $('#hbody')) $('#hbody').innerHTML = body;   /* only the data changed: leave the date picker alone, it may be open */
+    else sb.innerHTML = html;
+    sb.scrollTop = top ? 0 : st;
+  } else wpPage(histPage, [], '<h2>History</h2>' + html, false, right);
+  HYSIG = head;
+  var ready = HY.tab === 'all' ? HEVS : HSDOCS;
+  if (HY.back && ready) { var sb2 = pg.querySelector('.sp-body'); if (sb2) sb2.scrollTop = HY.sy; HY.back = false; }
+  if ($('#hfs')) $('#hfs').innerHTML = histSheetHtml();
+}
+function histPage() {   /* (re)start the live data for what is on show, then draw it */
+  histStop();
+  if (HY.tab === 'all') {
+    var r = histRange(); HEVS = null; histDraw();
+    HUN = onSnapshot(query(col('events'), where('t', '>=', r.a), where('t', '<', r.b), limit(3000)), function (snap) { HEVS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); histDraw(); }, function (e) { toast(errText(e)); });
+  } else {
+    histDraw();
+    HUN = onSnapshot(query(col('shifts'), orderBy('at', 'desc'), limit(400)), function (snap) { HSDOCS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; HSD[x.id] = x; return x; }); histDraw(); }, function (e) { toast(errText(e)); });
+  }
+}
+function histGo() { if (HY.tab === 'all') histPage(); else histDraw(); }
+function histOpen() { histReset(); histStop(); WPS = []; histPage(); }
+function histIsOpen() { var c = WPS[WPS.length - 1]; return !$('#spage').hidden && c && c.fn === histPage; }
+function histShift(id) {   /* a shift's own page, on top of History; back returns to the list as it was */
+  if ($('#spage').hidden) { histReset(); WPS = [{ mode: 'page', fn: histPage, args: [] }]; }
+  else if (histIsOpen()) { var sb = $('#spage .sp-body'); HY.sy = sb ? sb.scrollTop : 0; HY.back = true; }
+  histShiftPage(id);
+}
+function histShiftPage(id) {
+  histStop();
+  var evs = null, gone = false, draw = function () { var d = HSD[id]; wpPage(histShiftPage, [id], d ? shiftDetailHtml(d, evs || []) : '<h2>Shift</h2><div class="empty">' + (gone ? 'This shift was not found.' : 'Loading…') + '</div>', true); };
+  draw();
+  var u1 = onSnapshot(ref('shifts/' + id), function (sn) { if (sn.exists()) { var x = sn.data(); x.id = id; HSD[id] = x; } else gone = true; draw(); }, function (e) { toast(errText(e)); });
+  var u2 = onSnapshot(query(col('events'), where('sid', '==', id)), function (snap) { evs = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); draw(); }, function () { });
+  HUN = function () { u1(); u2(); };
+}
+function histSheetHtml() {
+  var all = HY.tab === 'all', pers = all ? [['day', 'Day'], ['month', 'Month']] : [['day', 'Day'], ['month', 'Month'], ['year', 'Year']], p = histPer(), n, body;
+  if (all) {
+    var cnt = {}; (HEVS || []).forEach(function (e) { var g = hgroup(e); cnt[g] = (cnt[g] || 0) + 1; });
+    body = '<div class="flab">Entry types</div>' + HGROUPS.map(function (g) { var on = !!HY.types[g[0]]; return '<div class="frow" data-act="ftog" data-v="' + esc(g[0]) + '"><div class="fbox' + (on ? ' on' : '') + '">' + (on ? '✓' : '') + '</div><span class="grow">' + g[1] + ' ' + esc(g[0]) + '</span><span class="muted">' + (cnt[g[0]] || 0) + '</span></div>'; }).join('');
+    n = histShown().length; n = 'Show ' + n + (n === 1 ? ' entry' : ' entries');
+  } else {
+    body = '<div class="flab">Shifts</div><div class="frow" data-act="fshort"><div class="fbox' + (HY.short ? ' on' : '') + '">' + (HY.short ? '✓' : '') + '</div><span class="grow">Only shifts with a shortage</span></div>';
+    n = histShiftList().length; n = 'Show ' + n + (n === 1 ? ' shift' : ' shifts');
+  }
+  return '<div class="row" style="align-items:center;margin-bottom:6px"><h2 class="grow" style="margin:0">Filter</h2><a class="link" data-act="hclear" style="font-weight:700;cursor:pointer">Clear all</a></div><div class="flab">Show</div><div class="seg" style="grid-template-columns:repeat(' + pers.length + ',1fr);margin-bottom:6px">' + pers.map(function (x) { return '<button data-act="hper" data-v="' + x[0] + '" class="' + (p === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>' + body + '<div class="row" style="margin-top:14px"><button class="btn sec grow" data-act="hshowall">Show all</button><button class="btn grow" data-act="hdone" style="flex:1.4">' + n + '</button></div>';
 }
 function shStatus(d) {
   if (d.status === 'accepted') return d.short > 0 ? '<b style="color:var(--exp)">short ' + money(d.short) + '</b>' : d.over > 0 ? '<b style="color:var(--soon)">over ' + money(d.over) + '</b>' : '<b style="color:var(--ok)">✓ matched</b>';
   return '<b style="color:var(--cnt)">waiting to be taken</b>';
-}
-function histShiftsHtml(docs, evs) {
-  docs.forEach(function (d) { HSD[d.id] = d; });
-  if (HV.id && HSD[HV.id]) return shiftDetailHtml(HSD[HV.id], evs || []);
-  if (HV.view === 'charts') return histTabs('charts') + chartsHtml(docs);
-  var list = docs.filter(function (d) { return !HV.wk || d.wk === HV.wk; }), last = '', out = '';
-  var chips = '<div class="chips" style="margin-bottom:10px">' + [['', 'All']].concat(WATCHES.map(function (w) { return [w, w]; })).map(function (c) { return '<button data-act="hwk" data-v="' + c[0] + '" class="' + (HV.wk === c[0] ? 'on' : '') + '">' + c[1] + '</button>'; }).join('') + '</div>';
-  list.forEach(function (d) {
-    var m = (d.day || '').slice(0, 7), ml = m ? new Date(+m.slice(0, 4), +m.slice(5, 7) - 1, 1).toLocaleDateString([], { month: 'long', year: 'numeric' }) : '';
-    if (ml !== last) { last = ml; out += '<div class="sec-h">' + esc(ml) + '</div>'; }
-    out += '<div data-act="shopen" data-id="' + esc(d.id) + '" style="cursor:pointer;flex-wrap:wrap;align-items:flex-start"><div class="grow"><div>' + wsw(d.wk) + ' <b>' + esc(d.date) + ' ' + esc(HL(d.half)) + '</b></div><div class="muted">' + esc(d.fromName || '') + (d.receivedByName ? ' → ' + esc(d.receivedByName) : d.toLabels && d.toLabels.length ? ' → ' + esc(d.toLabels.join(', ')) : '') + '</div><div class="muted">Sales ' + money(d.sales) + ' · cash ' + money(d.counted) + '</div></div><div style="text-align:right">' + shStatus(d) + '<div class="muted">›</div></div></div>';
-  });
-  return '<h2>History</h2>' + histTabs('shifts') + chips + (list.length ? '<div class="list">' + out + '</div>' : '<div class="empty">No shifts recorded yet. A shift appears here when it is handed over.</div>') + '<p class="muted">Every shift keeps a permanent summary. The detailed entries are kept for about 31 days.</p><button class="btn sec block" data-act="close">Close</button>';
 }
 function shiftDetailHtml(d, evs) {
   var row = function (l, v, c) { return '<div><span>' + l + '</span><b' + (c ? ' style="color:' + c + '"' : '') + '>' + v + '</b></div>'; };
   var rows = d.rows || [], tq = 0, tc = 0;
   var tbl = rows.length ? '<table><tr><th>Item</th><th>Was</th><th>Added</th><th>Sold</th><th>Cash</th><th>Now</th></tr>' + rows.map(function (r) { tq += r.s; tc += r.c; return '<tr><td>' + esc(r.n) + '</td><td>' + r.o + '</td><td>' + (r.a ? '<span style="color:var(--cnt)">+' + r.a + '</span>' : '–') + '</td><td>' + (r.s ? '<span class="pill">' + r.s + '</span>' : '–') + '</td><td>' + (r.c ? '<b style="color:var(--ok)">' + money(r.c) + '</b>' : '–') + '</td><td><b>' + r.w + '</b></td></tr>' + (r.cr || r.sp ? '<tr><td colspan="6" style="border:0;text-align:left;padding-top:0">' + (r.cr ? '<span class="tag cr" style="margin-left:0">' + r.cr + ' on credit</span>' : '') + (r.sp ? '<span class="tag neg">' + r.sp + ' spoiled</span>' : '') + '</td></tr>' : ''); }).join('') + '<tr class="tot"><td colspan="3">Total</td><td><span class="pill">' + tq + '</span></td><td style="color:var(--ok)">' + money(tc) + '</td><td></td></tr></table>' : '<div class="muted">No item details kept for this shift.</div>';
   var tl = (evs || []).slice().sort(function (a, b) { return b.t - a.t; });
-  return '<div class="row" style="margin-bottom:8px"><button class="btn sec sm" data-act="shback">‹ All shifts</button><div class="grow" style="text-align:right">' + shStatus(d) + '</div></div>' +
-    '<h2 style="margin-bottom:2px">' + wsw(d.wk) + ' ' + esc(d.date) + ' ' + esc(HL(d.half)) + '</h2>' +
+  return '<h2>' + wsw(d.wk) + ' ' + esc(d.date) + ' ' + esc(HL(d.half)) + '</h2><div style="margin:0 0 6px">' + shStatus(d) + '</div>' +
     '<div class="muted" style="margin-bottom:10px">' + esc(d.fromName || '') + ' handed over' + (d.at ? ' · ' + new Date(d.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '') + (d.receivedByName ? ' to ' + esc(d.receivedByName) : '') + '</div>' +
     '<div class="card sum"><h2>Cash</h2>' + row('Received from previous handover', money(d.received)) + row('Sales', '+ ' + money(d.sales)) + (d.cr ? row('Sold on credit (not paid)', '− ' + money(d.cr)) : '') + (d.paid ? row('Credit payments received', '+ ' + money(d.paid)) : '') + (d.loans ? row('Cash lent out', '− ' + money(d.loans)) : '') + (d.purch ? row('Purchases', '− ' + money(d.purch)) : '') + (d.used ? row('Cash used', '− ' + money(d.used)) : '') +
     '<div class="t"><span>Expected</span><span>' + money(d.expected) + '</span></div>' + row('Counted by ' + esc(d.fromName || 'the giver'), money(d.counted)) + (d.status === 'accepted' ? row('Counted by ' + esc(d.receivedByName || 'the receiver'), money(d.receivedCash)) : '') +
@@ -1746,7 +1862,7 @@ function shiftDetailHtml(d, evs) {
     '<div class="card"><h2>Sold this shift</h2>' + tbl + '</div>' + handoverLists(d.owedBy, d.openShort) +
     ((d.trail || []).length || (d.fromWatch && d.fromWatch !== d.wk) ? trailHtml(d.trail || [], d.wk) : '') +
     '<div class="card"><h2>Entries (' + tl.length + ')</h2>' + (tl.length ? '<div class="list">' + tl.map(function (e) { return evRow(e, false); }).join('') + '</div>' : '<div class="muted">Detailed entries are kept for about 31 days, then only this summary remains.</div>') + '</div>' +
-    '<button class="btn sec block" data-act="close">Close</button>';
+    '';
 }
 var CALD = {};
 function chBars(rows, color, fmt) {
@@ -1754,9 +1870,9 @@ function chBars(rows, color, fmt) {
   return rows.map(function (r) { return '<div style="margin:10px 0"><div class="row" style="margin-bottom:3px"><span class="grow">' + r.label + '</span><b style="color:' + (r.col || 'var(--ink)') + '">' + fmt(r.v) + '</b></div><div style="height:14px;background:var(--soft);border-radius:7px"><div style="height:14px;width:' + Math.round(100 * r.v / mx) + '%;background:' + color(r) + ';border-radius:7px"></div></div></div>'; }).join('');
 }
 function chartsHtml(docs) {
-  var acc = docs.filter(function (d) { return d.status === 'accepted' && d.day; }), cv = HV.cv || 'score';
-  var tabs = '<div class="seg" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">' + [['score', 'Scoreboard'], ['watch', 'By watch'], ['month', 'This month'], ['cal', 'Calendar']].map(function (x) { return '<button data-act="chv" data-v="' + x[0] + '" class="' + (cv === x[0] ? 'on' : '') + '" style="font-size:11px;padding:0 2px;min-height:36px">' + x[1] + '</button>'; }).join('') + '</div>';
-  if (!acc.length) return '<h2>Charts</h2>' + tabs + '<div class="empty">Nothing to show yet. Charts fill in as shifts are handed over and accepted.</div><button class="btn sec block" data-act="close">Close</button>';
+  var acc = docs.filter(function (d) { return d.status === 'accepted' && d.day; }), cv = HY.cv || 'score';
+  var tabs = '<div class="seg" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">' + [['score', 'Scoreboard'], ['watch', 'By shift'], ['month', 'This month'], ['cal', 'Calendar']].map(function (x) { return '<button data-act="chv" data-v="' + x[0] + '" class="' + (cv === x[0] ? 'on' : '') + '" style="font-size:11px;padding:0 2px;min-height:36px">' + x[1] + '</button>'; }).join('') + '</div>';
+  if (!acc.length) return tabs + '<div class="empty">Nothing to show yet. Charts fill in as shifts are handed over and accepted.</div>';
   var last = acc.map(function (d) { return d.day; }).sort().pop(), endD = new Date(last + 'T12:00:00');
   var since = function (n) { var x = new Date(endD); x.setDate(x.getDate() - n); return x.getFullYear() + '-' + pad(x.getMonth() + 1) + '-' + pad(x.getDate()); };
   var sum = function (l, f) { return l.reduce(function (a, d) { return a + (d[f] || 0); }, 0); };
@@ -1765,13 +1881,13 @@ function chartsHtml(docs) {
     var l4 = acc.filter(function (d) { return d.day > since(28); }), rows = WATCHES.map(function (w) { var l = l4.filter(function (d) { return d.wk === w; }); return { w: w, n: l.length, sales: sum(l, 'sales'), short: sum(l, 'short'), bad: l.filter(function (d) { return d.short > 0; }).length }; });
     var best = rows.slice().sort(function (a, b) { return b.sales - a.sales; })[0], worst = rows.slice().sort(function (a, b) { return b.short - a.short; })[0];
     body = '<div class="card" style="background:var(--cnt-bg);box-shadow:none"><b>Last 4 weeks</b><div style="margin-top:4px;font-size:15px">Sales <b>' + money(sum(l4, 'sales')) + '</b> · Short <b style="color:var(--exp)">' + money(sum(l4, 'short')) + '</b></div><div class="muted" style="margin-top:4px">' + best.w + ' sold the most (' + money(best.sales) + ').' + (worst.short ? ' ' + worst.w + ' was short the most (' + money(worst.short) + ').' : ' No shortages.') + '</div></div>' +
-      '<div class="card"><h2>Sales by watch</h2>' + chBars(rows.map(function (r) { return { label: wsw(r.w) + ' <span class="muted">' + r.n + ' shifts</span>', v: r.sales, w: r.w }; }), function (r) { return WKC[r.w] === '#E9EDF0' ? '#9AA7B2' : WKC[r.w]; }, money) + '</div>' +
-      '<div class="card"><h2>Shortages by watch</h2>' + chBars(rows.map(function (r) { return { label: wsw(r.w) + ' <span class="muted">' + r.bad + ' of ' + r.n + ' shifts short</span>', v: r.short, col: r.short ? 'var(--exp)' : 'var(--ok)' }; }), function () { return 'var(--exp)'; }, money) + '</div>';
+      '<div class="card"><h2>Sales by shift</h2>' + chBars(rows.map(function (r) { return { label: wsw(r.w) + ' <span class="muted">' + r.n + ' shifts</span>', v: r.sales, w: r.w }; }), function (r) { return WKC[r.w] === '#E9EDF0' ? '#9AA7B2' : WKC[r.w]; }, money) + '</div>' +
+      '<div class="card"><h2>Shortages by shift</h2>' + chBars(rows.map(function (r) { return { label: wsw(r.w) + ' <span class="muted">' + r.bad + ' of ' + r.n + ' shifts short</span>', v: r.short, col: r.short ? 'var(--exp)' : 'var(--ok)' }; }), function () { return 'var(--exp)'; }, money) + '</div>';
   } else if (cv === 'watch') {
     var weeks = []; for (var k = 7; k >= 0; k--) weeks.push({ a: since(k * 7 + 6), b: since(k * 7) });
     var val = function (w, x) { return sum(acc.filter(function (d) { return d.wk === w && d.day >= x.a && d.day <= x.b; }), 'sales'); };
     var mx = Math.max.apply(null, [1].concat(WATCHES.map(function (w) { return Math.max.apply(null, weeks.map(function (x) { return val(w, x); })); })));
-    body = '<div class="muted" style="margin-bottom:8px">Sales per week, last 8 weeks. Every watch uses the same scale.</div>' + WATCHES.map(function (w) {
+    body = '<div class="muted" style="margin-bottom:8px">Sales per week, last 8 weeks. Every shift uses the same scale.</div>' + WATCHES.map(function (w) {
       var vs = weeks.map(function (x) { return val(w, x); }), tot = vs.reduce(function (a, c) { return a + c; }, 0), cl = WKC[w] === '#E9EDF0' ? '#9AA7B2' : WKC[w];
       return '<div class="card"><div class="row" style="margin-bottom:6px"><span class="grow">' + wsw(w) + '</span><span class="muted">8 weeks <b style="color:var(--ink)">' + money(tot) + '</b> · avg ' + money(tot / 8) + ' a week</span></div><div style="display:flex;gap:2px">' + vs.map(function (v) { return '<div style="flex:1;text-align:center"><div style="height:70px;display:flex;align-items:flex-end;justify-content:center"><div style="width:70%;height:' + Math.round(64 * v / mx) + 'px;background:' + cl + ';border-radius:3px 3px 0 0"></div></div><div style="font-size:10px">' + (v ? '$' + Math.round(v) : '') + '</div></div>'; }).join('') + '</div><div style="display:flex;gap:2px;font-size:10px;color:var(--muted)">' + weeks.map(function (x) { return '<div style="flex:1;text-align:center">' + x.a.slice(8, 10) + '/' + x.a.slice(5, 7) + '</div>'; }).join('') + '</div></div>';
     }).join('');
@@ -1784,12 +1900,12 @@ function chartsHtml(docs) {
   } else {
     body = calHtml(acc, endD);
   }
-  return '<h2>Charts</h2>' + tabs + body + '<button class="btn sec block" data-act="close">Close</button>';
+  return tabs + body;
 }
 function dayParts(D) { return CFG.periods.map(function (pd) { return D[pd.key]; }); }
 function calHtml(acc, endD) {
   var days = {}; acc.forEach(function (d) { (days[d.day] = days[d.day] || {})[d.half] = d; }); CALD = days;
-  var first = new Date(endD.getFullYear(), endD.getMonth() - (HV.cm || 0), 1), y = first.getFullYear(), m = first.getMonth(), nd = new Date(y, m + 1, 0).getDate(), off = (first.getDay() + 6) % 7;
+  var first = new Date(HY.dt.getFullYear(), HY.dt.getMonth(), 1), y = first.getFullYear(), m = first.getMonth(), nd = new Date(y, m + 1, 0).getDate(), off = (first.getDay() + 6) % 7;
   var short = function (x) { return x && x.short > 0; }, nDays = 0, nShortDays = 0, nT = 0, nS = 0, tS = 0;
   for (var q = 1; q <= nd; q++) { var D = days[y + '-' + pad(m + 1) + '-' + pad(q)]; if (D) { nDays++; if (dayParts(D).some(short)) nShortDays++; dayParts(D).forEach(function (x) { if (x) { nT++; if (short(x)) { nS++; tS += x.short; } } }); } }
   var FR = nDays ? nShortDays / nDays : 0, ol = 'paint-order:stroke fill;-webkit-text-stroke:1.2px rgba(10,16,22,.8);', cells = '';
@@ -1798,15 +1914,15 @@ function calHtml(acc, endD) {
   for (var i = 0; i < off; i++) cells += '<div></div>';
   for (var dd = 1; dd <= nd; dd++) {
     var key = y + '-' + pad(m + 1) + '-' + pad(dd), DD = days[key] || {}, pp = dayParts(DD), have = pp.some(function (x) { return x; }), raised = pp.some(short), sc = raised ? (1.14 - 0.14 * FR) : (0.82 + 0.12 * FR), op = raised ? 1 : (0.65 + 0.15 * FR);
-    cells += '<div ' + (have ? 'data-act="caday" data-id="' + key + '" ' : '') + 'style="position:relative;height:54px;border-radius:9px;overflow:hidden;' + (have ? 'cursor:pointer;' : '') + 'background:linear-gradient(135deg,' + pp.map(function (x, q2) { return colr(x) + ' ' + (q2 * 100 / pp.length) + '% ' + ((q2 + 1) * 100 / pp.length) + '%'; }).join(',') + ');transform:scale(' + sc.toFixed(3) + ');' + (raised ? 'z-index:3;box-shadow:0 7px 14px rgba(8,18,28,.42),0 2px 4px rgba(8,18,28,.35);' : 'opacity:' + op.toFixed(2) + ';') + '">' + pp.map(function (x, q2) { return mark(x, raised, q2 === 0 ? 'left:4px;top:3px;' : q2 === pp.length - 1 ? 'right:4px;bottom:3px;' : 'right:4px;top:3px;'); }).join('') + '<span style="position:absolute;z-index:2;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font-size:13px;font-weight:700;color:#fff;pointer-events:none;' + ol + '">' + dd + '</span></div>';
+    cells += '<div data-act="caday" data-id="' + key + '" style="position:relative;height:54px;border-radius:9px;overflow:hidden;cursor:pointer;' + 'background:linear-gradient(135deg,' + pp.map(function (x, q2) { return colr(x) + ' ' + (q2 * 100 / pp.length) + '% ' + ((q2 + 1) * 100 / pp.length) + '%'; }).join(',') + ');transform:scale(' + sc.toFixed(3) + ');' + (raised ? 'z-index:3;box-shadow:0 7px 14px rgba(8,18,28,.42),0 2px 4px rgba(8,18,28,.35);' : 'opacity:' + op.toFixed(2) + ';') + '">' + pp.map(function (x, q2) { return mark(x, raised, q2 === 0 ? 'left:4px;top:3px;' : q2 === pp.length - 1 ? 'right:4px;bottom:3px;' : 'right:4px;top:3px;'); }).join('') + '<span style="position:absolute;z-index:2;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font-size:13px;font-weight:700;color:#fff;pointer-events:none;' + ol + '">' + dd + '</span></div>';
   }
   var sw = function (w) { return '<span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:' + WKC[w] + ';border:1px solid rgba(0,0,0,.2);margin-right:4px;vertical-align:-1px"></span>' + w; };
-  return '<div class="card"><div class="row" style="margin-bottom:8px"><button class="btn sec sm" data-act="calm" data-v="1">◀</button><b class="grow" style="text-align:center">' + first.toLocaleDateString([], { month: 'long', year: 'numeric' }) + '</b><button class="btn sec sm" data-act="calm" data-v="-1"' + ((HV.cm || 0) <= 0 ? ' disabled' : '') + '>▶</button></div>' +
+  return '<div class="card">' +
     '<div class="muted" style="margin-bottom:8px">' + nT + ' shifts · <b style="color:' + (nS ? 'var(--exp)' : 'var(--ok)') + '">' + nS + ' short</b> · ' + money(tS) + ' short in total</div>' +
     '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px">' + ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(function (x) { return '<div style="font-size:10px;text-align:center;color:var(--muted)">' + x + '</div>'; }).join('') + '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:' + (FR > 0.85 ? '3px' : '6px 4px') + ';padding:6px 3px 8px">' + cells + '</div>' +
     '<div class="muted" style="margin-top:6px">' + WATCHES.map(sw).join('&nbsp; ') + '</div>' +
-    '<div class="muted" style="margin-top:6px">Each day is split from the top-left corner to the bottom-right: ' + CFG.periods.map(function (pd) { return '<b style="color:var(--ink)">' + esc(pd.label) + '</b>'; }).join(', then ') + ', in the colour of the watch that worked it. <b style="color:#12B552">✓</b> matched, <b style="color:var(--exp)">-$49</b> = $49 short. Days with a shortage stand out, larger and raised. Tap a day for details.</div></div>';
+    '<div class="muted" style="margin-top:6px">Each day is split from the top-left corner to the bottom-right: ' + CFG.periods.map(function (pd) { return '<b style="color:var(--ink)">' + esc(pd.label) + '</b>'; }).join(', then ') + ', in the colour of the watch that worked it. <b style="color:#12B552">✓</b> matched, <b style="color:var(--exp)">-$49</b> = $49 short. Days with a shortage stand out, larger and raised. Tap any day to see its shifts.</div></div>';
 }
 function calDay(key) {
   var D = CALD[key] || {}, d = new Date(key + 'T12:00:00');
@@ -1814,11 +1930,7 @@ function calDay(key) {
     if (!x) return '<div class="card" style="box-shadow:none;background:var(--soft)"><b>' + lab + '</b><div class="muted">No shift recorded.</div></div>';
     return '<div class="card" style="box-shadow:none;background:var(--soft)"><div class="row"><b class="grow">' + lab + ' · ' + wsw(x.wk) + '</b><b style="color:' + (x.short > 0 ? 'var(--exp)' : 'var(--ok)') + '">' + (x.short > 0 ? 'short ' + money(x.short) : '✓ matched') + '</b></div><div class="muted" style="margin:4px 0 6px">' + esc(x.fromName || '') + (x.receivedByName ? ' → ' + esc(x.receivedByName) : '') + '</div><div class="sum" style="box-shadow:none"><div><span>Sales</span><b>' + money(x.sales) + '</b></div><div><span>Cash expected</span><b>' + money(x.expected) + '</b></div><div><span>Cash counted</span><b>' + money(x.receivedCash) + '</b></div>' + (x.short > 0 ? '<div><span>Total short</span><b style="color:var(--exp)">$' + (Math.round(x.short * 100) / 100) + '</b></div>' : '') + '</div><button class="btn sec sm block" style="margin-top:8px" data-act="shopen2" data-id="' + esc(x.id || x.sid) + '">Open this shift ›</button></div>';
   };
-  modal('<h2>' + d.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' }) + '</h2>' + CFG.periods.map(function (pd) { return one(D[pd.key], pd.label + ' shift'); }).join('') + '<button class="btn sec block" data-act="hv" data-v="charts">‹ Back to the calendar</button>');
-}
-function histModal() {
-  var now = new Date(), day = new Date(now.getFullYear(), now.getMonth(), now.getDate() - HD), a = day.getTime(), b = a + 864e5;
-  CM = false; liveModal(query(col('events'), where('t', '>=', a), where('t', '<', b)), function (docs) { return histHtml(docs, day); });
+  modal('<h2>' + d.getDate() + ' ' + d.toLocaleDateString('en-GB', { month: 'long' }) + ' ' + d.getFullYear() + '</h2>' + (CFG.periods.some(function (pd) { return D[pd.key]; }) ? CFG.periods.map(function (pd) { return one(D[pd.key], pd.label + ' shift'); }).join('') : '<div class="empty">No records for this day.</div>') + '<button class="btn sec block" data-act="close">Close</button>');
 }
 function cancelAsk(id) {
   var e = S.log.filter(function (x) { return x.id === id; })[0]; if (!e) return toast('Only entries from this shift can be cancelled');
@@ -2091,7 +2203,7 @@ function shareText() {
   else toast('Copy not supported here');
 }
 var RXV = null;   /* what the receiver has typed so far, kept when the pop-up redraws */
-function rxKeep() { if (!RX || !$('#rx-cash')) return; RXV = { cash: $('#rx-cash').value, c: {}, g: {} }; RX.items.forEach(function (i, k) { if ($('#rx-c' + k)) RXV.c[k] = $('#rx-c' + k).value; if ($('#rx-g' + k)) RXV.g[k] = $('#rx-g' + k).value; }); }
+function rxKeep() { if (!RX || !$('#rx-cash')) return; var o = RXV || {}; RXV = { cash: $('#rx-cash').value, c: Object.assign({}, o.c), g: Object.assign({}, o.g), x: o.x || {}, xo: !!o.xo };   /* a value set by the page itself (an extra item) survives too */ RX.items.forEach(function (i, k) { if ($('#rx-c' + k)) RXV.c[k] = $('#rx-c' + k).value; if ($('#rx-g' + k)) RXV.g[k] = $('#rx-g' + k).value; }); }
 function cageName(n, unit) { return esc(n) + ' <span class="muted" style="font-weight:400">(' + esc(unit || 'case') + ')</span>'; }
 function cageCmp(recs, big) {   /* the cage / storage, in two sections by where things go: fridge and shelf. rec: n, unit, shelf, m (moved out), was, now, tg (tags html) */
   var sec = function (title, head, list) { return list.length ? '<h3 style="margin:12px 0 4px;font-size:14px">' + title + '</h3><table class="cmp">' + CMPCOLS + '<tr><th>Item</th><th>' + head + '</th><th>Was</th><th></th><th>Now</th></tr>' + list.map(function (r) { return '<tr><td>' + cageName(r.n, r.unit) + '</td><td>' + (r.m || '') + '</td><td>' + r.was + '</td><td>' + (r.was !== r.now ? '→' : '') + '</td><td><b>' + r.now + '</b></td></tr>' + (r.tg ? '<tr><td colspan="5" style="border:0;text-align:left;padding-top:0">' + r.tg + '</td></tr>' : ''); }).join('') + '</table>' : ''; };
@@ -2099,7 +2211,7 @@ function cageCmp(recs, big) {   /* the cage / storage, in two sections by where 
   return (sec('Cage → Fridge', 'Moved to fridge', f) + sec('Cage → Shelf', 'Moved to shelf', sh)) || '<div class="muted">No items.</div>';
 }
 var CMPCOLS = '<colgroup><col style="width:33%"><col style="width:25%"><col style="width:14%"><col style="width:10%"><col style="width:18%"></colgroup>';   /* the same column widths in every Sold / Was / Now table, so they line up */
-var RXSTEP = 0;   /* 0 = the list of what was sold, 1 = the counts */
+var RXSTEP = 0, RXFLIP = false;   /* RXFLIP: the page changes (list <-> counts), so it starts at the top */   /* 0 = the list of what was sold, 1 = the counts */
 function rxHasDetail(h) { return (h.items || []).some(function (i) { return typeof i.open === 'number'; }); }
 function rxOnList(h) { return RXSTEP === 0 && rxHasDetail(h); }
 function docRows(h, RM) {   /* the rows of a handover, in the same shape as the Handover tab: older handovers only kept sold, credit and spoiled, so the rest is worked out */
@@ -2142,22 +2254,40 @@ function rxMissing() {   /* the first count box that is still empty; every count
   ids.forEach(function (id) { var e = $('#' + id); if (e) e.style.borderColor = bad.indexOf(id) >= 0 ? 'var(--exp)' : ''; });
   return bad.length ? $('#' + bad[0]) : null;
 }
+function rxShow(v, p, k, i) { return (p === 'g' ? i.cage : i.stock) > 0 || !!(v.x && v.x[p + k]); }   /* an item handed over as 0 is not counted, unless the receiver found some */
+function rxCard(h, v, kind) {   /* the fridge, shelf or cage count boxes */
+  var g = kind === 'cage', p = g ? 'g' : 'c', vals = g ? v.g : v.c;
+  var rows = h.items.map(function (i, k) {
+    if (g ? !itStore(i) : (kind === 'shelf') !== !!i.shelf) return '';
+    if (!rxShow(v, p, k, i)) return '';
+    return '<tr><td>' + (g ? cageName(i.name, i.unit) : esc(i.name)) + '</td><td>' + (g ? i.cage : i.stock) + '</td><td><input id="rx-' + p + k + '" enterkeyhint="next" type="number" inputmode="numeric" min="0" value="' + esc(vals[k] != null ? vals[k] : '') + '" placeholder="count" style="width:76px;height:38px;text-align:right"></td></tr>';
+  }).join('');
+  return rows ? '<div class="card"><h2>Check the ' + kind + ' <b style="color:var(--exp)">*</b></h2><table><tr><th>Item</th><th>Handed over</th><th>Your count</th></tr>' + rows + '</table></div>' : '';
+}
+function rxHidden(h, v) {   /* the places that were handed over as 0 and are not listed */
+  var out = []; h.items.forEach(function (i, k) { if (!rxShow(v, 'c', k, i)) out.push(['c' + k, esc(i.name) + (i.shelf ? ' (shelf)' : ' (fridge)')]); if (itStore(i) && !rxShow(v, 'g', k, i)) out.push(['g' + k, esc(i.name) + ' (cage)']); });
+  return out;
+}
+function rxExtraCard(h, v) {
+  var hid = rxHidden(h, v); if (!hid.length) return '';
+  if (v.xo) return '<div class="card"><h2>Found something extra?</h2><div class="muted" style="margin:-6px 0 8px">Pick an item that was handed over as 0 and enter how many you found.</div><div class="f"><label>Item</label><select id="rxx-sel">' + hid.map(function (x) { return '<option value="' + x[0] + '">' + x[1] + '</option>'; }).join('') + '</select></div><div class="f"><label>How many found</label><input id="rxx-n" type="number" inputmode="numeric" min="1" placeholder="0"></div><div class="row"><button class="btn sec grow" data-act="rxxno">Cancel</button><button class="btn grow" data-act="rxxadd">Add to my count</button></div></div>';
+  return '<div class="card" style="box-shadow:none"><div class="muted">' + hid.length + (hid.length === 1 ? ' item' : ' items') + ' handed over as 0 ' + (hid.length === 1 ? 'is' : 'are') + ' not listed.</div><button class="btn sec sm" data-act="rxxopen" style="margin-top:8px">Found something extra? ›</button></div>';
+}
 function showRx(keep) {
   var h = S.hand; if (!h) return;
   if (keep) rxKeep(); else { RXV = null; RXSTEP = 0; RXTAB = 'fridge'; }
-  RX = h; var v = RXV || { cash: '', c: {}, g: {} };
+  RX = h; var v = RXV || { cash: '', c: {}, g: {}, x: {}, xo: false };
+  var stay = keep === true && !RXFLIP; RXFLIP = false;
   wpPage(showRx, [true], '<h2>' + (h.locked ? '🔒 Locked handover' : h.same ? 'Handover within the shift' : 'Handover received') + '</h2>' + (h.same ? '<div class="card" style="background:var(--soon-bg);box-shadow:none"><b>Same shift</b><div style="margin-top:4px">This hand over is inside the ' + esc(h.shift.name) + ' shift, so the shift keeps going. Count what is here. Any difference is recorded against the shift, and the sales, credit and totals carry on until the shift is handed over to the next one.</div></div>' : '') + (h.locked ? '<div class="card" style="background:var(--soon-bg)"><b>Fridge and cage were locked.</b> Open them and check everything below before accepting.</div>' : '') +
     '<div class="card sum"><div><span>From</span><b>' + esc(hnl(h.fromName, h.fromEmail)) + (h.fromWatch ? '<div class="muted" style="font-weight:500">' + esc(h.fromWatch) + ' watch' + (h.fromWatch !== h.shift.name ? ' · visiting, the ' + esc(h.shift.name) + ' watch was on duty' : '') + '</div>' : '') + '</b></div><div><span>Handed over</span><b>' + new Date(h.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (no one in particular)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Shift</span><b>' + esc(h.shift.name) + ' · ' + esc(h.shift.date) + ' ' + esc(HL(h.shift.half)) + '</b></div><div><span>Sales</span><b>' + money(h.sales) + '</b></div>' + (typeof h.sold === 'number' ? '<div><span>Total items sold</span><b>' + h.sold + '</b></div>' : '') + (typeof h.computed === 'number' && r2(h.computed - h.cash) > 0 ? '<div><span>Cash short when counted</span><b style="color:var(--exp)">' + money(r2(h.computed - h.cash)) + '</b></div>' : '') + (typeof h.computed === 'number' && r2(h.cash - h.computed) > 0 ? '<div><span>Cash over when counted</span><b style="color:var(--soon)">' + money(r2(h.cash - h.computed)) + '</b></div>' : '') + '</div>' +
     (rxOnList(h) ? rxDetail(h) + '<button class="btn block" data-act="rxcheck">Check items</button><button class="btn sec block" data-act="close" style="margin-top:10px">Not now</button>' : (rxHasDetail(h) ? '<button class="btn sec sm" data-act="rxlist" style="margin-bottom:10px">‹ See what was sold again</button>' : '') + '<div class="card" style="background:var(--soon-bg);box-shadow:none"><b><span style="color:var(--exp)">*</span> Counting is required</b><div class="muted" style="color:inherit">Count the cash and every item below. You can accept once everything is counted.</div></div>' +
     '<div class="card"><h2>Check the cash <b style="color:var(--exp)">*</b></h2><table><tr><th>Item</th><th>Handed over</th><th>Your count</th></tr><tr><td>Cash</td><td style="font-size:17px;font-weight:600">' + money(h.cash) + '</td><td><div class="ig" style="width:112px;margin-left:auto;height:40px"><i>$</i><input id="rx-cash" enterkeyhint="next" type="number" inputmode="decimal" value="' + esc(v.cash) + '" style="text-align:right"></div></td></tr></table></div>' +
-    '<div class="card"><h2>Check the fridge <b style="color:var(--exp)">*</b></h2><table><tr><th>Item</th><th>Handed over</th><th>Your count</th></tr>' + h.items.map(function (i, k) { return i.shelf ? '' : '<tr><td>' + esc(i.name) + '</td><td>' + i.stock + '</td><td><input id="rx-c' + k + '" enterkeyhint="next" type="number" inputmode="numeric" min="0" value="' + esc(v.c[k] != null ? v.c[k] : '') + '" placeholder="count" style="width:76px;height:38px;text-align:right"></td></tr>'; }).join('') + '</table></div>' +
-    (h.items.some(function (i) { return i.shelf; }) ? '<div class="card"><h2>Check the shelf <b style="color:var(--exp)">*</b></h2><table><tr><th>Item</th><th>Handed over</th><th>Your count</th></tr>' + h.items.map(function (i, k) { return !i.shelf ? '' : '<tr><td>' + esc(i.name) + '</td><td>' + i.stock + '</td><td><input id="rx-c' + k + '" enterkeyhint="next" type="number" inputmode="numeric" min="0" value="' + esc(v.c[k] != null ? v.c[k] : '') + '" placeholder="count" style="width:76px;height:38px;text-align:right"></td></tr>'; }).join('') + '</table></div>' : '') +
-    (h.items.some(itStore) ? '<div class="card"><h2>Check the cage <b style="color:var(--exp)">*</b></h2><table><tr><th>Item</th><th>Handed over</th><th>Your count</th></tr>' + h.items.map(function (i, k) { return !itStore(i) ? '' : '<tr><td>' + cageName(i.name, i.unit) + '</td><td>' + i.cage + '</td><td><input id="rx-g' + k + '" enterkeyhint="next" type="number" inputmode="numeric" min="0" value="' + esc(v.g[k] != null ? v.g[k] : '') + '" placeholder="count" style="width:76px;height:38px;text-align:right"></td></tr>'; }).join('') + '</table></div>' : '') +
+    rxCard(h, v, 'fridge') + rxCard(h, v, 'shelf') + rxCard(h, v, 'cage') + rxExtraCard(h, v) +
     ((h.trail || []).length ? trailHtml(h.trail, h.shift.name, h.fromName, h.fromWatch) : '') + editsCard(h.edits) + (rxHasDetail(h) ? '' : rxCredit(h)) + handoverLists(h.owedBy, h.openShort) +
     (h.notes ? '<div class="card"><label>Remarks</label>' + esc(h.notes) + '</div>' : '') +
     (h.sig ? '<div class="card"><label>Signed by ' + esc(hnl(h.fromName, h.fromEmail)) + '</label><img class="sigimg" src="' + h.sig + '" alt="signature"></div>' : '') +
     sigCard('Your signature (receiving)') +
-    '<button class="btn green block" data-act="rxaccept">Accept &amp; take control</button><button class="btn sec block" data-act="close" style="margin-top:10px">Not now</button>'));
+    '<button class="btn green block" data-act="rxaccept">Accept &amp; take control</button><button class="btn sec block" data-act="close" style="margin-top:10px">Not now</button>'), stay);
 }
 function rxAccept() { try { rxAccept2(); } catch (e) { console.error(e); toast('Could not accept: ' + (e && e.message ? e.message : e)); } }
 function rxAccept2() {
@@ -2170,7 +2300,7 @@ function rxAccept2() {
     ns = same ? Object.assign({}, cur, { received: r2((cur.received || 0) + cashC - expC0), counted: '', mode: 'person', tos: [] }) : newShift(c0, cashC), b = writeBatch(DB); DAYQ = []; ns.prevEmail = h.fromEmail || ''; ns.prevName = h.fromName || '';   /* a same-shift handover keeps the shift: same id, the cash count difference goes into what the shift started with */
   h.items.forEach(function (i, k) {
     var it = item(i.id); if (!it) return;
-    var c = Math.max(0, Math.floor(num($('#rx-c' + k).value))), g = itStore(i) ? Math.max(0, Math.floor(num($('#rx-g' + k).value))) : 0;
+    var c = $('#rx-c' + k) ? Math.max(0, Math.floor(num($('#rx-c' + k).value))) : 0, g = itStore(i) && $('#rx-g' + k) ? Math.max(0, Math.floor(num($('#rx-g' + k).value))) : 0;   /* an item handed over as 0 has no box: counted as 0 */
     if (c !== i.stock) { diffs.push(i.name + ': counted ' + c + ', handover said ' + i.stock); rawEv(b, { t: Date.now(), type: 'adjust', item: i.id, items: [i.id], name: i.name, qty: c - i.stock, amt: 0, sid: ns.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: h.shift.name, ho: true, dly: 1, day: sday, cogs: c < i.stock ? r2((i.stock - c) * (it.cost || 0)) : 0 }); }
     if (g !== i.cage) { diffs.push(i.name + ' (cage): counted ' + g + ' ' + unitPl(i.unit || 'case', 2) + ', handover said ' + i.cage); rawEv(b, { t: Date.now(), type: 'cageadj', item: i.id, items: [i.id], name: i.name, qty: g - i.cage, amt: 0, sid: ns.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: h.shift.name, ho: true, dly: 1, day: sday, cogs: g < i.cage ? r2((i.cage - g) * per(it) * (it.cost || 0)) : 0 }); }
     RI[i.id] = { stock: c, cage: g };
@@ -2382,14 +2512,16 @@ async function resetApp() {
 /* ---------- Settings: a full page. The account bubble on top, everything else as rows below it; each row opens its own page or sheet ---------- */
 function spRow(ic, title, sub, act, extra) { return '<div class="sp-row' + (extra || '') + '" data-act="' + act + '"><i class="sp-ic">' + ic + '</i><div class="grow"><b>' + title + '</b><div class="muted">' + sub + '</div></div><span class="sp-ch">›</span></div>'; }
 var WPS = [];   /* the pages opened one on top of the other inside the full-screen page, like a phone's back stack */
-function wpPage(fn, args, html) {   /* show a full-screen page; going back returns to the page before it */
+function wpPage(fn, args, html, keepScroll, right) {   /* show a full-screen page; going back returns to the page before it */
   var m = /^<h2[^>]*>([\s\S]*?)<\/h2>/.exec(html), title = m ? m[1] : 'Settings', body = m ? html.slice(m[0].length) : html, pg = $('#spage');
   if ($('#modal').innerHTML) { var rx0 = RX; closeModal(); RX = rx0; }
+  var oldBody = pg.querySelector('.sp-body'), oldTop = keepScroll && oldBody ? oldBody.scrollTop : 0;
   var at = -1; WPS.forEach(function (e, i) { if (e.mode === 'page' && e.fn === fn) at = i; });
   if (at >= 0) { WPS.length = at + 1; WPS[at].args = args; } else WPS.push({ mode: 'page', fn: fn, args: args });
   SPMODE = 'page'; if (pg.hidden) { pg.hidden = false; document.body.classList.add('spo'); }
-  pg.innerHTML = '<div class="sp-top"><button data-act="wpback" aria-label="Back">‹</button><b>' + title + '</b></div><div class="sp-body">' + body + '</div>';
-  var sb = pg.querySelector('.sp-body'); if (sb) sb.scrollTop = 0;
+  if (HUN && fn !== histPage && fn !== histShiftPage) histStop();
+  pg.innerHTML = '<div class="sp-top' + (right ? ' hasr' : '') + '"><button data-act="wpback" aria-label="Back">‹</button><b>' + title + '</b>' + (right || '') + '</div><div class="sp-body">' + body + '</div>';
+  var sb = pg.querySelector('.sp-body'); if (sb) sb.scrollTop = oldTop;   /* a tab or a signature on the same page keeps the scroll where it was */
   hsync();
 }
 function wpBack() {
@@ -2400,7 +2532,7 @@ function wpBack() {
 }
 var SPMODE = '';   /* 'places' = the full Workplaces page inside the settings page */
 function spOpen() { WPS = [{ mode: 'settings' }]; $('#spage').hidden = false; document.body.classList.add('spo'); spRender(); hsync(); }
-function spClose() { SPMODE = ''; WPS = []; RX = null; $('#spage').hidden = true; document.body.classList.remove('spo'); $('#spage').innerHTML = ''; hsync(); }
+function spClose() { histStop(); SPMODE = ''; WPS = []; RX = null; $('#spage').hidden = true; document.body.classList.remove('spo'); $('#spage').innerHTML = ''; hsync(); }
 function spRender() {
   var pg = $('#spage'); if (pg.hidden) return;
   if (SPMODE === 'page') return;   /* a workplace page keeps what it shows until you move on */
@@ -3455,7 +3587,7 @@ document.addEventListener('click', function (e) {
   if (hid === 'menu') return settings();
   if (hid === 'bell') return noticesModal();
   if (e.target.id === 'inst') return installApp();
-  if (hid === 'hist') { HD = 0; HV.id = null; return histOpen(HV.view === 'day' ? 'shifts' : HV.view); }
+  if (hid === 'hist') return histOpen();
   if (hid === 'prof') { PF = { mode: 'day', off: 0 }; return profitModal(); }
   if (e.target.id === 'mbg') { if (M && !M.personId && !isPres() && $('#who-q, [data-np]')) return; return closeModal(); }
   var b = e.target.closest('[data-act]'); if (!b) return;
@@ -3483,9 +3615,13 @@ document.addEventListener('click', function (e) {
   else if (a === 'pfmode') { PF.mode = b.dataset.v; PF.off = 0; profitModal(); }
   else if (a === 'pfprev') { PF.off++; profitModal(); }
   else if (a === 'shview') shDetail(id);
-  else if (a === 'repayform') repayForm();
-  else if (a === 'rpwk') { RP.wk = b.dataset.v; repayForm(); }
+  else if (a === 'payopen') payOpen(id);
+  else if (a === 'owedetail') owedDetail(id);
+  else if (a === 'rpwk') { var ox = openShortList().filter(function (x) { return x.wk === b.dataset.v; })[0]; if (!ox || !RP) return; RP.wk = ox.wk; RP.amount = String(ox.owed); b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); $('#rp-amt').value = RP.amount; $('#rp-owes').textContent = money(ox.owed); }
   else if (a === 'rpgo') repayGo();
+  else if (a === 'rxxopen') { rxKeep(); if (RXV) RXV.xo = true; showRx(true); }
+  else if (a === 'rxxno') { rxKeep(); if (RXV) RXV.xo = false; showRx(true); }
+  else if (a === 'rxxadd') { var xk = $('#rxx-sel') ? $('#rxx-sel').value : '', xn = Math.floor(num($('#rxx-n') ? $('#rxx-n').value : 0)); if (!xk) return; if (!(xn > 0)) return toast('Enter how many you found'); rxKeep(); RXV.x[xk] = true; RXV.xo = false; (xk[0] === 'g' ? RXV.g : RXV.c)[xk.slice(1)] = String(xn); showRx(true); }
   else if (a === 'pfnext') { if (PF.off > 0) PF.off--; profitModal(); }
   else if (a === 'toastundo') { $('#toast').classList.remove('show'); cancelEvent(id, 'Undo', true); }
   else if (a === 'cyes') { var f = CONF; CONF = null; var c1 = $('#cf'); if (c1) c1.remove(); if (f) f(); }
@@ -3509,7 +3645,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'shreqno') guard(updateDoc(ref('shiftreqs/' + id), { status: 'declined' }));
   else if (a === 'startover') startOverAsk();
   else if (a === 'sovgo') startOverGo(b.dataset.v === 'all');
-  else if (a === 'cmtog') { CM = !CM; var bx = $('#modal .modal > div'); if (bx && LASTV) bx.innerHTML = LASTV(); }
+  else if (a === 'cmtog') { CM = !CM; if (histIsOpen()) histDraw(); else { var bx = $('#modal .modal > div'); if (bx && LASTV) bx.innerHTML = LASTV(); } }
   else if (a === 'pkw') { PK.w = b.dataset.w; document.querySelectorAll('#pk-chips button').forEach(function (x) { x.classList.toggle('on', x.dataset.w === PK.w); }); $('#pk-list').innerHTML = pickerList($('#pk-q').value); }
   else if (a === 'pkpick') pickParty(id);
   else if (a === 'pkadd') { var nm = $('#pk-q').value.trim(); if (nm) ngForm(nm); }
@@ -3531,7 +3667,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'oshwk') { OP.sh[+b.dataset.i].wk = b.dataset.v; opForm(); }
   else if (a === 'mbrolep') { if (b.disabled) return; $('#mb-role').value = b.dataset.v; b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); }
   else if (a === 'gmpick') { $('#g-into').value = id; $('#gm-chosen').innerHTML = 'Merge into <b>' + esc(plab(id)) + '</b>'; $('#gm-list').querySelectorAll('[data-act=gmpick]').forEach(function (x) { x.style.background = x.dataset.id === id ? 'var(--cnt-bg)' : ''; }); }
-  else if (a === 'shrepay') { RP = { wk: (HSH[id] || {}).wk || '', amount: '', note: '', by: '' }; repayForm(); }
+  else if (a === 'shrepay') payOpen((HSH[id] || {}).wk || '');
   else if (a === 'shfix') { FX = null; shFixForm(id); }
   else if (a === 'shfixgo') shFixGo(id);
   else if (a === 'notices') noticesModal();
@@ -3644,9 +3780,9 @@ document.addEventListener('click', function (e) {
   else if (a === 'shareapp') shareApp();
   else if (a === 'openrx') showRx();
   else if (a === 'rxaccept') rxAccept();
-  else if (a === 'rxcheck') { RXSTEP = 1; showRx(true); }
+  else if (a === 'rxcheck') { RXSTEP = 1; RXFLIP = true; showRx(true); }
   else if (a === 'rxtab') { RXTAB = b.dataset.v; showRx(true); }
-  else if (a === 'rxlist') { rxKeep(); RXSTEP = 0; showRx(true); }
+  else if (a === 'rxlist') { rxKeep(); RXSTEP = 0; RXFLIP = true; showRx(true); }
   else if (a === 'copy') shareText();
   else if (a === 'print') window.print();
   else if (a === 'close') { if ($('#modal').innerHTML) closeModal(); else if (!$('#spage').hidden) spClose(); }
@@ -3657,16 +3793,20 @@ document.addEventListener('click', function (e) {
   else if (a === 'pasthos') pastHandovers();
   else if (a === 'install') installApp();
   else if (a === 'settings') { if (!$('#spage').hidden) closeModal(); else spOpen(); }
-  else if (a === 'hv') histOpen(b.dataset.v);
-  else if (a === 'hwk') { HV.wk = b.dataset.v; histOpen(); }
-  else if (a === 'shopen') { HV.id = id; histOpen(); }
-  else if (a === 'shback') { HV.id = null; histOpen(); }
-  else if (a === 'chv') { HV.cv = b.dataset.v; histOpen(); }
-  else if (a === 'calm') { HV.cm = Math.max(0, (HV.cm || 0) + (+b.dataset.v)); histOpen(); }
+  else if (a === 'hytab') { HY.tab = b.dataset.v; if (HY.tab === 'all' && HY.per === 'year') HY.per = 'month'; histPage(); var hb = $('#spage .sp-body'); if (hb) hb.scrollTop = 0; }
+  else if (a === 'hstep') { histStep(+b.dataset.v); histGo(); }
+  else if (a === 'htoday') { HY.dt = histNoon(new Date()); histGo(); }
+  else if (a === 'hwk') { HY.wk = b.dataset.v; histDraw(); }
+  else if (a === 'hmonth') { HY.per = 'month'; HY.dt = histNoon(new Date(+id.slice(0, 4), +id.slice(5, 7) - 1, 1)); histDraw(true); }
+  else if (a === 'chv') { HY.cv = b.dataset.v; histDraw(); }
   else if (a === 'caday') calDay(id);
-  else if (a === 'shopen2') { HV.view = 'shifts'; HV.id = id; histOpen(); }
-  else if (a === 'hprev') { HD++; histModal(); }
-  else if (a === 'hnext') { if (HD > 0) HD--; histModal(); }
+  else if (a === 'shopen' || a === 'shopen2') histShift(id);
+  else if (a === 'hfilter') { modal('<div id="hfs">' + histSheetHtml() + '</div>'); }
+  else if (a === 'hper') { HY.per = b.dataset.v; histGo(); }
+  else if (a === 'ftog') { HY.types[b.dataset.v] = !HY.types[b.dataset.v]; histDraw(); }
+  else if (a === 'fshort') { HY.short = !HY.short; histDraw(); }
+  else if (a === 'hclear' || a === 'hshowall') { HY.types = {}; HY.short = false; HY.per = 'day'; HY.wk = ''; histGo(); if (a === 'hshowall') closeModal(); }
+  else if (a === 'hdone') closeModal();
   else if (a === 'hlist') hlist();
   else if (a === 'hcopy') { var tx = S._hl[+b.dataset.i].text; if (navigator.clipboard) navigator.clipboard.writeText(tx).then(function () { toast('Copied'); }); }
   else if (a === 'people') peopleEditor();
@@ -3883,6 +4023,14 @@ document.addEventListener('keydown', function (e) {   /* the Enter key on the ph
   }
 });
 document.addEventListener('change', function (e) {
+  if (e.target.classList && e.target.classList.contains('hpick')) {   /* the date, month or year picked in History */
+    var pv = e.target.value, pq = pv.split('-');
+    if (e.target.tagName === 'SELECT') HY.dt = histNoon(new Date(+pv, HY.dt.getMonth(), 1));
+    else if (pq.length === 3) HY.dt = histNoon(new Date(+pq[0], +pq[1] - 1, +pq[2]));
+    else if (pq.length === 2) HY.dt = histNoon(new Date(+pq[0], +pq[1] - 1, 1));
+    else return;
+    histGo(); return;
+  }
   if (e.target.dataset && e.target.dataset.wz && WZ) { wzInput(e.target); return; }
   if (e.target.dataset && e.target.dataset.ws && WS) { wsInput(e.target); return; }
   var t = e.target;
