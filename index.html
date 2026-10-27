@@ -138,6 +138,8 @@ html:has(#mbg.top),body:has(#mbg.top){overflow:hidden;overscroll-behavior:none}h
 .sq{position:sticky;top:-10px;z-index:3;background:var(--pop);padding:6px 0 8px;margin:-6px 0 0}
 .stick{position:sticky;top:var(--hh,60px);z-index:4;background:var(--bg);padding:6px 0 10px;margin:-6px 0 0}
 input:disabled{background:var(--dis);color:var(--muted)}
+#spage .lockbox,.lockbox{display:flex;align-items:center;justify-content:space-between;min-height:34px;padding:0 10px;border-radius:10px;background:var(--soft);border:1px solid var(--line);box-shadow:inset 0 2px 5px rgba(0,0,0,.18);color:var(--ink);font-weight:600;font-size:14px}.lockbox .muted{font-weight:500;font-size:12px}
+.bstep .stepper{gap:4px}.bstep .stepper button{width:40px;height:44px;font-size:21px}.bstep .stepper .stepin{width:58px;height:44px}.bsl{font-size:13px;font-weight:700;margin-bottom:5px;white-space:nowrap}
 @media print{body>*:not(#modal){display:none!important}.modal{position:static;background:none}.modal>div{max-height:none;overflow:visible}.noprint{display:none!important}}
 #updbar{position:fixed;left:12px;right:12px;bottom:calc(var(--bar) + 10px + env(safe-area-inset-bottom));z-index:28;background:var(--toast);color:#fff;border-radius:14px;padding:10px 12px;display:flex;gap:8px;align-items:center;box-shadow:0 4px 14px rgba(0,0,0,.3)}
 #updbar span{flex:1;font-weight:700;font-size:13px}
@@ -237,7 +239,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.18', RULES_VERSION = '2.11';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.21', RULES_VERSION = '2.11';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -425,7 +427,7 @@ function tosText() { return tosList().map(plabel).join(', '); }
 function wsw(w) { return '<span class="sw ' + swc(w) + '">' + esc(w || 'Saved') + '</span>'; }
 function per(i) { return i.per || CFG.perCase; }
 /* storage: every fridge item has it; a shelf item has it when it comes in packs (more than 1 in a pack). The unit word (case, pack, box...) belongs to each item */
-function hasCage(i) { return !i.shelf || (i.per > 1); }
+function hasCage(i) { return !i.shelf || (i.per > 1) || (i.cage > 0) || (i.cageOpen > 0); }   /* anything can be kept in storage: the cage list shows when there is something in it */
 function unitName(i) { return String((i && i.unit) || (i && i.shelf ? 'pack' : 'case')).toLowerCase(); }
 function unitPl(u, n) { return n === 1 ? u : (/(s|x|ch|sh)$/.test(u) ? u + 'es' : u + 's'); }
 function uLab(i, n) { return n + ' ' + unitPl(unitName(i), n); }
@@ -503,8 +505,8 @@ function reverseEvent(b, e) {
   else if (e.type === 'cageadj') { if (!it || it.cage - e.qty < 0) return 'Cannot undo: the cage would go below zero'; itemInc(b, it.id, { cage: -e.qty }); }
   else if (e.type === 'move') { if (!it || it.stock < e.qty) return 'Cannot undo: those items were already sold'; itemInc(b, it.id, { stock: -e.qty, cage: e.cases }); }
   else if (e.type === 'buy' || e.type === 'other') {
-    for (var k = 0; k < (e.lines || []).length; k++) { var l = e.lines[k], li = item(l.item); if (!li || (l.shelf ? li.stock : li.cage) < l.cases * (l.pk || 1)) return 'Cannot undo: that stock was already moved or sold'; }
-    (e.lines || []).forEach(function (l) { itemInc(b, l.item, l.shelf ? { stock: -l.cases * (l.pk || 1) } : { cage: -l.cases }); });
+    for (var k = 0; k < (e.lines || []).length; k++) { var l = e.lines[k], li = item(l.item); if (!li || (l.v === 2 ? (li.cage < l.dc || li.stock < l.ds) : (l.shelf ? li.stock : li.cage) < l.cases * (l.pk || 1))) return 'Cannot undo: that stock was already moved or sold'; }
+    (e.lines || []).forEach(function (l) { itemInc(b, l.item, l.v === 2 ? { cage: -l.dc, stock: -l.ds } : l.shelf ? { stock: -l.cases * (l.pk || 1) } : { cage: -l.cases }); });
   }
   else return 'This entry cannot be cancelled';
   return null;
@@ -892,14 +894,15 @@ function owedByWatch() {
   return o;
 }
 function pm(n) { return (n < 0 ? '− ' : '') + money(Math.abs(n)); }
+function mn(n) { return n ? '− ' + money(n) : money(n); }   /* a minus sign only when there is something to take off */
 function breakdown(t, c, label) {
-  return '<div class="card pl"><h2>' + label + '</h2><div><span>Sales</span><b>' + money(t.sales) + '</b></div><div><span>Cost of what was sold</span><b>− ' + money(t.cogs) + '</b></div>' +
+  return '<div class="card pl"><h2>' + label + '</h2><div><span>Sales</span><b>' + money(t.sales) + '</b></div><div><span>Cost of what was sold</span><b>' + mn(t.cogs) + '</b></div>' +
     '<div><b>Gross profit</b><b class="' + (c.gross < 0 ? 'bad' : 'good') + '">' + pm(c.gross) + '</b></div>' +
-    '<div class="sub"><span>Spoiled / damaged</span><span>− ' + money(t.spoil) + '</span></div><div class="sub"><span>Stock counted short at handovers</span><span>− ' + money(t.short) + '</span></div><div class="sub"><span>Cash counted short at handovers</span><span>− ' + money(t.cshort) + '</span></div><div class="sub"><span>Welfare expenses (cash used)</span><span>− ' + money(t.exp) + '</span></div>' + (t.sedit ? '<div class="sub" style="color:var(--exp)"><span>⚠ Stock edited by hand</span><span>− ' + money(t.sedit) + '</span></div>' : '') + (t.wo ? '<div class="sub"><span>Change not kept (purchases)</span><span>− ' + money(t.wo) + '</span></div>' : '') + '' +
+    '<div class="sub"><span>Spoiled / damaged</span><span>' + mn(t.spoil) + '</span></div><div class="sub"><span>Stock counted short at handovers</span><span>' + mn(t.short) + '</span></div><div class="sub"><span>Cash counted short at handovers</span><span>' + mn(t.cshort) + '</span></div><div class="sub"><span>Welfare expenses (cash used)</span><span>' + mn(t.exp) + '</span></div>' + (t.sedit ? '<div class="sub" style="color:var(--exp)"><span>⚠ Stock edited by hand</span><span>' + mn(t.sedit) + '</span></div>' : '') + (t.wo ? '<div class="sub"><span>Change not kept (purchases)</span><span>' + mn(t.wo) + '</span></div>' : '') + '' +
     '<div><b>Profit after losses</b><b class="big ' + (c.profit < 0 ? 'bad' : 'good') + '">' + pm(c.profit) + '</b></div></div>';
 }
 function unpaidCard(t, c, scope) {
-  return '<div class="card pl"><h2>Money not yet paid back</h2><div><span>Credit given' + scope + '</span><b>' + money(t.cr) + '</b></div><div><span>Cash lent out</span><b>' + money(t.ln) + '</b></div><div><span>Collected</span><b>− ' + money(t.pd) + '</b></div>' +
+  return '<div class="card pl"><h2>Money not yet paid back</h2><div><span>Credit given' + scope + '</span><b>' + money(t.cr) + '</b></div><div><span>Cash lent out</span><b>' + money(t.ln) + '</b></div><div><span>Collected</span><b>' + mn(t.pd) + '</b></div>' +
     '<div><b>Still unpaid' + scope + '</b><b class="' + (c.unpaid > 0 ? 'bad' : '') + '">' + pm(c.unpaid) + '</b></div><div><b>Profit if that is never paid</b><b class="big">' + pm(c.ifNever) + '</b></div>' +
     '<p class="muted" style="margin:4px 0 0">Everyone owing you right now: ' + money(owing().reduce(function (a, x) { return a + x.bal; }, 0)) + '.</p></div>';
 }
@@ -1033,9 +1036,9 @@ function profitMonth(mo, docs, prevDocs) {
 }
 function profitModal() {
   var now = new Date(), q = function (d) { return query(col('daily'), where('month', '==', dkey(d).slice(0, 7))); };
-  if (PF.mode === 'short') { var mo2 = new Date(now.getFullYear(), now.getMonth() - PF.off, 1), mk = dkey(mo2).slice(0, 7); liveModal([query(col('shortages'), where('month', '==', mk)), query(col('repayments'), where('month', '==', mk)), col('shortages'), col('repayments')], function (ms, mr, as, ar) { return shortView(mo2, ms, mr, as, ar); }); return; }
-  if (PF.mode === 'day') { var day = new Date(now.getFullYear(), now.getMonth(), now.getDate() - PF.off); liveModal(q(day), function (docs) { return profitDay(day, docs); }); }
-  else { var mo = new Date(now.getFullYear(), now.getMonth() - PF.off, 1), prev = new Date(mo.getFullYear(), mo.getMonth() - 1, 1); liveModal([q(mo), q(prev)], function (a, b) { return profitMonth(mo, a, b); }); }
+  if (PF.mode === 'short') { var mo2 = new Date(now.getFullYear(), now.getMonth() - PF.off, 1), mk = dkey(mo2).slice(0, 7); livePage(profitModal, 'Profit &amp; loss', [query(col('shortages'), where('month', '==', mk)), query(col('repayments'), where('month', '==', mk)), col('shortages'), col('repayments')], function (ms, mr, as, ar) { return shortView(mo2, ms, mr, as, ar); }); return; }
+  if (PF.mode === 'day') { var day = new Date(now.getFullYear(), now.getMonth(), now.getDate() - PF.off); livePage(profitModal, 'Profit &amp; loss', q(day), function (docs) { return profitDay(day, docs); }); }
+  else { var mo = new Date(now.getFullYear(), now.getMonth() - PF.off, 1), prev = new Date(mo.getFullYear(), mo.getMonth() - 1, 1); livePage(profitModal, 'Profit &amp; loss', [q(mo), q(prev)], function (a, b) { return profitMonth(mo, a, b); }); }
 }
 
 /* ---------- Use cash (money from the welfare cash spent on something that is not a loan) ---------- */
@@ -1203,14 +1206,25 @@ function shelfFieldsOld(pre) {   /* shelf items are counted one by one: no cases
   if (cg) { if (shelf) { cg.value = ''; cg.placeholder = 'N/A'; } else cg.placeholder = '0'; cg.disabled = shelf; }
 }
 function newItemForm() {
-  modal('<h2>New item</h2><div class="card"><div class="f"><label>Name</label><input id="ni-name" placeholder="e.g. Coke" autocomplete="off"></div><div class="f"><label>Kept in</label>' + whereSeg('ni-where', false, 'wsel', ' data-for="ni"') + '</div><div class="row f"><div class="grow"><label>Selling price (each item)</label>' + ig('<input id="ni-price" type="number" inputmode="decimal" min="0" placeholder="0">', '$') + '</div></div>' + unitBlock('ni', 'case', CFG.perCase, false) + '<div class="f"><label>Cost price each (what you paid, optional)</label>' + ig('<input id="ni-cost" type="number" inputmode="decimal" min="0" placeholder="0">', '$') + '</div>' +
-    '<div class="row f"><div class="grow"><label>In fridge / on shelf now</label>' + ig('<input id="ni-fr" type="number" inputmode="numeric" min="0" placeholder="0">', '', 'items') + '</div><div class="grow"><label>In the cage now</label>' + ig('<input id="ni-cg" type="number" inputmode="numeric" min="0" placeholder="0">', '', 'in the cage') + '</div></div></div>' +
+  var ng = function (v, u) { return '<div class="lockbox"><span>' + v + '</span><span class="muted">' + u + '</span></div>'; };
+  modal('<h2>New item</h2><div class="card"><div class="f"><label>Name</label><input id="ni-name" placeholder="e.g. Coke" autocomplete="off"></div>' +
+    '<div class="f"><label>Sold from</label><select id="ni-where"><option value="fridge">' + lbl('🧊 Fridge') + '</option><option value="shelf">' + lbl('🧁 Shelf') + '</option></select></div>' +
+    '<div class="f"><label>How does it usually come?</label><select id="ni-kind"><option value="case">In cases</option><option value="pack">In packs</option><option value="item">Single items only</option></select></div>' +
+    '<div class="f" id="ni-perwrap"><label id="ni-perlbl">Items in one case</label>' + ig('<input id="ni-per" type="number" inputmode="numeric" min="1" value="' + CFG.perCase + '">', '', 'items') + '</div>' +
+    '<div class="f"><label>Selling price (each item)</label>' + ig('<input id="ni-price" type="number" inputmode="decimal" min="0" placeholder="0">', '$') + '</div>' +
+    '<div class="f"><label>Cost price each (what you paid, optional)</label>' + ig('<input id="ni-cost" type="number" inputmode="decimal" min="0" placeholder="0">', '$') + '</div>' +
+    '<div class="row f"><div class="grow"><label>In the shop now</label><div id="ni-frbox"><input id="ni-fr" type="number" value="0" disabled hidden>' + ng(0, 'items') + '</div></div><div class="grow"><label>In storage now</label><div id="ni-cgbox"><input id="ni-cg" type="number" value="0" disabled hidden>' + ng(0, 'in storage') + '</div></div></div>' +
+    '<div class="muted">A new item starts at 0. Put stock in with Add stock after you save.</div></div>' +
     '<button class="btn block" data-act="saveitem">Add item</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>');
   $('#ni-name').focus();
 }
+function niKind() {   /* the "how does it usually come" drop-down changes the label, and single items have no items-in-one box */
+  var k = $('#ni-kind').value, w = $('#ni-perwrap'), l = $('#ni-perlbl'); if (!w) return;
+  w.hidden = k === 'item'; if (l) l.textContent = 'Items in one ' + (k === 'pack' ? 'pack' : 'case');
+}
 
 /* ---------- Add stock: purchase bill ---------- */
-function blankBuy() { return { other: false, receipt: '', paid: '', sup: '', when: '', total: '', tax: '', note: '', lines: [{ item: S.items[0] ? S.items[0].id : '__new', cases: 1, name: '', price: '', per: String(CFG.perCase), where: 'fridge', cost: '' }] }; }
+function blankBuy() { return { other: false, receipt: '', paid: '', sup: '', when: '', total: '', tax: '', note: '', lines: [{ item: S.items[0] ? S.items[0].id : '__new', cases: 1, units: 0, dest: '', name: '', price: '', per: String(CFG.perCase), kind: 'case', where: 'fridge', cost: '' }] }; }
 function localDT(t) { var d = new Date(t); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
 function vBuy() {
   if (!BUY) BUY = blankBuy();
@@ -1220,36 +1234,65 @@ function vBuy() {
     h += '<div class="f"><label>Bought from</label><input id="b-sup" data-b="sup" list="sups" value="' + esc(BUY.sup) + '" placeholder="Supplier name" autocomplete="off"><datalist id="sups">' + S.suppliers.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).map(function (s) { return '<option value="' + esc(s.name) + '">'; }).join('') + '</datalist></div>' +
       '<div class="f"><label>When (local time, leave blank for now)</label><input id="b-when" data-b="when" type="datetime-local" value="' + esc(BUY.when) + '"></div>';
   } else h += '<div class="f"><label>Note</label><input data-b="note" value="' + esc(BUY.note) + '" placeholder="e.g. donated, returned stock" autocomplete="off"></div>';
-  h += BUY.lines.map(function (l, k) {
-    var it = item(l.item);
-    return '<div class="card" style="background:var(--bg);box-shadow:none;padding:10px"><div class="f"><label>Item</label><button class="btn sec selbtn" data-act="itempick" data-k="' + k + '"><span>' + (l.item === '__new' ? '+ New item' : it ? esc(it.name) : 'Choose an item') + '</span><span>▾</span></button></div>' +
-      (l.item === '__new' ? '<div class="f"><label>Name</label><input data-bl="' + k + '" data-f="name" value="' + esc(l.name) + '" autocomplete="off"></div><div class="row f"><div class="grow"><label>Selling price (each item)</label>' + ig('<input data-bl="' + k + '" data-f="price" type="number" inputmode="decimal" value="' + esc(l.price) + '">', '$') + '</div><div class="grow"><label>Items in one case</label>' + ig('<input data-bl="' + k + '" data-f="per" type="number" inputmode="numeric"' + (l.where === 'shelf' ? ' disabled value="" placeholder="N/A"' : ' value="' + esc(l.per) + '"') + '>', '', 'items') + '</div></div><div class="f"><label>Kept in</label>' + whereSeg('', l.where === 'shelf', 'blwhere', ' data-k="' + k + '"') + '</div>' : '') +
-      '<div class="f"><label>Bought by</label><div class="seg" style="grid-template-columns:1fr 1fr"><button data-act="blby" data-k="' + k + '" data-v="' + (lineDirect(l) ? 'pack' : 'case') + '" class="' + (lineDirect(l) ? (linePack(l) ? 'on' : '') : (lineUnit(l) ? '' : 'on')) + '">' + (lineDirect(l) ? 'Pack' : it ? unitName(it).replace(/^./, function (c) { return c.toUpperCase(); }) : 'Case') + '</button><button data-act="blby" data-k="' + k + '" data-v="unit" class="' + (lineDirect(l) ? (linePack(l) ? '' : 'on') : (lineUnit(l) ? 'on' : '')) + '">Unit</button></div><div class="muted" style="margin-top:4px">A unit = 1 item. ' + (lineDirect(l) ? 'A pack = the number of items you type below.' : it ? 'A ' + unitName(it) + ' = ' + per(it) + ' items.' : 'A case = a full case.') + (lineUnit(l) ? ' Units go straight to the fridge.' : '') + '</div></div>' + (linePack(l) ? '<div class="f"><label>Items in one pack</label><input data-bl="' + k + '" data-f="pk" type="number" inputmode="numeric" min="1" value="' + esc(l.pk || '') + '" placeholder="e.g. 6 or 12"></div>' : '') +
-      '<div class="row"><div class="grow"><label>' + (lineUnit(l) ? 'Units (single items)' : linePack(l) ? 'Packs' : (it && !hasCage(it)) || (!it && l.where === 'shelf') ? 'Items (single)' : (it ? unitPl(unitName(it), 2).replace(/^./, function (c) { return c.toUpperCase(); }) + ' (of ' + per(it) + ')' : 'Cases')) + '</label>' + stepper('bl', l.cases, 'data-k="' + k + '"') + '</div>' + (BUY.lines.length > 1 ? '<button class="btn sec sm" data-act="bldel" data-k="' + k + '">Remove</button>' : '') + '</div>' + costBlock(l, k) + '</div>';
-  }).join('');
+  h += BUY.lines.map(buyLineHtml).join('');
   h += '<button class="btn sec block" data-act="bladd" style="margin-bottom:10px">+ Add another item</button>';
   if (!BUY.other) h += '<div class="row f"><div class="grow"><label>Tax on the bill (if any)</label><input data-b="tax" type="number" inputmode="decimal" min="0" value="' + esc(BUY.tax) + '" placeholder="0"></div><div class="grow"><label>Total on the bill (with tax)</label><input data-b="total" type="number" inputmode="decimal" min="0" value="' + esc(BUY.total) + '" placeholder="0"></div></div>';
   if (!BUY.other) h += '<div class="f"><label>Cash taken from the cash (you keep no change)</label><input data-b="paid" type="number" inputmode="decimal" min="0" value="' + esc(BUY.paid) + '" placeholder="' + (num(BUY.total) > 0 ? num(BUY.total) : 'same as the bill') + '"><div id="rc">' + roundChips() + '</div><div id="bw">' + woBar() + '</div></div>';
   if (!BUY.other) h += '<div class="card" style="background:var(--bg);box-shadow:none;padding:10px"><label>Receipt photo (recommended)</label>' + (BUY.receipt ? '<img src="' + BUY.receipt + '" alt="receipt" style="width:100%;max-height:240px;object-fit:contain;border-radius:12px;border:1px solid var(--line);background:#fff">' : '<div class="muted" style="margin-bottom:6px">Take a photo of the bill. It is shrunk to a small size and kept for about 31 days, so you can open it later from History.</div>') +
     '<input type="file" accept="image/*" capture="environment" id="br-cam" hidden><input type="file" accept="image/*" id="br-pick" hidden><div class="row" style="margin-top:8px"><button class="btn sec sm grow" data-act="brcam">📷 ' + (BUY.receipt ? 'Retake' : 'Take photo') + '</button><button class="btn sec sm grow" data-act="brpick">🖼 Choose from phone</button>' + (BUY.receipt ? '<button class="btn sec sm" data-act="brclear">Remove</button>' : '') + '</div></div>';
-  h += '<div id="bb">' + billBar() + '</div><button class="btn block" data-act="buysave">' + (BUY.other ? 'Add stock' : 'Review &amp; save') + '</button><button class="btn sec block" data-act="bcancel" style="margin-top:10px">Cancel</button><p class="muted" style="margin-bottom:0">Items with a case, pack or box go into the cage. Shelf items without one go straight on the shelf. Move from the cage from the Stock tab.</p></div>';
+  h += '<div id="bb">' + billBar() + '</div><button class="btn block" data-act="buysave">' + (BUY.other ? 'Add stock' : 'Review &amp; save') + '</button><button class="btn sec block" data-act="bcancel" style="margin-top:10px">Cancel</button><p class="muted" style="margin-bottom:0">For each item you choose whether it goes into storage or out in the shop. Move from storage to the shop from the Stock tab.</p></div>';
   var bl = S.log.filter(function (e) { return e.type === 'buy' || e.type === 'other'; }).reverse();
   h += '<div class="card"><h2>This shift · purchases ' + money(t.purch) + '</h2>' + (bl.length ? '<div class="list">' + bl.map(function (e) { HEV[e.id] = e; return '<div data-act="buyview" data-id="' + e.id + '" style="cursor:pointer"><div class="grow"><b>' + esc(buyText(e)) + '</b><div class="muted">' + hhmm(e.t) + (e.supplier ? ' · ' + esc(e.supplier) : '') + (e.tax ? ' · tax ' + money(e.tax) : '') + (e.note ? ' · ' + esc(e.note) : '') + '</div></div>' + (e.receipt ? '<img data-act="rcv" src="' + e.receipt + '" alt="receipt" style="width:44px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">' : '') + '<b>' + (e.amt ? '− ' + money(e.amt) : '') + '</b></div>'; }).join('') + '</div><p class="muted" style="margin-bottom:0">Tap a purchase to see the receipt and the details. To cancel one use History → Cancel an item.</p>' : '<div class="muted">Nothing added yet.</div>') + '</div>';
   return h;
 }
-function lineDirect(l) { var it = item(l.item); return it ? !hasCage(it) : l.where === 'shelf'; }   /* an item with no cage: its buys go straight on the shelf */
-function lineUnit(l) { return !lineDirect(l) && l.by === 'unit'; }   /* bought as single items, not cases: they go straight to the fridge, the cage stays in whole cases */
-function linePack(l) { return lineDirect(l) && l.by === 'pack'; }   /* a pack bought straight onto the shelf: the number of items in it is typed on the line */
-function packN(l) { return Math.max(0, Math.floor(num(l.pk))); }
-function lineUnits(l) { var it = item(l.item), pp = it ? per(it) : Math.max(1, Math.floor(num(l.per)) || CFG.perCase); return l.cases * (linePack(l) ? packN(l) : lineDirect(l) || lineUnit(l) ? 1 : pp); }
+var BDEST = {}; try { BDEST = JSON.parse(localStorage.getItem('sw_bdest') || '{}') || {}; } catch (e) { BDEST = {}; }   /* where each item went the last time it was bought: storage or the shop */
+function lineP(l) { var it = item(l.item); if (it) return Math.max(1, per(it)); if (l.kind === 'item') return 1; return Math.max(1, Math.floor(num(l.per)) || CFG.perCase); }   /* items in one case or pack */
+function lineWord(l) { var it = item(l.item); if (lineP(l) < 2) return 'item'; return it ? unitName(it) : (l.kind === 'pack' ? 'pack' : 'case'); }
+function lineShelf(l) { var it = item(l.item); return it ? !!it.shelf : l.where === 'shelf'; }
+function lineDest(l) { if (l.dest) return l.dest; var it = item(l.item); if (it && BDEST[it.id]) return BDEST[it.id]; return lineP(l) > 1 && (!it || !it.shelf || it.cage > 0) ? 'store' : 'shop'; }
+function lineParts(l) {   /* what a line really does: whole cases or packs (b) and loose singles (u), and where each goes (dc into the cage, ds into the fridge or shelf) */
+  var p = lineP(l), bun = p > 1, d = lineDest(l);
+  if (!bun && l.cases) { l.units = (Math.floor(num(l.units)) || 0) + l.cases; l.cases = 0; }
+  var b = bun ? Math.max(0, Math.floor(num(l.cases))) : 0, u = Math.max(0, Math.floor(num(l.units)));
+  return { p: p, bun: bun, d: d, b: b, u: u, dc: d === 'store' ? (bun ? b : u) : 0, ds: d === 'store' ? (bun ? u : 0) : (bun ? b * p : 0) + u, items: (bun ? b * p : 0) + u };
+}
+function lineUnits(l) { return lineParts(l).items; }
+function capW(w) { return w.charAt(0).toUpperCase() + w.slice(1); }
+function buySummary(l) {   /* the yellow box: what is being bought and where it goes */
+  var t = lineParts(l), w = lineWord(l), sh = lineShelf(l) ? 'on the shelf' : 'in the fridge', one = function (n, word) { return n + ' ' + unitPl(word, n); };
+  if (t.items < 1) return 'Choose how many you bought.';
+  var bits = [t.b ? one(t.b, w) : '', t.u ? one(t.u, 'single') : ''].filter(Boolean).join(' + ');
+  if (t.bun && t.d === 'store') return 'Buying <b>' + bits + '</b>.' + (t.b ? '<br><b>' + one(t.b, w) + '</b> (' + t.b * t.p + ' items) go into storage.' : '') + (t.u ? '<br><b>' + one(t.u, 'single') + '</b> go ' + sh + ', ready to sell.' : '');
+  if (!t.bun && t.d === 'store') return 'Buying <b>' + bits + '</b>.<br>All ' + t.u + ' go into storage.';
+  return 'Buying <b>' + bits + '</b>' + (t.b ? ' (' + t.items + ' items)' : '') + '.<br>All ' + t.items + ' go ' + sh + ', ready to sell.';
+}
+function lockBox(v, unit) { return '<div class="lockbox"><span>' + v + '</span><span class="muted">' + unit + '</span></div>'; }
+function buyLineHtml(l, k) {
+  var it = item(l.item), isNew = l.item === '__new', p = lineP(l), bun = p > 1, w = lineWord(l), t = lineParts(l), sh = lineShelf(l);
+  var sel = function (f, opts, cur) { return '<select data-bl="' + k + '" data-f="' + f + '">' + opts.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === cur ? ' selected' : '') + '>' + lbl(o[1]) + '</option>'; }).join('') + '</select>'; };
+  var h = '<div class="card bline" style="background:var(--bg);box-shadow:none;padding:10px"><div class="f"><label>Item</label><button class="btn sec selbtn" data-act="itempick" data-k="' + k + '"><span>' + (isNew ? '+ New item' : it ? esc(it.name) : 'Choose an item') + '</span><span>▾</span></button>' + (isNew ? '' : '<div class="muted" style="margin-top:4px">' + (bun ? capW(unitPl(w, 2)) + ' of ' + p : 'Single items only') + '</div>') + '</div>';
+  if (isNew) h += '<div class="f"><label>Name</label><input data-bl="' + k + '" data-f="name" value="' + esc(l.name) + '" autocomplete="off"></div><div class="f"><label>Sold from</label>' + sel('where', [['fridge', '🧊 Fridge'], ['shelf', '🧁 Shelf']], l.where) + '</div><div class="f"><label>How does it usually come?</label>' + sel('kind', [['case', 'In cases'], ['pack', 'In packs'], ['item', 'Single items only']], l.kind) + '</div>' +
+    (l.kind === 'item' ? '' : '<div class="f"><label>Items in one ' + (l.kind === 'pack' ? 'pack' : 'case') + '</label>' + ig('<input data-bl="' + k + '" data-f="per" type="number" inputmode="numeric" min="1" value="' + esc(l.per) + '">', '', 'items') + '</div>') + '<div class="f"><label>Selling price (each item)</label>' + ig('<input data-bl="' + k + '" data-f="price" type="number" inputmode="decimal" value="' + esc(l.price) + '">', '$') + '</div>';
+  var ex = 'data-k="' + k + '"';
+  h += '<div style="height:1px;background:var(--line);margin:6px 0 14px"></div><div style="font-size:14px;font-weight:700;margin-bottom:10px">How many did you buy?</div><div class="bstep" style="display:flex;gap:10px">' +
+    (bun ? '<div style="flex:1;min-width:0"><div class="bsl">' + capW(unitPl(w, 2)) + '</div>' + stepper('bl', t.b, ex) + '</div>' : '') + '<div style="flex:1;min-width:0"><div class="bsl">Singles</div>' + stepper('bu', t.u, ex) + '</div></div>' +
+    '<div class="muted" style="font-size:12px;margin-top:6px">Tap + or −, or type the number.</div>' +
+    '<div style="font-size:13px;font-weight:700;margin:14px 0 5px">Where are you putting them?</div><div class="seg" style="grid-template-columns:1fr 1fr">' +
+    '<button data-act="bdest" ' + ex + ' data-v="store" class="' + (t.d === 'store' ? 'on' : '') + '" style="height:auto;padding:9px 6px;line-height:1.3;font-size:13px">📦 Put in storage<br><span style="font-weight:400;font-size:11px">locked away in the cage</span></button>' +
+    '<button data-act="bdest" ' + ex + ' data-v="shop" class="' + (t.d === 'shop' ? 'on' : '') + '" style="height:auto;padding:9px 6px;line-height:1.3;font-size:13px">' + (sh ? '🧁' : '🧊') + ' Put out in the shop<br><span style="font-weight:400;font-size:11px">' + (sh ? 'on the shelf' : 'in the fridge') + ', ready to sell</span></button></div>' +
+    (bun && t.d === 'store' ? '<div class="muted" style="font-size:12px;margin-top:6px">Storage keeps whole ' + unitPl(w, 2) + ' only. Loose singles always go out in the shop.</div>' : '') +
+    '<div id="bs' + k + '" style="padding:10px;border-radius:10px;background:var(--soon-bg);margin-top:12px;font-size:14px">' + buySummary(l) + '</div>' + costBlock(l, k) +
+    (it ? '<div style="margin-top:12px"><div class="muted" style="font-size:11px;margin-bottom:4px">Right now (counted by the app)</div><div class="row" style="gap:8px"><div class="grow">' + lockBox(it.stock, 'in the shop') + '</div><div class="grow">' + lockBox(it.cage || 0, bun ? unitPl(unitName(it), it.cage || 0) + ' in storage' : 'in storage') + '</div></div></div>' : '') +
+    (BUY.lines.length > 1 ? '<div style="margin-top:10px"><button class="btn sec sm" data-act="bldel" ' + ex + '>Remove</button></div>' : '') + '</div>';
+  return h;
+}
 function lineCost(l) {   /* what this line really cost, with its share of the tax */
   var tot = num(BUY.total); if (BUY.lines.length === 1) return tot;
   var sum = BUY.lines.reduce(function (a, x) { return a + num(x.cost); }, 0); return sum > 0 && tot > 0 ? num(l.cost) * tot / sum : num(l.cost);
 }
 function costBlock(l, k) {
   if (BUY.other) return '';
-  var it = item(l.item);
-  return (BUY.lines.length > 1 ? '<div class="f" style="margin-top:8px"><label>Cost for these ' + ((lineDirect(l) && !linePack(l) || lineUnit(l)) ? 'items' : linePack(l) ? 'packs' : (it ? unitPl(unitName(it), 2) : 'cases')) + '</label><input data-bl="' + k + '" data-f="cost" type="number" inputmode="decimal" min="0" value="' + esc(l.cost) + '"></div>' : '') +
+  return (BUY.lines.length > 1 ? '<div class="f" style="margin-top:8px"><label>Cost for everything on this line</label><input data-bl="' + k + '" data-f="cost" type="number" inputmode="decimal" min="0" value="' + esc(l.cost) + '"></div>' : '') +
     '<div id="ce' + k + '">' + ceLine(l) + '</div>';
 }
 function ceLine(l) {
@@ -1257,7 +1300,7 @@ function ceLine(l) {
   return c > 0 ? '<div class="muted" style="margin-top:6px">= <b>' + money(each) + '</b> each · sells ' + money(price) + ' · profit <b style="color:' + (price - each >= 0 ? 'var(--ok)' : 'var(--exp)') + '">' + money(price - each) + '</b> each' + (num(BUY.tax) > 0 ? ' <span class="muted">(tax included)</span>' : '') + '</div>' : '';
 }
 function buyLive() {   /* keep the cost lines and the check bar in step while typing, without redrawing the form */
-  if (!BUY) return; BUY.lines.forEach(function (l, k) { var el = $('#ce' + k); if (el) el.innerHTML = ceLine(l); });
+  if (!BUY) return; BUY.lines.forEach(function (l, k) { var el = $('#ce' + k); if (el) el.innerHTML = ceLine(l); var sm = $('#bs' + k); if (sm) sm.innerHTML = buySummary(l); });
   var bb = $('#bb'); if (bb) bb.innerHTML = billBar();
   var bw = $('#bw'); if (bw) bw.innerHTML = woBar();
   var rc = $('#rc'); if (rc) rc.innerHTML = roundChips(); var pd = document.querySelector('[data-b=paid]'); if (pd && num(BUY.total) > 0) pd.placeholder = String(num(BUY.total));
@@ -1299,7 +1342,7 @@ function itemPicker(k) {
 var HEV = {};   /* events seen in lists, so a tapped row can show its details */
 function showPurchase(id) {
   var e = HEV[id] || S.log.filter(function (x) { return x.id === id; })[0] || EVC[id]; if (!e) return;
-  var lines = (e.lines || []).map(function (l) { var u = l.cases * (l.shelf ? (l.pk || 1) : (l.per || 1)); return '<tr><td>' + esc(l.name) + '</td><td>' + l.cases + (l.shelf && l.by !== 'unit' && l.by !== 'pack' ? '' : ' ' + buyWord(l, l.cases)) + (l.by === 'pack' ? ' of ' + l.pk : '') + '</td><td>' + (l.cost ? money(l.cost) : '–') + '</td><td>' + (l.cost && u ? money(l.cost / u) : '–') + '</td></tr>'; }).join('');
+  var lines = (e.lines || []).map(function (l) { var u = l.v === 2 ? l.items : l.cases * (l.shelf ? (l.pk || 1) : (l.per || 1)); return '<tr><td>' + esc(l.name) + '</td><td>' + (l.v === 2 ? lineBits(l) + '<div class="muted">' + (l.dc > 0 ? 'to storage' : 'to the shop') + '</div>' : l.cases + (l.shelf && l.by !== 'unit' && l.by !== 'pack' ? '' : ' ' + buyWord(l, l.cases)) + (l.by === 'pack' ? ' of ' + l.pk : '')) + '</td><td>' + (l.cost ? money(l.cost) : '–') + '</td><td>' + (l.cost && u ? money(l.cost / u) : '–') + '</td></tr>'; }).join('');
   $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div style="max-height:90vh;overflow:auto"><h2>' + (e.type === 'buy' ? '🧾 Purchase' : '➕ Stock added') + '</h2>' +
     '<div class="card sum" style="box-shadow:none;padding:8px 14px 10px"><div><span>When</span><b>' + new Date(e.t).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div>' + (e.supplier ? '<div><span>Bought from</span><b>' + esc(e.supplier) + '</b></div>' : '') + '<div><span>Entered by</span><b>' + esc(e.byName || '') + '</b></div>' + (e.note ? '<div><span>Note</span><b>' + esc(e.note) + '</b></div>' : '') +
     (e.tax ? '<div><span>Tax</span><b>' + money(e.tax) + '</b></div>' : '') + (e.invoice ? '<div><span>Bill total</span><b>' + money(e.invoice) + '</b></div>' : '') + (e.writeoff ? '<div><span>Change not kept</span><b>' + money(e.writeoff) + '</b></div>' : '') + (e.amt ? '<div class="t"><span>Cash taken</span><span>' + money(e.amt) + '</span></div>' : '') + '</div>' +
@@ -1307,8 +1350,12 @@ function showPurchase(id) {
     (e.receipt ? '<label style="margin-top:12px">Receipt</label><img src="' + e.receipt + '" alt="receipt" style="width:100%;border-radius:10px;border:1px solid var(--line)">' : '<p class="muted">No receipt photo was attached.</p>') +
     '<button class="btn sec block" data-act="cno" style="margin-top:10px">Close</button></div></div>');
 }
-function buyWord(l, n) { return l.by === 'unit' ? (n === 1 ? 'unit' : 'units') : l.by === 'pack' ? unitPl('pack', n) : unitPl(l.unit || 'case', n); }   /* what was bought: cases, units or packs */
-function buyText(e) { return (e.lines || []).map(function (l) { return l.cases + ' ' + buyWord(l, l.cases) + ' of ' + l.name; }).join(', ') || e.name; }
+function buyWord(l, n) { return l.by === 'unit' ? (n === 1 ? 'unit' : 'units') : l.by === 'pack' ? unitPl('pack', n) : unitPl(l.unit || 'case', n); }   /* what was bought, in older entries: cases, units or packs */
+function lineBits(l) {   /* "3 packs + 5 singles" for a purchase line (newer entries keep cases or packs and singles apart) */
+  if (l.v === 2) return [l.cases ? l.cases + ' ' + unitPl(l.word || 'case', l.cases) : '', l.units ? l.units + ' ' + unitPl('single', l.units) : ''].filter(Boolean).join(' + ');
+  return l.cases + ' ' + buyWord(l, l.cases);
+}
+function buyText(e) { return (e.lines || []).map(function (l) { return lineBits(l) + ' of ' + l.name + (l.v === 2 && l.dc > 0 ? ' · to storage' : ''); }).join(', ') || e.name; }
 function buySave() {
   var lines = [], fills = [], b = writeBatch(DB), supName = BUY.sup.trim(), total = num(BUY.total), eid = newEv();
   if (!BUY.other && !supName) return toast('Who was it bought from?');
@@ -1317,20 +1364,27 @@ function buySave() {
   var bcm = billCheck(); if (bcm) return toast(bcm);
   var paid = BUY.other ? 0 : paidAmt(), wo = BUY.other ? 0 : woAmt(); if (!BUY.other && wo < 0) return toast('Cash taken cannot be less than the bill total');
   for (var k = 0; k < BUY.lines.length; k++) {
-    var l = BUY.lines[k], lc = BUY.other ? 0 : lineCost(l), cu = lineUnits(l), ce = lc > 0 && cu > 0 ? Math.round(lc / cu * 10000) / 10000 : 0;
-    if (l.cases < 1) return toast('The amount must be at least 1');
-    if (linePack(l) && packN(l) < 1) return toast('How many items are in one pack?');
+    var l = BUY.lines[k], pt = lineParts(l), lc = BUY.other ? 0 : lineCost(l), cu = pt.items, ce = lc > 0 && cu > 0 ? Math.round(lc / cu * 10000) / 10000 : 0, lw = lineWord(l);
+    if (pt.items < 1) return toast('Choose how many you bought');
+    var ln = { name: '', cases: pt.b, units: pt.u, per: pt.p, word: lw, dest: pt.d, dc: pt.dc, ds: pt.ds, items: pt.items, cost: lc, v: 2 };
     if (l.item === '__new') {
       if (!l.name.trim()) return toast('Name the new item');
       if (!(num(l.price) > 0)) return toast('Enter the selling price for ' + l.name.trim() + ' (more than $0)');
-      var nid = newId('items'), pr = num(l.price), pp = Math.max(1, Math.floor(num(l.per)) || CFG.perCase), shf = l.where === 'shelf', un = lineUnit(l);
-      b.set(ref('items/' + nid), { name: l.name.trim(), price: pr, per: shf ? 1 : pp, unit: 'case', stock: shf ? l.cases * (linePack(l) ? packN(l) : 1) : un ? l.cases : 0, open: 0, cage: shf || un ? 0 : l.cases, cageOpen: 0, shelf: shf, ord: Date.now() + k, lastEvent: eid, cost: ce });
-      lines.push({ item: nid, name: l.name.trim(), cases: l.cases, per: shf ? 1 : pp, shelf: shf || un, by: linePack(l) ? 'pack' : un ? 'unit' : 'case', pk: linePack(l) ? packN(l) : 0, unit: 'case', cost: lc });
-    } else { var it = item(l.item); if (!it) return toast('Pick an item'); var un = lineUnit(l), idl = hasCage(it) && !un ? { cage: l.cases } : { stock: l.cases * (linePack(l) ? packN(l) : 1) }; idl.cost = ce; if (!it.cost && ce > 0) fills.push({ id: it.id, cost: ce }); itemInc(b, it.id, idl); lines.push({ item: it.id, name: it.name, cases: l.cases, per: per(it), shelf: !hasCage(it) || un, by: linePack(l) ? 'pack' : un ? 'unit' : 'case', pk: linePack(l) ? packN(l) : 0, unit: unitName(it), cost: lc }); }
+      if (l.kind !== 'item' && lineP(l) < 2) return toast('Enter how many items are in one ' + (l.kind === 'pack' ? 'pack' : 'case'));
+      var nid = newId('items'), pr = num(l.price), shf = l.where === 'shelf';
+      b.set(ref('items/' + nid), { name: l.name.trim(), price: pr, per: pt.p, unit: lw, stock: pt.ds, open: 0, cage: pt.dc, cageOpen: 0, shelf: shf, ord: Date.now() + k, lastEvent: eid, cost: ce });
+      ln.item = nid; ln.name = l.name.trim(); BDEST[nid] = pt.d;
+    } else {
+      var it = item(l.item); if (!it) return toast('Pick an item');
+      var idl = { cage: pt.dc, stock: pt.ds }; idl.cost = ce; if (!it.cost && ce > 0) fills.push({ id: it.id, cost: ce }); itemInc(b, it.id, idl);
+      ln.item = it.id; ln.name = it.name;
+    }
+    lines.push(ln);
   }
+  try { localStorage.setItem('sw_bdest', JSON.stringify(BDEST)); } catch (e) {}
   var when = BUY.when ? new Date(BUY.when).getTime() : Date.now();
   if (!BUY.other && !S.suppliers.some(function (s) { return nkey(s.name) === nkey(supName); })) b.set(ref('suppliers/' + newId('suppliers')), { name: supName, nameKey: nkey(supName) });
-  var tc = lines.reduce(function (a, l) { return a + l.cases; }, 0);
+  var tc = lines.reduce(function (a, l) { return a + l.items; }, 0);
   mkEvent(b, BUY.other ? 'other' : 'buy', null, tc, BUY.other ? 0 : paid, { invoice: BUY.other ? 0 : total, writeoff: BUY.other ? 0 : wo, name: BUY.other ? 'Added stock' : 'Purchase', lines: lines, supplier: BUY.other ? '' : supName, tax: BUY.other ? 0 : num(BUY.tax), receipt: BUY.other ? '' : (BUY.receipt || ''), note: BUY.other ? BUY.note.trim() : '', t: when, items: lines.map(function (l) { return l.item; }) });
   var rcp = BUY.other ? '' : (BUY.receipt || ''), isBuy = !BUY.other, tot0 = total;
   BUY = null; toast('Stock added', eid); render();
@@ -1419,10 +1473,11 @@ function cdetail(pid) {
 function sheetRows() {
   return S.items.map(function (i) {
     var L = S.log.filter(function (e) { return e.item === i.id; }), s = function (f) { return L.reduce(function (a, e) { return a + f(e); }, 0); };
-    var lines = function (types, unitsOnly) { return S.log.reduce(function (a, e) { return types.indexOf(e.type) < 0 ? a : a + (e.lines || []).reduce(function (x, l) { return l.item === i.id && (hasCage(i) ? (l.by === 'unit') === !!unitsOnly : !unitsOnly) ? x + l.cases * (l.pk || 1) : x; }, 0); }, 0); };
+    var lines = function (types, unitsOnly) { return S.log.reduce(function (a, e) { return types.indexOf(e.type) < 0 ? a : a + (e.lines || []).reduce(function (x, l) { return l.item !== i.id ? x : l.v === 2 ? x + (unitsOnly ? l.ds : l.dc) : (hasCage(i) ? (l.by === 'unit') === !!unitsOnly : !unitsOnly) ? x + l.cases * (l.pk || 1) : x; }, 0); }, 0); };
     var R = { id: i.id, shelf: !!i.shelf, store: hasCage(i), direct: !hasCage(i), unit: unitName(i), name: i.name, price: i.price, per: per(i), open: i.open || 0, stock: i.stock, cageOpen: i.cageOpen || 0, cage: i.cage,
       gone: s(function (e) { return e.type === 'sale' || e.type === 'count' ? e.qty : 0; }), soldAmt: s(function (e) { return e.type === 'sale' || e.type === 'count' ? e.amt : 0; }), crQ: s(function (e) { return e.type === 'cnote' && !creditCover().set[e.id] ? e.qty : 0; }), crAmt: s(function (e) { return e.type === 'cnote' && !creditCover().set[e.id] ? e.amt : 0; }), spQ: s(function (e) { return e.type === 'snote' ? e.qty : 0; }), spAmt: s(function (e) { return e.type === 'snote' ? e.amt : 0; }), counted: L.some(function (e) { return e.type === 'count'; }), moved: s(function (e) { return e.type === 'move' ? e.qty : 0; }), movedCases: s(function (e) { return e.type === 'move' ? e.cases : 0; }),
       spoil: s(function (e) { return e.type === 'spoil' ? e.qty : 0; }), adj: s(function (e) { return e.type === 'adjust' ? e.qty : 0; }), edit: s(function (e) { return e.type === 'stockedit' ? e.qty : 0; }), cedit: s(function (e) { return e.type === 'stockedit' ? e.cases : 0; }), cadj: s(function (e) { return e.type === 'cageadj' ? e.qty : 0; }), bought: lines(['buy', 'other']), ub: lines(['buy', 'other'], true) };
+    R.store = R.store || R.bought > 0 || R.movedCases > 0; R.direct = !R.store;   /* anything bought into storage this shift shows in the storage list */
     R.sold = Math.max(0, R.gone - R.spQ);   /* sold = what left the fridge by counting, minus what was spoiled; credit is part of sold */
     return R;
   });
@@ -1433,7 +1488,7 @@ function hoRows() {   /* the handover leaves out items that were 0 at the start 
 function tagList(r, mode) {   /* what happened to one item, as [colour class, text] */
   var cage = mode === 'cage', t = [], g = function (n, txt, cls) { if (n) t.push([cls, txt]); };
   if (cage) { g(r.cedit, '⚠ edited by hand ' + (r.cedit > 0 ? '+' : '') + r.cedit, 'neg'); g(r.bought, '+' + r.bought + ' bought', 'pos'); g(r.movedCases, '−' + r.movedCases + ' to ' + (r.shelf ? 'shelf' : 'fridge'), 'neg'); g(r.cadj, (r.cadj > 0 ? '+' : '') + r.cadj + ' count', ''); }
-  else { g(r.edit, '⚠ edited by hand ' + (r.edit > 0 ? '+' : '') + r.edit, 'neg'); g(r.sold - Math.min(r.sold, r.crQ), (r.sold - Math.min(r.sold, r.crQ)) + ' sold', 'pos'); g(r.crQ, r.crQ + ' sold on credit', 'cr'); g(r.spQ, r.spQ + ' spoiled', 'neg'); if (r.direct) g(r.bought, '+' + r.bought + ' bought', 'pos'); g(r.ub, '+' + r.ub + ' bought (units)', 'pos'); g(r.moved, '+' + r.moved + ' from cage', 'pos'); g(r.spoil, '−' + r.spoil + ' spoiled', 'neg'); g(r.adj, (r.adj > 0 ? '+' : '') + r.adj + ' count', ''); }
+  else { g(r.edit, '⚠ edited by hand ' + (r.edit > 0 ? '+' : '') + r.edit, 'neg'); g(r.sold - Math.min(r.sold, r.crQ), (r.sold - Math.min(r.sold, r.crQ)) + ' sold', 'pos'); g(r.crQ, r.crQ + ' sold on credit', 'cr'); g(r.spQ, r.spQ + ' spoiled', 'neg'); if (r.direct) g(r.bought, '+' + r.bought + ' bought', 'pos'); g(r.ub, '+' + r.ub + ' bought', 'pos'); g(r.moved, '+' + r.moved + ' from cage', 'pos'); g(r.spoil, '−' + r.spoil + ' spoiled', 'neg'); g(r.adj, (r.adj > 0 ? '+' : '') + r.adj + ' count', ''); }
   return t;
 }
 function tags(r, mode) { return tagList(r, mode).map(function (x) { return '<span class="tag ' + x[0] + '">' + x[1] + '</span>'; }).join(''); }
@@ -1801,6 +1856,21 @@ var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['lo
 function hgroup(e) { for (var i = 0; i < HGROUPS.length; i++) if (HGROUPS[i][2].indexOf(e.type) >= 0) return HGROUPS[i][0]; return 'Stock edits by hand'; }
 function histNoon(d) { var x = new Date(d); x.setHours(12, 0, 0, 0); return x; }
 function histReset() { CM = false; HY.tab = 'all'; HY.per = 'day'; HY.dt = histNoon(new Date()); HY.types = {}; HY.short = false; HY.wk = ''; HY.cv = 'score'; HY.sy = 0; HY.back = false; HEVS = null; }
+function livePage(fn, title, qs, build) {   /* a full-screen page that stays in step with the database */
+  if (!Array.isArray(qs)) qs = [qs];
+  histStop(); LIVEKEEP = fn; wpPage(fn, [], '<h2>' + title + '</h2><div class="empty">Loading…</div>');
+  var res = [], got = 0, uns = [];
+  qs.forEach(function (q, i) {
+    uns.push(onSnapshot(q, function (snap) {
+      if (res[i] === undefined) got++;
+      res[i] = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; });
+      var top = WPS[WPS.length - 1]; if (got < qs.length || !top || top.fn !== fn || $('#spage').hidden) return;
+      var a = document.activeElement; if (a && /INPUT/.test(a.tagName) && $('#spage').contains(a)) return;
+      wpPage(fn, [], build.apply(null, res), true);
+    }, function (e) { toast(errText(e)); }));
+  });
+  HUN = function () { uns.forEach(function (u) { u(); }); };
+}
 function histStop() { if (HUN) { HUN(); HUN = null; } HSHDRAW = null; }
 function histPer() { return HY.tab === 'charts' ? 'month' : HY.tab === 'all' && HY.per === 'year' ? 'month' : HY.per; }
 function histRange() {   /* the start and end of what is on show, in ms */
@@ -2385,7 +2455,7 @@ function soldCards(rows, h, title) {   /* what was sold: a clean list; tap an it
         if (r.spQ) L.push('<div class="hx neg">' + r.spQ + ' spoiled · not sold, no money</div>');
         if (r.spoil) L.push('<div class="hx neg">' + r.spoil + ' spoiled from stock · no money</div>');
         if (r.moved) L.push('<div class="hx pos">+ ' + r.moved + ' added from storage' + (r.movedCases ? ' (' + r.movedCases + ' ' + unitPl(r.unit || 'case', r.movedCases) + ')' : '') + '</div>');
-        if (r.direct && r.bought) L.push('<div class="hx pos">+ ' + r.bought + ' bought</div>'); if (r.ub) L.push('<div class="hx pos">+ ' + r.ub + ' bought (units)</div>');
+        if (r.direct && r.bought) L.push('<div class="hx pos">+ ' + r.bought + ' bought</div>'); if (r.ub) L.push('<div class="hx pos">+ ' + r.ub + ' bought</div>');
         if (r.edit) L.push('<div class="hx neg">⚠ edited by hand ' + (r.edit > 0 ? '+' : '') + r.edit + '</div>');
         if (r.adj) L.push('<div class="hx">' + (r.adj > 0 ? '+' : '') + r.adj + ' count change</div>');
         var t = '' + r.open; if (plus(r)) t += ' + ' + plus(r); t += ' − ' + r.sold + ' sold'; if (sp(r)) t += ' − ' + sp(r) + ' spoiled'; if (r.edit) t += (r.edit > 0 ? ' + ' : ' − ') + Math.abs(r.edit) + ' edit'; if (r.adj) t += (r.adj > 0 ? ' + ' : ' − ') + Math.abs(r.adj) + ' count'; var df = r.stock - (r.open + plus(r) - r.sold - sp(r) + r.edit + r.adj); if (df) t += ' <b style="color:var(--exp)">' + (df > 0 ? '+ ' : '− ') + Math.abs(df) + ' not explained</b>'; t += ' = ' + r.stock + ' left';
@@ -2711,6 +2781,7 @@ async function resetApp() {
 /* ---------- settings ---------- */
 /* ---------- Settings: a full page. The account bubble on top, everything else as rows below it; each row opens its own page or sheet ---------- */
 function spRow(ic, title, sub, act, extra) { return '<div class="sp-row' + (extra || '') + '" data-act="' + act + '"><i class="sp-ic">' + ic + '</i><div class="grow"><b>' + title + '</b><div class="muted">' + sub + '</div></div><span class="sp-ch">›</span></div>'; }
+var LIVEKEEP = null;   /* the page whose live data (livePage) must keep running while it redraws */
 var WPS = [];   /* the pages opened one on top of the other inside the full-screen page, like a phone's back stack */
 function wpPage(fn, args, html, keepScroll, right) {   /* show a full-screen page; going back returns to the page before it */
   var m = /^<h2[^>]*>([\s\S]*?)<\/h2>/.exec(html), title = m ? m[1] : 'Settings', body = m ? html.slice(m[0].length) : html, pg = $('#spage');
@@ -2719,7 +2790,7 @@ function wpPage(fn, args, html, keepScroll, right) {   /* show a full-screen pag
   var at = -1; WPS.forEach(function (e, i) { if (e.mode === 'page' && e.fn === fn) at = i; });
   if (at >= 0) { WPS.length = at + 1; WPS[at].args = args; } else WPS.push({ mode: 'page', fn: fn, args: args });
   SPMODE = 'page'; if (pg.hidden) { pg.hidden = false; document.body.classList.add('spo'); }
-  if (HUN && fn !== histPage && fn !== histShiftPage) histStop();
+  if (HUN && fn !== histPage && fn !== histShiftPage && fn !== LIVEKEEP) histStop();
   pg.innerHTML = '<div class="sp-top' + (right ? ' hasr' : '') + '"><button data-act="wpback" aria-label="Back">‹</button><b>' + title + '</b>' + (right || '') + '</div><div class="sp-body">' + body + '</div>';
   var sb = pg.querySelector('.sp-body'); if (sb) sb.scrollTop = oldTop;   /* a tab or a signature on the same page keeps the scroll where it was */
   hsync();
@@ -2837,10 +2908,10 @@ function hlist() {
   }).catch(function (e) { toast(errText(e)); });
 }
 function cancelledModal() {
-  liveModal(query(col('cancelled'), orderBy('at', 'desc'), limit(40)), function (docs) {
+  livePage(cancelledModal, 'Cancelled entries', query(col('cancelled'), orderBy('at', 'desc'), limit(40)), function (docs) {
     return '<h2>Cancelled entries</h2><p class="muted" style="margin-top:0">A private record kept for admins. These no longer show in History.</p><div class="list">' + (docs.length ? docs.map(function (c) {
       var e = c.event || {}; return '<div><div class="grow"><b>' + esc(e.type === 'sale' || e.type === 'cnote' || e.type === 'snote' ? e.qty + ' × ' + e.name : e.type === 'count' ? 'Count of ' + e.name : e.type === 'buy' ? 'Purchase ' + buyText(e) : e.type === 'loan' ? 'Cash loan' : e.name || e.type) + '</b><div class="muted">' + new Date(c.at).toLocaleString() + ' · cancelled by ' + esc(nameOfEmail(c.by) !== 'A member' ? nameOfEmail(c.by) : (c.byName || 'a member')) + (c.reason ? ' · ' + esc(c.reason) : '') + '</div></div><b>' + (e.amt ? money(e.amt) : '') + '</b></div>';
-    }).join('') : '<div class="empty">Nothing cancelled.</div>') + '</div><button class="btn sec block" data-act="settings" style="margin-top:10px">Back</button>';
+    }).join('') : '<div class="empty">Nothing cancelled.</div>') + '</div><button class="btn sec block" data-act="wpback" style="margin-top:10px">Back</button>';
   });
 }
 
@@ -3352,13 +3423,13 @@ function receiptsLoad() {
 function receiptsModal() {
   var d = new Date(), first = new Date(d.getFullYear(), d.getMonth() - RC.m, 1), all = RC.list, l = all ? all.filter(function (r) { return !RC.kind || r.kind === RC.kind; }) : null;
   var tot = l ? l.filter(function (r) { return !r.cancelled; }).reduce(function (a, r) { return a + (r.amount || 0); }, 0) : 0;
-  modal('<h2>Receipts</h2><div class="row" style="margin-bottom:8px"><button class="btn sec sm" data-act="rcm" data-v="1">◀</button><b class="grow" style="text-align:center">' + first.toLocaleDateString([], { month: 'long', year: 'numeric' }) + '</b><button class="btn sec sm" data-act="rcm" data-v="-1"' + (RC.m <= 0 ? ' disabled' : '') + '>▶</button></div>' +
+  wpPage(receiptsModal, [], '<h2>Receipts</h2><div class="row" style="margin-bottom:8px"><button class="btn sec sm" data-act="rcm" data-v="1">◀</button><b class="grow" style="text-align:center">' + first.toLocaleDateString([], { month: 'long', year: 'numeric' }) + '</b><button class="btn sec sm" data-act="rcm" data-v="-1"' + (RC.m <= 0 ? ' disabled' : '') + '>▶</button></div>' +
     '<div class="chips" style="margin-bottom:8px">' + [['', 'All'], ['buy', 'Purchases'], ['cash', 'Cash used']].map(function (c) { return '<button data-act="rck" data-v="' + c[0] + '" class="' + (RC.kind === c[0] ? 'on' : '') + '">' + c[1] + '</button>'; }).join('') + '</div>' +
     '<div id="rc-body">' + (l === null ? '<div class="card empty">Loading…</div>' : (l.length ? '<div class="muted" style="margin-bottom:6px">' + l.length + ' receipt' + (l.length === 1 ? '' : 's') + ' · ' + money(tot) + ' in all</div><div class="list">' + l.map(function (r) {
       return '<div data-act="rcopen" data-id="' + esc(r.id) + '" style="cursor:pointer;gap:10px">' + (r.thumb ? '<img src="' + r.thumb + '" alt="" style="width:46px;height:58px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">' : '<div style="width:46px;height:58px;border-radius:6px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-size:20px">' + (r.kind === 'cash' ? '💵' : '🧾') + '</div>') +
         '<div class="grow"><b>' + esc(r.title || (r.kind === 'cash' ? 'Cash used' : 'Purchase')) + '</b>' + (r.cancelled ? ' <span class="pill out">cancelled</span>' : '') + '<div class="muted">' + new Date(r.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' · ' + (r.kind === 'cash' ? 'Cash used' : 'Purchase') + ' · ' + esc(r.by || '') + '</div>' + (r.hasImg ? '' : '<div class="muted" style="color:var(--exp)">No receipt' + (r.noReceipt ? ': ' + esc(r.noReceipt) : '') + '</div>') + '</div><b>' + money(r.amount || 0) + '</b></div>';
     }).join('') + '</div>' : '<div class="empty">No receipts this month.</div>')) + '</div>' +
-    '<p class="muted">Kept for a year. ' + (canAdmin() ? '<button class="btn sec sm" data-act="rcsync" style="margin-left:6px">Add receipts from the last 31 days</button>' : '') + '</p><button class="btn sec block" data-act="close">Close</button>');
+    '<p class="muted">Kept for a year. ' + (canAdmin() ? '<button class="btn sec sm" data-act="rcsync" style="margin-left:6px">Add receipts from the last 31 days</button>' : '') + '</p><button class="btn sec block" data-act="close">Close</button>', true);
   REFRESH = null;
 }
 function receiptOpen(id) {
@@ -3790,7 +3861,7 @@ document.addEventListener('click', function (e) {
   if (hid === 'bell') return noticesModal();
   if (e.target.id === 'inst') return installApp();
   if (hid === 'hist') return histOpen();
-  if (hid === 'prof') { PF = { mode: 'day', off: 0 }; return profitModal(); }
+  if (hid === 'prof') { PF = { mode: 'day', off: 0 }; WPS = []; return profitModal(); }
   if (e.target.id === 'mbg') { if (M && !M.personId && !isPres() && $('#who-q, [data-np]')) return; return closeModal(); }
   var b = e.target.closest('[data-act]'); if (!b) return;
   var a = b.dataset.act, id = b.dataset.id, it = id && item(id);
@@ -3897,10 +3968,10 @@ document.addEventListener('click', function (e) {
     if (!(num($('#ni-price').value) > 0)) return toast('Enter the selling price (more than $0)');
     var nk = function (x) { return String(x).toLowerCase().replace(/\s+/g, ' ').trim(); };
     if (S.items.some(function (i) { return nk(i.name) === nk(name); })) return toast(name + ' already exists');
-    var fr = Math.max(0, Math.floor(num($('#ni-fr').value))), shf = $('#ni-where').value === 'shelf', unit = ($('#ni-unit').value || '').trim().toLowerCase() || 'case', np0 = Math.floor(num($('#ni-per').value)), cg = (shf && !(np0 > 1)) ? 0 : Math.max(0, Math.floor(num($('#ni-cg').value)));
-    if (!shf && np0 < 1) return toast('Enter how many items are in one ' + unit);
+    var fr = Math.max(0, Math.floor(num($('#ni-fr').value))), shf = $('#ni-where').value === 'shelf', unit = $('#ni-kind').value || 'case', np0 = unit === 'item' ? 1 : Math.floor(num($('#ni-per').value)), cg = Math.max(0, Math.floor(num($('#ni-cg').value)));   /* the two counts are locked at 0 on the screen */
+    if (unit !== 'item' && !(np0 > 1)) return toast('Enter how many items are in one ' + unit);
     var nid = newId('items'), nb = writeBatch(DB), nev = newEv();
-    nb.set(ref('items/' + nid), { name: name, price: num($('#ni-price').value), per: shf ? Math.max(1, np0 || 1) : Math.max(1, np0 || CFG.perCase), unit: unit, stock: fr, open: fr, cage: cg, cageOpen: cg, shelf: shf, ord: Date.now(), lastEvent: nev, cost: Math.max(0, num($('#ni-cost').value)) });
+    nb.set(ref('items/' + nid), { name: name, price: num($('#ni-price').value), per: Math.max(1, np0 || 1), unit: unit, stock: fr, open: fr, cage: cg, cageOpen: cg, shelf: shf, ord: Date.now(), lastEvent: nev, cost: Math.max(0, num($('#ni-cost').value)) });
     mkEvent(nb, 'newitem', { id: nid, name: name }, fr, 0, { cases: cg, note: 'New item ' + name + ' at ' + money(num($('#ni-price').value)) }); commit(nb); closeModal(); toast(name + ' added');
   }
   else if (a === 'editstock') esWarn();
@@ -3958,7 +4029,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'buyview') showPurchase(id);
   else if (a === 'bpaid') { BUY.paid = b.dataset.v; render(); }
   else if (a === 'bcancel') {
-    var dirty = BUY && (BUY.sup || BUY.total || BUY.tax || BUY.note || BUY.receipt || BUY.paid || BUY.lines.some(function (l) { return l.cost || l.name || l.cases > 1; }));
+    var dirty = BUY && (BUY.sup || BUY.total || BUY.tax || BUY.note || BUY.receipt || BUY.paid || BUY.lines.some(function (l) { return l.cost || l.name || l.cases > 1 || l.units > 0; }));
     if (!dirty) { BUY = null; render(); return; }
     askConfirm('Clear this bill?', 'Everything you entered on this bill is cleared. Nothing is saved.', 'Yes, clear it', function () { BUY = null; render(); });
   }
@@ -3966,18 +4037,18 @@ document.addEventListener('click', function (e) {
   else if (a === 'ippick') { BUY.lines[IP.k].item = id; closeModal(); render(); }
   else if (a === 'ipnew') { var l0 = BUY.lines[IP.k]; l0.item = '__new'; l0.name = $('#ip-q').value.trim(); closeModal(); render(); }
   else if (a === 'bmode') { BUY.other = b.dataset.v === 'other'; render(); }
-  else if (a === 'bl+' || a === 'bl-') { var bk = +b.dataset.k; BUY.lines[bk].cases = stepTo(BUY.lines[bk].cases, a === 'bl+' ? 1 : -1, 1); render(); }
-  else if (a === 'blby') { BUY.lines[+b.dataset.k].by = b.dataset.v; render(); }
-  else if (a === 'bladd') { BUY.lines.push({ item: S.items[0] ? S.items[0].id : '__new', cases: 1, name: '', price: '', per: String(CFG.perCase), where: 'fridge', cost: '' }); render(); }
+  else if (a === 'bl+' || a === 'bl-') { var bk = +b.dataset.k; BUY.lines[bk].cases = stepTo(BUY.lines[bk].cases, a === 'bl+' ? 1 : -1, 0); render(); }
+  else if (a === 'bu+' || a === 'bu-') { var bk2 = +b.dataset.k; BUY.lines[bk2].units = stepTo(Math.floor(num(BUY.lines[bk2].units)), a === 'bu+' ? 1 : -1, 0); render(); }
+  else if (a === 'bdest') { var bl0 = BUY.lines[+b.dataset.k], bi0 = item(bl0.item); bl0.dest = b.dataset.v; if (bi0) { BDEST[bi0.id] = bl0.dest; try { localStorage.setItem('sw_bdest', JSON.stringify(BDEST)); } catch (e) {} } render(); }
+  else if (a === 'bladd') { BUY.lines.push({ item: S.items[0] ? S.items[0].id : '__new', cases: 1, units: 0, dest: '', name: '', price: '', per: String(CFG.perCase), kind: 'case', where: 'fridge', cost: '' }); render(); }
   else if (a === 'bldel') { BUY.lines.splice(+b.dataset.k, 1); render(); }
   else if (a === 'buysave') {
-    var bp = BUY.lines.filter(function (l) { return linePack(l) && packN(l) < 1; })[0]; if (bp) return toast('How many items are in one pack?');
-    if (BUY.other) return buySave();
-    var tot = num(BUY.total), cs = BUY.lines.reduce(function (x, l) { return x + l.cases; }, 0);
+        if (BUY.other) return buySave();
+    var tot = num(BUY.total), cs = BUY.lines.reduce(function (x, l) { return x + lineParts(l).items; }, 0);
     if (!BUY.sup.trim()) return toast('Who was it bought from?'); if (tot <= 0) return toast('Enter the total on the bill');
     var bc = billCheck(); if (bc) return toast(bc);
     if (woAmt() < 0) return toast('Cash taken cannot be less than the bill total');
-    askConfirm('Save this purchase?', '<b>' + esc(BUY.sup.trim()) + '</b><br>' + BUY.lines.map(function (l) { var li = item(l.item); return l.cases + ' ' + (lineUnit(l) ? (l.cases === 1 ? 'unit' : 'units') : linePack(l) ? unitPl('pack', l.cases) + ' of ' + packN(l) : (li ? unitPl(unitName(li), l.cases) : lineDirect(l) ? 'items' : 'cases')) + ' of ' + esc(li ? li.name : l.name); }).join('<br>') + '<br><br>Bill total <b>' + money(tot) + '</b> · cash taken <b>' + money(paidAmt()) + '</b>' + (woAmt() > 0 ? '<br>Change not kept: <b>' + money(woAmt()) + '</b>' + (woAmt() > 5 ? '<br><b style="color:var(--exp)">This writes off ' + money(woAmt()) + '. Is that right?</b>' : '') : '') + '<br>' + cs + ' unit' + (cs === 1 ? '' : 's') + ' are added to the stock.<br><span class="muted">' + (BUY.receipt ? '📎 Receipt photo attached.' : 'No receipt photo attached.') + '</span>', 'Yes, save purchase', buySave);
+    askConfirm('Save this purchase?', '<b>' + esc(BUY.sup.trim()) + '</b><br>' + BUY.lines.map(function (l) { var li = item(l.item), pt = lineParts(l), w = lineWord(l); return [pt.b ? pt.b + ' ' + unitPl(w, pt.b) : '', pt.u ? pt.u + ' ' + unitPl('single', pt.u) : ''].filter(Boolean).join(' + ') + ' of ' + esc(li ? li.name : l.name) + ' <span class="muted">(' + (pt.dc > 0 ? 'storage' : 'the shop') + ')</span>'; }).join('<br>') + '<br><br>Bill total <b>' + money(tot) + '</b> · cash taken <b>' + money(paidAmt()) + '</b>' + (woAmt() > 0 ? '<br>Change not kept: <b>' + money(woAmt()) + '</b>' + (woAmt() > 5 ? '<br><b style="color:var(--exp)">This writes off ' + money(woAmt()) + '. Is that right?</b>' : '') : '') + '<br>' + cs + ' item' + (cs === 1 ? '' : 's') + ' are added to the stock.<br><span class="muted">' + (BUY.receipt ? '📎 Receipt photo attached.' : 'No receipt photo attached.') + '</span>', 'Yes, save purchase', buySave);
   }
   else if (a === 'htab') { HT = b.dataset.v; render(); }
   else if (a === 'hoopen') { HOPEN[id] = !HOPEN[id]; render(); }
@@ -4223,7 +4294,8 @@ document.addEventListener('input', function (e) {
   else if (t.dataset.oc) { OP.counts[t.dataset.oc] = OP.counts[t.dataset.oc] || {}; OP.counts[t.dataset.oc][t.dataset.f] = t.value; }
   else if (t.id === 'sw-q') $('#sw-list').innerHTML = swList(t.value);
   else if (t.id === 'ip-q') { $('#ip-list').innerHTML = ipList(t.value); $('#ip-new').innerHTML = ipNewRow(t.value); }
-  else if (t.dataset.step === 'bl') { BUY.lines[+t.dataset.k].cases = Math.max(1, Math.floor(num(t.value)) || 1); buyLive(); }
+  else if (t.dataset.step === 'bl') { BUY.lines[+t.dataset.k].cases = Math.max(0, Math.floor(num(t.value)) || 0); buyLive(); }
+  else if (t.dataset.step === 'bu') { BUY.lines[+t.dataset.k].units = Math.max(0, Math.floor(num(t.value)) || 0); buyLive(); }
   else if (t.dataset.rp) RP[t.dataset.rp] = t.value;
   else if (t.dataset.es) ES[t.dataset.es] = t.value;
   else if (t.dataset.uc) UC[t.dataset.uc] = t.value;
@@ -4271,12 +4343,15 @@ document.addEventListener('change', function (e) {
     else if (a2 === 'sg') { ST.cage = Math.max(0, n); stRender(); }
     else if (a2 === 'sm') { var mi2 = item(ST.id); ST.move = Math.max(1, Math.min(n || 1, Math.max(1, mi2.cage))); stockSheet(); }
     else if (a2 === 'sp') { var pi2 = item(ST.id); ST.spoil = Math.max(1, Math.min(n || 1, Math.max(1, pi2.stock))); stockSheet(); }
-    else if (a2 === 'bl') { BUY.lines[+t.dataset.k].cases = Math.max(1, n || 1); render(); }
+    else if (a2 === 'bl') { BUY.lines[+t.dataset.k].cases = Math.max(0, n || 0); buyLive(); }   /* no redraw here: a redraw would swallow the tap on the next button */
+    else if (a2 === 'bu') { BUY.lines[+t.dataset.k].units = Math.max(0, n || 0); buyLive(); }
     return;
   }
   if (t.dataset.bl !== undefined && t.dataset.f === 'item') { BUY.lines[+t.dataset.bl].item = t.value; render(); return; }
   if (t.dataset.bl !== undefined && t.dataset.f === 'where') { BUY.lines[+t.dataset.bl].where = t.value; render(); return; }
-  if (t.id === 'ni-where' || t.id === 'sd-where') { shelfFields(t.id.slice(0, 2)); return; }
+  if (t.id === 'ni-kind') { niKind(); return; }
+  if (t.dataset.bl !== undefined && t.dataset.f === 'kind') { BUY.lines[+t.dataset.bl].kind = t.value; render(); return; }
+  if (t.id === 'sd-where') { shelfFields('sd'); return; }
   if (t.id === 'ni-unit' || t.id === 'sd-unit') { unitSync(t.id.slice(0, 2)); return; }
   if (!t.dataset.sh) return;
   if (viewOnly()) { toast('View only: you are not in control'); render(); return; }
