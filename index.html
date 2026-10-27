@@ -249,7 +249,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.26', RULES_VERSION = '2.11';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.27', RULES_VERSION = '2.11';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -483,15 +483,18 @@ function dayFlush(b) {
     b.set(ref('daily/' + k), data, { merge: true });
   });
 }
-function commit(b) { dayFlush(b); return b.commit().catch(function (e) { console.error(e); toast(errText(e)); }); }
+function commit(b) { dayFlush(b); var q = PLQ; PLQ = []; return b.commit().then(function () { q.forEach(function (x) { if (x.del) deleteDoc(ref('plog/' + x.id)).catch(function () {}); else setDoc(ref('plog/' + x.id), x.d).catch(function () {}); }); }).catch(function (e) { console.error(e); toast(errText(e)); }); }   /* the credit lines are best effort: if they fail the entry itself is still saved */
 function guard(p) { return p.catch(function (e) { console.error(e); toast(errText(e)); }); }
 var LE = '';   /* id of the event the current save is for: every item / credit change in the save names it, and the database refuses changes that don't */
 var EXP = function () { return Timestamp.fromMillis(Date.now() + 31 * 864e5); };   /* records are kept about 31 days */
+var EXPY = function () { return Timestamp.fromMillis(Date.now() + 365 * 864e5); };   /* nothing is kept longer than a year */
+var PLQ = [], PLT = { sale: 'credit', cnote: 'credit', pay: 'pay', loan: 'loan', opencredit: 'open' };   /* the small yearly credit lines, written right after the entry is saved */
 function newEv() { LE = newId('events'); DAYQ = []; return LE; }
 function mkEvent(b, type, it, q, amt, extra, given) {
   var id = given || LE || newId('events'), e = { t: Date.now(), type: type, item: it ? it.id : '', items: it ? [it.id] : [], name: it ? it.name : '', qty: q, amt: amt || 0, sid: SH().sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: SH().name, dly: 1 };
   if (extra) for (var k in extra) e[k] = extra[k];
   if (type !== 'shiftrec' && type !== 'watchchg' && corrOn()) e.corr = myName();   /* entries made as a correction are marked until the shift changes */
+  if (PLT[type] && (type !== 'sale' || e.cr) && (e.cid || e.person)) PLQ.push({ id: id, d: { t: e.t, type: PLT[type], person: e.cid || rootOf(e.person), name: e.crName || '', amt: e.amt || 0, qty: e.qty || 0, item: type === 'sale' || type === 'cnote' ? e.name || '' : '', sid: e.sid, wk: e.wk || '', by: e.byName || '', note: e.note || '', expireAt: EXPY() } });
   b.set(ref('events/' + id), e); EVC[id] = e; e.id = id; DAYQ.push({ e: e, sign: 1 }); return id;
 }
 function itemInc(b, id, d, ev) { var u = { lastEvent: ev || LE }; if (d.cost) u.cost = d.cost; if (d.stock) u.stock = increment(d.stock); if (d.cage) u.cage = increment(d.cage); b.update(ref('items/' + id), u); }
@@ -529,7 +532,7 @@ function cancelEvent(id, reason, quiet) {
   DAYQ.push({ e: cxEv(e), sign: -1 });
   var rec = {}; for (var k in e) if (k !== 'id') rec[k] = e[k];
   b.set(ref('cancelled/' + id), { at: Date.now(), by: EMAIL, byName: myName(), reason: reason || '', sid: e.sid, event: rec, expireAt: EXP() });
-  b.delete(ref('events/' + id)); delete EVC[id];
+  b.delete(ref('events/' + id)); delete EVC[id]; if (PLT[e.type]) PLQ.push({ id: id, del: true });
   if (e.type === 'buy' || e.type === 'usecash') getDoc(ref('receipts/' + id)).then(function (sn) { if (sn.exists()) b.update(ref('receipts/' + id), { cancelled: true }); commit(b); }, function () { commit(b); }); else commit(b);
   toast(quiet ? 'Undone' : 'Cancelled and removed');
 }
@@ -715,7 +718,7 @@ async function startOverRun(list) {
     var rec = {}; for (var f in e) if (f !== 'id') rec[f] = e[f];
     b.set(ref('cancelled/' + e.id), { at: Date.now(), by: EMAIL, byName: myName(), reason: 'Start over', sid: e.sid, event: rec, expireAt: EXP() });
     b.delete(ref('events/' + e.id)); delete EVC[e.id]; dayFlush(b);
-    try { await b.commit(); } catch (x) { console.error(x); err = errText(x); break; }
+    try { await b.commit(); if (PLT[e.type]) deleteDoc(ref('plog/' + e.id)).catch(function () {}); } catch (x) { console.error(x); err = errText(x); break; }
     done++; await new Promise(function (r) { setTimeout(r, 120); });
   }
   if (!err) { try { SH().counted = ''; await setShift({ counted: '' }); } catch (x) { console.error(x); } }   /* the cash that was counted goes too: the count starts again from nothing */
@@ -1862,12 +1865,12 @@ function evRow(e, cancelable) {
   return '<div' + (e.type === 'buy' || e.type === 'other' ? ' data-act="buyview" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'pay' || e.type === 'cnote' || e.type === 'loan' || (e.type === 'sale' && e.cr) ? ' data-act="evsheet" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'stockedit' ? ' data-act="editview" data-id="' + e.id + '" style="cursor:pointer;background:var(--exp-bg);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px;box-shadow:inset 2px 0 0 var(--exp)"' : e.type === 'cashshort' ? ' style="cursor:pointer;background:var(--exp-bg);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px;box-shadow:inset 2px 0 0 var(--exp)"' : '') + '><span style="font-size:18px;width:26px;flex:none;text-align:center">' + ic + '</span><div class="grow"><b>' + esc(tx) + '</b><div class="muted">' + (hdt(e) ? hdt(e) + ' ' : '') + hhmm(e.t) + (sub ? ' · ' + esc(sub) : '') + (e.byName ? ' · recorded by ' + esc(e.byName) : '') + '</div></div>' + (e.receipt ? '<img data-act="rcv" src="' + e.receipt + '" alt="receipt" style="width:44px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">' : '') + '<b style="color:' + col + '">' + amt + '</b>' + (CM && cancelable && ['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'shiftrec', 'watchchg'].indexOf(e.type) < 0 ? '<button class="btn red sm" data-act="cancelask" data-id="' + e.id + '">Cancel</button>' : '') + '</div>';
 }
 /* ---------- History: one full page. All = the entries of a day or a month, Shifts = the permanent shift summaries (a day, a month or a year), Charts. The Filter is in the top bar ---------- */
-var HY = { tab: 'all', per: 'day', dt: new Date(), types: {}, short: false, wk: '', sid: '', cnt: {}, cv: 'score', sy: 0, back: false }, HUN = null, HEVS = null, HSDOCS = null, HSD = {}, HYSIG = '';
+var HY = { tab: 'all', per: 'day', dt: new Date(), types: {}, short: false, wk: '', sid: '', cnt: {}, sper: 'month', pper: 'month', pf: 'all', pq: '', pid: '', pl: null, cv: 'score', sy: 0, back: false }, HUN = null, HEVS = null, HSDOCS = null, HSD = {}, HYSIG = '';
 var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash']], ['Shortages and repayments', '⚠️', ['cashshort', 'shortfix', 'repay']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
 function hgroup(e) { for (var i = 0; i < HGROUPS.length; i++) if (HGROUPS[i][2].indexOf(e.type) >= 0) return HGROUPS[i][0]; return 'Stock edits by hand'; }
 function histNoon(d) { var x = new Date(d); x.setHours(12, 0, 0, 0); return x; }
 function histToday() { return histNoon(new Date()); }   /* History always opens on today, by the phone's own clock */
-function histReset() { CM = false; HY.tab = 'all'; HY.per = 'day'; HY.dt = histToday(); HY.types = {}; HY.short = false; HY.wk = ''; HY.sid = ''; HY.cnt = {}; HY.cv = 'score'; HY.sy = 0; HY.back = false; HEVS = null; }
+function histReset() { CM = false; HY.tab = 'all'; HY.per = 'day'; HY.dt = histToday(); HY.types = {}; HY.short = false; HY.wk = ''; HY.sid = ''; HY.cnt = {}; HY.sper = 'month'; HY.pper = 'month'; HY.pf = 'all'; HY.pq = ''; HY.pid = ''; HY.pl = null; HY.cv = 'score'; HY.sy = 0; HY.back = false; HEVS = null; }
 function livePage(fn, title, qs, build) {   /* a full-screen page that stays in step with the database */
   if (!Array.isArray(qs)) qs = [qs];
   histStop(); LIVEKEEP = fn; wpPage(fn, [], '<h2>' + title + '</h2><div class="empty">Loading…</div>');
@@ -1884,7 +1887,7 @@ function livePage(fn, title, qs, build) {   /* a full-screen page that stays in 
   HUN = function () { uns.forEach(function (u) { u(); }); };
 }
 function histStop() { if (HUN) { HUN(); HUN = null; } HSHDRAW = null; }
-function histPer() { return HY.tab === 'charts' ? 'month' : HY.tab === 'all' && HY.per === 'year' ? 'month' : HY.per; }
+function histPer() { return HY.tab === 'all' ? 'day' : HY.tab === 'shifts' ? HY.sper : HY.tab === 'people' ? (HY.pper === 'all' ? 'year' : HY.pper) : 'month'; }
 function histRange() {   /* the start and end of what is on show, in ms */
   var d = HY.dt, y = d.getFullYear(), m = d.getMonth(), p = histPer();
   return p === 'day' ? { a: new Date(y, m, d.getDate()).getTime(), b: new Date(y, m, d.getDate() + 1).getTime() } : p === 'month' ? { a: new Date(y, m, 1).getTime(), b: new Date(y, m + 1, 1).getTime() } : { a: new Date(y, 0, 1).getTime(), b: new Date(y + 1, 0, 1).getTime() };
@@ -1898,14 +1901,17 @@ function histPlain() { var d = HY.dt, p = histPer(), mn = d.toLocaleDateString('
 function histFilterCount() { return Object.keys(HY.types).filter(function (k) { return HY.types[k]; }).length + (HY.short && HY.tab === 'shifts' ? 1 : 0); }
 function histHead() {
   var r = histRange(), now = Date.now(), p = histPer(), here = p === 'day' ? dkey(HY.dt) === dkey(histToday()) : now >= r.a && now < r.b, fut = r.a > now && !here, y = HY.dt.getFullYear(), pick, st = ' style="width:' + (here ? '100%' : 'calc(100% - 66px)') + '"';
+  var tabs = '<div class="htabs">' + [['all', 'Day'], ['shifts', 'Handovers'], ['people', 'People'], ['charts', 'Charts']].map(function (x) { return '<button data-act="hytab" data-v="' + x[0] + '" class="' + (HY.tab === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>';
+  if (HY.tab === 'people' && !HY.pid) return tabs;
+  var seg = HY.tab === 'people' ? '<div class="htabs" style="margin-top:2px">' + [['month', 'Month'], ['year', 'Year'], ['all', 'All']].map(function (x) { return '<button data-act="pper" data-v="' + x[0] + '" style="height:28px" class="' + (HY.pper === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>' : '';
+  if (HY.tab === 'people' && HY.pper === 'all') return tabs + seg;
   if (p === 'day') pick = '<input class="hpick"' + st + ' type="date" value="' + dkey(HY.dt) + '" aria-label="Pick a date">';
   else if (p === 'month') pick = '<input class="hpick"' + st + ' type="month" value="' + dkey(HY.dt).slice(0, 7) + '" aria-label="Pick a month">';
   else { var yo = ''; for (var q = y + 1; q >= y - 6; q--) yo += '<option' + (q === y ? ' selected' : '') + '>' + q + '</option>'; pick = '<select class="hpick"' + st + ' aria-label="Pick a year">' + yo + '</select>'; }
-  return '<div class="htabs">' + [['all', 'All'], ['shifts', 'Shifts'], ['charts', 'Charts']].map(function (x) { return '<button data-act="hytab" data-v="' + x[0] + '" class="' + (HY.tab === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>' +
-    '<div class="hsel"><button class="btn sec sm" data-act="hstep" data-v="-1" aria-label="Back">‹</button><div class="hdate' + (fut ? ' fut' : '') + (here ? '' : ' away') + '"><span>' + histLabel() + '</span>' + pick + (here ? '' : '<button class="htoday" data-act="htoday">Today</button>') + '</div><button class="btn sec sm" data-act="hstep" data-v="1" aria-label="Forward">›</button></div>';
+  return tabs + seg + '<div class="hsel"><button class="btn sec sm" data-act="hstep" data-v="-1" aria-label="Back">‹</button><div class="hdate' + (fut ? ' fut' : '') + (here ? '' : ' away') + '"><span>' + histLabel() + '</span>' + pick + (here ? '' : '<button class="htoday" data-act="htoday">Today</button>') + '</div><button class="btn sec sm" data-act="hstep" data-v="1" aria-label="Forward">›</button></div>';
 }
 function histFilterBtn() {
-  if (HY.tab === 'charts') return '';
+  if (HY.tab === 'charts' || HY.tab === 'people') return '';
   var n = histFilterCount();
   return '<button class="spr' + (n ? ' act' : '') + '" data-act="hfilter"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z" fill="currentColor"/></svg> Filter' + (n ? ' · ' + n : '') + '</button>';
 }
@@ -1957,6 +1963,54 @@ function evSheet(id) {   /* a payment, credit or loan: who, how much, when, and 
   var e = HEV[id]; if (!e) return; var who = e.crName || plab(e.person || e.cr), bal = balance(e.person || e.cr || ''), kv = function (l, v) { return '<div class="hkv"><span>' + l + '</span><b>' + v + '</b></div>'; };
   var title = e.type === 'pay' ? '💵 ' + esc(who) + ' paid ' + money(e.amt) : e.type === 'loan' ? '🤝 Cash lent to ' + esc(who) : '💳 ' + esc(who) + ' took ' + e.qty + ' × ' + esc(e.name) + ' on credit';
   modal('<h2 style="margin:0 0 8px">' + title + '</h2>' + kv(e.type === 'pay' ? 'Paid' : e.type === 'loan' ? 'Lent' : 'Credit', money(e.amt)) + (e.type === 'sale' || e.type === 'cnote' ? kv('Items', e.qty + ' × ' + esc(e.name)) : '') + kv('When', hfmt(e.t)) + kv('Recorded by', esc(e.byName || 'A member')) + (e.note ? kv('Note', esc(e.note)) : '') + kv('Still owed now', bal > 0.004 ? '<span style="color:var(--exp)">' + money(bal) + '</span>' : '<span style="color:var(--ok)">Nothing ✓</span>') + '<button class="btn block" data-act="close" style="margin-top:10px">Close</button>');
+}
+var PLOG_SINCE = new Date(2026, 9, 27).getTime();   /* the permanent credit lines start the day they were switched on */
+function peopleAll() {
+  var out = [];
+  S.people.forEach(function (p) { out.push({ id: p.id, name: plabel(p), crew: p.watch || '', kind: 'p', bal: Math.max(0, balance(p.id)) }); });
+  S.guests.forEach(function (g) { if (g.mergedInto) return; out.push({ id: g.id, name: plabel(g), crew: '', kind: 'g', bal: Math.max(0, balance(g.id)) }); });
+  return out.sort(function (a, b) { return b.bal - a.bal || a.name.localeCompare(b.name); });
+}
+function peopleListHtml() {
+  var q = (HY.pq || '').trim().toLowerCase(), f = HY.pf, all = peopleAll().filter(function (x) { return (!q || x.name.toLowerCase().indexOf(q) >= 0) && (f === 'all' || (f === 'owing' && x.bal > 0) || (f === 'reg' && x.kind === 'p') || (f === 'saved' && x.kind === 'g')); });
+  var hi = function (n) { var e = esc(n), i = q ? n.toLowerCase().indexOf(q) : -1; return i < 0 ? e : esc(n.slice(0, i)) + '<b style="color:var(--brand)">' + esc(n.slice(i, i + q.length)) + '</b>' + esc(n.slice(i + q.length)); };
+  var tot = r2(all.reduce(function (a, x) { return a + x.bal; }, 0)), nOwe = all.filter(function (x) { return x.bal > 0; }).length;
+  var note = f === 'owing' ? '<div class="muted" style="margin:2px 4px 6px;font-size:12.5px">' + nOwe + (nOwe === 1 ? ' person owes ' : ' people owe ') + '<b style="color:var(--exp)">' + money(tot) + '</b> in all</div>' : '<div class="muted" style="margin:2px 4px 6px;font-size:12.5px">Owing first, then A to Z</div>';
+  if (!all.length) return note + '<div class="empty">' + (q ? 'Nobody matches “' + esc(HY.pq) + '”.' : 'Nobody here yet.') + '</div>';
+  return note + '<div class="card" style="margin:0;padding:2px 12px">' + all.map(function (x) { return '<div data-act="ppick" data-id="' + esc(x.id) + '" style="display:flex;align-items:center;gap:10px;padding:11px 4px;border-top:1px solid var(--line);cursor:pointer"><div class="grow"><b>' + hi(x.name) + '</b> ' + (x.kind === 'p' ? (x.crew ? wsw(x.crew) : '') : '<span class="muted" style="font-size:11.5px;border:1px solid var(--line);border-radius:10px;padding:0 7px">saved name</span>') + '<div class="muted" style="font-size:12.5px">' + (x.kind === 'p' ? (x.crew ? esc(x.crew) + ' shift' : 'Registered') : 'Added when taking credit') + '</div></div>' + (x.bal > 0 ? '<b style="color:var(--exp);white-space:nowrap">owes ' + money(x.bal) + '</b>' : '<span class="muted" style="font-size:12.5px">–</span>') + '<span style="color:var(--brand);font-size:20px;margin-left:6px">›</span></div>'; }).join('') + '</div>';
+}
+function pRange() { var r = histRange(); return HY.pper === 'all' ? { a: 0, b: Infinity } : r; }
+function histPeopleHtml() {
+  if (HY.pid) return histPersonHtml();
+  var chip = function (v, t) { return '<button data-act="pf" data-v="' + v + '" class="' + (HY.pf === v ? 'on' : '') + '" style="height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--line);background:' + (HY.pf === v ? 'var(--brand)' : 'var(--surface)') + ';color:' + (HY.pf === v ? '#fff' : 'var(--ink)') + ';font:inherit;font-size:12px;font-weight:600;flex:none">' + t + '</button>'; };
+  return '<div style="margin-top:12px;display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:14px;box-shadow:var(--sh);padding:0 12px;height:42px"><span style="color:var(--muted)">🔍</span><input id="pp-q" value="' + esc(HY.pq) + '" placeholder="Search a name" autocomplete="off" style="border:0;background:none;height:40px;padding:0;font-size:15px"></div><div style="display:flex;gap:6px;margin:10px 0 6px;overflow-x:auto">' + chip('all', 'Everyone') + chip('owing', 'Owing') + chip('reg', 'Registered') + chip('saved', 'Saved names') + '</div><div id="pplist">' + peopleListHtml() + '</div>';
+}
+function histPersonHtml() {
+  var pid = HY.pid, pr = party(pid); if (!pr) { HY.pid = ''; return histPeopleHtml(); }
+  var root = rootOf(pid), r = pRange(), inP = function (t) { return t >= r.a && t < r.b; }, bal = Math.max(0, balance(pid)), mem = S.members.filter(function (m) { return m.personId === root; })[0], email = mem ? mem.email : '';
+  var docs = HSDOCS || [], given = docs.filter(function (d) { return email && d.fromEmail === email && inP(d.at); }), recv = docs.filter(function (d) { return email && d.receivedBy === email && d.status === 'accepted' && inP(d.receivedAt || d.at); });
+  var shortG = given.filter(function (d) { return hoShort(d).k === 'short'; }).length;
+  var cell = function (l, v, c) { return '<div><div class="l">' + l + '</div><div class="v"' + (c ? ' style="color:' + c + '"' : '') + '>' + v + '</div></div>'; };
+  var head = '<div class="card" style="margin:12px 0 0"><div style="display:flex;justify-content:space-between;align-items:center"><div><b style="font-size:17px">' + esc(plabel(pr)) + '</b> ' + (pr.watch ? wsw(pr.watch) : '') + '</div><a data-act="pclear" style="color:var(--brand);font-weight:600;font-size:13px;cursor:pointer">Change</a></div><div class="hsum" style="margin:10px 0 0;box-shadow:none;padding:0">' + cell('Owes now', money(bal), bal > 0 ? 'var(--exp)' : '') + (email ? cell('Handovers given', given.length) + cell('Short', shortG, shortG ? 'var(--exp)' : '') : '') + '</div></div>';
+  var pl = (HY.pl || []).filter(function (x) { return inP(x.t); }).sort(function (a, b) { return b.t - a.t; }), iconOf = { credit: '💳', pay: '💵', loan: '🤝', open: '📒' };
+  var plRow = function (x) { var tx = x.type === 'credit' ? 'Took ' + (x.qty && x.item ? x.qty + ' × ' + x.item + ' ' : '') + 'on credit' : x.type === 'pay' ? 'Paid ' + money(x.amt) : x.type === 'loan' ? 'Borrowed ' + money(x.amt) + ' from the cash' : 'Owed from before'; return { t: x.t, html: '<div><span style="font-size:18px;width:26px;flex:none;text-align:center">' + iconOf[x.type] + '</span><div class="grow"><b>' + esc(tx) + '</b><div class="muted">' + hfmt(x.t) + (x.by ? ' · recorded by ' + esc(x.by) : '') + '</div></div><b style="color:' + (x.type === 'pay' ? 'var(--ok)' : 'var(--soon)') + ';white-space:nowrap">' + (x.type === 'pay' ? '+ ' : '') + money(x.amt) + '</b></div>' }; };
+  var note = '', since = r.a < PLOG_SINCE ? '<div style="padding:8px 10px;border-radius:10px;background:var(--soon-bg);color:var(--soon);font-size:12.5px;margin:10px 0 0">Credit, payment and loan history is kept from ' + new Date(PLOG_SINCE).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) + '. Nothing is kept longer than a year. Handovers are kept for a year too.</div>' : '';
+  var body = '';
+  if (HY.pper === 'month') {
+    var hrows = given.map(function (d) { return { t: d.at, html: hoRowHtml({ kind: 'give', doc: d, t: d.at, shiftWk: d.receivedBy ? whoOf(d.receivedBy).wk : '' }) }; }).concat(recv.map(function (d) { return { t: d.receivedAt || d.at, html: hoRowHtml({ kind: 'recv', doc: d, t: d.receivedAt || d.at, shiftWk: d.receivedBy ? whoOf(d.receivedBy).wk : '' }) }; })).sort(function (a, b) { return b.t - a.t; });
+    body = (pl.length ? '<div class="sec-h">Credit and loans</div><div class="list">' + pl.map(function (x) { return plRow(x).html; }).join('') + '</div>' : '') + (hrows.length ? '<div class="sec-h">Handovers</div><div class="list">' + hrows.map(function (x) { return x.html; }).join('') + '</div>' : '') + (!pl.length && !hrows.length ? '<div class="empty">Nothing important in ' + esc(histPlain()) + '.</div>' : '') + '<div class="muted" style="margin:10px 2px;font-size:12.5px">Only the important things. Counts, sales and purchases are in Day.</div>';
+  } else {
+    var by = {}; given.concat(recv).forEach(function (d) { var m = dkey(new Date(d.receivedAt && d.receivedBy === email ? d.receivedAt : d.at)).slice(0, 7); (by[m] = by[m] || { g: 0, sh: 0, c: 0 }); if (d.fromEmail === email) { by[m].g++; if (hoShort(d).k === 'short') by[m].sh++; } });
+    pl.forEach(function (x) { var m = dkey(new Date(x.t)).slice(0, 7); (by[m] = by[m] || { g: 0, sh: 0, c: 0 }).c++; });
+    var keys = Object.keys(by).sort().reverse();
+    body = '<div class="sec-h">By month</div>' + (keys.length ? '<div class="card"><div class="list">' + keys.map(function (m) { var v = by[m]; return '<div data-act="pmonth" data-id="' + m + '" style="cursor:pointer"><b style="width:72px">' + new Date(+m.slice(0, 4), +m.slice(5, 7) - 1, 1).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) + '</b><div class="grow muted" style="font-size:12.5px">' + v.g + ' handed over' + (v.c ? ' · ' + v.c + ' credit ' + (v.c === 1 ? 'entry' : 'entries') : '') + '</div><span style="color:' + (v.sh ? 'var(--exp)' : 'var(--ok)') + ';font-size:12.5px">' + (v.sh ? v.sh + ' short' : '✓') + '</span><span style="color:var(--brand);font-size:20px;margin-left:6px">›</span></div>'; }).join('') + '</div></div>' : '<div class="empty">Nothing important in this period.</div>');
+  }
+  return head + since + body;
+}
+function plogSub() {
+  if (HEUN) { HEUN(); HEUN = null; }
+  HY.pl = null; if (!HY.pid) return;
+  HEUN = onSnapshot(query(col('plog'), where('person', '==', rootOf(HY.pid)), limit(500)), function (snap) { HY.pl = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); histDraw(); }, function () { HY.pl = []; histDraw(); });
 }
 function histEvSub() {   /* the entries of the shifts of the chosen day (a night shift keeps its entries after midnight) */
   var sids = histDay().map(function (x) { return x.sid; }).slice(0, 10), key = sids.join(',');
@@ -2026,7 +2080,7 @@ function histAllHtml() {
   var can = inControl() && all.some(function (e) { return e.sid === SH().sid; });
   var blocks = sel.slice().reverse().map(function (X) { return histShiftBlock(X, evs, sel.length > 1 ? '<div class="sec-h" style="margin-top:14px">' + hdot(X.wk) + ' ' + esc(X.wk) + ' · ' + (X.start ? hfmt(X.start) : '') + ' → ' + (X.running ? 'now' : X.end ? hfmt(X.end) : '') + '</div>' : '') }).join('');
   if (!/class="list"|class="hcs"/.test(blocks)) blocks = histFilterCount() ? '<div class="empty">No entries match this filter on ' + esc(histPlain()) + '.<br><button class="btn sec" data-act="hclear" style="margin-top:12px">Clear filter</button></div>' : '<div class="empty">No entries yet for ' + esc(histPlain()) + '.</div>';
-  return chips + line + warn + histTiles(all, day.some(function (x) { return x.running; })) + blocks + (can ? '<button class="btn ' + (CM ? 'sec' : 'red') + ' block" data-act="cmtog" style="margin-top:12px">' + (CM ? 'Done cancelling' : 'Cancel an item') + '</button>' + (CM ? '<div class="cancelbar">Tap Cancel next to the entry to remove. Only this shift can be cancelled.</div>' : '') : '') + '<p class="muted">Entries are kept for about 31 days. Every shift keeps a permanent summary under Shifts.</p>';
+  return chips + line + warn + histTiles(all, day.some(function (x) { return x.running; })) + blocks + (can ? '<button class="btn ' + (CM ? 'sec' : 'red') + ' block" data-act="cmtog" style="margin-top:12px">' + (CM ? 'Done cancelling' : 'Cancel an item') + '</button>' + (CM ? '<div class="cancelbar">Tap Cancel next to the entry to remove. Only this shift can be cancelled.</div>' : '') : '') + '<p class="muted">Entries are kept for about 31 days. Every handover keeps its summary for a year, under Handovers.</p>';
 }
 function histAllMonth() {
   if (!HEVS) return '<div class="empty">Loading…</div>';
@@ -2039,7 +2093,7 @@ function histAllMonth() {
     if (p !== 'day') { var k = new Date(e.t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); if (k !== last) { last = k; out += '<div class="sec-h">' + esc(k) + '</div>'; } }
     out += evRow(e, e.sid === SH().sid);
   });
-  return tiles + '<div class="list">' + out + '</div>' + (can ? '<button class="btn ' + (CM ? 'sec' : 'red') + ' block" data-act="cmtog" style="margin-top:12px">' + (CM ? 'Done cancelling' : 'Cancel an item') + '</button>' + (CM ? '<div class="cancelbar">Tap Cancel next to the entry to remove. Only this shift can be cancelled.</div>' : '') : '') + '<p class="muted">Entries are kept for about 31 days. Every shift keeps a permanent summary under Shifts.</p>';
+  return tiles + '<div class="list">' + out + '</div>' + (can ? '<button class="btn ' + (CM ? 'sec' : 'red') + ' block" data-act="cmtog" style="margin-top:12px">' + (CM ? 'Done cancelling' : 'Cancel an item') + '</button>' + (CM ? '<div class="cancelbar">Tap Cancel next to the entry to remove. Only this shift can be cancelled.</div>' : '') : '') + '<p class="muted">Entries are kept for about 31 days. Every handover keeps its summary for a year, under Handovers.</p>';
 }
 function shDay(d) { var x = String(d.day || ''); if (x) return x; var q = String(d.date || '').split('/'); return q.length === 3 ? q[2] + '-' + q[1] + '-' + q[0] : ''; }
 function histShiftRow(d) {
@@ -2049,21 +2103,37 @@ function histShiftList() {   /* the shifts in the chosen day, month or year, aft
   var p = histPer(), key = dkey(HY.dt), pre = p === 'day' ? key : p === 'month' ? key.slice(0, 7) : key.slice(0, 4);
   return (HSDOCS || []).filter(function (d) { return (!HY.wk || d.wk === HY.wk) && (!HY.short || d.short > 0) && shDay(d).indexOf(pre) === 0 && (p !== 'day' || shDay(d) === pre); });
 }
+function histSpan(d, asc) { var i = asc.indexOf(d), pv = i > 0 ? asc[i - 1] : null, a = pv ? (pv.receivedAt || pv.at) : 0; return (a ? hfmt(a) : '') + ' → ' + hfmt(d.at); }
+function histHoCard(d, asc) {
+  var st = hoShort(d), c = st.c, recvName = d.receivedByName || (d.toLabels || []).join(', ') || 'the next shift', rwk = d.receivedBy ? whoOf(d.receivedBy).wk : '';
+  var chip = function (t, col, bg) { return '<span style="background:' + bg + ';color:' + col + ';padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700;white-space:nowrap">' + t + '</span>'; };
+  var ch = st.k === 'short' ? chip(c.cashDiff < 0 ? 'short ' + money(-c.cashDiff) : c.less + (c.less === 1 ? ' item' : ' items') + ' short', 'var(--exp)', 'var(--exp-bg)') : st.k === 'over' ? chip('over', 'var(--soon)', 'var(--soon-bg)') : st.k === 'ok' ? chip('✓ matched', 'var(--ok)', 'var(--ok-bg)') : chip('waiting', 'var(--muted)', 'var(--soft)');
+  return '<div class="card" data-act="hosheet" data-id="' + esc(d.id) + '" data-k="give" data-wk="' + esc(rwk) + '" style="cursor:pointer;margin:0 0 10px;padding:12px 14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="min-width:0">' + wsw(d.wk) + ' <span style="font-size:12.5px">' + histSpan(d, asc) + '</span></div>' + ch + '</div><div class="muted" style="margin-top:6px;font-size:13px">' + esc(d.fromName || '') + ' → ' + esc(recvName) + (st.k === 'wait' ? ' · waiting to be counted' : '') + '</div><div style="display:flex;gap:18px;margin-top:8px;font-size:13px"><span><span class="muted">Sales</span> <b>' + money(d.sales || 0) + '</b></span><span><span class="muted">Cash counted</span> <b>' + money(d.counted || 0) + '</b></span></div></div>';
+}
+function histHandoversTotals(list) {
+  var k = { ok: 0, short: 0, wait: 0, over: 0 }, sh = 0; list.forEach(function (d) { var st = hoShort(d); k[st.k]++; if (st.k === 'short') sh += st.c.cashDiff < 0 ? -st.c.cashDiff : 0; });
+  return list.length + (list.length === 1 ? ' handover' : ' handovers') + (k.ok ? ' · ' + k.ok + ' matched' : '') + (k.short ? ' · <b style="color:var(--exp)">' + k.short + ' short' + (sh ? ' ' + money(sh) : '') + '</b>' : '') + (k.over ? ' · ' + k.over + ' over' : '') + (k.wait ? ' · ' + k.wait + ' waiting' : '');
+}
 function histShiftsHtml() {
   if (!HSDOCS) return '<div class="empty">Loading…</div>';
-  var p = histPer(), list = histShiftList(), sum = function (f) { return r2(list.reduce(function (a, d) { return a + (d[f] || 0); }, 0)); };
-  var chips = '<div class="chips" style="margin-bottom:10px">' + [['', 'All']].concat(WATCHES.map(function (w) { return [w, w]; })).map(function (c) { return '<button data-act="hwk" data-v="' + esc(c[0]) + '" class="' + (HY.wk === c[0] ? 'on' : '') + '">' + esc(c[1]) + '</button>'; }).join('') + '</div>';
-  if (!list.length) return chips + (histFilterCount() || HY.wk ? '<div class="empty">No shifts match this filter on ' + esc(histPlain()) + '.<br><button class="btn sec" data-act="hclear" style="margin-top:12px">Clear filter</button></div>' : '<div class="empty">No records for ' + histEmptyWord() + '.</div>');
-  var line = p === 'day' ? '' : '<div class="muted" style="margin:0 2px 8px">' + (HY.wk ? esc(HY.wk) : 'All shifts') + ' · ' + list.length + (list.length === 1 ? ' shift' : ' shifts') + ' · Sales ' + money(sum('sales')) + ' · Short <b style="color:' + (sum('short') > 0 ? 'var(--exp)' : 'var(--ok)') + '">' + money(sum('short')) + '</b></div>';
+  var p = histPer(), list = histShiftList(), asc = (HSDOCS || []).slice().sort(function (a, b) { return a.at - b.at; }), r = histRange();
+  var chips = '<div class="hcc">' + [['', 'All crews']].concat(WATCHES.map(function (w) { return [w, w]; })).map(function (c) { return '<button data-act="hwk" data-v="' + esc(c[0]) + '" class="' + (HY.wk === c[0] ? 'on' : '') + '">' + (c[0] ? hdot(c[0]) : '') + esc(c[1]) + '</button>'; }).join('') + '</div>';
+  var cur = S.state && S.state.shift, run = '';
+  if (cur && cur.sid && !asc.some(function (d) { return (d.sid || d.id) === cur.sid; }) && (!HY.wk || HY.wk === cur.name) && !HY.short) {
+    var q = String(cur.date || '').split('/'), cd = q.length === 3 ? new Date(+q[2], +q[1] - 1, +q[0]).getTime() : 0, lastDoc = asc[asc.length - 1];
+    if (cd >= r.a && cd < r.b) run = '<div class="card" style="margin:0 0 10px;padding:12px 14px;box-shadow:var(--sh),inset 3px 0 0 var(--ok)"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div>' + wsw(cur.name) + ' <span style="font-size:12.5px">' + (lastDoc ? hfmt(lastDoc.receivedAt || lastDoc.at) : '') + ' → now</span></div><span style="background:var(--ok-bg);color:var(--ok);padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700;white-space:nowrap">● Running now</span></div><div class="muted" style="margin-top:6px;font-size:13px">Shift running · handover not made yet</div></div>';
+  }
+  if (!list.length && !run) return chips + (histFilterCount() || HY.wk ? '<div class="empty">No handovers match this filter in ' + esc(histPlain()) + '.<br><button class="btn sec" data-act="hclear" style="margin-top:12px">Clear filter</button></div>' : '<div class="empty">No handovers for ' + esc(histPlain()) + '.</div>');
+  var line = '<div class="hline"><span>' + histHandoversTotals(list) + '</span></div>';
   if (p === 'year') {
     var by = {}; list.forEach(function (d) { var m = shDay(d).slice(0, 7); (by[m] = by[m] || []).push(d); });
-    return chips + '<div class="muted" style="margin:0 2px 8px">' + (HY.wk ? esc(HY.wk) : 'All shifts') + ' · Tap a month to open it</div><div class="card"><div class="list">' + Object.keys(by).sort().reverse().map(function (m) { var l = by[m], s = r2(l.reduce(function (a, d) { return a + (d.sales || 0); }, 0)), sh = r2(l.reduce(function (a, d) { return a + (d.short || 0); }, 0)); return '<div data-act="hmonth" data-id="' + m + '" style="cursor:pointer"><b style="width:44px">' + new Date(+m.slice(0, 4), +m.slice(5, 7) - 1, 1).toLocaleDateString('en-GB', { month: 'short' }) + '</b><div class="grow muted">' + l.length + ' shifts</div><span>Sales <b>' + money(s) + '</b></span><span style="margin-left:10px;color:' + (sh > 0 ? 'var(--exp)' : 'var(--ok)') + '">Short <b>' + money(sh) + '</b></span></div>'; }).join('') + '</div></div>';
+    return chips + '<div class="muted" style="margin:0 2px 8px;font-size:12.5px">' + (HY.wk ? esc(HY.wk) : 'All crews') + ' · Tap a month to open it</div><div class="card"><div class="list">' + Object.keys(by).sort().reverse().map(function (m) { var l = by[m], tl = histHandoversTotals(l); return '<div data-act="hmonth" data-id="' + m + '" style="cursor:pointer"><b style="width:44px">' + new Date(+m.slice(0, 4), +m.slice(5, 7) - 1, 1).toLocaleDateString('en-GB', { month: 'short' }) + '</b><div class="grow muted" style="font-size:12.5px">' + tl + '</div><span style="color:var(--brand);font-size:20px">›</span></div>'; }).join('') + '</div></div>';
   }
-  return chips + line + '<div class="list">' + list.map(histShiftRow).join('') + '</div><p class="muted">Every shift keeps a permanent summary. The detailed entries are kept for about 31 days.</p>';
+  return chips + line + run + list.map(function (d) { return histHoCard(d, asc); }).join('') + '<p class="muted">Every handover keeps its summary for a year. The detailed entries are kept for about 31 days.</p>';
 }
 function histChartsHtml() { return HSDOCS ? chartsHtml(HSDOCS) : '<div class="empty">Loading…</div>'; }
 function histDraw(top) {
-  var body = HY.tab === 'all' ? histAllHtml() : HY.tab === 'shifts' ? histShiftsHtml() : histChartsHtml(), right = histFilterBtn(), pg = $('#spage'), cur = WPS[WPS.length - 1];
+  var body = HY.tab === 'all' ? histAllHtml() : HY.tab === 'shifts' ? histShiftsHtml() : HY.tab === 'people' ? histPeopleHtml() : histChartsHtml(), right = histFilterBtn(), pg = $('#spage'), cur = WPS[WPS.length - 1];
   var topHtml = '<button data-act="wpback" aria-label="Back">‹</button><b>History</b>' + right, head = histHead(), html = '<div id="hhead">' + head + '</div><div id="hbody">' + body + '</div>';
   if (!pg.hidden && cur && cur.fn === histPage && pg.querySelector('.sp-body')) {
     var sb = pg.querySelector('.sp-body'), st = sb.scrollTop, tp = pg.querySelector('.sp-top');
@@ -2073,7 +2143,7 @@ function histDraw(top) {
     sb.scrollTop = top ? 0 : st;
   } else wpPage(histPage, [], '<h2>History</h2>' + html, false, right);
   HYSIG = head;
-  var ready = HY.tab === 'all' ? HEVS : HSDOCS;
+  var ready = HY.tab === 'all' ? HEVS : HY.tab === 'people' ? true : HSDOCS;
   if (HY.back && ready) { var sb2 = pg.querySelector('.sp-body'); if (sb2) sb2.scrollTop = HY.sy; HY.back = false; }
   if ($('#hfs')) $('#hfs').innerHTML = histSheetHtml();
 }
@@ -2088,7 +2158,9 @@ function histPage() {   /* (re)start the live data for what is on show, then dra
     HUN = onSnapshot(query(col('events'), where('t', '>=', r.a), where('t', '<', r.b), limit(3000)), function (snap) { HEVS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); histDraw(); }, function (e) { toast(errText(e)); });
   } else {
     histDraw();
-    HUN = onSnapshot(query(col('shifts'), orderBy('at', 'desc'), limit(400)), function (snap) { HSDOCS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; HSD[x.id] = x; return x; }); histDraw(); }, function (e) { toast(errText(e)); });
+    var u1 = onSnapshot(query(col('shifts'), orderBy('at', 'desc'), limit(400)), function (snap) { HSDOCS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; HSD[x.id] = x; return x; }); histDraw(); }, function (e) { toast(errText(e)); });
+    HUN = function () { u1(); if (HEUN) { HEUN(); HEUN = null; } };
+    if (HY.tab === 'people') plogSub();
   }
 }
 function histGo() { HY.sid = HY.sid; if (HY.tab === 'all') histPage(); else histDraw(); }
@@ -2121,7 +2193,7 @@ function recordHtml(d, evs, h) {
   var acc = d.status === 'accepted', fold = function (k, t, html) { return rxFold(k, t, html, RCF, 'rcfold'); }, at2 = d.receivedAt || (h && h.acceptedAt) || 0, wk = d.wk;
   var res = !acc ? '<b style="color:var(--cnt)">Waiting to be taken</b>' : d.short > 0 ? '<b style="color:var(--exp)">Short ' + money(d.short) + '</b>' : d.over > 0 ? '<b style="color:var(--soon)">Over ' + money(d.over) + '</b>' : '<b style="color:var(--ok)">✓ Matched</b>';
   var to = d.receivedByName ? esc(d.receivedByName) : esc((d.toLabels || []).join(', ')) || 'the next shift';
-  var head = '<div class="card"><div class="row" style="align-items:center"><b class="grow" style="font-size:15px">' + wsw(wk) + ' ' + esc(d.date) + ' ' + esc(HL(d.half)) + '</b>' + res + '</div><div class="muted" style="margin-top:2px">' + esc(d.fromName || '') + (d.fromWatch && d.fromWatch !== wk ? ' (' + esc(d.fromWatch) + ', visiting)' : '') + ' → ' + to + '</div><div class="hosteps"><div class="d"><i>✓</i>Handed over<br>' + (d.at ? hhmm(d.at) : '') + '</div>' + (acc ? '<div class="' + (d.short > 0 ? 'x' : 'd') + '"><i>' + (d.short > 0 ? '!' : '✓') + '</i>Accepted &amp; counted<br>' + (at2 ? hhmm(at2) : '') + '</div>' : '<div class="n"><i>2</i>Waiting<br>to be taken</div>') + '</div></div>';
+  var head = '<div class="card"><div class="row" style="align-items:center"><b class="grow" style="font-size:15px">' + wsw(wk) + ' ' + esc(d.date) + ' ' + esc(HL(d.half)) + '</b>' + res + '</div><div style="position:relative;display:flex;margin-top:6px"><div class="muted" style="flex:1;text-align:center">' + esc(d.fromName || '') + (d.fromWatch && d.fromWatch !== wk ? ' (' + esc(d.fromWatch) + ', visiting)' : '') + '</div><div class="muted" style="flex:1;text-align:center">' + to + '</div><span class="muted" style="position:absolute;left:50%;top:0;transform:translateX(-50%)">→</span></div><div class="hosteps"><div class="d"><i>✓</i>Handed over<br>' + (d.at ? hhmm(d.at) : '') + '</div>' + (acc ? '<div class="' + (d.short > 0 ? 'x' : 'd') + '"><i>' + (d.short > 0 ? '!' : '✓') + '</i>Accepted &amp; counted<br>' + (at2 ? hhmm(at2) : '') + '</div>' : '<div class="n"><i>2</i>Waiting<br>to be taken</div>') + '</div></div>';
   var gs = Math.max(0, r2((d.expected || 0) - (d.counted || 0))), ex = acc ? r2((d.shortCash || 0) - gs) : 0;
   var cashNote = acc && d.shortCash > 0 ? 'Cash short ' + money(d.shortCash) + (gs > 0 && ex > 0 ? ': ' + money(gs) + ' the giver counted short, ' + money(ex) + ' more when the receiver counted.' : gs > 0 ? ': the giver counted it short.' : ': found when the receiver counted.') : acc && d.over > 0 ? 'Cash over ' + money(d.over) + '.' : '';
   var cash = '<div class="card"><h2>Cash</h2>' + rctbl([['Cash expected', d.expected || 0, acc ? d.expected || 0 : null, money], ['Cash counted', d.counted || 0, acc ? d.receivedCash || 0 : null, money]]) + (cashNote ? '<div class="muted" style="margin-top:4px">' + cashNote + '</div>' : '') + '</div>';
@@ -2172,7 +2244,7 @@ function histShiftPage(id) {
   HUN = function () { u1(); u2(); if (hsub) hsub(); };
 }
 function histSheetHtml() {
-  var all = HY.tab === 'all', pers = all ? [['day', 'Day'], ['month', 'Month']] : [['day', 'Day'], ['month', 'Month'], ['year', 'Year']], p = histPer(), n, body;
+  var all = HY.tab === 'all', pers = all ? [] : [['day', 'Day'], ['month', 'Month'], ['year', 'Year']], p = histPer(), n, body;
   if (all) {
     var cnt = {}; (HEVS || []).forEach(function (e) { var g = hgroup(e); cnt[g] = (cnt[g] || 0) + 1; });
     body = '<div class="flab">Entry types</div>' + HGROUPS.map(function (g) { var on = !!HY.types[g[0]]; return '<div class="frow" data-act="ftog" data-v="' + esc(g[0]) + '"><div class="fbox' + (on ? ' on' : '') + '">' + (on ? '✓' : '') + '</div><span class="grow">' + g[1] + ' ' + esc(g[0]) + '</span><span class="muted">' + (cnt[g[0]] || 0) + '</span></div>'; }).join('');
@@ -2181,7 +2253,7 @@ function histSheetHtml() {
     body = '<div class="flab">Shifts</div><div class="frow" data-act="fshort"><div class="fbox' + (HY.short ? ' on' : '') + '">' + (HY.short ? '✓' : '') + '</div><span class="grow">Only shifts with a shortage</span></div>';
     n = histShiftList().length; n = 'Show ' + n + (n === 1 ? ' shift' : ' shifts');
   }
-  return '<div class="row" style="align-items:center;margin-bottom:6px"><h2 class="grow" style="margin:0">Filter</h2><a class="link" data-act="hclear" style="font-weight:700;cursor:pointer">Clear all</a></div><div class="flab">Show</div><div class="seg" style="grid-template-columns:repeat(' + pers.length + ',1fr);margin-bottom:6px">' + pers.map(function (x) { return '<button data-act="hper" data-v="' + x[0] + '" class="' + (p === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>' + body + '<div class="row" style="margin-top:14px"><button class="btn sec grow" data-act="hshowall">Show all</button><button class="btn grow" data-act="hdone" style="flex:1.4">' + n + '</button></div>';
+  return '<div class="row" style="align-items:center;margin-bottom:6px"><h2 class="grow" style="margin:0">Filter</h2><a class="link" data-act="hclear" style="font-weight:700;cursor:pointer">Clear all</a></div>' + (pers.length ? '<div class="flab">Show</div><div class="seg" style="grid-template-columns:repeat(' + pers.length + ',1fr);margin-bottom:6px">' + pers.map(function (x) { return '<button data-act="hper" data-v="' + x[0] + '" class="' + (p === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>' : '') + body + '<div class="row" style="margin-top:14px"><button class="btn sec grow" data-act="hshowall">Show all</button><button class="btn grow" data-act="hdone" style="flex:1.4">' + n + '</button></div>';
 }
 function shStatus(d) {
   if (d.status === 'accepted') return d.short > 0 ? '<b style="color:var(--exp)">short ' + money(d.short) + '</b>' : d.over > 0 ? '<b style="color:var(--soon)">over ' + money(d.over) + '</b>' : '<b style="color:var(--ok)">✓ matched</b>';
@@ -2527,7 +2599,7 @@ function doHandover2() {
   var hd = String(sh.date || '').split('/'), cashRows = soldRows(rows).map(function (x) { return { n: x.r.name, o: x.r.open, a: x.plus, s: x.r.sold, c: x.cash, w: x.r.stock, cr: x.r.crQ, sp: x.r.spQ }; });
   h.sum = !same;
   var b = writeBatch(DB); b.set(ref('handovers/' + id), h);
-  if (!same) b.set(ref('shifts/' + sh.sid), { sid: sh.sid, wk: sh.name, date: sh.date, half: sh.half, day: hd.length === 3 ? hd[2] + '-' + hd[1] + '-' + hd[0] : '', status: 'open', handoverId: id, fromEmail: EMAIL, fromName: myName(), fromWatch: whoOf(EMAIL).wk, trail: ctlTrail(), toLabels: h.toLabels, locked: locked, received: sh.received, sales: t.sales, cr: t.crN, paid: t.paidN, loans: t.loans, purch: t.purch, used: t.used, expected: t.cash, counted: h.cash, sold: t.sold, rows: cashRows, owedBy: h.owedBy, openShort: h.openShort, its: packItems(h.items), edits: h.edits, notes: sh.notes || '', at: Date.now() }); b.update(ref('shop/state'), { controlEmail: '', controlName: '', pending: id });
+  if (!same) b.set(ref('shifts/' + sh.sid), { expireAt: EXPY(), sid: sh.sid, wk: sh.name, date: sh.date, half: sh.half, day: hd.length === 3 ? hd[2] + '-' + hd[1] + '-' + hd[0] : '', status: 'open', handoverId: id, fromEmail: EMAIL, fromName: myName(), fromWatch: whoOf(EMAIL).wk, trail: ctlTrail(), toLabels: h.toLabels, locked: locked, received: sh.received, sales: t.sales, cr: t.crN, paid: t.paidN, loans: t.loans, purch: t.purch, used: t.used, expected: t.cash, counted: h.cash, sold: t.sold, rows: cashRows, owedBy: h.owedBy, openShort: h.openShort, its: packItems(h.items), edits: h.edits, notes: sh.notes || '', at: Date.now() }); b.update(ref('shop/state'), { controlEmail: '', controlName: '', pending: id });
   commit(b); sel = null; qty = 1; tab = 'sell'; closeModal(); if (!$('#spage').hidden) spClose(); toast('Handed over. You are now view only.');
 }
 function cancelHandover() {
@@ -2889,7 +2961,7 @@ async function resetApp() {
   var msg = $('#rs-msg'), go = $('#rs-go'); go.disabled = true; msg.textContent = 'Clearing… keep this screen open.';
   try {
     await updateDoc(ref('shop/state'), { resetting: true });
-    var counts = {}, cols = ['events', 'cancelled', 'handovers', 'daily', 'credit', 'items', 'shortages', 'repayments', 'notices', 'shifts'];
+    var counts = {}, cols = ['events', 'cancelled', 'handovers', 'daily', 'credit', 'items', 'shortages', 'repayments', 'notices', 'shifts', 'plog'];
     for (var c = 0; c < cols.length; c++) {
       var snap = await getDocs(col(cols[c])), ds = snap.docs; counts[cols[c]] = ds.length; msg.textContent = 'Clearing ' + cols[c] + '… (' + ds.length + ')';
       for (var i = 0; i < ds.length; i += 400) { var b = writeBatch(DB); ds.slice(i, i + 400).forEach(function (d) { b.delete(d.ref); }); await b.commit(); }
@@ -3588,7 +3660,7 @@ function tidyUp() {
   var key = 'sw.tidy.' + PID, day = new Date().toISOString().slice(0, 10);
   if (lsGet(key) === day) return;
   TIDY = true;
-  var cols = ['events', 'cancelled', 'handovers', 'receiptimgs', 'receipts'];
+  var cols = ['events', 'cancelled', 'handovers', 'receiptimgs', 'receipts', 'plog', 'shifts'];
   (async function () {
     try {
       for (var c = 0; c < cols.length; c++) {
@@ -4239,23 +4311,28 @@ document.addEventListener('click', function (e) {
   else if (a === 'pasthos') pastHandovers();
   else if (a === 'install') installApp();
   else if (a === 'settings') { if (!$('#spage').hidden) closeModal(); else spOpen(); }
-  else if (a === 'hytab') { HY.tab = b.dataset.v; if (HY.tab === 'all' && HY.per === 'year') HY.per = 'month'; histPage(); var hb = $('#spage .sp-body'); if (hb) hb.scrollTop = 0; }
+  else if (a === 'hytab') { HY.tab = b.dataset.v; histPage(); var hb = $('#spage .sp-body'); if (hb) hb.scrollTop = 0; }
   else if (a === 'hstep') { histStep(+b.dataset.v); histGo(); }
   else if (a === 'htoday') { HY.dt = histToday(); HY.sid = ''; histGo(); }
   else if (a === 'hwk') { HY.wk = b.dataset.v; histDraw(); }
+  else if (a === 'pf') { HY.pf = b.dataset.v; histDraw(); }
+  else if (a === 'ppick') { HY.pid = id; HY.pper = 'month'; HY.dt = histToday(); histDraw(); plogSub(); }
+  else if (a === 'pclear') { HY.pid = ''; histDraw(); plogSub(); }
+  else if (a === 'pper') { HY.pper = b.dataset.v; HY.dt = histToday(); histDraw(); }
+  else if (a === 'pmonth') { HY.pper = 'month'; HY.dt = histNoon(new Date(+id.slice(0, 4), +id.slice(5, 7) - 1, 1)); histDraw(true); }
   else if (a === 'hsid') { HY.sid = b.dataset.id || ''; histDraw(); }
   else if (a === 'hcnt') { HY.cnt[id] = !HY.cnt[id]; histDraw(); }
   else if (a === 'hosheet') hoSheet(id, b.dataset.k, b.dataset.wk);
   else if (a === 'evsheet') evSheet(id);
-  else if (a === 'hmonth') { HY.per = 'month'; HY.dt = histNoon(new Date(+id.slice(0, 4), +id.slice(5, 7) - 1, 1)); histDraw(true); }
+  else if (a === 'hmonth') { HY.sper = 'month'; HY.dt = histNoon(new Date(+id.slice(0, 4), +id.slice(5, 7) - 1, 1)); histDraw(true); }
   else if (a === 'chv') { HY.cv = b.dataset.v; histDraw(); }
   else if (a === 'caday') calDay(id);
   else if (a === 'shopen' || a === 'shopen2') histShift(id);
   else if (a === 'hfilter') { modal('<div id="hfs">' + histSheetHtml() + '</div>'); }
-  else if (a === 'hper') { HY.per = b.dataset.v; histGo(); }
+  else if (a === 'hper') { HY.sper = b.dataset.v; histGo(); }
   else if (a === 'ftog') { HY.types[b.dataset.v] = !HY.types[b.dataset.v]; histDraw(); }
   else if (a === 'fshort') { HY.short = !HY.short; histDraw(); }
-  else if (a === 'hclear' || a === 'hshowall') { HY.types = {}; HY.short = false; HY.per = 'day'; HY.wk = ''; histGo(); if (a === 'hshowall') closeModal(); }
+  else if (a === 'hclear' || a === 'hshowall') { HY.types = {}; HY.short = false; HY.wk = ''; histGo(); if (a === 'hshowall') closeModal(); }
   else if (a === 'hdone') closeModal();
   else if (a === 'hlist') hlist();
   else if (a === 'hcopy') { var tx = S._hl[+b.dataset.i].text; if (navigator.clipboard) navigator.clipboard.writeText(tx).then(function () { toast('Copied'); }); }
@@ -4441,6 +4518,7 @@ document.addEventListener('input', function (e) {
   if (t.id === 'rs-in') { var g = $('#rs-go'); if (g) g.disabled = t.value.trim().toUpperCase() !== 'RESET'; }
   else if (t.id === 'pk-q') $('#pk-list').innerHTML = pickerList(t.value);
   else if (t.id === 'c-q') $('#c-list').innerHTML = creditList(t.value);
+  else if (t.id === 'pp-q') { HY.pq = t.value; var pl0 = $('#pplist'); if (pl0) pl0.innerHTML = peopleListHtml(); }
   else if (t.id === 'cp-q') $('#cp-list').innerHTML = peopleHtml(t.value);
   else if (t.id === 'gm-q') $('#gm-list').innerHTML = gmList(GMO, t.value);
   else if (t.dataset.pc) PCQ[t.dataset.pc] = t.value;
