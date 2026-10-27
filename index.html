@@ -162,6 +162,14 @@ input:disabled{background:var(--dis);color:var(--muted)}
 .sp-top.hasr b{text-align:left;margin-right:0}.sp-top .spr{width:auto;height:36px;border-radius:18px;padding:0 12px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px;background:var(--soft);color:var(--link)}.sp-top .spr.act{background:var(--brand);color:#fff}
 .hsel{display:flex;align-items:center;gap:6px;margin-bottom:8px}.hsel .btn{width:40px;flex:none;padding:0}.hdate{position:relative;flex:1;border:2px solid var(--secb);border-radius:12px;background:var(--surface);display:flex;align-items:center;justify-content:center;min-height:40px;font-weight:700}.hdate.away span{padding-right:56px}.hdate.fut{opacity:.8;font-style:italic}.hdate u{text-decoration:underline dotted;text-underline-offset:3px}.hpick{position:absolute;left:0;top:0;height:100%;opacity:0;border:0;font-size:16px}.htoday{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:var(--brand);color:#fff;border:0;border-radius:9px;padding:4px 9px;font-size:12px;font-weight:700;z-index:2}
 .hsum{background:var(--surface);border-radius:12px;box-shadow:var(--sh);padding:6px 10px;margin-bottom:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px 6px}.hsum div{min-width:0}.hsum .l{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);white-space:nowrap}.hsum .v{font-size:14px;font-weight:700}
+.htabs{display:flex;gap:3px;padding:3px;border-radius:13px;background:var(--line);box-shadow:inset 0 1px 2px rgba(0,0,0,.12);margin-bottom:8px}.htabs button{flex:1;height:32px;border:0;border-radius:10px;background:transparent;color:var(--muted);font:inherit;font-size:13.5px;font-weight:600}.htabs button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.hsel{background:var(--surface);border-radius:14px;box-shadow:var(--sh);gap:0;overflow:hidden;margin-bottom:6px}.hsel .btn.sec{width:48px;height:38px;border:0;background:transparent;box-shadow:none;color:var(--brand);font-size:24px;line-height:1;padding:0;border-radius:0}.hsel .hdate{border:0;border-radius:0;background:none;min-height:38px;font-weight:600;font-size:13.5px}
+.hcc{display:flex;gap:6px;margin:10px 0 8px;overflow-x:auto}.hcc button{flex:none;display:flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:12px;font-weight:600}.hcc button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.hdot{width:10px;height:10px;border-radius:50%;border:1.5px solid rgba(128,128,128,.6);display:inline-block}.hline{display:flex;align-items:center;gap:8px;font-size:12.5px;white-space:nowrap;margin:2px 2px 12px}.hline>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;flex:1 1 auto}.hline .run{flex:none;color:var(--ok);font-weight:700;font-size:11.5px}.hline .who{flex:none;color:var(--muted);font-weight:500}
+.hcs{display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:var(--surface);box-shadow:var(--sh);margin-top:6px;cursor:pointer}.hcs .ci{width:26px;text-align:center;font-size:18px}
+.hkv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}.hkv:last-child{border:0}.hkv>span:first-child{color:var(--muted)}.hkv b{text-align:right}
+.hbox{margin:10px 0 6px;padding:10px 12px;border-radius:12px;font-size:13.5px;line-height:1.4}.hbox.bad{background:var(--exp-bg);color:var(--exp)}.hbox.good{background:var(--ok-bg);color:var(--ok)}.hbox.wait{background:var(--soft);color:var(--muted)}
+.htbl{width:100%;border-collapse:collapse;font-size:13.5px;margin:6px 0 4px}.htbl th{text-align:right;color:var(--muted);font-weight:600;font-size:10.5px;line-height:1.25;padding:4px 0 4px 6px;vertical-align:bottom}.htbl th:first-child,.htbl td:first-child{text-align:left}.htbl td{text-align:right;padding:6px 0;border-top:1px solid var(--line)}
 .flab{margin:12px 0 4px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}.frow{display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid var(--line);cursor:pointer}.fbox{width:22px;height:22px;border-radius:6px;border:2px solid var(--secb);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex:none}.fbox.on{background:var(--brand);border-color:var(--brand)}
 .hochk{position:sticky;top:var(--hh,56px);z-index:4;background:var(--bg);display:flex;gap:6px;padding:8px 0 8px;margin-bottom:2px}.hochip{flex:none;border-radius:14px;padding:4px 9px;font-weight:700;font-size:12px;background:var(--surface);border:2px solid var(--secb);cursor:pointer}.hochip.ok{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}.hochip.no{background:var(--exp-bg);border-color:var(--exp);color:var(--exp)}.hochip.wn{background:var(--soon-bg);border-color:var(--soon);color:var(--soon)}
 .hoslim{display:flex;gap:6px;margin-bottom:10px}.hoslim button{flex:1;border:0;background:var(--surface);color:var(--link);border-radius:10px;padding:7px 8px;font-size:12px;font-weight:700;box-shadow:var(--sh)}
@@ -241,7 +249,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.22', RULES_VERSION = '2.11';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.23', RULES_VERSION = '2.11';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1819,14 +1827,15 @@ function liveModal(qs, build) {   /* a pop-up that stays in step with the databa
 }
 
 /* ---------- history of the day (with cancel mode) ---------- */
+var hdt = function (e) { var d = new Date(e.t), k = HY && HY.dt && HY.tab === 'all' && histPer() === 'day' ? dkey(HY.dt) : ''; return k && dkey(d) !== k ? d.getDate() + ' ' + d.toLocaleDateString('en-GB', { month: 'short' }) : ''; };   /* an entry after midnight carries its date */
 function evRow(e, cancelable) {
   var ic, tx, sub = '', amt = '', col = 'var(--ink)';
-  if (e.type === 'sale') { ic = e.cr ? '💳' : '🛒'; tx = e.qty + ' × ' + e.name; sub = e.cr ? 'On credit · ' + (e.crName || plab(e.cr)) : 'Cash sale'; amt = money(e.amt); col = e.cr ? 'var(--soon)' : 'var(--ink)'; }
+  if (e.type === 'sale') { ic = e.cr ? '💳' : '🛒'; tx = e.cr ? (e.crName || plab(e.cr)) + ' took ' + e.qty + ' × ' + e.name + ' on credit' : e.qty + ' × ' + e.name; sub = e.cr ? '' : 'Cash sale'; amt = money(e.amt); col = e.cr ? 'var(--soon)' : 'var(--ink)'; }
   else if (e.type === 'count') { ic = '🧮'; tx = 'Counted ' + e.name + ': ' + e.from + ' → ' + e.to; sub = e.qty ? e.qty + ' sold' : 'none sold'; amt = e.qty ? money(e.amt) : ''; }
-  else if (e.type === 'cnote') { ic = '💳'; tx = 'Credit note: ' + e.qty + ' × ' + e.name; sub = (e.crName || plab(e.cr)) + ' · ' + e.qty + (e.qty === 1 ? ' of the items counted was' : ' of the items counted were') + ' on credit'; amt = money(e.amt); col = 'var(--soon)'; }
+  else if (e.type === 'cnote') { ic = '💳'; tx = (e.crName || plab(e.cr)) + ' took ' + e.qty + ' × ' + e.name + ' on credit'; sub = ''; amt = money(e.amt); col = 'var(--soon)'; }
   else if (e.type === 'snote') { ic = '🗑'; tx = 'Spoiled note: ' + e.qty + ' × ' + e.name; sub = e.qty + (e.qty === 1 ? ' of the items counted was' : ' of the items counted were') + ' spoiled'; }
-  else if (e.type === 'loan') { ic = '🤝'; tx = 'Cash loan'; sub = (e.crName || plab(e.cr)) + (e.note ? ' · ' + e.note : ''); amt = '− ' + money(e.amt); col = 'var(--soon)'; }
-  else if (e.type === 'pay') { ic = '💵'; tx = 'Payment collected'; sub = e.crName || plab(e.person); amt = '+ ' + money(e.amt); col = 'var(--ok)'; }
+  else if (e.type === 'loan') { ic = '🤝'; tx = 'Cash lent to ' + (e.crName || plab(e.cr)); sub = e.note || ''; amt = '− ' + money(e.amt); col = 'var(--soon)'; }
+  else if (e.type === 'pay') { ic = '💵'; var pwho = e.crName || plab(e.person), pbal = balance(e.person || e.cr || ''); tx = pwho + ' paid ' + money(e.amt); sub = pbal > 0.004 ? money(pbal) + ' still owed' : 'paid in full'; amt = '+ ' + money(e.amt); col = 'var(--ok)'; }
   else if (e.type === 'buy') { ic = '🧾'; tx = 'Bought ' + buyText(e); sub = (e.supplier || '') + (e.tax ? ' · tax ' + money(e.tax) : '') + (e.writeoff ? ' · change not kept ' + money(e.writeoff) : ''); amt = '− ' + money(e.amt); }
   else if (e.type === 'other') { ic = '➕'; tx = 'Added ' + buyText(e) + ' to stock'; sub = e.note; }
   else if (e.type === 'spoil') { ic = '🗑'; tx = 'Spoiled ' + e.qty + ' × ' + e.name; }
@@ -1850,14 +1859,14 @@ function evRow(e, cancelable) {
   else { ic = '✏️'; tx = 'Count changed: ' + e.name + ' (' + (e.qty > 0 ? '+' : '') + e.qty + ')'; }
   if (e.corr) sub = (sub ? sub + ' · ' : '') + 'Correction by ' + e.corr;
   HEV[e.id] = e;
-  return '<div' + (e.type === 'buy' || e.type === 'other' ? ' data-act="buyview" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'stockedit' ? ' data-act="editview" data-id="' + e.id + '" style="cursor:pointer;background:var(--exp-bg);border-left:4px solid var(--exp);padding-left:8px;border-radius:8px"' : '') + '><span style="font-size:18px">' + ic + '</span><div class="grow"><b>' + esc(tx) + '</b><div class="muted">' + hhmm(e.t) + (sub ? ' · ' + esc(sub) : '') + (e.byName ? ' · by ' + esc(e.byName) : '') + '</div></div>' + (e.receipt ? '<img data-act="rcv" src="' + e.receipt + '" alt="receipt" style="width:44px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">' : '') + '<b style="color:' + col + '">' + amt + '</b>' + (CM && cancelable && ['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'shiftrec', 'watchchg'].indexOf(e.type) < 0 ? '<button class="btn red sm" data-act="cancelask" data-id="' + e.id + '">Cancel</button>' : '') + '</div>';
+  return '<div' + (e.type === 'buy' || e.type === 'other' ? ' data-act="buyview" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'pay' || e.type === 'cnote' || e.type === 'loan' || (e.type === 'sale' && e.cr) ? ' data-act="evsheet" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'stockedit' ? ' data-act="editview" data-id="' + e.id + '" style="cursor:pointer;background:var(--exp-bg);border-left:4px solid var(--exp);padding-left:8px;border-radius:8px"' : '') + '><span style="font-size:18px;width:26px;flex:none;text-align:center">' + ic + '</span><div class="grow"><b>' + esc(tx) + '</b><div class="muted">' + (hdt(e) ? hdt(e) + ' ' : '') + hhmm(e.t) + (sub ? ' · ' + esc(sub) : '') + (e.byName ? ' · recorded by ' + esc(e.byName) : '') + '</div></div>' + (e.receipt ? '<img data-act="rcv" src="' + e.receipt + '" alt="receipt" style="width:44px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">' : '') + '<b style="color:' + col + '">' + amt + '</b>' + (CM && cancelable && ['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'shiftrec', 'watchchg'].indexOf(e.type) < 0 ? '<button class="btn red sm" data-act="cancelask" data-id="' + e.id + '">Cancel</button>' : '') + '</div>';
 }
 /* ---------- History: one full page. All = the entries of a day or a month, Shifts = the permanent shift summaries (a day, a month or a year), Charts. The Filter is in the top bar ---------- */
-var HY = { tab: 'all', per: 'day', dt: new Date(), types: {}, short: false, wk: '', cv: 'score', sy: 0, back: false }, HUN = null, HEVS = null, HSDOCS = null, HSD = {}, HYSIG = '';
-var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash']], ['Shortages and repayments', '⚠️', ['cashshort', 'shortfix', 'repay']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']]];
+var HY = { tab: 'all', per: 'day', dt: new Date(), types: {}, short: false, wk: '', sid: '', cnt: {}, cv: 'score', sy: 0, back: false }, HUN = null, HEVS = null, HSDOCS = null, HSD = {}, HYSIG = '';
+var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash']], ['Shortages and repayments', '⚠️', ['cashshort', 'shortfix', 'repay']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
 function hgroup(e) { for (var i = 0; i < HGROUPS.length; i++) if (HGROUPS[i][2].indexOf(e.type) >= 0) return HGROUPS[i][0]; return 'Stock edits by hand'; }
 function histNoon(d) { var x = new Date(d); x.setHours(12, 0, 0, 0); return x; }
-function histReset() { CM = false; HY.tab = 'all'; HY.per = 'day'; HY.dt = histNoon(new Date()); HY.types = {}; HY.short = false; HY.wk = ''; HY.cv = 'score'; HY.sy = 0; HY.back = false; HEVS = null; }
+function histReset() { CM = false; HY.tab = 'all'; HY.per = 'day'; HY.dt = histNoon(new Date()); HY.types = {}; HY.short = false; HY.wk = ''; HY.sid = ''; HY.cnt = {}; HY.cv = 'score'; HY.sy = 0; HY.back = false; HEVS = null; }
 function livePage(fn, title, qs, build) {   /* a full-screen page that stays in step with the database */
   if (!Array.isArray(qs)) qs = [qs];
   histStop(); LIVEKEEP = fn; wpPage(fn, [], '<h2>' + title + '</h2><div class="empty">Loading…</div>');
@@ -1879,10 +1888,10 @@ function histRange() {   /* the start and end of what is on show, in ms */
   var d = HY.dt, y = d.getFullYear(), m = d.getMonth(), p = histPer();
   return p === 'day' ? { a: new Date(y, m, d.getDate()).getTime(), b: new Date(y, m, d.getDate() + 1).getTime() } : p === 'month' ? { a: new Date(y, m, 1).getTime(), b: new Date(y, m + 1, 1).getTime() } : { a: new Date(y, 0, 1).getTime(), b: new Date(y + 1, 0, 1).getTime() };
 }
-function histStep(n) { var d = HY.dt, y = d.getFullYear(), m = d.getMonth(), p = histPer(); HY.dt = p === 'day' ? histNoon(new Date(y, m, d.getDate() + n)) : p === 'month' ? histNoon(new Date(y, m + n, 1)) : histNoon(new Date(y + n, m, 1)); }
+function histStep(n) { HY.sid = ''; var d = HY.dt, y = d.getFullYear(), m = d.getMonth(), p = histPer(); HY.dt = p === 'day' ? histNoon(new Date(y, m, d.getDate() + n)) : p === 'month' ? histNoon(new Date(y, m + n, 1)) : histNoon(new Date(y + n, m, 1)); }
 function histLabel() {
   var d = HY.dt, p = histPer(), mn = d.toLocaleDateString('en-GB', { month: 'long' });
-  return p === 'day' ? d.getDate() + ' <u>' + mn + '</u> ' + d.getFullYear() : p === 'month' ? '<u>' + mn + '</u> ' + d.getFullYear() : String(d.getFullYear());
+  return p === 'day' ? d.toLocaleDateString('en-GB', { weekday: 'short' }) + ' · ' + d.getDate() + ' ' + mn + ' ' + d.getFullYear() : p === 'month' ? mn + ' ' + d.getFullYear() : String(d.getFullYear());
 }
 function histPlain() { var d = HY.dt, p = histPer(), mn = d.toLocaleDateString('en-GB', { month: 'long' }); return p === 'day' ? d.getDate() + ' ' + mn + ' ' + d.getFullYear() : p === 'month' ? mn + ' ' + d.getFullYear() : String(d.getFullYear()); }
 function histFilterCount() { return Object.keys(HY.types).filter(function (k) { return HY.types[k]; }).length + (HY.short && HY.tab === 'shifts' ? 1 : 0); }
@@ -1891,8 +1900,8 @@ function histHead() {
   if (p === 'day') pick = '<input class="hpick"' + st + ' type="date" value="' + dkey(HY.dt) + '" aria-label="Pick a date">';
   else if (p === 'month') pick = '<input class="hpick"' + st + ' type="month" value="' + dkey(HY.dt).slice(0, 7) + '" aria-label="Pick a month">';
   else { var yo = ''; for (var q = y + 1; q >= y - 6; q--) yo += '<option' + (q === y ? ' selected' : '') + '>' + q + '</option>'; pick = '<select class="hpick"' + st + ' aria-label="Pick a year">' + yo + '</select>'; }
-  return '<div class="seg" style="grid-template-columns:repeat(3,1fr);margin-bottom:8px">' + [['all', 'All'], ['shifts', 'Shifts'], ['charts', 'Charts']].map(function (x) { return '<button data-act="hytab" data-v="' + x[0] + '" class="' + (HY.tab === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>' +
-    '<div class="hsel"><button class="btn sec sm" data-act="hstep" data-v="-1" aria-label="Back">◀</button><div class="hdate' + (fut ? ' fut' : '') + (here ? '' : ' away') + '"><span>' + histLabel() + '</span>' + pick + (here ? '' : '<button class="htoday" data-act="htoday">Today</button>') + '</div><button class="btn sec sm" data-act="hstep" data-v="1" aria-label="Forward">▶</button></div>';
+  return '<div class="htabs">' + [['all', 'All'], ['shifts', 'Shifts'], ['charts', 'Charts']].map(function (x) { return '<button data-act="hytab" data-v="' + x[0] + '" class="' + (HY.tab === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>' +
+    '<div class="hsel"><button class="btn sec sm" data-act="hstep" data-v="-1" aria-label="Back">‹</button><div class="hdate' + (fut ? ' fut' : '') + (here ? '' : ' away') + '"><span>' + histLabel() + '</span>' + pick + (here ? '' : '<button class="htoday" data-act="htoday">Today</button>') + '</div><button class="btn sec sm" data-act="hstep" data-v="1" aria-label="Forward">›</button></div>';
 }
 function histFilterBtn() {
   if (HY.tab === 'charts') return '';
@@ -1904,15 +1913,106 @@ function histShown() {   /* the entries on show after the type filter */
   return on.length ? ev.filter(function (e) { return HY.types[hgroup(e)]; }) : ev;
 }
 function histEmptyWord() { var p = histPer(); return p === 'day' ? 'this day' : p === 'month' ? 'this month' : 'this year'; }
+function histTiles(evs, now) {   /* Cash sales, Credit given, Cash lent out / Purchases, Still owed, Paid back */
+  var sm = function (f) { return evs.filter(f).reduce(function (a, e) { return a + (e.amt || 0); }, 0); };
+  var cash = Math.max(0, r2(sm(function (e) { return (e.type === 'sale' && !e.cr) || e.type === 'count'; }) - sm(function (e) { return e.type === 'snote' || e.type === 'cnote'; })));
+  var people = {}; evs.forEach(function (e) { if ((e.type === 'sale' && e.cr) || e.type === 'cnote' || e.type === 'pay' || e.type === 'loan') { var k = rootOf(e.person || e.cr || ''); if (k) people[k] = 1; } });
+  var owed = r2(Object.keys(people).reduce(function (a, k) { return a + Math.max(0, balance(k)); }, 0));
+  var cell = function (l, v, c) { return '<div><div class="l">' + l + '</div><div class="v"' + (c ? ' style="color:' + c + '"' : '') + '>' + money(v) + '</div></div>'; };
+  return '<div class="hsum" style="margin-bottom:12px">' + cell('Cash sales', cash) + cell('Credit given', r2(sm(function (e) { return (e.type === 'sale' && e.cr) || e.type === 'cnote'; }))) + cell('Cash lent out', r2(sm(function (e) { return e.type === 'loan'; }))) + cell('Purchases', r2(sm(function (e) { return e.type === 'buy'; }))) + cell(now ? 'Still owed' : 'Owed now', owed, owed > 0 ? 'var(--exp)' : '') + cell('Paid back', r2(sm(function (e) { return e.type === 'pay'; }))) + '</div>';
+}
+function shKeyOf(sh) { var q = String(sh && sh.date || '').split('/'); return q.length === 3 ? q[2] + '-' + q[1] + '-' + q[0] : ''; }
+function histDay() {   /* the shifts that started on the chosen day: the finished ones (their permanent summaries) and the one still running, oldest first */
+  var key = dkey(HY.dt), docs = (HSDOCS || []).slice().sort(function (a, b) { return a.at - b.at; }), out = [];
+  docs.forEach(function (d, i) { if (shDay(d) === key) out.push({ sid: d.sid || d.id, wk: d.wk, date: d.date, half: d.half, doc: d, prev: docs[i - 1] || null, running: false }); });
+  var cur = S.state && S.state.shift; if (cur && cur.sid && shKeyOf(cur) === key && !out.some(function (x) { return x.sid === cur.sid; })) out.push({ sid: cur.sid, wk: cur.name, date: cur.date, half: cur.half, doc: null, prev: docs[docs.length - 1] || null, running: true });
+  out.forEach(function (x) { x.start = x.prev ? (x.prev.receivedAt || x.prev.at) : 0; x.end = x.doc ? x.doc.at : 0; if (!x.start) { var ts = (HEVS || []).filter(function (e) { return e.sid === x.sid; }).map(function (e) { return e.t; }); if (ts.length) x.start = Math.min.apply(null, ts); } });
+  return out;
+}
+var HEUN = null, HEKEY = null;
+function hoSheet(id, kind, wk2) {   /* the short handover pop-up: who, the result in one sentence, what differs, who owes, remarks */
+  var d = HSD[id] || (HSDOCS || []).filter(function (x) { return x.id === id; })[0]; if (!d) return;
+  var acc = d.status === 'accepted', giver = d.fromName || 'A member', recvName = d.receivedByName || (d.toLabels || []).join(', ') || 'the next shift', rwk = wk2 || (d.receivedBy ? whoOf(d.receivedBy).wk : '');
+  var st = hoShort(d), c = st.c, diffs = c.diffs, same = c.same, ni = c.less, cashOk = acc && c.cashDiff === 0, cashDiff = c.cashDiff;
+  var box = !acc ? '<div class="hbox wait"><b>⏳ Waiting for ' + esc(recvName) + ' to count it</b><br>The result shows here as soon as ' + esc(recvName) + ' accepts.</div>'
+    : st.k === 'short' ? '<div class="hbox bad"><b>⚠ Short ' + [c.cashDiff < 0 ? money(-c.cashDiff) : '', ni ? ni + (ni === 1 ? ' item' : ' items') : ''].filter(Boolean).join(' and ') + '</b><br>' + esc(recvName) + ' counted less than ' + esc(giver) + ' handed over. The shortage is recorded against the <b>' + esc(d.wk) + ' shift</b>.' + (rwk ? ' The ' + esc(rwk) + ' shift is not charged.' : '') + '</div>'
+    : st.k === 'over' ? '<div class="hbox bad" style="background:var(--soon-bg);color:var(--soon)"><b>↑ Counted more than handed over</b><br>' + esc(recvName) + ' counted more than ' + esc(giver) + ' handed over.</div>'
+    : '<div class="hbox good"><b>✓ Nothing short</b><br>' + esc(recvName) + ' counted the same as ' + esc(giver) + ' handed over.</div>';
+  var tr = function (n, a, b, df, col) { return '<tr><td>' + n + '</td><td>' + a + '</td><td>' + b + '</td><td style="font-weight:700;color:' + col + '">' + df + '</td></tr>'; };
+  var tbl = '<table class="htbl"><tr><th></th><th>' + esc(d.wk) + '<br>handed over</th><th>' + esc(rwk || 'Next') + '<br>counted</th><th>Difference</th></tr>' + tr('Cash', money(d.counted), acc ? money(d.receivedCash) : '–', !acc ? '–' : cashOk ? '✓' : (cashDiff > 0 ? '+' : '−') + money(Math.abs(cashDiff)), !acc ? 'var(--muted)' : cashOk ? 'var(--ok)' : 'var(--exp)') +
+    diffs.map(function (x) { var df = x[2] - x[1]; return tr(x[0], x[1], x[2], (df > 0 ? '+' : '−') + Math.abs(df), 'var(--exp)'); }).join('') + '</table>' + (acc && same && !ni ? '<div style="font-size:13px;color:var(--ok);margin:2px 0 4px">✓ All items were counted correctly.</div>' : acc && same ? '<div style="font-size:13px;color:var(--ok);margin:2px 0 4px">✓ All other items were counted correctly.</div>' : '');
+  var owed = (d.owedBy || []), tot = r2(owed.reduce(function (a, x) { return a + x.bal; }, 0));
+  modal('<h2 style="margin:0 0 4px">🔁 ' + (kind === 'recv' ? 'Handover received from ' + esc(giver) : 'Handed over to ' + esc(recvName)) + '</h2><div style="margin:4px 0 8px">' + wsw(d.wk) + ' <b>→</b> ' + (rwk ? wsw(rwk) : '<span class="muted">next shift</span>') + '</div>' +
+    '<div class="hkv"><span>Handed over by</span><b>' + esc(giver) + ' <span class="muted">(' + esc(d.wk) + ' shift)</span></b></div><div class="hkv"><span>' + (acc ? 'Received and counted by' : 'To be counted by') + '</span><b>' + esc(recvName) + (rwk ? ' <span class="muted">(' + esc(rwk) + ' shift)</span>' : '') + '</b></div><div class="hkv"><span>' + (acc ? 'When' : 'Handed over') + '</span><b>' + (kind === 'recv' && d.receivedAt ? hfmt(d.receivedAt) : hfmt(d.at) + (acc && d.receivedAt ? ' · accepted ' + hhmm(d.receivedAt) : '')) + '</b></div>' + box + tbl +
+    (d.notes ? '<div style="margin:8px 0 2px;padding:9px 12px;border-radius:12px;background:var(--soft);font-size:13.5px"><span class="muted" style="font-size:12px">Remarks · ' + esc(giver) + '</span><div>' + esc(d.notes) + '</div></div>' : '') +
+    '<div style="margin:10px 0 2px;font-weight:700;font-size:13.5px">Who owes on credit</div>' + (owed.length ? owed.map(function (x) { return '<div class="hkv"><span>' + esc(x.label) + '</span><b>' + money(x.bal) + '</b></div>'; }).join('') + '<div class="hkv"><span><b style="color:var(--ink)">Total</b></span><b>' + money(tot) + '</b></div>' : '<div class="muted">Nobody owed anything on credit.</div>') +
+    '<button class="btn block" data-act="close" style="margin-top:10px">Close</button><button class="btn sec block" data-act="shopen" data-id="' + esc(d.id) + '" style="margin-top:8px">Open the full handover record ›</button>');
+}
+function evSheet(id) {   /* a payment, credit or loan: who, how much, when, and what is still owed */
+  var e = HEV[id]; if (!e) return; var who = e.crName || plab(e.person || e.cr), bal = balance(e.person || e.cr || ''), kv = function (l, v) { return '<div class="hkv"><span>' + l + '</span><b>' + v + '</b></div>'; };
+  var title = e.type === 'pay' ? '💵 ' + esc(who) + ' paid ' + money(e.amt) : e.type === 'loan' ? '🤝 Cash lent to ' + esc(who) : '💳 ' + esc(who) + ' took ' + e.qty + ' × ' + esc(e.name) + ' on credit';
+  modal('<h2 style="margin:0 0 8px">' + title + '</h2>' + kv(e.type === 'pay' ? 'Paid' : e.type === 'loan' ? 'Lent' : 'Credit', money(e.amt)) + (e.type === 'sale' || e.type === 'cnote' ? kv('Items', e.qty + ' × ' + esc(e.name)) : '') + kv('When', hfmt(e.t)) + kv('Recorded by', esc(e.byName || 'A member')) + (e.note ? kv('Note', esc(e.note)) : '') + kv('Still owed now', bal > 0.004 ? '<span style="color:var(--exp)">' + money(bal) + '</span>' : '<span style="color:var(--ok)">Nothing ✓</span>') + '<button class="btn block" data-act="close" style="margin-top:10px">Close</button>');
+}
+function histEvSub() {   /* the entries of the shifts of the chosen day (a night shift keeps its entries after midnight) */
+  var sids = histDay().map(function (x) { return x.sid; }).slice(0, 10), key = sids.join(',');
+  if (key === HEKEY) return; HEKEY = key; if (HEUN) { HEUN(); HEUN = null; }
+  if (!sids.length) { HEVS = []; histDraw(); return; }
+  HEUN = onSnapshot(query(col('events'), where('sid', 'in', sids), limit(3000)), function (snap) { HEVS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); histDraw(); }, function (e) { toast(errText(e)); });
+}
+var hdot = function (wk) { var c = shiftColor(wk); return '<span class="hdot" style="background:' + c + '"></span>'; };
+var hfmt = function (t) { var d = new Date(t); return d.getDate() + ' ' + d.toLocaleDateString('en-GB', { month: 'short' }) + ' ' + hhmm(t); };
+function hoCalc(d) {   /* what the next shift counted against what was handed over: the cash and every item that differs */
+  var acc = d.status === 'accepted', rows = acc ? recRows(d, null) : null, diffs = [], same = 0;
+  if (rows) rows.forEach(function (r) {
+    if (r.rs != null) { if (r.rs !== r.stock) diffs.push([esc(r.name), r.stock, r.rs]); else same++; }
+    if (r.store && r.rg != null) { if (r.rg !== r.cage) diffs.push([cageName(r.name, r.unit), r.cage, r.rg]); else same++; }
+  });
+  var cashDiff = acc ? r2(num(d.receivedCash) - num(d.counted)) : 0, less = diffs.filter(function (x) { return x[2] < x[1]; }).length, more = diffs.length - less;
+  return { acc: acc, diffs: diffs, same: same, cashDiff: cashDiff, less: less, more: more };
+}
+function hoShort(d) { var c = hoCalc(d); return !c.acc ? { k: 'wait', v: 0, c: c } : (c.cashDiff < 0 || c.less) ? { k: 'short', v: Math.max(0, -c.cashDiff), c: c } : (c.cashDiff > 0 || c.more) ? { k: 'over', v: Math.max(0, c.cashDiff), c: c } : { k: 'ok', v: 0, c: c }; }
+function hoRowHtml(h) {   /* "Handover received from X" and "Handed over to Y" */
+  var d = h.doc, st = hoShort(d), recv = h.kind === 'recv', rwk = recv ? h.shiftWk : (d.receivedBy ? whoOf(d.receivedBy).wk : ''), who = recv ? (d.fromName || 'A member') : (d.receivedByName || (d.toLabels || []).join(', ') || 'the next shift');
+  var ni = st.c.less, bits = [st.c.cashDiff < 0 ? 'cash short ' + money(-st.c.cashDiff) : '', ni ? ni + (ni === 1 ? ' item' : ' items') + ' short' : ''].filter(Boolean).join(' · ');
+  var res = st.k === 'short' ? bits : st.k === 'over' ? 'counted more than handed over' : st.k === 'ok' ? '✓ nothing short' : 'waiting to be counted';
+  var amt = st.k === 'short' ? (st.c.cashDiff < 0 ? 'Short ' + money(-st.c.cashDiff) : ni + (ni === 1 ? ' item' : ' items')) : st.k === 'over' ? 'Over' : st.k === 'ok' ? '✓' : '', col = st.k === 'short' ? 'var(--exp)' : st.k === 'over' ? 'var(--soon)' : 'var(--ok)';
+  var hl = st.k === 'short' ? ' style="cursor:pointer;background:var(--exp-bg);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px"' : ' style="cursor:pointer"';
+  return '<div data-act="hosheet" data-id="' + esc(d.id) + '" data-k="' + h.kind + '" data-wk="' + esc(rwk || '') + '"' + hl + '><span style="font-size:18px;width:26px;flex:none;text-align:center">🔁</span><div class="grow"><b>' + (recv ? 'Handover received from ' : 'Handed over to ') + esc(who) + '</b><div class="muted">' + hfmt(h.t) + ' · ' + esc(d.wk) + ' → ' + esc(rwk || '') + ' · ' + res + '</div></div><b style="color:' + col + ';white-space:nowrap">' + amt + '</b></div>';
+}
+function histShiftBlock(X, evs, head) {
+  var mine = evs.filter(function (e) { return e.sid === X.sid; }), imp = mine.filter(function (e) { return e.type !== 'count'; }), cnt = mine.filter(function (e) { return e.type === 'count'; });
+  var on = Object.keys(HY.types).filter(function (k) { return HY.types[k]; }), keepHo = !on.length || HY.types['Handovers'], rows = imp.map(function (e) { return { t: e.t, html: evRow(e, e.sid === SH().sid) }; });
+  if (keepHo) { if (X.doc) rows.push({ t: X.doc.at, html: hoRowHtml({ kind: 'give', doc: X.doc, t: X.doc.at, shiftWk: X.wk }) }); if (X.prev && X.prev.status === 'accepted') rows.push({ t: X.prev.receivedAt || X.prev.at, html: hoRowHtml({ kind: 'recv', doc: X.prev, t: X.prev.receivedAt || X.prev.at, shiftWk: X.wk }) }); }
+  rows.sort(function (a, b) { return b.t - a.t; });
+  var out = head || '';
+  if (rows.length) out += '<div class="sec-h">Important</div><div class="list">' + rows.map(function (r) { return r.html; }).join('') + '</div>';
+  if (cnt.length) {
+    var sold = cnt.reduce(function (a, e) { return a + (e.qty || 0); }, 0), amt = cnt.reduce(function (a, e) { return a + (e.amt || 0); }, 0), op = !!HY.cnt[X.sid];
+    out += '<div class="sec-h">Counts</div><div class="hcs" data-act="hcnt" data-id="' + esc(X.sid) + '"><span class="ci">🧮</span><div class="grow"><b>' + cnt.length + (cnt.length === 1 ? ' item counted' : ' items counted') + '</b><div class="muted">' + sold + ' sold · ' + money(amt) + (op ? '' : ' · tap to see them') + '</div></div><span style="color:var(--brand);font-size:20px">' + (op ? '⌄' : '›') + '</span></div>' + (op ? '<div class="list" style="margin-top:4px">' + cnt.map(function (e) { return evRow(e, e.sid === SH().sid); }).join('') + '</div>' : '');
+  }
+  return out;
+}
 function histAllHtml() {
+  if (histPer() !== 'day') return histAllMonth();
+  if (!HEVS || !HSDOCS) return '<div class="empty">Loading…</div>';
+  var day = histDay(); if (!day.length) return '<div class="empty">No records for ' + histEmptyWord() + '.</div>';
+  var one = HY.sid && day.filter(function (x) { return x.sid === HY.sid; })[0], sel = one ? [one] : day, sids = sel.map(function (x) { return x.sid; });
+  var evs = histShown().filter(function (e) { return sids.indexOf(e.sid) >= 0; }), all = HEVS.filter(function (e) { return sids.indexOf(e.sid) >= 0; });
+  var chips = '<div class="hcc"><button data-act="hsid" data-id="" class="' + (one ? '' : 'on') + '">All of the day</button>' + day.map(function (x) { return '<button data-act="hsid" data-id="' + esc(x.sid) + '" class="' + (one && one.sid === x.sid ? 'on' : '') + '">' + hdot(x.wk) + esc(x.wk) + '</button>'; }).join('') + '</div>';
+  var first = sel[0], last = sel[sel.length - 1], t0 = first.start || Math.min.apply(null, all.map(function (e) { return e.t; }).concat([Infinity])), runs = sel.filter(function (x) { return x.running; })[0];
+  var span = (isFinite(t0) ? hfmt(t0) : '') + ' → ' + (last.running ? '<b>now</b>' : last.end ? hfmt(last.end) : '');
+  var line = '<div class="hline"><span>' + sel.map(function (x) { return hdot(x.wk) + ' <b>' + esc(x.wk) + '</b>'; }).join(' / ') + ' · ' + span + '</span>' + (runs ? '<span class="run">● ' + esc(runs.wk) + ' running</span>' : one && one.doc ? '<span class="who">' + esc(one.doc.fromName || '') + (one.doc.receivedByName ? ' → ' + esc(one.doc.receivedByName) : '') + '</span>' : '') + '</div>';
+  var can = inControl() && all.some(function (e) { return e.sid === SH().sid; });
+  var blocks = sel.slice().reverse().map(function (X) { return histShiftBlock(X, evs, sel.length > 1 ? '<div class="sec-h" style="margin-top:14px">' + hdot(X.wk) + ' ' + esc(X.wk) + ' · ' + (X.start ? hfmt(X.start) : '') + ' → ' + (X.running ? 'now' : X.end ? hfmt(X.end) : '') + '</div>' : '') }).join('');
+  if (!/class="list"|class="hcs"/.test(blocks)) blocks = histFilterCount() ? '<div class="empty">No entries match this filter on ' + esc(histPlain()) + '.<br><button class="btn sec" data-act="hclear" style="margin-top:12px">Clear filter</button></div>' : '<div class="empty">No entries yet for ' + esc(histPlain()) + '.</div>';
+  return chips + line + histTiles(all, day.some(function (x) { return x.running; })) + blocks + (can ? '<button class="btn ' + (CM ? 'sec' : 'red') + ' block" data-act="cmtog" style="margin-top:12px">' + (CM ? 'Done cancelling' : 'Cancel an item') + '</button>' + (CM ? '<div class="cancelbar">Tap Cancel next to the entry to remove. Only this shift can be cancelled.</div>' : '') : '') + '<p class="muted">Entries are kept for about 31 days. Every shift keeps a permanent summary under Shifts.</p>';
+}
+function histAllMonth() {
   if (!HEVS) return '<div class="empty">Loading…</div>';
   var sh = histShown(), p = histPer(), can = p === 'day' && inControl() && HEVS.some(function (e) { return e.sid === SH().sid; });
   if (!HEVS.length) return '<div class="empty">No records for ' + histEmptyWord() + '.</div>';
   if (!sh.length) return '<div class="empty">No entries match this filter on ' + esc(histPlain()) + '.<br><button class="btn sec" data-act="hclear" style="margin-top:12px">Clear filter</button></div>';
-  var sm = function (f) { return HEVS.filter(f).reduce(function (a, e) { return a + e.amt; }, 0); };   /* the day's (or month's) totals, as before */
-  var cr = sm(function (e) { return (e.type === 'sale' && e.cr) || e.type === 'cnote'; }), cash = sm(function (e) { return (e.type === 'sale' && !e.cr) || e.type === 'count'; }) - sm(function (e) { return e.type === 'snote' || e.type === 'cnote'; });
-  var cell = function (l, v) { return '<div><div class="l">' + l + '</div><div class="v">' + money(v) + '</div></div>'; };
-  var tiles = '<div class="hsum">' + cell('Cash sales', cash) + cell('Credit sales', cr) + cell('Collected', sm(function (e) { return e.type === 'pay'; })) + cell('Purchases', sm(function (e) { return e.type === 'buy'; })) + cell('Cash lent out', sm(function (e) { return e.type === 'loan'; })) + '</div>';
+  var tiles = histTiles(HEVS, false);
   var out = '', last = '';
   sh.forEach(function (e) {
     if (p !== 'day') { var k = new Date(e.t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); if (k !== last) { last = k; out += '<div class="sec-h">' + esc(k) + '</div>'; } }
@@ -1958,7 +2058,11 @@ function histDraw(top) {
 }
 function histPage() {   /* (re)start the live data for what is on show, then draw it */
   histStop();
-  if (HY.tab === 'all') {
+  if (HY.tab === 'all' && histPer() === 'day') {
+    HEVS = null; HEKEY = null; histDraw();
+    var u0 = onSnapshot(query(col('shifts'), orderBy('at', 'desc'), limit(400)), function (snap) { HSDOCS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; HSD[x.id] = x; return x; }); histEvSub(); histDraw(); }, function (e) { toast(errText(e)); });
+    HUN = function () { u0(); if (HEUN) { HEUN(); HEUN = null; } HEKEY = null; };
+  } else if (HY.tab === 'all') {
     var r = histRange(); HEVS = null; histDraw();
     HUN = onSnapshot(query(col('events'), where('t', '>=', r.a), where('t', '<', r.b), limit(3000)), function (snap) { HEVS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); histDraw(); }, function (e) { toast(errText(e)); });
   } else {
@@ -1966,7 +2070,7 @@ function histPage() {   /* (re)start the live data for what is on show, then dra
     HUN = onSnapshot(query(col('shifts'), orderBy('at', 'desc'), limit(400)), function (snap) { HSDOCS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; HSD[x.id] = x; return x; }); histDraw(); }, function (e) { toast(errText(e)); });
   }
 }
-function histGo() { if (HY.tab === 'all') histPage(); else histDraw(); }
+function histGo() { HY.sid = HY.sid; if (HY.tab === 'all') histPage(); else histDraw(); }
 function histOpen() { histReset(); histStop(); WPS = []; histPage(); }
 function histIsOpen() { var c = WPS[WPS.length - 1]; return !$('#spage').hidden && c && c.fn === histPage; }
 function histShift(id) {   /* a shift's own page, on top of History; back returns to the list as it was */
@@ -4116,8 +4220,12 @@ document.addEventListener('click', function (e) {
   else if (a === 'settings') { if (!$('#spage').hidden) closeModal(); else spOpen(); }
   else if (a === 'hytab') { HY.tab = b.dataset.v; if (HY.tab === 'all' && HY.per === 'year') HY.per = 'month'; histPage(); var hb = $('#spage .sp-body'); if (hb) hb.scrollTop = 0; }
   else if (a === 'hstep') { histStep(+b.dataset.v); histGo(); }
-  else if (a === 'htoday') { HY.dt = histNoon(new Date()); histGo(); }
+  else if (a === 'htoday') { HY.dt = histNoon(new Date()); HY.sid = ''; histGo(); }
   else if (a === 'hwk') { HY.wk = b.dataset.v; histDraw(); }
+  else if (a === 'hsid') { HY.sid = b.dataset.id || ''; histDraw(); }
+  else if (a === 'hcnt') { HY.cnt[id] = !HY.cnt[id]; histDraw(); }
+  else if (a === 'hosheet') hoSheet(id, b.dataset.k, b.dataset.wk);
+  else if (a === 'evsheet') evSheet(id);
   else if (a === 'hmonth') { HY.per = 'month'; HY.dt = histNoon(new Date(+id.slice(0, 4), +id.slice(5, 7) - 1, 1)); histDraw(true); }
   else if (a === 'chv') { HY.cv = b.dataset.v; histDraw(); }
   else if (a === 'caday') calDay(id);
@@ -4362,7 +4470,7 @@ document.addEventListener('change', function (e) {
     else if (pq.length === 3) HY.dt = histNoon(new Date(+pq[0], +pq[1] - 1, +pq[2]));
     else if (pq.length === 2) HY.dt = histNoon(new Date(+pq[0], +pq[1] - 1, 1));
     else return;
-    histGo(); return;
+    HY.sid = ''; histGo(); return;
   }
   if (e.target.dataset && e.target.dataset.wz && WZ) { wzInput(e.target); return; }
   if (e.target.dataset && e.target.dataset.ws && WS) { wsInput(e.target); return; }
