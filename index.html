@@ -138,6 +138,8 @@ html:has(#mbg.top),body:has(#mbg.top){overflow:hidden;overscroll-behavior:none}h
 .sq{position:sticky;top:-10px;z-index:3;background:var(--pop);padding:6px 0 8px;margin:-6px 0 0}
 .stick{position:sticky;top:var(--hh,60px);z-index:4;background:var(--bg);padding:6px 0 10px;margin:-6px 0 0}
 input:disabled{background:var(--dis);color:var(--muted)}
+.dd{position:relative}.dd>select{position:absolute;left:0;top:0;width:100%;height:46px;opacity:0;pointer-events:none}.ddb{width:100%;height:46px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 12px;border:1px solid var(--ib);border-radius:10px;background:var(--field);color:var(--ink);font:inherit;font-size:15px;text-align:left}.ddb.open{border-color:var(--brand);box-shadow:0 0 0 2px var(--soft)}
+#ddl{position:fixed;z-index:100;background:var(--surface);border:1px solid var(--ib);border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.25);overflow-y:auto}#ddl div{display:flex;justify-content:space-between;align-items:center;min-height:44px;padding:0 14px;font-size:15px;color:var(--ink);border-top:1px solid var(--line)}#ddl div:first-child{border-top:0}#ddl div.cur{background:var(--soft);font-weight:700}
 #spage .lockbox,.lockbox{display:flex;align-items:center;justify-content:space-between;min-height:34px;padding:0 10px;border-radius:10px;background:var(--soft);border:1px solid var(--line);box-shadow:inset 0 2px 5px rgba(0,0,0,.18);color:var(--ink);font-weight:600;font-size:14px}.lockbox .muted{font-weight:500;font-size:12px}
 .bstep .stepper{gap:4px}.bstep .stepper button{width:40px;height:44px;font-size:21px}.bstep .stepper .stepin{width:58px;height:44px}.bsl{font-size:13px;font-weight:700;margin-bottom:5px;white-space:nowrap}
 @media print{body>*:not(#modal){display:none!important}.modal{position:static;background:none}.modal>div{max-height:none;overflow:visible}.noprint{display:none!important}}
@@ -239,7 +241,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.21', RULES_VERSION = '2.11';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.22', RULES_VERSION = '2.11';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1133,9 +1135,9 @@ function stockSheet() {
     (hasCage(it) ? '<div class="grow"><label>Cage (' + unitPl(unitName(it), 2) + ' of ' + per(it) + ')</label><b style="font-size:18px;font-weight:600">' + it.cage + '</b></div>' : '') + '</div>' +
     '<p class="muted" style="margin:8px 0 0">Stock goes up with a purchase (Add stock) and comes down with counts, spoiled items and moves. To fix a counting mistake use Edit stock.</p></div>' +
     (hasCage(it) ? '<div class="card"><h2>Move ' + (unitName(it) === 'case' ? 'a case' : 'a ' + unitName(it)) + ' to ' + (it.shelf ? 'the shelf' : 'the fridge') + '</h2><div class="row"><div>' + stepper('sm', ST.move) + '</div><div class="grow muted">= ' + ST.move * per(it) + ' items</div></div>' +
-    '<button class="btn sec block" data-act="domove" style="margin-top:10px"' + (it.cage < 1 ? ' disabled' : '') + '>Move to ' + (it.shelf ? 'shelf' : 'fridge') + '</button></div>' : '') +
+    '<button class="btn sec block" data-act="domove" style="margin-top:10px"' + (it.cage < 1 || ST.move < 1 ? ' disabled' : '') + '>Move to ' + (it.shelf ? 'shelf' : 'fridge') + '</button></div>' : '') +
     '<div class="card"><h2>Spoiled / damaged</h2><div class="row"><div>' + stepper('sp', ST.spoil) + '</div><div class="grow muted">out of the ' + (it.shelf ? 'shelf' : 'fridge') + '</div></div>' +
-    '<button class="btn sec block" data-act="dospoil" style="margin-top:10px"' + (it.stock < 1 ? ' disabled' : '') + '>Record spoiled</button></div>' +
+    '<button class="btn sec block" data-act="dospoil" style="margin-top:10px"' + (it.stock < 1 || ST.spoil < 1 ? ' disabled' : '') + '>Record spoiled</button></div>' +
     '<div class="card"><h2>Item details</h2><div class="f"><label>Name</label><input id="sd-name" value="' + esc(it.name) + '" autocomplete="off"></div><div class="f"><label>Kept in</label>' + whereSeg('sd-where', it.shelf, 'wsel', ' data-for="sd"') + '</div><div class="row f"><div class="grow"><label>Selling price (each item)</label>' + ig('<input id="sd-price" type="number" inputmode="decimal" min="0" value="' + it.price + '">', '$') + '</div></div>' + unitBlock('sd', it.unit, it.shelf ? (it.per > 1 ? it.per : '') : per(it), it.shelf) + '<div class="f"><label>Cost price each (what you paid)</label>' + ig('<input id="sd-cost" type="number" inputmode="decimal" min="0" value="' + (it.cost || '') + '">', '$') + '</div>' +
     '<button class="btn sec block" data-act="savedetails">Save details</button><button class="btn red block" data-act="rmitem" style="margin-top:10px">Remove item</button></div>' +
     '<button class="btn red block" data-act="editstock">⚠ Edit stock</button><button class="btn sec block" data-act="close" style="margin-top:10px">Close</button>');
@@ -1209,7 +1211,7 @@ function newItemForm() {
   var ng = function (v, u) { return '<div class="lockbox"><span>' + v + '</span><span class="muted">' + u + '</span></div>'; };
   modal('<h2>New item</h2><div class="card"><div class="f"><label>Name</label><input id="ni-name" placeholder="e.g. Coke" autocomplete="off"></div>' +
     '<div class="f"><label>Sold from</label><select id="ni-where"><option value="fridge">' + lbl('🧊 Fridge') + '</option><option value="shelf">' + lbl('🧁 Shelf') + '</option></select></div>' +
-    '<div class="f"><label>How does it usually come?</label><select id="ni-kind"><option value="case">In cases</option><option value="pack">In packs</option><option value="item">Single items only</option></select></div>' +
+    '<div class="f"><label>How does it usually come? (case, pack, box…)</label><select id="ni-kind"><option value="case">Case</option><option value="pack">Pack</option><option value="box">Box</option><option value="carton">Carton</option><option value="item">Single items only</option></select></div>' +
     '<div class="f" id="ni-perwrap"><label id="ni-perlbl">Items in one case</label>' + ig('<input id="ni-per" type="number" inputmode="numeric" min="1" value="' + CFG.perCase + '">', '', 'items') + '</div>' +
     '<div class="f"><label>Selling price (each item)</label>' + ig('<input id="ni-price" type="number" inputmode="decimal" min="0" placeholder="0">', '$') + '</div>' +
     '<div class="f"><label>Cost price each (what you paid, optional)</label>' + ig('<input id="ni-cost" type="number" inputmode="decimal" min="0" placeholder="0">', '$') + '</div>' +
@@ -1220,7 +1222,7 @@ function newItemForm() {
 }
 function niKind() {   /* the "how does it usually come" drop-down changes the label, and single items have no items-in-one box */
   var k = $('#ni-kind').value, w = $('#ni-perwrap'), l = $('#ni-perlbl'); if (!w) return;
-  w.hidden = k === 'item'; if (l) l.textContent = 'Items in one ' + (k === 'pack' ? 'pack' : 'case');
+  w.hidden = k === 'item'; if (l) l.textContent = 'Items in one ' + (k === 'item' ? 'case' : k);
 }
 
 /* ---------- Add stock: purchase bill ---------- */
@@ -1247,7 +1249,7 @@ function vBuy() {
 }
 var BDEST = {}; try { BDEST = JSON.parse(localStorage.getItem('sw_bdest') || '{}') || {}; } catch (e) { BDEST = {}; }   /* where each item went the last time it was bought: storage or the shop */
 function lineP(l) { var it = item(l.item); if (it) return Math.max(1, per(it)); if (l.kind === 'item') return 1; return Math.max(1, Math.floor(num(l.per)) || CFG.perCase); }   /* items in one case or pack */
-function lineWord(l) { var it = item(l.item); if (lineP(l) < 2) return 'item'; return it ? unitName(it) : (l.kind === 'pack' ? 'pack' : 'case'); }
+function lineWord(l) { var it = item(l.item); if (lineP(l) < 2) return 'item'; return it ? unitName(it) : (l.kind && l.kind !== 'item' ? l.kind : 'case'); }
 function lineShelf(l) { var it = item(l.item); return it ? !!it.shelf : l.where === 'shelf'; }
 function lineDest(l) { if (l.dest) return l.dest; var it = item(l.item); if (it && BDEST[it.id]) return BDEST[it.id]; return lineP(l) > 1 && (!it || !it.shelf || it.cage > 0) ? 'store' : 'shop'; }
 function lineParts(l) {   /* what a line really does: whole cases or packs (b) and loose singles (u), and where each goes (dc into the cage, ds into the fridge or shelf) */
@@ -1271,8 +1273,8 @@ function buyLineHtml(l, k) {
   var it = item(l.item), isNew = l.item === '__new', p = lineP(l), bun = p > 1, w = lineWord(l), t = lineParts(l), sh = lineShelf(l);
   var sel = function (f, opts, cur) { return '<select data-bl="' + k + '" data-f="' + f + '">' + opts.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === cur ? ' selected' : '') + '>' + lbl(o[1]) + '</option>'; }).join('') + '</select>'; };
   var h = '<div class="card bline" style="background:var(--bg);box-shadow:none;padding:10px"><div class="f"><label>Item</label><button class="btn sec selbtn" data-act="itempick" data-k="' + k + '"><span>' + (isNew ? '+ New item' : it ? esc(it.name) : 'Choose an item') + '</span><span>▾</span></button>' + (isNew ? '' : '<div class="muted" style="margin-top:4px">' + (bun ? capW(unitPl(w, 2)) + ' of ' + p : 'Single items only') + '</div>') + '</div>';
-  if (isNew) h += '<div class="f"><label>Name</label><input data-bl="' + k + '" data-f="name" value="' + esc(l.name) + '" autocomplete="off"></div><div class="f"><label>Sold from</label>' + sel('where', [['fridge', '🧊 Fridge'], ['shelf', '🧁 Shelf']], l.where) + '</div><div class="f"><label>How does it usually come?</label>' + sel('kind', [['case', 'In cases'], ['pack', 'In packs'], ['item', 'Single items only']], l.kind) + '</div>' +
-    (l.kind === 'item' ? '' : '<div class="f"><label>Items in one ' + (l.kind === 'pack' ? 'pack' : 'case') + '</label>' + ig('<input data-bl="' + k + '" data-f="per" type="number" inputmode="numeric" min="1" value="' + esc(l.per) + '">', '', 'items') + '</div>') + '<div class="f"><label>Selling price (each item)</label>' + ig('<input data-bl="' + k + '" data-f="price" type="number" inputmode="decimal" value="' + esc(l.price) + '">', '$') + '</div>';
+  if (isNew) h += '<div class="f"><label>Name</label><input data-bl="' + k + '" data-f="name" value="' + esc(l.name) + '" autocomplete="off"></div><div class="f"><label>Sold from</label>' + sel('where', [['fridge', '🧊 Fridge'], ['shelf', '🧁 Shelf']], l.where) + '</div><div class="f"><label>How does it usually come? (case, pack, box…)</label>' + sel('kind', [['case', 'Case'], ['pack', 'Pack'], ['box', 'Box'], ['carton', 'Carton'], ['item', 'Single items only']], l.kind) + '</div>' +
+    (l.kind === 'item' ? '' : '<div class="f"><label>Items in one ' + l.kind + '</label>' + ig('<input data-bl="' + k + '" data-f="per" type="number" inputmode="numeric" min="1" value="' + esc(l.per) + '">', '', 'items') + '</div>') + '<div class="f"><label>Selling price (each item)</label>' + ig('<input data-bl="' + k + '" data-f="price" type="number" inputmode="decimal" value="' + esc(l.price) + '">', '$') + '</div>';
   var ex = 'data-k="' + k + '"';
   h += '<div style="height:1px;background:var(--line);margin:6px 0 14px"></div><div style="font-size:14px;font-weight:700;margin-bottom:10px">How many did you buy?</div><div class="bstep" style="display:flex;gap:10px">' +
     (bun ? '<div style="flex:1;min-width:0"><div class="bsl">' + capW(unitPl(w, 2)) + '</div>' + stepper('bl', t.b, ex) + '</div>' : '') + '<div style="flex:1;min-width:0"><div class="bsl">Singles</div>' + stepper('bu', t.u, ex) + '</div></div>' +
@@ -1370,7 +1372,7 @@ function buySave() {
     if (l.item === '__new') {
       if (!l.name.trim()) return toast('Name the new item');
       if (!(num(l.price) > 0)) return toast('Enter the selling price for ' + l.name.trim() + ' (more than $0)');
-      if (l.kind !== 'item' && lineP(l) < 2) return toast('Enter how many items are in one ' + (l.kind === 'pack' ? 'pack' : 'case'));
+      if (l.kind !== 'item' && lineP(l) < 2) return toast('Enter how many items are in one ' + l.kind);
       var nid = newId('items'), pr = num(l.price), shf = l.where === 'shelf';
       b.set(ref('items/' + nid), { name: l.name.trim(), price: pr, per: pt.p, unit: lw, stock: pt.ds, open: 0, cage: pt.dc, cageOpen: 0, shelf: shf, ord: Date.now() + k, lastEvent: eid, cost: ce });
       ln.item = nid; ln.name = l.name.trim(); BDEST[nid] = pt.d;
@@ -3702,6 +3704,39 @@ var relabel = (function () {
   return run;
 })();
 
+
+/* ---------- drop-downs: every list is a button that opens a small list right under it (no full-screen pop-up from the phone) ---------- */
+var DDS = null;
+function ddClose() { if (DDS) { DDS.list.remove(); DDS.btn.classList.remove('open'); DDS = null; } }
+function ddText(sel) { var o = sel.options[sel.selectedIndex]; return o ? o.textContent : ''; }
+function ddSync(sel) { var b = sel.parentNode && sel.parentNode.querySelector('.ddb'); if (b) { var t = ddText(sel); if (b.firstChild.textContent !== t) b.firstChild.textContent = t; } }
+function ddEnhance() {
+  document.querySelectorAll('select:not(.hpick):not([data-dd])').forEach(function (sel) {
+    sel.setAttribute('data-dd', '1'); sel.tabIndex = -1;
+    var w = document.createElement('div'); w.className = 'dd'; sel.parentNode.insertBefore(w, sel); w.appendChild(sel);
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'ddb'; b.setAttribute('aria-haspopup', 'listbox'); b.innerHTML = '<span></span><span aria-hidden="true">▾</span>'; w.appendChild(b);
+  });
+  document.querySelectorAll('.dd > select').forEach(ddSync);
+}
+function ddOpen(btn) {
+  var sel = btn.parentNode.querySelector('select'), l = document.createElement('div'), r = btn.getBoundingClientRect(), n = sel.options.length, h = Math.min(n * 44 + 2, window.innerHeight * 0.5);
+  l.id = 'ddl'; l.setAttribute('role', 'listbox');
+  Array.prototype.forEach.call(sel.options, function (o, i) { if (o.disabled) return; var d = document.createElement('div'); d.dataset.i = i; if (i === sel.selectedIndex) d.className = 'cur'; d.innerHTML = '<span></span><span>' + (i === sel.selectedIndex ? '✓' : '') + '</span>'; d.firstChild.textContent = o.textContent; l.appendChild(d); });
+  var below = window.innerHeight - r.bottom - 8, top = below >= h || r.top < h ? r.bottom + 4 : r.top - h - 4;
+  l.style.cssText = 'left:' + r.left + 'px;width:' + r.width + 'px;top:' + top + 'px;max-height:' + Math.max(132, Math.min(h, below >= h ? h : Math.max(below, r.top - 12))) + 'px';
+  document.body.appendChild(l); btn.classList.add('open'); DDS = { list: l, btn: btn, sel: sel };
+}
+document.addEventListener('click', function (e) {
+  var item = e.target.closest && e.target.closest('#ddl > div'), btn = e.target.closest && e.target.closest('.ddb');
+  if (item && DDS) { var s = DDS.sel; s.selectedIndex = +item.dataset.i; ddSync(s); ddClose(); s.dispatchEvent(new Event('input', { bubbles: true })); s.dispatchEvent(new Event('change', { bubbles: true })); e.stopPropagation(); e.preventDefault(); return; }
+  if (btn) { var same = DDS && DDS.btn === btn; ddClose(); if (!same) ddOpen(btn); e.stopPropagation(); e.preventDefault(); return; }
+  if (DDS) { ddClose(); e.stopPropagation(); e.preventDefault(); }   /* the first tap outside only closes the list */
+}, true);
+document.addEventListener('change', function (e) { if (e.target && e.target.matches && e.target.matches('.dd > select')) ddSync(e.target); }, true);
+window.addEventListener('scroll', function (e) { if (DDS && !(e.target && e.target.id === 'ddl')) ddClose(); }, true);
+window.addEventListener('resize', ddClose);
+(function () { var q = 0; var run = function () { q = 0; ddEnhance(); }; if (window.MutationObserver) new MutationObserver(function () { if (!q) q = requestAnimationFrame(run); }).observe(document.body, { childList: true, subtree: true }); ddEnhance(); })();
+
 /* ---------- never show an email address on screen (only on the sign-in page, and in the box when inviting someone) ---------- */
 (function () {
   var EM = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/, EMG = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, busy = false;
@@ -3871,7 +3906,7 @@ document.addEventListener('click', function (e) {
   if (a === 'wsel') { var wi = $('#' + b.dataset.for + '-where'); wi.value = b.dataset.v; b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); shelfFields(b.dataset.for); }
   else if (a === 'blwhere') { BUY.lines[+b.dataset.k].where = b.dataset.v; render(); }
   else if (a === 'pick') { sel = id; CN = { to: null, q: 0, mv: 0 }; countSheet(); }
-  else if (a === 'editfromsell') { var ei = item(sel); if (ei) { ST = { id: ei.id, fridge: ei.stock, cage: ei.cage, move: 1, spoil: 1 }; stockSheet(); } }
+  else if (a === 'editfromsell') { var ei = item(sel); if (ei) { ST = { id: ei.id, fridge: ei.stock, cage: ei.cage, move: 0, spoil: 0 }; stockSheet(); } }
   else if (a === 'cn+' || a === 'cn-') { var ci = item(sel); CN.to = stepTo(CN.to == null ? ci.stock : CN.to, a === 'cn+' ? 1 : -1, 0, ci.stock); countSheet(); }
   else if (a === 'cm+' || a === 'cm-') { var cmi = item(sel); CN.mv = stepTo(CN.mv, a === 'cm+' ? 1 : -1, 0, Math.max(0, cmi.cage)); countSheet(); }
   else if (a === 'cq+' || a === 'cq-') { CN.q = stepTo(CN.q, a === 'cq+' ? 1 : -1, 0, 999); countSheet(); }
@@ -3980,11 +4015,11 @@ document.addEventListener('click', function (e) {
   else if (a === 'esreason') { ES.reason = b.dataset.v; esForm(); }
   else if (a === 'esreview') esReview();
   else if (a === 'editview') showStockEdit(id);
-  else if (a === 'stockitem') { var si = item(id); ST = { id: id, fridge: si.stock, cage: si.cage, move: 1, spoil: 1 }; stockSheet(); }
+  else if (a === 'stockitem') { var si = item(id); ST = { id: id, fridge: si.stock, cage: si.cage, move: 0, spoil: 0 }; stockSheet(); }
   else if (a === 'sf+' || a === 'sf-') { ST.fridge = stepTo(ST.fridge, a === 'sf+' ? 1 : -1, 0); stRender(); }
   else if (a === 'sg+' || a === 'sg-') { ST.cage = stepTo(ST.cage, a === 'sg+' ? 1 : -1, 0); stRender(); }
-  else if (a === 'sm+' || a === 'sm-') { var mi = item(ST.id); ST.move = stepTo(ST.move, a === 'sm+' ? 1 : -1, 1, Math.max(1, mi.cage)); stockSheet(); }
-  else if (a === 'sp+' || a === 'sp-') { var pi = item(ST.id); ST.spoil = stepTo(ST.spoil, a === 'sp+' ? 1 : -1, 1, Math.max(1, pi.stock)); stockSheet(); }
+  else if (a === 'sm+' || a === 'sm-') { var mi = item(ST.id); ST.move = stepTo(ST.move, a === 'sm+' ? 1 : -1, 0, Math.max(0, mi.cage)); stockSheet(); }
+  else if (a === 'sp+' || a === 'sp-') { var pi = item(ST.id); ST.spoil = stepTo(ST.spoil, a === 'sp+' ? 1 : -1, 0, Math.max(0, pi.stock)); stockSheet(); }
   else if (a === 'savecount') {
     var ci = item(ST.id), df = ST.fridge - ci.stock, dg = ST.cage - ci.cage, cb = writeBatch(DB), lastId;
     askConfirm('Save the new count?', esc(ci.name) + ': fridge ' + ci.stock + ' → <b>' + ST.fridge + '</b>, cages ' + ci.cage + ' → <b>' + ST.cage + '</b>', 'Yes, save', function () {
@@ -3996,14 +4031,14 @@ document.addEventListener('click', function (e) {
     });
   }
   else if (a === 'domove') {
-    var mv = item(ST.id), n = ST.move; if (mv.cage < n) return toast('Only ' + mv.cage + ' in the cage');
+    var mv = item(ST.id), n = ST.move; if (n < 1) return toast('Choose how many first'); if (mv.cage < n) return toast('Only ' + mv.cage + ' in the cage');
     askConfirm('Move to ' + (mv.shelf ? 'the shelf' : 'the fridge') + '?', '<b>' + uLab(mv, n) + '</b> of ' + esc(mv.name) + ' = ' + n * per(mv) + ' items go ' + (mv.shelf ? 'onto the shelf' : 'into the fridge') + '.', 'Yes, move', function () {
       var mb = writeBatch(DB), mid = newEv(); itemInc(mb, mv.id, { stock: n * per(mv), cage: -n }); mkEvent(mb, 'move', mv, n * per(mv), 0, { cases: n }); commit(mb).then(function () { setTimeout(function () { if (tab === 'stock' && ST && ST.id === mv.id && $('#modal').querySelector('[data-act=domove]')) { ST.move = 1; stockSheet(); } }, 150); });   /* the sheet stays open and shows the new numbers */
       toast(uLab(mv, n) + ' moved to ' + sellFrom(mv), mid);
     });
   }
   else if (a === 'dospoil') {
-    var sp = item(ST.id), q2 = ST.spoil; if (sp.stock < q2) return toast('Only ' + sp.stock + ' in the fridge');
+    var sp = item(ST.id), q2 = ST.spoil; if (q2 < 1) return toast('Choose how many first'); if (sp.stock < q2) return toast('Only ' + sp.stock + ' in the fridge');
     askConfirm('Record spoiled?', '<b>' + q2 + ' × ' + esc(sp.name) + '</b> taken out of the fridge as spoiled / damaged.', 'Yes, record', function () {
       var sb = writeBatch(DB), spid = newEv(); itemInc(sb, sp.id, { stock: -q2 }); mkEvent(sb, 'spoil', sp, q2, 0, { cogs: r2((sp.cost || 0) * q2) }); commit(sb); closeModal(); toast('Spoiled recorded', spid);
     });
@@ -4341,8 +4376,8 @@ document.addEventListener('change', function (e) {
     else if (a2 === 'cq') { CN.q = Math.max(0, Math.min(n || 0, 999)); countSheet(); }
     else if (a2 === 'sf') { ST.fridge = Math.max(0, n); stRender(); }
     else if (a2 === 'sg') { ST.cage = Math.max(0, n); stRender(); }
-    else if (a2 === 'sm') { var mi2 = item(ST.id); ST.move = Math.max(1, Math.min(n || 1, Math.max(1, mi2.cage))); stockSheet(); }
-    else if (a2 === 'sp') { var pi2 = item(ST.id); ST.spoil = Math.max(1, Math.min(n || 1, Math.max(1, pi2.stock))); stockSheet(); }
+    else if (a2 === 'sm') { var mi2 = item(ST.id); ST.move = Math.max(0, Math.min(n || 0, Math.max(0, mi2.cage))); stockSheet(); }
+    else if (a2 === 'sp') { var pi2 = item(ST.id); ST.spoil = Math.max(0, Math.min(n || 0, Math.max(0, pi2.stock))); stockSheet(); }
     else if (a2 === 'bl') { BUY.lines[+t.dataset.k].cases = Math.max(0, n || 0); buyLive(); }   /* no redraw here: a redraw would swallow the tap on the next button */
     else if (a2 === 'bu') { BUY.lines[+t.dataset.k].units = Math.max(0, n || 0); buyLive(); }
     return;
