@@ -249,7 +249,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.25', RULES_VERSION = '2.11';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.26', RULES_VERSION = '2.11';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1866,7 +1866,7 @@ var HY = { tab: 'all', per: 'day', dt: new Date(), types: {}, short: false, wk: 
 var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash']], ['Shortages and repayments', '⚠️', ['cashshort', 'shortfix', 'repay']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
 function hgroup(e) { for (var i = 0; i < HGROUPS.length; i++) if (HGROUPS[i][2].indexOf(e.type) >= 0) return HGROUPS[i][0]; return 'Stock edits by hand'; }
 function histNoon(d) { var x = new Date(d); x.setHours(12, 0, 0, 0); return x; }
-function histToday() { var q = String(SH().date || '').split('/'); return q.length === 3 && +q[2] ? histNoon(new Date(+q[2], +q[1] - 1, +q[0])) : histNoon(new Date()); }   /* 'today' in History is the day the running shift started: after midnight a night shift still belongs to yesterday */
+function histToday() { return histNoon(new Date()); }   /* History always opens on today, by the phone's own clock */
 function histReset() { CM = false; HY.tab = 'all'; HY.per = 'day'; HY.dt = histToday(); HY.types = {}; HY.short = false; HY.wk = ''; HY.sid = ''; HY.cnt = {}; HY.cv = 'score'; HY.sy = 0; HY.back = false; HEVS = null; }
 function livePage(fn, title, qs, build) {   /* a full-screen page that stays in step with the database */
   if (!Array.isArray(qs)) qs = [qs];
@@ -1927,7 +1927,11 @@ function histDay() {   /* the shifts that started on the chosen day: the finishe
   var key = dkey(HY.dt), docs = (HSDOCS || []).slice().sort(function (a, b) { return a.at - b.at; }), out = [];
   docs.forEach(function (d, i) { if (shDay(d) === key) out.push({ sid: d.sid || d.id, wk: d.wk, date: d.date, half: d.half, doc: d, prev: docs[i - 1] || null, running: false }); });
   var cur = S.state && S.state.shift; if (cur && cur.sid && shKeyOf(cur) === key && !out.some(function (x) { return x.sid === cur.sid; })) out.push({ sid: cur.sid, wk: cur.name, date: cur.date, half: cur.half, doc: null, prev: docs[docs.length - 1] || null, running: true });
-  out.forEach(function (x) { x.start = x.prev ? (x.prev.receivedAt || x.prev.at) : 0; x.end = x.doc ? x.doc.at : 0; if (!x.start) { var ts = (HEVS || []).filter(function (e) { return e.sid === x.sid; }).map(function (e) { return e.t; }); if (ts.length) x.start = Math.min.apply(null, ts); } });
+  else if (cur && cur.sid && key === dkey(new Date()) && !out.some(function (x) { return x.sid === cur.sid; })) {   /* a shift that started on an earlier day and is still the working one: today shows what was recorded into it today */
+    var cd = docs.filter(function (d) { return (d.sid || d.id) === cur.sid; })[0], ci = docs.indexOf(cd);
+    out.push({ sid: cur.sid, wk: cur.name, date: cur.date, half: cur.half, doc: cd || null, prev: cd ? docs[ci - 1] || null : docs[docs.length - 1] || null, running: true, carry: true });
+  }
+  out.forEach(function (x) { x.start = x.prev ? (x.prev.receivedAt || x.prev.at) : 0; x.end = x.doc && !x.carry ? x.doc.at : 0; if (!x.start) { var ts = (HEVS || []).filter(function (e) { return e.sid === x.sid; }).map(function (e) { return e.t; }); if (ts.length) x.start = Math.min.apply(null, ts); } });
   return out;
 }
 var HEUN = null, HEKEY = null;
@@ -2007,9 +2011,12 @@ function histShiftBlock(X, evs, head) {
 function histAllHtml() {
   if (histPer() !== 'day') return histAllMonth();
   if (!HEVS || !HSDOCS) return '<div class="empty">Loading…</div>';
-  var day = histDay(); if (!day.length) return '<div class="empty">No records for ' + histEmptyWord() + '.</div>';
+  var day = histDay(), d0 = histRange().a;
+  day = day.filter(function (x) { return !x.carry || HEVS.some(function (e) { return e.sid === x.sid && e.t >= d0; }); });   /* a carried-over shift shows only if something was recorded in it today */
+  if (!day.length) return '<div class="empty">No records for ' + histEmptyWord() + '.</div>';
   var one = HY.sid && day.filter(function (x) { return x.sid === HY.sid; })[0], sel = one ? [one] : day, sids = sel.map(function (x) { return x.sid; });
-  var evs = histShown().filter(function (e) { return sids.indexOf(e.sid) >= 0; }), all = HEVS.filter(function (e) { return sids.indexOf(e.sid) >= 0; });
+  var inDay = function (e) { var X = day.filter(function (x) { return x.sid === e.sid; })[0]; return !!X && (!X.carry || e.t >= d0); };
+  var evs = histShown().filter(function (e) { return sids.indexOf(e.sid) >= 0 && inDay(e); }), all = HEVS.filter(function (e) { return sids.indexOf(e.sid) >= 0 && inDay(e); });
   var chips = '<div class="hcc"><button data-act="hsid" data-id="" class="' + (one ? '' : 'on') + '">All of the day</button>' + day.map(function (x) { return '<button data-act="hsid" data-id="' + esc(x.sid) + '" class="' + (one && one.sid === x.sid ? 'on' : '') + '">' + hdot(x.wk) + esc(x.wk) + '</button>'; }).join('') + '</div>';
   var first = sel[0], last = sel[sel.length - 1], t0 = first.start || Math.min.apply(null, all.map(function (e) { return e.t; }).concat([Infinity])), runs = sel.filter(function (x) { return x.running; })[0];
   var span = (isFinite(t0) ? hfmt(t0) : '') + ' → ' + (last.running ? '<b>now</b>' : last.end ? hfmt(last.end) : '');
