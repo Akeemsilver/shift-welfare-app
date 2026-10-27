@@ -249,7 +249,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.23', RULES_VERSION = '2.11';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.24', RULES_VERSION = '2.11';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1866,7 +1866,8 @@ var HY = { tab: 'all', per: 'day', dt: new Date(), types: {}, short: false, wk: 
 var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash']], ['Shortages and repayments', '⚠️', ['cashshort', 'shortfix', 'repay']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
 function hgroup(e) { for (var i = 0; i < HGROUPS.length; i++) if (HGROUPS[i][2].indexOf(e.type) >= 0) return HGROUPS[i][0]; return 'Stock edits by hand'; }
 function histNoon(d) { var x = new Date(d); x.setHours(12, 0, 0, 0); return x; }
-function histReset() { CM = false; HY.tab = 'all'; HY.per = 'day'; HY.dt = histNoon(new Date()); HY.types = {}; HY.short = false; HY.wk = ''; HY.sid = ''; HY.cnt = {}; HY.cv = 'score'; HY.sy = 0; HY.back = false; HEVS = null; }
+function histToday() { var q = String(SH().date || '').split('/'); return q.length === 3 && +q[2] ? histNoon(new Date(+q[2], +q[1] - 1, +q[0])) : histNoon(new Date()); }   /* 'today' in History is the day the running shift started: after midnight a night shift still belongs to yesterday */
+function histReset() { CM = false; HY.tab = 'all'; HY.per = 'day'; HY.dt = histToday(); HY.types = {}; HY.short = false; HY.wk = ''; HY.sid = ''; HY.cnt = {}; HY.cv = 'score'; HY.sy = 0; HY.back = false; HEVS = null; }
 function livePage(fn, title, qs, build) {   /* a full-screen page that stays in step with the database */
   if (!Array.isArray(qs)) qs = [qs];
   histStop(); LIVEKEEP = fn; wpPage(fn, [], '<h2>' + title + '</h2><div class="empty">Loading…</div>');
@@ -1896,7 +1897,7 @@ function histLabel() {
 function histPlain() { var d = HY.dt, p = histPer(), mn = d.toLocaleDateString('en-GB', { month: 'long' }); return p === 'day' ? d.getDate() + ' ' + mn + ' ' + d.getFullYear() : p === 'month' ? mn + ' ' + d.getFullYear() : String(d.getFullYear()); }
 function histFilterCount() { return Object.keys(HY.types).filter(function (k) { return HY.types[k]; }).length + (HY.short && HY.tab === 'shifts' ? 1 : 0); }
 function histHead() {
-  var r = histRange(), now = Date.now(), p = histPer(), here = now >= r.a && now < r.b, fut = r.a > now, y = HY.dt.getFullYear(), pick, st = ' style="width:' + (here ? '100%' : 'calc(100% - 66px)') + '"';
+  var r = histRange(), now = Date.now(), p = histPer(), here = p === 'day' ? dkey(HY.dt) === dkey(histToday()) : now >= r.a && now < r.b, fut = r.a > now && !here, y = HY.dt.getFullYear(), pick, st = ' style="width:' + (here ? '100%' : 'calc(100% - 66px)') + '"';
   if (p === 'day') pick = '<input class="hpick"' + st + ' type="date" value="' + dkey(HY.dt) + '" aria-label="Pick a date">';
   else if (p === 'month') pick = '<input class="hpick"' + st + ' type="month" value="' + dkey(HY.dt).slice(0, 7) + '" aria-label="Pick a month">';
   else { var yo = ''; for (var q = y + 1; q >= y - 6; q--) yo += '<option' + (q === y ? ' selected' : '') + '>' + q + '</option>'; pick = '<select class="hpick"' + st + ' aria-label="Pick a year">' + yo + '</select>'; }
@@ -4220,7 +4221,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'settings') { if (!$('#spage').hidden) closeModal(); else spOpen(); }
   else if (a === 'hytab') { HY.tab = b.dataset.v; if (HY.tab === 'all' && HY.per === 'year') HY.per = 'month'; histPage(); var hb = $('#spage .sp-body'); if (hb) hb.scrollTop = 0; }
   else if (a === 'hstep') { histStep(+b.dataset.v); histGo(); }
-  else if (a === 'htoday') { HY.dt = histNoon(new Date()); HY.sid = ''; histGo(); }
+  else if (a === 'htoday') { HY.dt = histToday(); HY.sid = ''; histGo(); }
   else if (a === 'hwk') { HY.wk = b.dataset.v; histDraw(); }
   else if (a === 'hsid') { HY.sid = b.dataset.id || ''; histDraw(); }
   else if (a === 'hcnt') { HY.cnt[id] = !HY.cnt[id]; histDraw(); }
