@@ -237,7 +237,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.17', RULES_VERSION = '2.11';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.18', RULES_VERSION = '2.11';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1537,7 +1537,7 @@ function vHandover() {
     (t.purch ? '<div><span>Purchases (cash taken)</span><b>− ' + money(t.purch) + '</b></div>' : '') + (t.wo ? '<div class="muted" style="padding-top:0"><span>of which change not kept</span><span>' + money(t.wo) + '</span></div>' : '') +
     (t.used ? '<div style="background:var(--soon-bg);margin:0 -14px;padding:6px 14px"><span>💵 Cash used</span><b>− ' + money(t.used) + '</b></div>' : '') +
     '<div class="t"><span>Cash to hand over</span><span>' + money(t.cash) + '</span></div>' +
-    '<div><span>Cash counted <b style="color:var(--exp)">*</b></span><span style="display:flex;align-items:center;gap:4px">$<input style="width:130px;height:46px;font-size:19px;font-weight:700;text-align:right' + (counted === null ? ';border-color:var(--exp)' : '') + '" data-sh="counted" type="number" inputmode="decimal" enterkeyhint="done" placeholder="count it" value="' + esc(sh.counted) + '"></span></div>' +
+    '<div><span>Cash counted <b style="color:var(--exp)">*</b></span><span style="display:flex;align-items:center;gap:4px">$<input style="width:130px;height:46px;font-size:19px;font-weight:700;text-align:right' + (counted === null ? ';border-color:var(--exp)' : '') + '" data-sh="counted" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="count it" value="' + esc(sh.counted) + '"></span></div>' +
     (counted === null ? '<div class="muted" style="color:var(--exp)">Count the cash and enter it. Required to hand over.</div>' : '') +
     (counted !== null && counted !== t.cash ? '<div><span>' + (counted < t.cash ? 'Cash short' : 'Cash over') + '</span><b style="color:' + (counted < t.cash ? 'var(--exp)' : 'var(--soon)') + '">' + money(Math.abs(counted - t.cash)) + '</b></div>' : '') + '</div>';
   if (ctlTrail().length) h += trailHtml(ctlTrail(), sh.name);
@@ -4230,6 +4230,14 @@ document.addEventListener('input', function (e) {
   else if (t.dataset.b) { BUY[t.dataset.b] = t.value; buyLive(); }
   else if (t.dataset.bl !== undefined && t.dataset.f !== 'item') { BUY.lines[+t.dataset.bl][t.dataset.f] = t.value; buyLive(); }
 });
+var PTR = 0, CNT_OUT = 0;   /* the phone keyboard's Next/Enter key must not jump from the cash box to another box: only a tap may move the cursor there */
+document.addEventListener('pointerdown', function () { PTR = Date.now(); }, true);
+document.addEventListener('touchstart', function () { PTR = Date.now(); }, true);
+document.addEventListener('focusout', function (e) { if (e.target && e.target.dataset && e.target.dataset.sh === 'counted') CNT_OUT = Date.now(); }, true);
+document.addEventListener('focusin', function (e) {
+  var t = e.target; if (!t || !t.dataset || t.dataset.sh === 'counted' || !/^(INPUT|TEXTAREA)$/.test(t.tagName)) return;
+  if (Date.now() - CNT_OUT < 500 && Date.now() - PTR > 600) { var y = window.pageYOffset, sb = $('#spage .sp-body'), sy = sb ? sb.scrollTop : 0; t.blur(); window.scrollTo(0, y); if (sb) sb.scrollTop = sy; setTimeout(function () { window.scrollTo(0, y); }, 50); }
+}, true);
 document.addEventListener('keydown', function (e) {   /* the Enter key on the phone keyboard saves the cash count and closes the keyboard */
   var t = e.target; if (!t) return;
   var isEnter = e.key === 'Enter' || e.keyCode === 13, isTab = (e.key === 'Tab' || e.keyCode === 9) && !e.shiftKey;   /* the phone's number pad shows a Tab arrow on the cash box: treat it like Enter */
