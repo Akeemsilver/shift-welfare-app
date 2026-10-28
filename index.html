@@ -165,9 +165,8 @@ input:disabled{background:var(--dis);color:var(--muted)}
 .htabs{display:flex;gap:3px;padding:3px;border-radius:13px;background:var(--line);box-shadow:inset 0 1px 2px rgba(0,0,0,.12);margin-bottom:8px}.htabs button{flex:1;height:32px;border:0;border-radius:10px;background:transparent;color:var(--muted);font:inherit;font-size:13.5px;font-weight:600}.htabs button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18)}
 .hsel{background:var(--surface);border-radius:14px;box-shadow:var(--sh);gap:0;overflow:hidden;margin-bottom:6px}.hsel .btn.sec{width:48px;height:38px;border:0;background:transparent;box-shadow:none;color:var(--brand);font-size:24px;line-height:1;padding:0;border-radius:0}.hsel .hdate{border:0;border-radius:0;background:none;min-height:38px;font-weight:600;font-size:13.5px}
 .mh{position:sticky;top:0;z-index:2;margin:12px -14px 6px;padding:6px 16px;background:var(--soft);font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.03em}.dh{margin:8px 4px 3px;font-size:12px;font-weight:700;color:var(--muted)}
-.hnote{display:flex;align-items:center;gap:10px;margin:14px 2px 6px;font-size:12px;color:var(--muted)}.hnote span{flex:1}.hnote button{flex:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:5px 12px;font:inherit;font-size:12.5px;font-weight:700}
+.hnote{display:flex;align-items:center;gap:10px;margin:14px 0 6px;padding:10px 12px;border-radius:12px;background:var(--soon-bg);font-size:12.5px;color:var(--soon)}.hnote span{flex:1}.hnote button{flex:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:5px 12px;font:inherit;font-size:12.5px;font-weight:700}
 .fld{display:flex;justify-content:space-between;align-items:center;background:var(--soft);border-radius:12px;padding:12px 14px;margin:8px 0;font-size:15px;cursor:pointer}.fchs{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}.fch{display:flex;align-items:center;gap:6px;height:32px;padding:0 13px;border-radius:16px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:13px;font-weight:600}.fch.on{background:var(--brand);color:#fff;border-color:var(--brand)}
-.wheelw{position:relative;margin:8px 0}.wheel{height:200px;overflow-y:auto;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;text-align:center}.wheel::-webkit-scrollbar{display:none}.wit{height:40px;line-height:40px;font-size:18px;scroll-snap-align:start;cursor:pointer}.wband{position:absolute;left:0;right:0;top:80px;height:40px;border-top:1px solid var(--brand);border-bottom:1px solid var(--brand);opacity:.5;pointer-events:none}
 .hcc{display:flex;gap:6px;margin:10px 0 8px;overflow-x:auto}.hcc button{flex:none;display:flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:12px;font-weight:600}.hcc button.on{background:var(--brand);border-color:var(--brand);color:#fff}
 .hdot{width:10px;height:10px;border-radius:50%;border:1.5px solid rgba(128,128,128,.6);display:inline-block}.hline{display:flex;align-items:center;gap:8px;font-size:12.5px;white-space:nowrap;margin:2px 2px 12px}.hline>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;flex:1 1 auto}.hline .run{flex:none;color:var(--ok);font-weight:700;font-size:11.5px}.hline .who{flex:none;color:var(--muted);font-weight:500}
 .hcs{display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:var(--surface);box-shadow:var(--sh);margin-top:6px;cursor:pointer}.hcs .ci{width:26px;text-align:center;font-size:18px}
@@ -253,7 +252,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.28', RULES_VERSION = '2.12';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.29', RULES_VERSION = '2.12';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -924,7 +923,11 @@ function unpaidCard(t, c, scope) {
     '<p class="muted" style="margin:4px 0 0">Everyone owing you right now: ' + money(owing().reduce(function (a, x) { return a + x.bal; }, 0)) + '.</p></div>';
 }
 function ncNote(t) { return t.nc > 0 ? '<div class="card" style="background:var(--soon-bg)"><b>' + t.nc + ' sale' + (t.nc === 1 ? '' : 's') + ' had no item cost</b><div class="muted">Their profit shows as the full sale. Enter costs on a purchase bill, or in Stock → item details.</div></div>' : ''; }
-function pfHead(sel) { return '<div class="seg" style="grid-template-columns:repeat(3,1fr);margin-bottom:12px"><button data-act="pfmode" data-v="day" class="' + (sel === 'day' ? 'on' : '') + '">Today</button><button data-act="pfmode" data-v="month" class="' + (sel === 'month' ? 'on' : '') + '">This month</button><button data-act="pfmode" data-v="short" class="' + (sel === 'short' ? 'on' : '') + '">Shortages</button></div>'; }
+function pfPick(kind, lbl, d) {   /* the date in the middle opens the phone's own calendar; the app uses the day, or just the month of the day, that is picked */
+  var t = new Date(), lo = kind === 'day' ? new Date(t.getFullYear(), t.getMonth(), t.getDate() - 365) : new Date(t.getFullYear(), t.getMonth() - 11, 1);
+  return '<div class="grow" style="position:relative;text-align:center;padding:9px 0;border-radius:10px;cursor:pointer"><b>' + lbl + ' ▾</b><input class="hpick" style="width:100%" type="date" data-pfp="' + kind + '" value="' + dkey(d) + '" min="' + dkey(lo) + '" max="' + dkey(t) + '" aria-label="Pick a ' + kind + '"></div>';
+}
+function pfHead(sel) { return '<div class="seg" style="grid-template-columns:repeat(3,1fr);margin-bottom:12px"><button data-act="pfmode" data-v="day" class="' + (sel === 'day' ? 'on' : '') + '">Day</button><button data-act="pfmode" data-v="month" class="' + (sel === 'month' ? 'on' : '') + '">Month</button><button data-act="pfmode" data-v="short" class="' + (sel === 'short' ? 'on' : '') + '">Shortages</button></div>'; }
 var HSH = {};
 function shortView(mo, ms, mr, allS, allR) {
   var W = WATCHES, sum = function (l, f, w) { return r2(l.filter(function (x) { return x.wk === w; }).reduce(function (a, x) { return a + (x[f] || 0); }, 0)); };
@@ -933,7 +936,7 @@ function shortView(mo, ms, mr, allS, allR) {
   var lbl = mo.toLocaleDateString([], { month: 'long', year: 'numeric' }) + (PF.off === 0 ? ' (to date)' : '');
   ms.forEach(function (x) { HSH[x.id] = x; });
   ms = ms.slice().sort(function (a, b) { return b.at - a.at; }); mr = mr.slice().sort(function (a, b) { return b.at - a.at; });
-  return '<h2>Shortages</h2>' + pfHead('short') + '<div class="row" style="margin-bottom:10px"><button class="btn sec sm" data-act="pfprev">◀</button><b class="grow" style="text-align:center">' + lbl + '</b><button class="btn sec sm" data-act="pfnext"' + (PF.off === 0 ? ' disabled' : '') + '>▶</button></div>' +
+  return '<h2>Shortages</h2>' + pfHead('short') + '<div class="row" style="margin-bottom:10px"><button class="btn sec sm" data-act="pfprev">◀</button>' + pfPick('month', lbl, mo) + '<button class="btn sec sm" data-act="pfnext"' + (PF.off === 0 ? ' disabled' : '') + '>▶</button></div>' +
     '<div class="tile wide" style="margin-bottom:10px"><div class="l">Still owed by the watches</div><div class="v">' + money(tot('owed')) + '</div><div style="opacity:.85;font-size:12px">' + money(tot('short')) + ' short this month · ' + money(tot('repaid')) + ' repaid</div></div>' +
     '<div class="card"><h2>By watch</h2><table style="font-size:12px"><tr><th>Watch</th><th>Short</th><th>Repaid</th><th>Owed now</th></tr>' + rows.map(function (r) {
       return '<tr><td>' + wsw(r.w) + '</td><td>' + money(r.short) + '</td><td>' + money(r.repaid) + '</td><td' + (r.owed > 0 && r.owed === mx ? ' class="bad"><b>' : '>') + money(r.owed) + (r.owed > 0 && r.owed === mx ? '</b>' : '') + '</td></tr>';
@@ -1027,7 +1030,7 @@ function profitDay(day, docs) {
   var key = dkey(day), d = docs.filter(function (x) { return x.id === key; }), t = sumDocs(d), c = calc(t);
   var best = Object.keys((d[0] && d[0].it) || {}).map(function (id) { var x = d[0].it[id], i = item(id); return { name: x.name || (i ? i.name : '(removed item)'), n: x.n, p: x.p }; }).filter(function (x) { return x.n > 0; }).sort(function (a, b) { return b.p - a.p; }).slice(0, 6);
   var lbl = (PF.off === 0 ? 'Today · ' : PF.off === 1 ? 'Yesterday · ' : '') + day.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'short' });
-  return '<h2>Profit &amp; loss</h2>' + pfHead('day') + '<div class="row" style="margin-bottom:10px"><button class="btn sec sm" data-act="pfprev">◀</button><b class="grow" style="text-align:center">' + lbl + '</b><button class="btn sec sm" data-act="pfnext"' + (PF.off === 0 ? ' disabled' : '') + '>▶</button></div>' +
+  return '<h2>Profit &amp; loss</h2>' + pfHead('day') + '<div class="row" style="margin-bottom:10px"><button class="btn sec sm" data-act="pfprev">◀</button>' + pfPick('day', lbl, day) + '<button class="btn sec sm" data-act="pfnext"' + (PF.off === 0 ? ' disabled' : '') + '>▶</button></div>' +
     '<div class="tile wide ' + pfCls(c) + '" style="margin-bottom:10px"><div class="l">Profit after losses</div><div class="v">' + pm(c.profit) + '</div><div style="opacity:.85;font-size:12px">' + (t.sales ? Math.round(c.profit / t.sales * 100) + '% of sales · ' : '') + t.items + ' items sold</div></div>' +
     ncNote(t) + breakdown(t, c, 'How it adds up') + unpaidCard(t, c, '') +
     (best.length ? '<div class="card"><h2>Best sellers</h2><table><tr><th>Item</th><th>Sold</th><th>Profit</th></tr>' + best.map(function (x) { return '<tr><td>' + esc(x.name) + '</td><td>' + x.n + '</td><td>' + money(x.p) + '</td></tr>'; }).join('') + '</table></div>' : '') +
@@ -1040,7 +1043,7 @@ function profitMonth(mo, docs, prevDocs) {
   var cmp = prevDocs.length && pc.profit !== 0 ? (c.profit >= pc.profit ? '▲ ' : '▼ ') + Math.abs(Math.round((c.profit - pc.profit) / Math.abs(pc.profit) * 1000) / 10) + '% vs last month (' + pm(pc.profit) + ')' : '';
   var days = docs.slice().sort(function (a, b) { return a.id < b.id ? 1 : -1; }).map(function (d) { return { id: d.id, v: calc(sumDocs([d])).profit }; }), mx = Math.max.apply(null, days.map(function (d) { return Math.abs(d.v); }).concat([1]));
   var lbl = mo.toLocaleDateString([], { month: 'long', year: 'numeric' }) + (PF.off === 0 ? ' (to date)' : '');
-  return '<h2>Profit &amp; loss</h2>' + pfHead('month') + '<div class="row" style="margin-bottom:10px"><button class="btn sec sm" data-act="pfprev">◀</button><b class="grow" style="text-align:center">' + lbl + '</b><button class="btn sec sm" data-act="pfnext"' + (PF.off === 0 ? ' disabled' : '') + '>▶</button></div>' +
+  return '<h2>Profit &amp; loss</h2>' + pfHead('month') + '<div class="row" style="margin-bottom:10px"><button class="btn sec sm" data-act="pfprev">◀</button>' + pfPick('month', lbl, mo) + '<button class="btn sec sm" data-act="pfnext"' + (PF.off === 0 ? ' disabled' : '') + '>▶</button></div>' +
     '<div class="tile wide ' + pfCls(c) + '" style="margin-bottom:10px"><div class="l">Profit after losses</div><div class="v">' + pm(c.profit) + '</div>' + (cmp ? '<div style="opacity:.85;font-size:12px">' + cmp + '</div>' : '') + '</div>' + ncNote(t) +
     breakdown(t, c, mo.toLocaleDateString([], { month: 'long' }) + (PF.off === 0 ? ' so far' : '')) +
     '<div class="card pl"><div><span>Unpaid credit + loans added this month</span><b class="' + (c.unpaid > 0 ? 'bad' : '') + '">' + pm(c.unpaid) + '</b></div><div><b>Profit if that is never paid</b><b class="big">' + pm(c.ifNever) + '</b></div></div>' +
@@ -1916,7 +1919,7 @@ function histHead() {
   if (HY.tab === 'people' || HY.tab === 'shifts') return tabs;
   var seg = '';
   if (p === 'day') pick = '<input class="hpick"' + st + ' type="date" value="' + dkey(HY.dt) + '" aria-label="Pick a date">';
-  else if (p === 'month') pick = '<input class="hpick"' + st + ' type="month" value="' + dkey(HY.dt).slice(0, 7) + '" aria-label="Pick a month">';
+  else if (p === 'month') pick = '<input class="hpick"' + st + ' type="date" value="' + dkey(HY.dt) + '" aria-label="Pick a day in the month">';
   else { var yo = ''; for (var q = y + 1; q >= y - 6; q--) yo += '<option' + (q === y ? ' selected' : '') + '>' + q + '</option>'; pick = '<select class="hpick"' + st + ' aria-label="Pick a year">' + yo + '</select>'; }
   return tabs + seg + '<div class="hsel"><button class="btn sec sm" data-act="hstep" data-v="-1" aria-label="Back">‹</button><div class="hdate' + (fut ? ' fut' : '') + (here ? '' : ' away') + '"><span>' + histLabel() + '</span>' + pick + (here ? '' : '<button class="htoday" data-act="htoday">Today</button>') + '</div><button class="btn sec sm" data-act="hstep" data-v="1" aria-label="Forward">›</button></div>';
 }
@@ -2256,7 +2259,7 @@ function histShiftPage(id) {
 function histSheetHtml() {
   var all = HY.tab === 'all', pers = [], p = histPer(), n, body;
   var chip = function (act, v, t, on) { return '<button data-act="' + act + '" data-v="' + esc(v) + '" class="fch' + (on ? ' on' : '') + '">' + t + '</button>'; };
-  var mrow = function (m) { return '<div class="fld" data-act="fmonth"><span>Month</span><b>' + (m ? esc(histMonthName(m)) : 'Whole year') + ' ▾</b></div>'; };
+  var mrow = function (m) { var t = new Date(); return '<div class="fld" style="position:relative"><span>Month</span><b>' + (m ? esc(histMonthName(m)) : 'Whole year') + ' ▾</b><input class="hpick" style="width:100%" type="date" data-hmp="1" value="' + (m ? m + '-01' : dkey(t)) + '" min="' + histYearFrom() + '-01" max="' + dkey(t) + '" aria-label="Pick a day in the month"></div>'; };
   if (all) {
     var cnt = {}; (HEVS || []).forEach(function (e) { var g = hgroup(e); cnt[g] = (cnt[g] || 0) + 1; });
     body = '<div class="flab">Entry types</div>' + HGROUPS.map(function (g) { var on = !!HY.types[g[0]]; return '<div class="frow" data-act="ftog" data-v="' + esc(g[0]) + '"><div class="fbox' + (on ? ' on' : '') + '">' + (on ? '✓' : '') + '</div><span class="grow">' + g[1] + ' ' + esc(g[0]) + '</span><span class="muted">' + (cnt[g[0]] || 0) + '</span></div>'; }).join('');
@@ -2269,15 +2272,6 @@ function histSheetHtml() {
   }
   return '<div class="row" style="align-items:center;margin-bottom:6px"><h2 class="grow" style="margin:0">Filter</h2><a class="link" data-act="hclear" style="font-weight:700;cursor:pointer">Clear all</a></div>' + body + '<div class="row" style="margin-top:14px"><button class="btn sec grow" data-act="hshowall">Show all</button><button class="btn grow" data-act="hdone" style="flex:1.4">' + n + '</button></div>';
 }
-function histWheel() {   /* a month wheel: scroll to a month like a time picker. Whole year is last */
-  var cur = HY.tab === 'shifts' ? HY.hm : HY.pm, items = []; for (var i = 11; i >= 0; i--) items.push(histMonthKey(i)); items.push('');
-  var sel = Math.max(0, items.indexOf(cur));
-  modal('<div class="row" style="align-items:center"><a class="link" data-act="wcancel" style="font-weight:700;cursor:pointer">Cancel</a><b class="grow" style="text-align:center">Pick a month</b><a class="link" data-act="wset" style="font-weight:700;cursor:pointer">Set</a></div><div class="wheelw"><div class="wheel" id="wheel" data-sel="' + sel + '"><div style="height:80px"></div>' + items.map(function (m, j) { return '<div class="wit" data-act="wit" data-i="' + j + '" data-m="' + m + '">' + (m ? esc(histMonthName(m)) : 'Whole year') + '</div>'; }).join('') + '<div style="height:80px"></div></div><div class="wband"></div></div>');
-  var w = $('#wheel'); w.scrollTop = sel * 40; wheelPaint();
-}
-function wheelIdx() { var w = $('#wheel'); return w ? Math.max(0, Math.min(12, Math.round(w.scrollTop / 40))) : 0; }
-function wheelPaint() { var w = $('#wheel'); if (!w) return; var c = wheelIdx(); w.querySelectorAll('.wit').forEach(function (e, i) { var d = Math.abs(i - c); e.style.opacity = d === 0 ? 1 : d === 1 ? .6 : .3; e.style.fontWeight = d === 0 ? 700 : 400; e.style.color = d === 0 ? 'var(--ink)' : 'var(--muted)'; }); }
-function wheelBack() { modal('<div id="hfs">' + histSheetHtml() + '</div>'); }
 function shStatus(d) {
   if (d.status === 'accepted') return d.short > 0 ? '<b style="color:var(--exp)">short ' + money(d.short) + '</b>' : d.over > 0 ? '<b style="color:var(--soon)">over ' + money(d.over) + '</b>' : '<b style="color:var(--ok)">✓ matched</b>';
   return '<b style="color:var(--cnt)">waiting to be taken</b>';
@@ -4349,10 +4343,6 @@ document.addEventListener('click', function (e) {
   else if (a === 'caday') calDay(id);
   else if (a === 'shopen' || a === 'shopen2') histShift(id);
   else if (a === 'hfilter') { modal('<div id="hfs">' + histSheetHtml() + '</div>'); }
-  else if (a === 'fmonth') histWheel();
-  else if (a === 'wit') { var wh = $('#wheel'); if (wh) { wh.scrollTo({ top: +b.dataset.i * 40, behavior: 'smooth' }); setTimeout(wheelPaint, 250); } }
-  else if (a === 'wset') { var wm = ($('#wheel').querySelectorAll('.wit')[wheelIdx()] || {}).dataset; wm = wm ? wm.m : ''; if (HY.tab === 'shifts') HY.hm = wm; else HY.pm = wm; histDraw(true); wheelBack(); }
-  else if (a === 'wcancel') wheelBack();
   else if (a === 'gotit') { try { localStorage.setItem('sw_note_' + b.dataset.v, String(Date.now())); } catch (x) {} histDraw(); }
   else if (a === 'ftog') { HY.types[b.dataset.v] = !HY.types[b.dataset.v]; histDraw(); }
   else if (a === 'fshort') { HY.short = b.dataset.v ? b.dataset.v === '1' : !HY.short; histDraw(); }
@@ -4586,8 +4576,16 @@ document.addEventListener('keydown', function (e) {   /* the Enter key on the ph
     if (nx) { nx.focus(); try { nx.select(); } catch (x) {} nx.scrollIntoView({ block: 'center' }); } else t.blur();
   }
 });
-document.addEventListener('scroll', function (e) { if (e.target && e.target.id === 'wheel') wheelPaint(); }, true);
 document.addEventListener('change', function (e) {
+  if (e.target.dataset && e.target.dataset.hmp) {   /* a day picked on the calendar in the History filter: its month is the month to show */
+    var hv = e.target.value; if (!/^\d{4}-\d{2}-\d{2}$/.test(hv)) return; var hm = hv.slice(0, 7); if (hm < histYearFrom()) hm = histYearFrom();
+    if (HY.tab === 'shifts') HY.hm = hm; else HY.pm = hm; histDraw(true); return;
+  }
+  if (e.target.dataset && e.target.dataset.pfp) {   /* Profit & loss: a day or month picked on the calendar */
+    var pv2 = e.target.value.split('-'); if (pv2.length !== 3) return; var pn = new Date(), pd = new Date(+pv2[0], +pv2[1] - 1, +pv2[2]), off;
+    off = e.target.dataset.pfp === 'day' ? Math.round((new Date(pn.getFullYear(), pn.getMonth(), pn.getDate()) - pd) / 864e5) : (pn.getFullYear() - pd.getFullYear()) * 12 + pn.getMonth() - pd.getMonth();
+    PF.off = Math.max(0, off); profitModal(); return;
+  }
   if (e.target.classList && e.target.classList.contains('hpick')) {   /* the date, month or year picked in History */
     var pv = e.target.value, pq = pv.split('-');
     if (e.target.tagName === 'SELECT') HY.dt = histNoon(new Date(+pv, HY.dt.getMonth(), 1));
