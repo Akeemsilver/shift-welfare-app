@@ -64,6 +64,7 @@ b,strong{font-weight:600}
 .cc .cv{font-size:15px;font-weight:500;line-height:1.15;color:var(--ink);margin-top:2px}.cc.out .cv{color:var(--exp)}
 .cc .cs{font-size:11px;color:var(--muted);margin-top:1px}
 .cc .ck{position:absolute;right:10px;top:8px;font-size:12px;font-weight:700;color:var(--cnt)}
+.cc .cpr{position:absolute;right:10px;top:9px;font-size:12px;font-weight:700;line-height:1.2;color:var(--link)}   /* the price sits where the check goes once the item is counted */
 .cprog{height:8px;border-radius:6px;background:var(--soft);overflow:hidden;margin-top:8px}.cprog>div{height:100%;background:var(--cnt);border-radius:6px}
 .pill{display:inline-block;font-size:12px;font-weight:600;color:var(--ok)}
 .pill.low{color:var(--soon)}.pill.out{color:var(--exp)}
@@ -151,6 +152,7 @@ input:disabled{background:var(--dis);color:var(--muted)}
 .bsec{font-size:13px;font-weight:700;margin:10px 0 2px}.bsep{height:1px;background:var(--line);margin:8px 0}.qpair{display:flex;justify-content:space-between;align-items:flex-start;padding:4px 11px 0 11px;margin-top:2px}.qpair>div{display:flex;flex-direction:column;align-items:center;text-align:center}.qpair b{display:block;font-size:14px;font-weight:600}.qpair span{font-size:11.5px;color:var(--muted)}.qrow{display:flex;align-items:center;gap:8px;padding:5px 10px}.qrow .grow b{display:block;font-size:14px;font-weight:600}.qrow .grow span{font-size:11.5px;color:var(--muted)}
 .badd{display:block;width:100%;margin:10px 0;border:2px dashed var(--secb);border-radius:14px;background:var(--surface);color:var(--link);font:inherit;font-weight:700;padding:11px}.bwarn{background:var(--soon-bg);color:var(--soon);border-radius:10px;padding:8px 10px;font-size:12.5px;font-weight:600;margin-top:8px}.bnote{background:var(--soft);border-radius:10px;padding:8px 12px;font-size:12.5px;color:var(--muted)}
 .bf .stepper,.ps .stepper{display:inline-flex;gap:0;height:32px;border-radius:16px;background:var(--soft);border:1px solid var(--secb);overflow:hidden;flex:none;align-items:center}.bf .stepper button,.ps .stepper button{width:32px;height:32px;border:0;border-radius:0;background:none;color:var(--link);font-size:18px;padding:0}.bf .stepper .stepin,.ps .stepper .stepin{width:42px;height:32px;border:0;border-left:1px solid var(--secb);border-right:1px solid var(--secb);border-radius:0;font-size:15px;font-weight:700;padding:0 2px;background:var(--surface)}
+.ps .stepper{height:37px;border-radius:19px}.ps .stepper button{width:40px;height:37px;font-size:20px}.ps .stepper .stepin{width:50px;height:37px;font-size:16px}   /* a little easier to tap on the Count and Stock sheets */
 .bstep .stepper{gap:4px}.bstep .stepper button{width:34px;height:36px;font-size:19px;border-radius:10px}.bstep .stepper .stepin{width:52px;height:36px;font-size:15px}.dest{display:flex;align-items:center;gap:8px;padding:8px 10px;margin:6px 0;border-radius:14px;border:2px solid var(--secb);background:var(--surface)}.dest.on{border-color:var(--brand);background:var(--soft)}.dest .dn{flex:1;min-width:0;display:flex;align-items:center;gap:8px;cursor:pointer}.dest .di{font-size:20px}.dest .dn b{display:block;font-size:14px}.dest .dn span:not(.di){display:block;font-size:11.5px;color:var(--muted);font-weight:400;line-height:1.25}.bsl{font-size:13px;font-weight:700;margin-bottom:5px;white-space:nowrap}
 @media print{body>*:not(#modal){display:none!important}.modal{position:static;background:none}.modal>div{max-height:none;overflow:visible}.noprint{display:none!important}}
 #updbar{position:fixed;left:12px;right:12px;bottom:calc(var(--bar) + 10px + env(safe-area-inset-bottom));z-index:28;background:var(--toast);color:#fff;border-radius:14px;padding:10px 12px;display:flex;gap:8px;align-items:center;box-shadow:0 4px 14px rgba(0,0,0,.3)}
@@ -267,7 +269,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.53', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.54', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -780,7 +782,7 @@ function vCount() {
   h += '<div class="muted" style="margin:-4px 4px 12px">What you see is what was handed over to you. At the end of your shift, count so it shows what you are handing over.</div>';
   return h + '<div class="cgrid">' + LI.map(function (i) {
     var c = cnum(i.id), cl = c.counted ? ' done' : i.stock <= 0 ? ' out' : i.stock <= 6 ? ' low' : '';
-    return '<button class="cc' + cl + '" data-act="pick" data-id="' + i.id + '"><div class="cn">' + esc(i.name) + '</div><div class="cv">' + i.stock + '</div><div class="cs">' + (hasCage(i) ? '📦 Cage: ' + uLab(i, i.cage) : '🧁 On the shelf') + '</div>' + (c.counted ? '<div class="cs" style="margin-top:3px"><span class="pill">Sold ' + Math.max(0, c.sold - c.sp) + '</span>' + (c.cr ? ' <span class="pill low">Credit ' + c.cr + '</span>' : '') + (c.sp ? ' <span class="pill out">Spoiled ' + c.sp + '</span>' : '') + '</div><span class="ck">✓ −' + c.sold + '</span>' : '') + '</button>';
+    return '<button class="cc' + cl + '" data-act="pick" data-id="' + i.id + '"><div class="cn">' + esc(i.name) + '</div>' + (c.counted ? '' : '<span class="cpr">' + money(i.price) + '</span>') + '<div class="cv">' + i.stock + '</div><div class="cs">' + (hasCage(i) ? '📦 Cage: ' + uLab(i, i.cage) : '🧁 On the shelf') + '</div>' + (c.counted ? '<div class="cs" style="margin-top:3px"><span class="pill">Sold ' + Math.max(0, c.sold - c.sp) + '</span>' + (c.cr ? ' <span class="pill low">Credit ' + c.cr + '</span>' : '') + (c.sp ? ' <span class="pill out">Spoiled ' + c.sp + '</span>' : '') + '</div><span class="ck">✓ −' + c.sold + '</span>' : '') + '</button>';
   }).join('') + '</div>';
 }
 function cnPreview(it) {
