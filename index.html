@@ -252,7 +252,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.32', RULES_VERSION = '2.12';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.33', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -3014,6 +3014,21 @@ async function resetApp() {
 
 /* ---------- settings ---------- */
 /* ---------- Settings: a full page. The account bubble on top, everything else as rows below it; each row opens its own page or sheet ---------- */
+var OLDY = 365 * 864e5;
+function oldTidy(go) {   /* shift summaries from before v2.27 have no expiry, so they are stamped one year after their handover and then removed. Only those already past a year */
+  var box = function (h) { modal(h + '<button class="btn sec block" data-act="close" style="margin-top:8px">Close</button>'); };
+  if (!go) box('<h2>Checking old shift summaries…</h2><div class="empty">One moment</div>');
+  getDocs(query(col('shifts'), limit(1000))).then(function (sn) {
+    var old = sn.docs.filter(function (d) { var x = d.data(); return !x.expireAt && typeof x.at === 'number' && x.at + OLDY < Date.now(); });
+    if (!go) return box(old.length ? '<h2>' + old.length + ' old shift summar' + (old.length === 1 ? 'y' : 'ies') + ' past a year</h2><div class="muted" style="margin-bottom:12px">They were saved before summaries expired on their own. Removing them cannot be undone. Newer summaries are not touched and keep expiring by themselves.</div><button class="btn block" data-act="oldtidygo" style="background:var(--exp)">Remove them</button>' : '<h2>Nothing to tidy</h2><div class="muted">No shift summary is older than a year without an expiry.</div>');
+    box('<h2>Removing…</h2><div class="empty">One moment</div>');
+    return (async function () {
+      for (var i = 0; i < old.length; i += 200) { var b = writeBatch(DB); old.slice(i, i + 200).forEach(function (d) { b.update(d.ref, { expireAt: Timestamp.fromMillis(d.data().at + OLDY) }); }); await b.commit(); }
+      for (var j = 0; j < old.length; j += 200) { var b2 = writeBatch(DB); old.slice(j, j + 200).forEach(function (d) { b2.delete(d.ref); }); await b2.commit(); }
+      box('<h2>✓ Removed ' + old.length + ' old shift summar' + (old.length === 1 ? 'y' : 'ies') + '</h2>');
+    })();
+  }).catch(function (e) { box('<h2>⚠ Could not finish</h2><div class="muted">' + (/permission/i.test((e && e.code || '') + (e && e.message || '')) ? 'The database refused it. Publish the newest rules (firestore-rules-v' + RULES_VERSION + '.txt) in the Firebase console first, then try again.' : esc(errText(e))) + '</div>'); });
+}
 function rulesCheck() {   /* reading the permanent credit lines is allowed only by rules 2.12 and later: older rules refuse it */
   var show = function (ok, txt) { modal('<h2>' + (ok ? '✓ Rules ' + RULES_VERSION + ' are published' : '⚠ Rules ' + RULES_VERSION + ' are not published yet') + '</h2><div class="muted" style="margin-bottom:12px">' + txt + '</div><button class="btn block" data-act="close">Close</button>'); };
   modal('<h2>Checking the rules…</h2><div class="empty">One moment</div>');
@@ -3077,6 +3092,7 @@ function spRender() {
     (isPres() && viewOnlyText() ? spRow('🛡️', 'Take control now', 'Someone else is in control or a handover is stuck', 'ptake') : '') + '</div>' +
     '<div class="sp-h">App</div><div class="sp-card">' +
     spRow('⬆️', 'App version ' + APP_VERSION, 'Needs rules ' + RULES_VERSION + '. Tap to check for updates', 'updcheck') +
+    (canAdmin() ? spRow('🧹', 'Tidy old shift summaries', 'One-time: remove handover summaries older than a year', 'oldtidy') : '') +
     (canAdmin() ? spRow('🛡️', 'Check the rules', 'Tests that the Firebase rules ' + RULES_VERSION + ' are published', 'rulescheck') : '') +
     (isPres() ? spRow('💾', 'Back up all data', 'Owner only. Saves everything into one file on this phone', 'backup') : '') +
     (isPres() ? spRow('⚠️', 'Reset app to default', 'Clears stock, sales, handovers, credit and profit history', 'resetask', ' red') : '') + '</div></div>';
@@ -4443,6 +4459,8 @@ document.addEventListener('click', function (e) {
   else if (a === 'updlater') { UPD.later = Date.now() + 30 * 60 * 1000; $('#updbar').hidden = true; }
   else if (a === 'updcheck') checkUpdate(true);
   else if (a === 'rulescheck') rulesCheck();
+  else if (a === 'oldtidy') oldTidy(false);
+  else if (a === 'oldtidygo') oldTidy(true);
   else if (a === 'swopen') swOpen();
   else if (a === 'swpick') swAsk(id);
   else if (a === 'ophide') { if (isPres()) guard(updateDoc(ref('shop/state'), { openingDone: true })); }
