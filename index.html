@@ -207,7 +207,7 @@ body.spo nav{display:none!important}body.spo .modal>div{margin-bottom:0;max-heig
 .mn{color:var(--exp)!important}
 .tile.wide:not(.pf1) .mn{color:#FF9E92!important}
 .tile.wide.pf1{background:var(--surface);color:var(--ink);border-left:6px solid var(--ok)}.tile.wide.pf1.neg{border-left-color:var(--exp)}.pf1 .l{color:var(--muted)!important}.pf1 .v{color:var(--ok)}.pf1.neg .v{color:var(--exp)}
-.tbtn{border:0;text-align:left;font:inherit;color:inherit;width:100%;cursor:pointer;border-left:4px solid var(--cnt)}
+.tbtn{border:0;text-align:left;font:inherit;color:inherit;width:100%;cursor:pointer;border-left:2px solid var(--cnt)}.tbtn.owes{border-left-color:var(--exp)}
 input[type=number]{-moz-appearance:textfield;appearance:textfield}
 input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .ig{display:flex;align-items:center;gap:5px;border:1px solid var(--ib);border-radius:10px;background:var(--field);height:42px;padding:0 10px}
@@ -259,7 +259,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.36', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.37', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1024,7 +1024,7 @@ function owedStrip() {
 }
 function owedCard() {
   var o = openShortList(), by = {}; o.forEach(function (x) { by[x.wk] = x.owed; });
-  if (!o.length) return '<div class="card" style="background:var(--ok-bg);box-shadow:none"><b style="color:var(--ok)">✓ No shortages owed</b></div>';
+  if (!o.length) return '<div class="card" style="background:color-mix(in srgb, var(--ok) 26%, var(--surface));border:1px solid var(--ok);box-shadow:none"><b style="color:var(--ok)">✓ No shortages owed</b></div>';
   return '<div class="card"><div class="row" style="align-items:center;margin-bottom:4px"><div class="grow"><h2 style="margin:0">Shifts owe for shortages</h2><div class="muted">Not yet repaid</div></div><button class="btn red sm" data-act="payopen">Pay</button></div><div class="list">' + WATCHES.map(function (w) { return '<div><div class="grow">' + wsw(w) + '</div><b style="color:' + (by[w] ? 'var(--exp)' : 'var(--ok)') + '">' + money(by[w] || 0) + '</b></div>'; }).join('') + '</div></div>';
 }
 function owedDetail(w) {
@@ -1093,7 +1093,8 @@ function updateBell() {
 function noticesModal() {
   var list = S.notices || [], un = list.filter(function (x) { return !x.read; }), pcr = pcMine() ? '<div data-act="pcview" style="cursor:pointer;border:2px solid var(--exp);background:var(--exp-bg);border-radius:12px;padding:10px;margin-bottom:10px"><b style="color:var(--exp)">🔔 ' + ({ offer: 'You were offered the president role', vote: 'Vote: change the president', challenge: 'The president is about to change' }[pcMine()]) + '</b><div class="muted">' + pcLine() + '</div></div>' : '';
   modal('<h2>Notifications</h2>' + pcr + (list.length ? '<div class="list">' + list.map(function (n) {
-    return '<div data-act="ntview" data-id="' + n.id + '" style="cursor:pointer;flex-wrap:wrap"><div class="grow"><b>' + (n.read ? '' : '<span style="color:var(--exp)">● </span>') + (n.kind === 'correction' ? 'Your ' + esc(n.wk) + ' shift shortage was corrected' : n.kind === 'received' ? 'Your ' + esc(n.wk) + ' shift handover was received, all matched ✓' : 'Your ' + esc(n.wk) + ' shift was counted short') + '</b><div class="muted">' + esc(n.shiftDate) + ' ' + esc(HL(n.shiftHalf)) + (n.kind === 'correction' ? ' · ' + esc(n.reason || '') + ' · by ' : n.kind === 'received' ? ' · received by ' : ' · counted by ') + esc(n.byName || '') + ' · ' + new Date(n.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</div></div><b style="color:var(--exp)">' + (n.kind === 'correction' ? money(n.before) + ' → ' : '') + money(n.total) + '</b></div>';
+    var canPay = n.kind === 'shortage' && inControl() && !OWNERVIEW && openShortList().some(function (x) { return x.wk === n.wk; });
+    return '<div data-act="ntview" data-id="' + n.id + '" style="cursor:pointer;align-items:center"><div class="grow"><b>' + (n.read ? '' : '<span style="color:var(--exp)">● </span>') + (n.kind === 'correction' ? 'Your ' + esc(n.wk) + ' shift shortage was corrected' : n.kind === 'received' ? 'Your ' + esc(n.wk) + ' shift handover was received, all matched ✓' : 'Your ' + esc(n.wk) + ' shift was counted short') + '</b><div class="muted">' + esc(n.shiftDate) + ' ' + esc(HL(n.shiftHalf)) + (n.kind === 'correction' ? ' · ' + esc(n.reason || '') + ' · by ' : n.kind === 'received' ? ' · received by ' : ' · counted by ') + esc(n.byName || '') + ' · ' + new Date(n.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</div>' + (n.kind === 'shortage' && inControl() && !OWNERVIEW ? (function () { var ow = openShortList().filter(function (x) { return x.wk === n.wk; })[0]; return ow ? '<div class="muted">' + money(ow.owed) + ' still owed by the ' + esc(n.wk) + ' shift</div>' : '<div class="muted">Nothing owed now</div>'; })() : '') + '</div><b style="color:var(--exp)">' + (n.kind === 'correction' ? money(n.before) + ' → ' : '') + money(n.total) + '</b>' + (canPay ? '<button class="btn red sm" data-act="payopen" data-id="' + esc(n.wk) + '" style="margin-left:10px;flex:none">Pay</button>' : '') + '</div>';
   }).join('') + '</div>' : '<div class="empty">No notifications.</div>') + '<p class="muted">You are told here when the person taking over your shift counts cash or stock short. It is recorded as a shortage against your shift. Tap one to see the details.</p><button class="btn sec block" data-act="close">Close</button>');
   if (un.length && DB) { var b = writeBatch(DB); un.forEach(function (n) { b.update(ref('notices/' + n.id), { read: true }); }); b.commit().catch(function (e) { console.error(e); }); }
 }
@@ -1496,8 +1497,8 @@ function creditList(q) {
 function vCredit() {
   var o = owing(), tot = o.reduce(function (a, x) { return a + x.bal; }, 0), t = totals();
   return owedCard() + '<div class="tiles"><div class="tile wide"><div class="l">Total owed on credit</div><div class="v">' + money(tot) + '</div></div>' +
-    '<button class="tile tbtn" data-act="cpeople"><div class="l">People owing ›</div><div class="v">' + o.length + '</div></button>' +
-    '<button class="tile tbtn" data-act="cledger"><div class="l">Credit + loans this shift ›</div><div class="v">' + money(t.crN + t.loans) + '</div></button></div>' +
+    '<button class="tile tbtn' + (o.length ? ' owes' : '') + '" data-act="cpeople"><div class="l">People owing ›</div><div class="v">' + o.length + '</div></button>' +
+    '<button class="tile tbtn' + (t.crN + t.loans > 0 ? ' owes' : '') + '" data-act="cledger"><div class="l">Credit + loans this shift ›</div><div class="v">' + money(t.crN + t.loans) + '</div></button></div>' +
     '<button class="btn amber block" data-act="lend" style="margin-bottom:14px">🤝 Lend cash (borrowed from the cash)</button>' +
     '<div class="stick"><input id="c-q" placeholder="Search name or number" autocomplete="off"></div><div id="c-list">' + creditList('') + '</div>' +
     '<p class="muted">To put something on credit, go to Count, tap the item and press “On credit to…”. Tap a name to take a payment.</p>';
