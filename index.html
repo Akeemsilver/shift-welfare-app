@@ -262,7 +262,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.41', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.42', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1183,7 +1183,7 @@ function vStock() {
 function stockSheet() {
   var it = item(ST.id); if (!it) return closeModal();
   modal('<div class="ps"><div class="row"><h2 class="grow" style="margin:0;font-size:21px">' + esc(it.name) + '</h2><b style="color:var(--brand);font-size:21px;margin-right:10px">' + money(it.price) + '</b></div>' +
-    (startupOn() ? '<div class="card" style="margin-top:12px"><h2>Stock now</h2>' + qRow(it.shelf ? 'On the shelf' : 'In the fridge', '', 'sf', ST.fridge, '') + (hasCage(it) ? qRow('In storage', unitPl(unitName(it), 2) + ' of ' + per(it), 'sg', ST.cage, '') : '') + '<p class="muted" style="margin:8px 0 8px">You are setting up, so you can change these directly. They are saved quietly.</p><button class="btn block" data-act="stsave">Save counts</button></div>' :
+    (startupOn() ? '<div class="card" style="margin-top:12px"><h2>Stock now</h2><div class="dest' + (ST.fridge > 0 ? ' on' : '') + '"><div class="dn"><span class="di">' + (it.shelf ? '🧁' : '🧊') + '</span><div><b>Shop</b><span>' + (it.shelf ? 'on the shelf, ready to sell' : 'in the fridge, ready to sell') + '</span></div></div>' + stepper('sf', ST.fridge) + '</div>' + (hasCage(it) ? '<div class="dest' + (ST.cage > 0 ? ' on' : '') + '"><div class="dn"><span class="di">📦</span><div><b>Storage</b><span>whole ' + unitPl(unitName(it), 2) + ' only, in the cage</span></div></div>' + stepper('sg', ST.cage) + '</div>' : '') + '<p class="muted" style="margin:8px 0 8px">You are setting up, so you can change these directly. They are saved quietly.</p><button class="btn block" data-act="stsave">Save counts</button></div>' :
     '<div class="card" style="margin-top:12px"><h2>Stock now</h2><div class="row"><div class="grow"><label>' + (it.shelf ? 'On the shelf' : 'In the fridge') + '</label><b style="font-size:18px;font-weight:600">' + it.stock + '</b></div>' +
     (hasCage(it) ? '<div class="grow"><label>Cage (' + unitPl(unitName(it), 2) + ' of ' + per(it) + ')</label><b style="font-size:18px;font-weight:600">' + it.cage + '</b></div>' : '') + '</div>' +
     '<p class="muted" style="margin:8px 0 0">Stock goes up with a purchase (Add stock) and comes down with counts, spoiled items and moves. To fix a counting mistake use Edit stock.</p></div>') +
@@ -1252,6 +1252,7 @@ function unitBlock(pre, unit, perVal, shelf) {   /* what the item is stored in (
 function unitSync(pre) { var u = (($('#' + pre + '-unit') || {}).value || 'case').toLowerCase().trim() || 'case', l = $('#' + pre + '-perlbl'); if (l) l.textContent = 'Items in one ' + u; document.querySelectorAll('[data-act=unitpick][data-pre=' + pre + ']').forEach(function (c) { c.classList.toggle('on', c.dataset.v.toLowerCase() === u); }); }
 function shelfFields(pre) {   /* a shelf item may still come in packs: the pack box stays on; empty means it goes straight onto the shelf */
   var shelf = $('#' + pre + '-where').value === 'shelf', per = $('#' + pre + '-per');
+  var sico = $('#ni-shopico'), ssub = $('#ni-shopsub'); if (pre === 'ni' && sico && ssub) { sico.textContent = shelf ? '🧁' : '🧊'; ssub.textContent = shelf ? 'on the shelf, ready to sell' : 'in the fridge, ready to sell'; }
   if (per) {
     per.placeholder = shelf ? 'leave empty if none' : '';
     if (shelf) { if (per.value) per.dataset.keep = per.value; per.value = ''; }
@@ -1271,7 +1272,7 @@ function newItemForm() {
     '<div class="f" id="ni-perwrap"><label id="ni-perlbl">Items in one case</label>' + ig('<input id="ni-per" type="number" inputmode="numeric" min="1" value="' + CFG.perCase + '">', '', 'items') + '</div>' +
     '<div class="f"><label>Selling price (each item)</label>' + ig('<input id="ni-price" type="number" inputmode="decimal" min="0" placeholder="0">', '$') + '</div>' +
     '<div class="f"><label>Cost price each (what you paid, optional)</label>' + ig('<input id="ni-cost" type="number" inputmode="decimal" min="0" placeholder="0">', '$') + '</div>' +
-    (!startupOn() ? '<div class="row f"><div class="grow"><label>In the shop now</label><div id="ni-frbox"><input id="ni-fr" type="number" value="0" disabled hidden>' + ng(0, 'items') + '</div></div><div class="grow"><label>In storage now</label><div id="ni-cgbox"><input id="ni-cg" type="number" value="0" disabled hidden>' + ng(0, 'in storage') + '</div></div></div><div class="muted">A new item starts at 0. Put stock in with Add stock after you save.</div></div>' : '<div class="niqty"><div class="qrow"><div class="grow"><b>In the shop now</b><span>how many are on the shelf or in the fridge</span></div><input id="ni-fr" type="number" value="0" hidden>' + stepper('nif', 0) + '</div><div class="qrow" id="ni-cgwrap"><div class="grow"><b>In storage now</b><span id="ni-cgsub">whole cases in storage</span></div><input id="ni-cg" type="number" value="0" hidden>' + stepper('nic', 0) + '</div></div>' +
+    (!startupOn() ? '<div class="row f"><div class="grow"><label>In the shop now</label><div id="ni-frbox"><input id="ni-fr" type="number" value="0" disabled hidden>' + ng(0, 'items') + '</div></div><div class="grow"><label>In storage now</label><div id="ni-cgbox"><input id="ni-cg" type="number" value="0" disabled hidden>' + ng(0, 'in storage') + '</div></div></div><div class="muted">A new item starts at 0. Put stock in with Add stock after you save.</div></div>' : '<div class="niqty"><div class="bsec" style="margin:6px 0 2px">How many are here right now?</div><div class="dest"><div class="dn"><span class="di" id="ni-shopico">🧊</span><div><b>Shop</b><span id="ni-shopsub">in the fridge, ready to sell</span></div></div><input id="ni-fr" type="number" value="0" hidden>' + stepper('nif', 0) + '</div><div class="dest" id="ni-cgwrap"><div class="dn"><span class="di">📦</span><div><b>Storage</b><span>whole cases only, in the cage</span></div></div><input id="ni-cg" type="number" value="0" hidden>' + stepper('nic', 0) + '</div></div>' +
     '<div class="muted">You are setting up: set what is here right now with + and −. Leave them at 0 if you will add stock with Add stock.</div></div>') +
     '<button class="btn block" data-act="saveitem">Add item</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>');
   $('#ni-name').focus();
@@ -4339,7 +4340,7 @@ document.addEventListener('click', function (e) {
     });
   }
   else if (a === 'newitem') newItemForm();
-  else if (a === 'nif+' || a === 'nif-' || a === 'nic+' || a === 'nic-') { var nk2 = a.slice(0, 3) === 'nif' ? 'fr' : 'cg', hi = $('#ni-' + nk2), nv2 = Math.max(0, (Math.floor(num(hi.value)) || 0) + (a.slice(-1) === '+' ? 1 : -1)); hi.value = nv2; var si = document.querySelector('[data-step=' + a.slice(0, 3) + ']'); if (si) si.value = nv2; }
+  else if (a === 'nif+' || a === 'nif-' || a === 'nic+' || a === 'nic-') { var nk2 = a.slice(0, 3) === 'nif' ? 'fr' : 'cg', hi = $('#ni-' + nk2), nv2 = Math.max(0, (Math.floor(num(hi.value)) || 0) + (a.slice(-1) === '+' ? 1 : -1)); hi.value = nv2; var si = document.querySelector('[data-step=' + a.slice(0, 3) + ']'); if (si) si.value = nv2; var dd2 = hi.closest('.dest'); if (dd2) dd2.classList.toggle('on', nv2 > 0); }
   else if (a === 'saveitem') {
     var name = $('#ni-name').value.trim(); if (!name) return toast('Enter a name');
     if (!(num($('#ni-price').value) > 0)) return toast('Enter the selling price (more than $0)');
@@ -4762,7 +4763,7 @@ document.addEventListener('change', function (e) {
     else if (a2 === 'sp') { var pi2 = item(ST.id); ST.spoil = Math.max(0, Math.min(n || 0, Math.max(0, pi2.stock))); stockSheet(); }
     else if (a2 === 'bl') { BUY.lines[+t.dataset.k].cases = Math.max(0, n || 0); buyLive(); }   /* no redraw here: a redraw would swallow the tap on the next button */
     else if (a2 === 'bu') { BUY.lines[+t.dataset.k].units = Math.max(0, n || 0); buyLive(); }
-    else if (a2 === 'nif' || a2 === 'nic') { var hn = $('#ni-' + (a2 === 'nif' ? 'fr' : 'cg')); if (hn) hn.value = Math.max(0, n || 0); }
+    else if (a2 === 'nif' || a2 === 'nic') { var hn = $('#ni-' + (a2 === 'nif' ? 'fr' : 'cg')); if (hn) { hn.value = Math.max(0, n || 0); var dd3 = hn.closest('.dest'); if (dd3) dd3.classList.toggle('on', n > 0); } }
     return;
   }
   if (t.dataset.bl !== undefined && t.dataset.f === 'item') { BUY.lines[+t.dataset.bl].item = t.value; render(); return; }
@@ -4770,6 +4771,7 @@ document.addEventListener('change', function (e) {
   if (t.id === 'ni-kind') { niKind(); return; }
   if (t.dataset.bl !== undefined && t.dataset.f === 'kind') { BUY.lines[+t.dataset.bl].kind = t.value; render(); return; }
   if (t.id === 'sd-where') { shelfFields('sd'); return; }
+  if (t.id === 'ni-where') { var nsh = t.value === 'shelf', nsi = $('#ni-shopico'), nss = $('#ni-shopsub'); if (nsi && nss) { nsi.textContent = nsh ? '🧁' : '🧊';  nss.textContent = nsh ? 'on the shelf, ready to sell' : 'in the fridge, ready to sell'; } }   /* the Shop line follows Sold from */
   if (t.id === 'ni-unit' || t.id === 'sd-unit') { unitSync(t.id.slice(0, 2)); return; }
   if (!t.dataset.sh) return;
   if (viewOnly()) { toast('View only: you are not in control'); render(); return; }
