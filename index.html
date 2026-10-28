@@ -262,7 +262,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.42', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.43', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -5052,6 +5052,14 @@ function vv() {   /* the part of the screen not covered by the keyboard: search 
 }
 if (window.visualViewport) { window.visualViewport.addEventListener('resize', vv); window.visualViewport.addEventListener('scroll', vv); }
 window.addEventListener('resize', vv); vv();
+(function () {   /* tapping - or + must not take the focus away from the box being typed in, or the keyboard closes */
+  document.addEventListener('mousedown', function (e) { if (e.target.closest && e.target.closest('.stepper button')) e.preventDefault(); }, true);
+  var sel = function (el) { if (!el || el.tagName !== 'INPUT') return ''; var d = el.dataset; return el.id ? '#' + el.id : d.bl !== undefined ? 'input[data-bl="' + d.bl + '"][data-f="' + d.f + '"]' : d.b ? 'input[data-b="' + d.b + '"]' : d.step ? 'input[data-step="' + d.step + '"]' + (d.k !== undefined ? '[data-k="' + d.k + '"]' : '') : ''; };
+  document.addEventListener('click', function (e) {   /* a page that redraws itself puts the same box back and the cursor in it */
+    if (!(e.target.closest && e.target.closest('.stepper button'))) return; var q = sel(document.activeElement); if (!q) return;
+    setTimeout(function () { var a = document.activeElement; if (!a || a === document.body) { var el = document.querySelector(q); if (el) { try { el.focus({ preventScroll: true }); } catch (x) { el.focus(); } } } }, 40);
+  }, true);
+})();
 (function () {   /* on a phone, while a box is being typed in the bottom bar is hidden so it never rides above the keyboard; close the keyboard to see it again */
   var typing = function (t) { return t && ((t.tagName === 'INPUT' && !/^(checkbox|radio|button|file|range|submit|hidden|color|date|month|time|datetime-local)$/.test(t.type)) || t.tagName === 'TEXTAREA'); }, coarse = function () { return window.matchMedia && window.matchMedia('(pointer: coarse)').matches; };
   document.addEventListener('focusin', function (e) { if (coarse() && typing(e.target)) document.body.classList.add('kb'); });
