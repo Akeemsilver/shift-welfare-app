@@ -54,6 +54,7 @@ b,strong{font-weight:600}
 .bub .p{font-size:14px;font-weight:600;color:var(--link)}
 .bub .s{font-size:11px;color:var(--muted)}
 .bub .pill{position:absolute;right:8px;top:8px}
+.niqty{margin:6px 0 4px}.niqty .stepper{display:inline-flex;gap:0;height:32px;border-radius:16px;background:var(--soft);border:1px solid var(--secb);overflow:hidden;flex:none;align-items:center}.niqty .stepper button{width:32px;height:32px;border:0;border-radius:0;background:none;color:var(--brand);font-size:18px;padding:0}.niqty .stepper .stepin{width:42px;height:32px;border:0;border-left:1px solid var(--secb);border-right:1px solid var(--secb);border-radius:0;font-size:15px;font-weight:700;padding:0 2px;background:var(--surface)}
 .icorow{display:flex;gap:6px;margin-top:8px}.icorow button{flex:1;max-width:46px;height:42px;border-radius:12px;border:2px solid var(--secb);background:var(--surface);font-size:22px;padding:0;line-height:1}.icorow button.on{border-color:var(--brand);background:var(--soft)}
 .brows{padding:2px 14px;margin-top:0}.bub.brow{display:flex;align-items:center;gap:10px;width:100%;min-height:0;padding:11px 0;background:none;border:0;border-radius:0;box-shadow:none}.bub.brow+.bub.brow{border-top:1px solid var(--line)}.bub.brow .n{font-size:15px}.bub.brow .s{display:block;font-size:12.5px;margin-top:2px}.bub.brow .s b{font-size:14px;font-weight:700;color:var(--link)}.bub.brow .s b.z{color:var(--exp)}.bub.brow .pr{font-size:17px;color:var(--brand)}.bub.brow .ch{color:var(--muted)}
 .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -204,7 +205,7 @@ body,#main{overflow-anchor:none}
 .sp-row b{font-size:16px;font-weight:600;display:block}.sp-row .muted{font-size:13px;margin-top:2px}
 .sp-ch{color:var(--muted);font-size:24px;flex:none}
 .sp-row.red b{color:var(--exp)}.sp-row.red .sp-ic{background:var(--exp-bg)}
-body.spo nav{display:none!important}body.spo .modal>div{margin-bottom:0;max-height:calc(100vh - 24px - env(safe-area-inset-bottom))}
+body.spo nav,body.kb nav{display:none!important}body.spo .modal>div{margin-bottom:0;max-height:calc(100vh - 24px - env(safe-area-inset-bottom))}
 [hidden]{display:none!important}
 .mn{color:var(--exp)!important}
 .tile.wide:not(.pf1) .mn{color:#FF9E92!important}
@@ -261,7 +262,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.39', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.41', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1182,16 +1183,17 @@ function vStock() {
 function stockSheet() {
   var it = item(ST.id); if (!it) return closeModal();
   modal('<div class="ps"><div class="row"><h2 class="grow" style="margin:0;font-size:21px">' + esc(it.name) + '</h2><b style="color:var(--brand);font-size:21px;margin-right:10px">' + money(it.price) + '</b></div>' +
+    (startupOn() ? '<div class="card" style="margin-top:12px"><h2>Stock now</h2>' + qRow(it.shelf ? 'On the shelf' : 'In the fridge', '', 'sf', ST.fridge, '') + (hasCage(it) ? qRow('In storage', unitPl(unitName(it), 2) + ' of ' + per(it), 'sg', ST.cage, '') : '') + '<p class="muted" style="margin:8px 0 8px">You are setting up, so you can change these directly. They are saved quietly.</p><button class="btn block" data-act="stsave">Save counts</button></div>' :
     '<div class="card" style="margin-top:12px"><h2>Stock now</h2><div class="row"><div class="grow"><label>' + (it.shelf ? 'On the shelf' : 'In the fridge') + '</label><b style="font-size:18px;font-weight:600">' + it.stock + '</b></div>' +
     (hasCage(it) ? '<div class="grow"><label>Cage (' + unitPl(unitName(it), 2) + ' of ' + per(it) + ')</label><b style="font-size:18px;font-weight:600">' + it.cage + '</b></div>' : '') + '</div>' +
-    '<p class="muted" style="margin:8px 0 0">Stock goes up with a purchase (Add stock) and comes down with counts, spoiled items and moves. To fix a counting mistake use Edit stock.</p></div>' +
+    '<p class="muted" style="margin:8px 0 0">Stock goes up with a purchase (Add stock) and comes down with counts, spoiled items and moves. To fix a counting mistake use Edit stock.</p></div>') +
     (hasCage(it) ? '<div class="card"><h2>Move ' + (unitName(it) === 'case' ? 'a case' : 'a ' + unitName(it)) + ' to ' + (it.shelf ? 'the shelf' : 'the fridge') + '</h2><div class="row"><div>' + stepper('sm', ST.move) + '</div><div class="grow muted">= ' + ST.move * per(it) + ' items</div></div>' +
     '<button class="btn sec block" data-act="domove" style="margin-top:10px"' + (it.cage < 1 || ST.move < 1 ? ' disabled' : '') + '>Move to ' + (it.shelf ? 'shelf' : 'fridge') + '</button></div>' : '') +
     '<div class="card"><h2>Spoiled / damaged</h2><div class="row"><div>' + stepper('sp', ST.spoil) + '</div><div class="grow muted">out of the ' + (it.shelf ? 'shelf' : 'fridge') + '</div></div>' +
     '<button class="btn sec block" data-act="dospoil" style="margin-top:10px"' + (it.stock < 1 || ST.spoil < 1 ? ' disabled' : '') + '>Record spoiled</button></div>' +
     '<div class="card"><h2>Item details</h2><div class="f"><label>Name</label><input id="sd-name" value="' + esc(it.name) + '" autocomplete="off"></div><div class="f"><label>Kept in</label>' + whereSeg('sd-where', it.shelf, 'wsel', ' data-for="sd"') + '</div><div class="row f"><div class="grow"><label>Selling price (each item)</label>' + ig('<input id="sd-price" type="number" inputmode="decimal" min="0" value="' + it.price + '">', '$') + '</div></div>' + unitBlock('sd', it.unit, it.shelf ? (it.per > 1 ? it.per : '') : per(it), it.shelf) + '<div class="f"><label>Cost price each (what you paid)</label>' + ig('<input id="sd-cost" type="number" inputmode="decimal" min="0" value="' + (it.cost || '') + '">', '$') + '</div>' +
     '<button class="btn sec block" data-act="savedetails">Save details</button><button class="btn red block" data-act="rmitem" style="margin-top:10px">Remove item</button></div>' +
-    '<button class="btn red block" data-act="editstock">⚠ Edit stock</button><button class="btn sec block" data-act="close" style="margin-top:10px">Close</button></div>');
+    (startupOn() ? '' : '<button class="btn red block" data-act="editstock">⚠ Edit stock</button>') + '<button class="btn sec block" data-act="close" style="margin-top:10px">Close</button></div>');
 }
 /* ---------- Edit stock by hand: a deliberate, red, recorded last resort ---------- */
 var ES = null, ES_REASONS = ['Miscounted', 'Found extra', 'Missing or stolen', 'Damaged', 'Other'];
@@ -1269,8 +1271,8 @@ function newItemForm() {
     '<div class="f" id="ni-perwrap"><label id="ni-perlbl">Items in one case</label>' + ig('<input id="ni-per" type="number" inputmode="numeric" min="1" value="' + CFG.perCase + '">', '', 'items') + '</div>' +
     '<div class="f"><label>Selling price (each item)</label>' + ig('<input id="ni-price" type="number" inputmode="decimal" min="0" placeholder="0">', '$') + '</div>' +
     '<div class="f"><label>Cost price each (what you paid, optional)</label>' + ig('<input id="ni-cost" type="number" inputmode="decimal" min="0" placeholder="0">', '$') + '</div>' +
-    '<div class="row f"><div class="grow"><label>In the shop now</label><div id="ni-frbox"><input id="ni-fr" type="number" value="0" disabled hidden>' + ng(0, 'items') + '</div></div><div class="grow"><label>In storage now</label><div id="ni-cgbox"><input id="ni-cg" type="number" value="0" disabled hidden>' + ng(0, 'in storage') + '</div></div></div>' +
-    '<div class="muted">A new item starts at 0. Put stock in with Add stock after you save.</div></div>' +
+    (!startupOn() ? '<div class="row f"><div class="grow"><label>In the shop now</label><div id="ni-frbox"><input id="ni-fr" type="number" value="0" disabled hidden>' + ng(0, 'items') + '</div></div><div class="grow"><label>In storage now</label><div id="ni-cgbox"><input id="ni-cg" type="number" value="0" disabled hidden>' + ng(0, 'in storage') + '</div></div></div><div class="muted">A new item starts at 0. Put stock in with Add stock after you save.</div></div>' : '<div class="niqty"><div class="qrow"><div class="grow"><b>In the shop now</b><span>how many are on the shelf or in the fridge</span></div><input id="ni-fr" type="number" value="0" hidden>' + stepper('nif', 0) + '</div><div class="qrow" id="ni-cgwrap"><div class="grow"><b>In storage now</b><span id="ni-cgsub">whole cases in storage</span></div><input id="ni-cg" type="number" value="0" hidden>' + stepper('nic', 0) + '</div></div>' +
+    '<div class="muted">You are setting up: set what is here right now with + and −. Leave them at 0 if you will add stock with Add stock.</div></div>') +
     '<button class="btn block" data-act="saveitem">Add item</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>');
   $('#ni-name').focus();
 }
@@ -4337,6 +4339,7 @@ document.addEventListener('click', function (e) {
     });
   }
   else if (a === 'newitem') newItemForm();
+  else if (a === 'nif+' || a === 'nif-' || a === 'nic+' || a === 'nic-') { var nk2 = a.slice(0, 3) === 'nif' ? 'fr' : 'cg', hi = $('#ni-' + nk2), nv2 = Math.max(0, (Math.floor(num(hi.value)) || 0) + (a.slice(-1) === '+' ? 1 : -1)); hi.value = nv2; var si = document.querySelector('[data-step=' + a.slice(0, 3) + ']'); if (si) si.value = nv2; }
   else if (a === 'saveitem') {
     var name = $('#ni-name').value.trim(); if (!name) return toast('Enter a name');
     if (!(num($('#ni-price').value) > 0)) return toast('Enter the selling price (more than $0)');
@@ -4351,6 +4354,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'editstock') esWarn();
   else if (a === 'esquiet') { var qd = item(ES.id); if (qd && ST.fridge === qd.stock && (!hasCage(qd) || ST.cage === qd.cage)) toast('Nothing has changed'); else esSave(); }
   else if (a === 'stbegin') startupAsk();
+  else if (a === 'stsave') { var qd2 = item(ST.id); if (!qd2) return; if (ST.fridge === qd2.stock && (!hasCage(qd2) || ST.cage === qd2.cage)) toast('Nothing has changed'); else { ES = { id: qd2.id, reason: 'Setting up', note: '' }; esSave(); } }
   else if (a === 'styes') { closeModal(); opOpen(); }
   else if (a === 'stno') startFresh();
   else if (a === 'esack') esForm();
@@ -4758,6 +4762,7 @@ document.addEventListener('change', function (e) {
     else if (a2 === 'sp') { var pi2 = item(ST.id); ST.spoil = Math.max(0, Math.min(n || 0, Math.max(0, pi2.stock))); stockSheet(); }
     else if (a2 === 'bl') { BUY.lines[+t.dataset.k].cases = Math.max(0, n || 0); buyLive(); }   /* no redraw here: a redraw would swallow the tap on the next button */
     else if (a2 === 'bu') { BUY.lines[+t.dataset.k].units = Math.max(0, n || 0); buyLive(); }
+    else if (a2 === 'nif' || a2 === 'nic') { var hn = $('#ni-' + (a2 === 'nif' ? 'fr' : 'cg')); if (hn) hn.value = Math.max(0, n || 0); }
     return;
   }
   if (t.dataset.bl !== undefined && t.dataset.f === 'item') { BUY.lines[+t.dataset.bl].item = t.value; render(); return; }
@@ -5045,6 +5050,11 @@ function vv() {   /* the part of the screen not covered by the keyboard: search 
 }
 if (window.visualViewport) { window.visualViewport.addEventListener('resize', vv); window.visualViewport.addEventListener('scroll', vv); }
 window.addEventListener('resize', vv); vv();
+(function () {   /* on a phone, while a box is being typed in the bottom bar is hidden so it never rides above the keyboard; close the keyboard to see it again */
+  var typing = function (t) { return t && ((t.tagName === 'INPUT' && !/^(checkbox|radio|button|file|range|submit|hidden|color|date|month|time|datetime-local)$/.test(t.type)) || t.tagName === 'TEXTAREA'); }, coarse = function () { return window.matchMedia && window.matchMedia('(pointer: coarse)').matches; };
+  document.addEventListener('focusin', function (e) { if (coarse() && typing(e.target)) document.body.classList.add('kb'); });
+  document.addEventListener('focusout', function () { setTimeout(function () { if (!typing(document.activeElement)) document.body.classList.remove('kb'); }, 120); });
+})();
 window.addEventListener('online', render); window.addEventListener('offline', render);
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(function () {});
 updInstall();
