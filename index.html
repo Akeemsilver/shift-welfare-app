@@ -252,7 +252,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.31', RULES_VERSION = '2.12';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.32', RULES_VERSION = '2.12';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1256,7 +1256,9 @@ function vBuy() {
   } else h += '<div class="f"><label>Note</label><input data-b="note" value="' + esc(BUY.note) + '" placeholder="e.g. donated, returned stock" autocomplete="off"></div>';
   h += BUY.lines.map(buyLineHtml).join('');
   h += '<button class="btn sec block" data-act="bladd" style="margin-bottom:10px">+ Add another item</button>';
-  if (!BUY.other) h += '<div class="row f"><div class="grow"><label>Tax on the bill (if any)</label><input data-b="tax" type="number" inputmode="decimal" min="0" value="' + esc(BUY.tax) + '" placeholder="0"></div><div class="grow"><label>Total on the bill (with tax)</label><input data-b="total" type="number" inputmode="decimal" min="0" value="' + esc(BUY.total) + '" placeholder="0"></div></div>';
+  if (!BUY.other) { billSync(); h += BUY.lines.length > 1
+    ? '<div class="f"><label>Items add up to</label><div class="lockbox"><span id="bsum">' + money(billSum()) + '</span><span class="muted">worked out</span></div></div><div class="f"><label>Tax on the bill (if any)</label><input data-b="tax" type="number" inputmode="decimal" min="0" value="' + esc(BUY.tax) + '" placeholder="0"></div><div class="f"><label>Total on the bill</label><div class="lockbox"><span id="btot">' + money(num(BUY.total)) + '</span><span class="muted">items + tax</span></div></div>'
+    : '<div class="f"><label>Total on the bill (with tax)</label><input data-b="total" type="number" inputmode="decimal" min="0" value="' + esc(BUY.total) + '" placeholder="0"></div><div class="f"><label>Tax included in it (optional)</label><input data-b="tax" type="number" inputmode="decimal" min="0" value="' + esc(BUY.tax) + '" placeholder="0"></div>'; }
   if (!BUY.other) h += '<div class="f"><label>Cash taken from the cash (you keep no change)</label><input data-b="paid" type="number" inputmode="decimal" min="0" value="' + esc(BUY.paid) + '" placeholder="' + (num(BUY.total) > 0 ? num(BUY.total) : 'same as the bill') + '"><div id="rc">' + roundChips() + '</div><div id="bw">' + woBar() + '</div></div>';
   if (!BUY.other) h += '<div class="card" style="background:var(--bg);box-shadow:none;padding:10px"><label>Receipt photo (recommended)</label>' + (BUY.receipt ? '<img src="' + BUY.receipt + '" alt="receipt" style="width:100%;max-height:240px;object-fit:contain;border-radius:12px;border:1px solid var(--line);background:#fff">' : '<div class="muted" style="margin-bottom:6px">Take a photo of the bill. It is shrunk to a small size and kept for about 31 days, so you can open it later from History.</div>') +
     '<input type="file" accept="image/*" capture="environment" id="br-cam" hidden><input type="file" accept="image/*" id="br-pick" hidden><div class="row" style="margin-top:8px"><button class="btn sec sm grow" data-act="brcam">📷 ' + (BUY.receipt ? 'Retake' : 'Take photo') + '</button><button class="btn sec sm grow" data-act="brpick">🖼 Choose from phone</button>' + (BUY.receipt ? '<button class="btn sec sm" data-act="brclear">Remove</button>' : '') + '</div></div>';
@@ -1333,7 +1335,7 @@ function ceLine(l) {
   return c > 0 ? '<div class="muted" style="margin-top:6px">= ' + cs + '<b>' + money(each) + '</b> each · sells ' + money(price) + ' · profit <b style="color:' + (price - each >= 0 ? 'var(--ok)' : 'var(--exp)') + '">' + money(price - each) + '</b> each' + (num(BUY.tax) > 0 ? ' <span class="muted">(tax included)</span>' : '') + '</div>' : '';
 }
 function buyLive() {   /* keep the cost lines and the check bar in step while typing, without redrawing the form */
-  if (!BUY) return; BUY.lines.forEach(function (l, k) { var el = $('#ce' + k); if (el) el.innerHTML = ceLine(l); var sm = $('#bs' + k); if (sm) sm.innerHTML = buySummary(l); var dr = $('#bw' + k); if (dr && !dr.contains(document.activeElement)) { var dh = destRows(l, k); if (dr.dataset.h !== dh) { dr.dataset.h = dh; dr.innerHTML = dh; } } });   /* only when it changed: a redraw between a finger going down and up would swallow the tap */
+  if (!BUY) return; billSync(); var bs = $('#bsum'); if (bs) bs.textContent = money(billSum()); var bt = $('#btot'); if (bt) bt.textContent = money(num(BUY.total)); BUY.lines.forEach(function (l, k) { var el = $('#ce' + k); if (el) el.innerHTML = ceLine(l); var sm = $('#bs' + k); if (sm) sm.innerHTML = buySummary(l); var dr = $('#bw' + k); if (dr && !dr.contains(document.activeElement)) { var dh = destRows(l, k); if (dr.dataset.h !== dh) { dr.dataset.h = dh; dr.innerHTML = dh; } } });   /* only when it changed: a redraw between a finger going down and up would swallow the tap */
   var bb = $('#bb'); if (bb) bb.innerHTML = billBar();
   var bw = $('#bw'); if (bw) bw.innerHTML = woBar();
   var rc = $('#rc'); if (rc) rc.innerHTML = roundChips(); var pd = document.querySelector('[data-b=paid]'); if (pd && num(BUY.total) > 0) pd.placeholder = String(num(BUY.total));
@@ -1350,9 +1352,11 @@ function woBar() {
   if (w < 0) return '<div class="cancelbar" style="margin-top:6px">Cash taken cannot be less than the bill total.</div>';
   return w > 0 ? '<div class="cancelbar" style="margin-top:6px;background:var(--soon-bg);color:var(--soon)">Change not kept: ' + money(w) + ' (written off)</div>' : '';
 }
+function billSum() { return r2(BUY.lines.reduce(function (a, x) { return a + num(x.cost); }, 0)); }
+function billSync() { if (BUY && !BUY.other && BUY.lines.length > 1) { var sm = billSum(); BUY.total = sm > 0 ? String(r2(sm + num(BUY.tax))) : ''; } }   /* with several items the total is worked out: the items plus the tax */
 function billCheck() {
   if (BUY.other) return ''; var tot = num(BUY.total), sum = 0;
-  if (BUY.lines.length > 1) { for (var k = 0; k < BUY.lines.length; k++) { if (num(BUY.lines[k].cost) <= 0) return 'Enter the cost for every item on the bill'; sum += num(BUY.lines[k].cost); } var tx = num(BUY.tax); if (Math.abs(sum + tx - tot) > 0.01) return 'Item costs (' + money(sum) + ')' + (tx > 0 ? ' + tax (' + money(tx) + ')' : '') + ' must add up to the bill total (' + money(tot) + ')'; }
+  if (BUY.lines.length > 1) { for (var k = 0; k < BUY.lines.length; k++) { if (num(BUY.lines[k].cost) <= 0) return 'Enter the cost for every item on the bill'; sum += num(BUY.lines[k].cost); } }
   return '';
 }
 function billBar() {
@@ -1391,7 +1395,7 @@ function lineBits(l) {   /* "3 packs + 5 singles" for a purchase line (newer ent
 }
 function buyText(e) { return (e.lines || []).map(function (l) { return lineBits(l) + ' of ' + l.name + (l.v === 2 && l.dc > 0 ? ' · to storage' : ''); }).join(', ') || e.name; }
 function buySave() {
-  var lines = [], fills = [], b = writeBatch(DB), supName = BUY.sup.trim(), total = num(BUY.total), eid = newEv();
+  billSync(); var lines = [], fills = [], b = writeBatch(DB), supName = BUY.sup.trim(), total = num(BUY.total), eid = newEv();
   if (!BUY.other && !supName) return toast('Who was it bought from?');
   if (!BUY.other && total <= 0) return toast('Enter the total on the bill');
   if (BUY.other && !BUY.note.trim()) return toast('Add a note');
