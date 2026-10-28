@@ -205,7 +205,7 @@ body,#main{overflow-anchor:none}
 .sp-row b{font-size:16px;font-weight:600;display:block}.sp-row .muted{font-size:13px;margin-top:2px}
 .sp-ch{color:var(--muted);font-size:24px;flex:none}
 .sp-row.red b{color:var(--exp)}.sp-row.red .sp-ic{background:var(--exp-bg)}
-body.spo nav,body.kb nav{display:none!important}body.spo .modal>div{margin-bottom:0;max-height:calc(100vh - 24px - env(safe-area-inset-bottom))}
+body.spo nav,body.kb nav{display:none!important}body.kb{--navoff:0px}body.kb .modal>div{margin-bottom:0;max-height:calc(var(--vvh,100vh) - 24px - env(safe-area-inset-bottom))}body.kb .modal.top>div{max-height:var(--vvh,100vh)}   /* the bottom bar is hidden while typing, so pop-ups and the toast use the whole space above the keyboard */body.spo .modal>div{margin-bottom:0;max-height:calc(100vh - 24px - env(safe-area-inset-bottom))}
 [hidden]{display:none!important}
 .mn{color:var(--exp)!important}
 .tile.wide:not(.pf1) .mn{color:#FF9E92!important}
@@ -262,7 +262,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.44', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.46', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1958,7 +1958,7 @@ function evRow(e, cancelable) {
   else if (e.type === 'repay') { ic = '💵'; tx = 'Shortage repaid by ' + (e.forWk || '') + ' watch'; sub = e.note || ''; amt = '+ ' + money(e.amt); col = 'var(--ok)'; }
   else if (e.type === 'takeover') { ic = '🛡️'; tx = 'Control taken'; sub = e.note; }
   else if (e.type === 'switch') { ic = '🔁'; tx = 'Operator switched'; sub = e.note; }
-  else if (e.type === 'opening') { ic = '📝'; tx = e.fresh ? 'Workplace started' : 'Opening handover entered by hand'; sub = (e.fromName ? 'From ' + e.fromName + ' · ' + e.fromWk + ' shift · ' + e.fromDate + ' ' + HL(e.fromHalf) + ' · ' : '') + 'Cash ' + money(e.cash || 0) + ' · ' + (e.lines || []).length + ' items counted' + (e.prevSales ? ' · previous sales ' + money(num(e.prevSales)) : ''); }
+  else if (e.type === 'opening') { ic = '📝'; tx = e.fresh ? 'Workplace started' : 'Opening handover entered by hand'; sub = (e.fromName ? 'From ' + e.fromName + ' · ' + e.fromWk + ' shift · ' + e.fromDate + ' ' + HL(e.fromHalf) + (e.fromTime ? ' · taken over at ' + fmtTime(e.fromTime) : '') + ' · ' : '') + 'Cash ' + money(e.cash || 0) + ' · ' + (e.lines || []).length + ' items counted' + (e.prevSales ? ' · previous sales ' + money(num(e.prevSales)) : ''); }
   else if (e.type === 'opencredit') { ic = '📒'; tx = 'Opening credit: ' + (e.crName || plab(e.cr)); sub = e.note || 'Owed from before'; amt = money(e.amt); col = 'var(--soon)'; }
   else if (e.type === 'newitem') { ic = '🆕'; tx = 'New item: ' + e.name; sub = e.note; }
   else if (e.type === 'remove') { ic = '🚫'; tx = 'Item removed: ' + e.name; sub = e.note; }
@@ -3001,7 +3001,7 @@ var OP = null;
 function opOpen() {
   if (!isPres()) return toast('Only the president can enter the previous handover');
   if (!inControl()) return toast('You must be in control to do this');
-  var td = new Date(); OP = { cash: String(SH().received || ''), prevSales: '', notes: '', counts: {}, sh: [], from: '', fwk: '', fdate: pad(td.getDate()) + '/' + pad(td.getMonth() + 1) + '/' + td.getFullYear(), fhalf: '' };
+  var td = new Date(); OP = { cash: String(SH().received || ''), prevSales: '', notes: '', counts: {}, sh: [], from: '', fwk: '', fdate: pad(td.getDate()) + '/' + pad(td.getMonth() + 1) + '/' + td.getFullYear(), fhalf: '', ftime: pad(td.getHours()) + ':' + pad(td.getMinutes()) };
   S.items.forEach(function (i) { OP.counts[i.id] = { stock: String(i.stock), cage: String(i.cage) }; }); opForm();
 }
 function opForm() {
@@ -3012,7 +3012,8 @@ function opForm() {
   modal('<h2>📝 Previous handover (by hand)</h2><p class="muted" style="margin-top:0">Copy these from the handover you received. It becomes this shift\'s starting point.</p>' +
     '<div class="card" style="border-top:3px solid var(--brand)"><h2 style="margin-top:0">Handed over by</h2><div class="f"><label>Who gave you the shift *</label><button type="button" class="btn sec selbtn" data-act="oppick" style="width:100%"><span>' + (OP.from ? esc(OP.from) : 'Search a name') + '</span><span>▾</span></button></div>' +
     '<div class="f"><label>Their shift *</label><div class="seg" style="grid-template-columns:repeat(' + Math.min(4, WATCHES.length) + ',1fr)">' + WATCHES.map(function (w) { return '<button type="button" data-act="opfwk" data-v="' + esc(w) + '" class="' + (OP.fwk === w ? 'on' : '') + '">' + esc(w) + '</button>'; }).join('') + '</div></div>' +
-    '<div class="row f"><div class="grow"><label>Date *</label><input data-op="fdate" value="' + esc(OP.fdate) + '" placeholder="dd/mm/yyyy" inputmode="numeric" autocomplete="off"></div><div class="grow"><label>Part of the day *</label><div class="seg" style="grid-template-columns:repeat(' + CFG.periods.length + ',1fr)">' + CFG.periods.map(function (p) { return '<button type="button" data-act="opfhalf" data-v="' + esc(p.key) + '" class="' + (OP.fhalf === p.key ? 'on' : '') + '">' + esc(p.label) + '</button>'; }).join('') + '</div></div></div></div>' +
+    '<div class="row f"><div class="grow"><label>Date *</label><input data-op="fdate" value="' + esc(OP.fdate) + '" placeholder="dd/mm/yyyy" inputmode="numeric" autocomplete="off"></div><div class="grow"><label>Part of the day *</label><div class="seg" style="grid-template-columns:repeat(' + CFG.periods.length + ',1fr)">' + CFG.periods.map(function (p) { return '<button type="button" data-act="opfhalf" data-v="' + esc(p.key) + '" class="' + (OP.fhalf === p.key ? 'on' : '') + '">' + esc(p.label) + '</button>'; }).join('') + '</div></div></div>' +
+    '<div class="f" style="margin-bottom:0"><label>What time did you take it over? *</label><input type="time" data-op="ftime" value="' + esc(OP.ftime) + '"></div></div>' +
     '<div class="card"><div class="f"><label>Cash received</label><input data-op="cash" type="number" inputmode="decimal" min="0" value="' + esc(OP.cash) + '" placeholder="0"></div>' +
     '<div class="f"><label>Sales on that handover (for the record, optional)</label><input data-op="prevSales" type="number" inputmode="decimal" min="0" value="' + esc(OP.prevSales) + '" placeholder="0"></div>' +
     '<div class="f" style="margin-bottom:0"><label>Remarks (optional)</label><input data-op="notes" value="' + esc(OP.notes) + '" placeholder="e.g. taken over from Red watch" autocomplete="off"></div></div>' +
@@ -3039,15 +3040,17 @@ function opShLines() {   /* the filled-in shortage lines, or a message saying wh
   }
   return out;
 }
+function fmtTime(t) { var m = /^(\d{2}):(\d{2})$/.exec(t || ''); if (!m) return ''; var h = +m[1]; return (h % 12 || 12) + ':' + m[2] + ' ' + (h < 12 ? 'AM' : 'PM'); }
 function opReview() {
   if (!inControl()) return toast('You must be in control to do this');
   if (!OP.from.trim()) return toast('Who handed over to you?');
   if (!OP.fwk) return toast('Choose their shift');
   if (!/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.test(OP.fdate.trim())) return toast('Write their date like 05/10/2026');
   if (!OP.fhalf) return toast('Choose the part of the day');
+  if (!/^\d{2}:\d{2}$/.test(OP.ftime || '')) return toast('Enter the time you took it over');
   var shl = opShLines(); if (typeof shl === 'string') return toast(shl);
   var cash = Math.max(0, num(OP.cash)), n = S.items.length;
-  askConfirm('Save the previous handover?', '<b>From ' + esc(OP.from.trim()) + '</b> · ' + esc(OP.fwk) + ' shift · ' + esc(OP.fdate.trim()) + ' ' + esc(HL(OP.fhalf)) + '<br>' + (shl.length ? '<b>' + shl.length + '</b> shortage' + (shl.length === 1 ? '' : 's') + ' still owed (' + money(shl.reduce(function (a, x) { return a + x.c + x.st; }, 0)) + ')<br>' : '') + 'Cash received <b>' + money(cash) + '</b>' + (OP.prevSales ? ' · previous sales ' + money(num(OP.prevSales)) : '') + '<br>' + n + ' item' + (n === 1 ? '' : 's') + ' will be set to the counts you entered.<br><span class="muted">This becomes the starting point for this shift. It is recorded in History.</span>', 'Yes, save', function () { opCommit(shl, cash); });
+  askConfirm('Save the previous handover?', '<b>From ' + esc(OP.from.trim()) + '</b> · ' + esc(OP.fwk) + ' shift · ' + esc(OP.fdate.trim()) + ' ' + esc(HL(OP.fhalf)) + ' · taken over at ' + fmtTime(OP.ftime) + '<br>' + (shl.length ? '<b>' + shl.length + '</b> shortage' + (shl.length === 1 ? '' : 's') + ' still owed (' + money(shl.reduce(function (a, x) { return a + x.c + x.st; }, 0)) + ')<br>' : '') + 'Cash received <b>' + money(cash) + '</b>' + (OP.prevSales ? ' · previous sales ' + money(num(OP.prevSales)) : '') + '<br>' + n + ' item' + (n === 1 ? '' : 's') + ' will be set to the counts you entered.<br><span class="muted">This becomes the starting point for this shift. It is recorded in History.</span>', 'Yes, save', function () { opCommit(shl, cash); });
 }
 function opCommit(shl, cash) {
   {
@@ -3059,8 +3062,8 @@ function opCommit(shl, cash) {
       b.update(ref('items/' + i.id), { stock: st, open: st, cage: cg, cageOpen: cg, lastEvent: eid });
     });
     shl.forEach(function (x) { var sid = 'open_' + newId('shortages'); b.set(ref('shortages/' + sid), { handoverId: sid, opening: true, lastEvent: eid, at: x.ms, wk: x.l.wk, shiftDate: x.d, shiftHalf: '', month: x.mo, fromEmail: '', fromName: x.l.who.trim(), toEmail: '', toName: '', ctl: [], trail: [], cashHanded: 0, cashCounted: 0, cashShort: r2(x.c), cashOver: 0, items: [], itemsValue: r2(x.st), total: r2(x.c + x.st), note: x.l.note.trim() }); });
-    mkEvent(b, 'opening', null, 0, 0, { name: fr ? 'Workplace started' : 'Opening handover', items: ids, lines: lines, shortLines: shl.length, cash: cash, prevSales: OP.prevSales ? num(OP.prevSales) : 0, note: OP.notes.trim(), fresh: !!fr, fromName: fr ? '' : OP.from.trim(), fromWk: fr ? '' : OP.fwk, fromDate: fr ? '' : OP.fdate.trim(), fromHalf: fr ? '' : OP.fhalf });
-    var u = { 'shift.received': cash, openingDone: true }; if (!fr) u['shift.notes'] = 'Opening handover from ' + OP.from.trim() + ' (' + OP.fwk + ' shift)' + (OP.notes.trim() ? ': ' + OP.notes.trim() : ''); b.update(ref('shop/state'), u);
+    mkEvent(b, 'opening', null, 0, 0, { name: fr ? 'Workplace started' : 'Opening handover', items: ids, lines: lines, shortLines: shl.length, cash: cash, prevSales: OP.prevSales ? num(OP.prevSales) : 0, note: OP.notes.trim(), fresh: !!fr, fromName: fr ? '' : OP.from.trim(), fromWk: fr ? '' : OP.fwk, fromDate: fr ? '' : OP.fdate.trim(), fromHalf: fr ? '' : OP.fhalf, fromTime: fr ? '' : OP.ftime });
+    var u = { 'shift.received': cash, openingDone: true }; if (!fr) u['shift.notes'] = 'Opening handover from ' + OP.from.trim() + ' (' + OP.fwk + ' shift), taken over at ' + fmtTime(OP.ftime) + (OP.notes.trim() ? ': ' + OP.notes.trim() : ''); b.update(ref('shop/state'), u);
     commit(b); OP = null; closeModal(); toast(fr ? 'Workplace started' : 'Previous handover saved', eid);
   }
 }
