@@ -56,7 +56,7 @@ b,strong{font-weight:600}
 .bub .pill{position:absolute;right:8px;top:8px}
 .niqty{margin:6px 0 4px}.niqty .stepper{display:inline-flex;gap:0;height:32px;border-radius:16px;background:var(--soft);border:1px solid var(--secb);overflow:hidden;flex:none;align-items:center}.niqty .stepper button{width:32px;height:32px;border:0;border-radius:0;background:none;color:var(--brand);font-size:18px;padding:0}.niqty .stepper .stepin{width:42px;height:32px;border:0;border-left:1px solid var(--secb);border-right:1px solid var(--secb);border-radius:0;font-size:15px;font-weight:700;padding:0 2px;background:var(--surface)}
 .icorow{display:flex;gap:6px;margin-top:8px}.icorow button{flex:1;max-width:46px;height:42px;border-radius:12px;border:2px solid var(--secb);background:var(--surface);font-size:22px;padding:0;line-height:1}.icorow button.on{border-color:var(--brand);background:var(--soft)}
-.brows{padding:2px 14px;margin-top:0}.bub.brow{display:flex;align-items:center;gap:10px;width:100%;min-height:0;padding:11px 0;background:none;border:0;border-radius:0;box-shadow:none}.bub.brow+.bub.brow{border-top:1px solid var(--line)}.bub.brow .n{font-size:15px}.bub.brow .s{display:block;font-size:12.5px;margin-top:2px}.bub.brow .s b{font-size:14px;font-weight:700;color:var(--link)}.bub.brow .s b.z{color:var(--exp)}.bub.brow .pr{font-size:17px;color:var(--brand)}.bub.brow .ch{color:var(--muted)}
+.brows{padding:2px 14px;margin-top:0}.bsechead{display:flex;align-items:center;gap:8px;padding:10px 0 6px;border-bottom:2px solid var(--line)}.bsechead>span:first-child{font-size:18px}.bsechead b{font-size:15px}.bsechead .muted{font-size:12px}.bub.brow{display:flex;align-items:center;gap:10px;width:100%;min-height:0;padding:11px 0;background:none;border:0;border-radius:0;box-shadow:none}.bub.brow+.bub.brow{border-top:1px solid var(--line)}.bub.brow .n{font-size:15px}.bub.brow .s{display:block;font-size:12.5px;margin-top:2px}.bub.brow .s b{font-size:14px;font-weight:700;color:var(--link)}.bub.brow .s b.z{color:var(--exp)}.bub.brow .pr{font-size:17px;color:var(--brand)}.bub.brow .ch{color:var(--muted)}
 .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .cc{background:var(--surface);border:0;border-left:5px solid var(--line);border-radius:14px;box-shadow:var(--sh);padding:9px 10px 9px 12px;text-align:left;font:inherit;color:inherit;display:block;width:100%;position:relative}
 .cc.done{border-left-color:var(--cnt);background:linear-gradient(90deg,var(--cnt-bg),var(--surface) 70%)}.cc.low{border-left-color:var(--soon)}.cc.out{border-left-color:var(--exp)}
@@ -262,7 +262,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.43', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.44', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -858,7 +858,7 @@ function pickerList(q) {
 }
 function openPicker(mode) {
   PK = { mode: mode, w: '', tos: (SH().tos || []).slice() };
-  var title = { open: 'Who owes from before…', loan: 'Lend cash to…', sale: 'Sold on credit to…', cnote: 'Credit note: who took it…', to: 'Hand over to (pick one or more)…' }[mode];
+  var title = { open: 'Who owes from before…', loan: 'Lend cash to…', sale: 'Sold on credit to…', cnote: 'Credit note: who took it…', to: 'Hand over to (pick one or more)…', from: 'Who gave you the shift…' }[mode];
   var chips = [['', 'All']].concat(WATCHES.map(function (w) { return [w, w]; }));
   if (mode !== 'to') chips.push(['Saved', 'Saved names']);
   var pkHtml = ('<h2>' + title + '</h2><div class="sq"><input id="pk-q" placeholder="Search name or number" autocomplete="off"><div class="chips" id="pk-chips" style="margin-top:8px">' + chips.map(function (c) { return '<button data-act="pkw" data-w="' + c[0] + '" class="' + (c[0] === '' ? 'on' : '') + '">' + c[1] + '</button>'; }).join('') + '</div></div><div class="list" id="pk-list">' + pickerList('') + '</div>' + (mode === 'to' ? '<button class="btn block" id="pk-done" data-act="pkdone" style="margin-top:10px">Done (' + PK.tos.length + ' chosen)</button>' : '<button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>'));
@@ -871,6 +871,9 @@ function pickParty(pid, newName, extra) {
     setShift({ tos: PK.tos.slice() }); $('#pk-list').innerHTML = pickerList($('#pk-q').value); $('#pk-done').textContent = 'Done (' + PK.tos.length + ' chosen)'; return;
   }
   PK.ng = newName ? Object.assign({ id: pid, name: newName }, extra || {}) : null;
+  if (PK.mode === 'from') {   /* the previous handover: the name and its shift come from the list (or a new person added on the way) */
+    var fp = newName ? null : party(pid); OP.from = newName ? newName : plabel(fp); OP.fwk = newName ? ((extra && extra.watch) || '') : (fp && fp.watch) || OP.fwk; OP.fng = PK.ng; closeModal(); opForm(); return;
+  }
   if (PK.mode === 'cnote') {
     var cit = item(sel); if (!cit) { closeModal(); return; }
     var ctot = cit.price * CN.q, cbal = newName ? 0 : balance(pid), cwho = newName ? newName + ' (new saved name)' : plab(pid);
@@ -1174,10 +1177,14 @@ function startFresh() {
 function vStock() {
   var su = startupOn(), h = (su ? startupBanner() : '') + '<button class="btn block" data-act="newitem" style="margin-bottom:14px">+ Add a new item</button>';
   if (!S.items.length) return h + '<div class="card empty">Your items will show here.</div>';
-  var SI = S.items.filter(function (i) { return !gone0(i); }).concat(S.items.filter(gone0));   /* what ran out goes to the bottom */
-  h += '<div class="card brows">' + SI.map(function (i) {
+  var nm2 = function (x, y) { return x.name.localeCompare(y.name); }, row = function (i) {
     return '<button class="bub brow"' + (gone0(i) ? ' style="opacity:.6"' : '') + ' data-act="stockitem" data-id="' + i.id + '"><span class="grow"><span class="n">' + esc(i.name) + '</span><span class="s"><b class="' + (i.stock <= 0 ? 'z' : '') + '">' + i.stock + '</b> ' + (i.shelf ? 'on shelf' : 'in fridge') + (hasCage(i) ? ' &nbsp;·&nbsp; 📦 ' + uLab(i, i.cage) + ' in storage' : '') + '</span></span><b class="pr">' + money(i.price) + '</b><span class="ch">›</span></button>';
-  }).join('') + '</div>' + (su ? '<button class="btn block" data-act="stbegin" style="background:var(--ok);margin-top:4px">✓ Start workplace</button><p class="muted">Press when your items are ready. You can still edit items afterwards.</p>' : '') + '<p class="muted">Tap an item to count it, move a case to the fridge, or record spoilage.</p>';
+  }, sec = function (title, ic, list) {   /* each place its own card, A to Z, what ran out at the bottom */
+    if (!list.length) return '';
+    list = list.filter(function (i) { return !gone0(i); }).sort(nm2).concat(list.filter(gone0).sort(nm2));
+    return '<div class="card brows" style="margin-top:12px"><div class="bsechead"><span>' + ic + '</span><b>' + title + '</b><span class="muted">' + list.length + (list.length === 1 ? ' item' : ' items') + '</span></div>' + list.map(row).join('') + '</div>';
+  };
+  h += sec('Fridge', '🧊', S.items.filter(function (i) { return !i.shelf; })) + sec('Shelf', '🧁', S.items.filter(function (i) { return i.shelf; })) + (su ? '<button class="btn block" data-act="stbegin" style="background:var(--ok);margin-top:4px">✓ Start workplace</button><p class="muted">Press when your items are ready. You can still edit items afterwards.</p>' : '') + '<p class="muted">Tap an item to count it, move a case to the fridge, or record spoilage.</p>';
   return h;
 }
 function stockSheet() {
@@ -3003,7 +3010,7 @@ function opForm() {
     return '<tr><td>' + esc(i.name) + '</td><td><input class="stepin" style="width:74px;height:40px;font-size:14px" type="number" inputmode="numeric" min="0" data-oc="' + i.id + '" data-f="stock" value="' + esc(c.stock) + '"></td><td>' + (!hasCage(i) ? '<span class="muted">shelf</span>' : '<input class="stepin" style="width:74px;height:40px;font-size:14px" type="number" inputmode="numeric" min="0" data-oc="' + i.id + '" data-f="cage" value="' + esc(c.cage) + '">') + '</td></tr>';
   }).join('');
   modal('<h2>📝 Previous handover (by hand)</h2><p class="muted" style="margin-top:0">Copy these from the handover you received. It becomes this shift\'s starting point.</p>' +
-    '<div class="card" style="border-top:3px solid var(--brand)"><h2 style="margin-top:0">Handed over by</h2><div class="f"><label>Who gave you the shift *</label><input data-op="from" list="op-ppl" value="' + esc(OP.from) + '" placeholder="Name" autocomplete="off"><datalist id="op-ppl">' + S.people.map(function (p) { return '<option value="' + esc(plabel(p)) + '">'; }).join('') + '</datalist></div>' +
+    '<div class="card" style="border-top:3px solid var(--brand)"><h2 style="margin-top:0">Handed over by</h2><div class="f"><label>Who gave you the shift *</label><button type="button" class="btn sec selbtn" data-act="oppick" style="width:100%"><span>' + (OP.from ? esc(OP.from) : 'Search a name') + '</span><span>▾</span></button></div>' +
     '<div class="f"><label>Their shift *</label><div class="seg" style="grid-template-columns:repeat(' + Math.min(4, WATCHES.length) + ',1fr)">' + WATCHES.map(function (w) { return '<button type="button" data-act="opfwk" data-v="' + esc(w) + '" class="' + (OP.fwk === w ? 'on' : '') + '">' + esc(w) + '</button>'; }).join('') + '</div></div>' +
     '<div class="row f"><div class="grow"><label>Date *</label><input data-op="fdate" value="' + esc(OP.fdate) + '" placeholder="dd/mm/yyyy" inputmode="numeric" autocomplete="off"></div><div class="grow"><label>Part of the day *</label><div class="seg" style="grid-template-columns:repeat(' + CFG.periods.length + ',1fr)">' + CFG.periods.map(function (p) { return '<button type="button" data-act="opfhalf" data-v="' + esc(p.key) + '" class="' + (OP.fhalf === p.key ? 'on' : '') + '">' + esc(p.label) + '</button>'; }).join('') + '</div></div></div></div>' +
     '<div class="card"><div class="f"><label>Cash received</label><input data-op="cash" type="number" inputmode="decimal" min="0" value="' + esc(OP.cash) + '" placeholder="0"></div>' +
@@ -3045,6 +3052,7 @@ function opReview() {
 function opCommit(shl, cash) {
   {
     var b = writeBatch(DB), eid = newEv(), ids = [], lines = [], fr = OP.fresh;
+    if (OP.fng) { PK = { ng: OP.fng }; ngBatch(b); }   /* a new person added on the way stays on the list */
     S.items.forEach(function (i) {
       var c = OP.counts[i.id] || {}, st = Math.max(0, Math.floor(num(c.stock))), cg = hasCage(i) ? Math.max(0, Math.floor(num(c.cage))) : 0;
       ids.push(i.id); lines.push({ item: i.id, name: i.name, stock: st, cage: cg });
@@ -4561,6 +4569,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'ophide') { if (isPres()) guard(updateDoc(ref('shop/state'), { openingDone: true })); }
   else if (a === 'opopen') opOpen();
   else if (a === 'opreview') opReview();
+  else if (a === 'oppick') openPicker('from');
   else if (a === 'opfwk') { OP.fwk = b.dataset.v; opForm(); }
   else if (a === 'opfhalf') { OP.fhalf = b.dataset.v; opForm(); }
   else if (a === 'opcredit') { if (!inControl()) return toast('You must be in control to do this'); openPicker('open'); }
