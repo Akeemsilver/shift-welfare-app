@@ -208,7 +208,7 @@ body,#main{overflow-anchor:none}
 body.spo nav,body.kb nav{display:none!important}body.kb{--navoff:0px}body.kb .modal>div{margin-bottom:0;max-height:calc(var(--vvh,100vh) - 24px - env(safe-area-inset-bottom))}body.kb .modal.top>div{max-height:var(--vvh,100vh)}
 body.kb{padding-bottom:16px}   /* the bottom bar is hidden, so the end of the page stops right at the top of the keyboard with no gap */
 body.kb .modal:not(.top):not(.mid){align-items:flex-start}
-body.kb .modal:not(.top):not(.mid)>div{height:min(100%,var(--vvh,100%));max-height:none;border-top:0;border-radius:0 0 18px 18px;padding-top:0;box-shadow:0 6px 24px rgba(0,0,0,.35);transition:none}
+body.kb .modal:not(.top):not(.mid)>div{height:100%;max-height:none;border-top:0;border-radius:0 0 18px 18px;padding-top:0;box-shadow:0 6px 24px rgba(0,0,0,.35);transition:none}
 body.kb .modal:not(.top):not(.mid)>div::before{position:sticky;top:0;z-index:3;margin:0 -16px;width:auto;border-radius:0;height:calc(22px + env(safe-area-inset-top));background:linear-gradient(#B5C0C8,#B5C0C8) center calc(10px + env(safe-area-inset-top))/38px 4px no-repeat,var(--pop)}
 body.kb .modal:not(.top):not(.mid)>div>h2:first-child{position:sticky;top:calc(22px + env(safe-area-inset-top));z-index:3;margin:0 -16px 8px;padding:0 16px 8px;background:var(--pop)}   /* keyboard open: the pop-up fills the screen from the top at once, grab bar and title stay put (pull them down to close), only what is under them scrolls; closing the keyboard puts it back at the bottom */   /* the bottom bar is hidden while typing, so pop-ups and the toast use the whole space above the keyboard */body.spo .modal>div{margin-bottom:0;max-height:calc(100vh - 24px - env(safe-area-inset-bottom))}
 [hidden]{display:none!important}
@@ -267,7 +267,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.49', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.50', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -5086,8 +5086,8 @@ window.addEventListener('resize', vv); vv();
 })();
 (function () {   /* on a phone, while a box is being typed in the bottom bar is hidden so it never rides above the keyboard; close the keyboard to see it again */
   var typing = function (t) { return t && ((t.tagName === 'INPUT' && !/^(checkbox|radio|button|file|range|submit|hidden|color|date|month|time|datetime-local)$/.test(t.type)) || t.tagName === 'TEXTAREA'); }, coarse = function () { return window.matchMedia && window.matchMedia('(pointer: coarse)').matches; };
-  document.addEventListener('focusin', function (e) { if (coarse() && typing(e.target)) document.body.classList.add('kb'); });
-  document.addEventListener('focusout', function () { setTimeout(function () { if (!typing(document.activeElement)) document.body.classList.remove('kb'); }, 120); });
+  document.addEventListener('focusin', function (e) { if (coarse() && typing(e.target)) { document.body.classList.add('kb'); setTimeout(vv, 150); setTimeout(vv, 450); } });   /* the keyboard slides in; measure again when it has stopped */
+  document.addEventListener('focusout', function () { setTimeout(function () { if (!typing(document.activeElement)) { document.body.classList.remove('kb'); setTimeout(vv, 150); setTimeout(vv, 450); } }, 120); });
 })();
 window.addEventListener('online', render); window.addEventListener('offline', render);
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(function () {});
