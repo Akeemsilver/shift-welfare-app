@@ -145,7 +145,7 @@ input:disabled{background:var(--dis);color:var(--muted)}
 .bhd.it,.bhd.who{background:var(--brand)}.bhd.bill{background:var(--ok)}.bhd.pay{background:#8a6410}.bhd.rcp{background:var(--muted)}.bhd.red{background:var(--exp)}.bhd[data-act]{cursor:pointer}.bok{background:#e1f3e4;color:#2e7d32;border-radius:10px;padding:1px 8px;font-size:11px;margin-left:6px;letter-spacing:0}
 .bd2{padding:10px 14px}.bbad{border:2px solid var(--exp)}.bkv{display:flex;justify-content:space-between;gap:10px;font-size:13.5px;padding:3px 0}.bkv span{color:var(--muted)}.bkv b{text-align:right}.bhint{font-size:12px;font-weight:700;color:var(--brand);margin-top:4px}
 .bz1{background:var(--soft);border-top:3px solid #5b7fa6;padding:10px 14px}.bz2{border-top:3px solid var(--brand);padding:10px 14px}.bzt{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:13px;letter-spacing:.04em}.bzt small{font-weight:500;font-size:11px;color:var(--muted);letter-spacing:0}.bzs{font-size:12px;color:var(--muted);margin:1px 0 6px}
-.bsec{font-size:13px;font-weight:700;margin:10px 0 2px}.bsep{height:1px;background:var(--line);margin:8px 0}.qrow{display:flex;align-items:center;gap:8px;padding:5px 10px}.qrow .grow b{display:block;font-size:14px;font-weight:600}.qrow .grow span{font-size:11.5px;color:var(--muted)}
+.bsec{font-size:13px;font-weight:700;margin:10px 0 2px}.bsep{height:1px;background:var(--line);margin:8px 0}.qpair{display:flex;justify-content:space-between;align-items:flex-start;padding:4px 11px 0 11px;margin-top:2px}.qpair b{display:block;font-size:14px;font-weight:600}.qpair span{font-size:11.5px;color:var(--muted)}.qrow{display:flex;align-items:center;gap:8px;padding:5px 10px}.qrow .grow b{display:block;font-size:14px;font-weight:600}.qrow .grow span{font-size:11.5px;color:var(--muted)}
 .badd{display:block;width:100%;margin:10px 0;border:2px dashed var(--secb);border-radius:14px;background:var(--surface);color:var(--brand);font:inherit;font-weight:700;padding:11px}.bwarn{background:var(--soon-bg);color:var(--soon);border-radius:10px;padding:8px 10px;font-size:12.5px;font-weight:600;margin-top:8px}.bnote{background:var(--soft);border-radius:10px;padding:8px 12px;font-size:12.5px;color:var(--muted)}
 .bf .stepper{display:inline-flex;gap:0;height:32px;border-radius:16px;background:var(--soft);border:1px solid var(--secb);overflow:hidden;flex:none;align-items:center}.bf .stepper button{width:32px;height:32px;border:0;border-radius:0;background:none;color:var(--brand);font-size:18px;padding:0}.bf .stepper .stepin{width:42px;height:32px;border:0;border-left:1px solid var(--secb);border-right:1px solid var(--secb);border-radius:0;font-size:15px;font-weight:700;padding:0 2px;background:var(--surface)}
 .bstep .stepper{gap:4px}.bstep .stepper button{width:34px;height:36px;font-size:19px;border-radius:10px}.bstep .stepper .stepin{width:52px;height:36px;font-size:15px}.dest{display:flex;align-items:center;gap:8px;padding:8px 10px;margin:6px 0;border-radius:14px;border:2px solid var(--secb);background:var(--surface)}.dest.on{border-color:var(--brand);background:var(--soft)}.dest .dn{flex:1;min-width:0;display:flex;align-items:center;gap:8px;cursor:pointer}.dest .di{font-size:20px}.dest .dn b{display:block;font-size:14px}.dest .dn span:not(.di){display:block;font-size:11.5px;color:var(--muted);font-weight:400;line-height:1.25}.bsl{font-size:13px;font-weight:700;margin-bottom:5px;white-space:nowrap}
@@ -259,7 +259,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.34', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.35', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1326,6 +1326,10 @@ function foldHtml(l, k) {   /* a finished item: its header with a green "complet
   var kv = function (a, b) { return '<div class="bkv"><span>' + a + '</span><b>' + b + '</b></div>'; };
   return '<div class="card bline bfolded">' + stepHd(k + 2, 'ITEM ' + (k + 1) + ' · ' + esc(nm) + ' <span class="bok">✓ complete</span>', (lineHeadCost(l) ? lineHeadCost(l) + ' ' : '') + '▾', 'it', ' data-act="bfold" data-k="' + k + '"') + '<div class="bd2">' + kv('Bought', bought) + kv('Going to', going) + (isNew ? kv('New item', 'sells ' + money(num(l.price)) + (lineP(l) > 1 ? ' · ' + lineP(l) + ' to a ' + l.kind : '')) : '') + (lc > 0 && t.items > 0 ? kv('Cost', (t.bun && t.b > 0 && !t.u ? money(lc / t.b) + ' a ' + w + ' · ' : '') + money(lc / t.items) + ' each') : '') + '<div class="bhint">Tap the dark bar to open and change it</div></div></div>';
 }
+function qPair(a, b, ex) {   /* Cases on the left, Singles on the right; the Singles stepper lines up with the Storage and Shop steppers below it */
+  var one = function (x, right) { return '<div' + (right ? ' style="text-align:right"' : '') + '><b>' + x[0] + '</b><span>' + x[1] + '</span><div style="margin-top:4px">' + stepper(x[2], x[3], ex) + '</div></div>'; };
+  return '<div class="qpair">' + (a ? one(a, false) : '<div></div>') + one(b, true) + '</div>';
+}
 function qRow(label, sub, act, n, ex) { return '<div class="qrow"><div class="grow"><b>' + label + '</b><span>' + sub + '</span></div>' + stepper(act, n, ex) + '</div>'; }
 function destRows(l, k) {   /* Storage and Shop, each with its own - and +, always adding up to what was bought */
   var t = lineParts(l), w = lineWord(l), sh = lineShelf(l), ex = 'data-k="' + k + '"', shopN = t.n - t.sto, word = t.bun ? unitPl(w, 2) : 'singles';
@@ -1346,7 +1350,7 @@ function buyLineHtml(l, k) {
     '<div class="f"><label>Name</label><input data-bl="' + k + '" data-f="name" value="' + esc(l.name) + '" autocomplete="off"></div><div class="f"><label>Sold from</label>' + sel('where', [['fridge', '🧊 Fridge'], ['shelf', '🧁 Shelf']], l.where) + '</div><div class="f"><label>How does it usually come? (case, pack, box…)</label>' + sel('kind', [['case', 'Case'], ['pack', 'Pack'], ['box', 'Box'], ['carton', 'Carton'], ['item', 'Single items only']], l.kind) + '</div>' +
     (l.kind === 'item' ? '' : '<div class="f"><label>Items in one ' + l.kind + '</label>' + ig('<input data-bl="' + k + '" data-f="per" type="number" inputmode="numeric" min="1" value="' + esc(l.per) + '">', '', 'items') + '</div>') + '<div class="f"><label>Selling price (each item)</label>' + ig('<input data-bl="' + k + '" data-f="price" type="number" inputmode="decimal" value="' + esc(l.price) + '">', '$') + '</div></div>';
   h += '<div class="' + (isNew ? 'bz2' : 'bd2') + '">' + (isNew ? '<div class="bzt"><span>🛒 THIS BUY</span><small>this purchase only</small></div><div class="bzs">What you bought today. Next time you only fill in this part.</div>' : '') +
-    '<div class="bsec">How many did you buy?</div>' + (bun ? qRow(capW(unitPl(w, 2)), p + ' in a ' + w, 'bl', t.b, ex) : '') + qRow('Singles', 'loose items', 'bu', t.u, ex) + '<div class="bsep"></div>' +
+    '<div class="bsec">How many did you buy?</div>' + qPair(bun ? [capW(unitPl(w, 2)), p + ' in a ' + w, 'bl', t.b] : null, ['Singles', 'loose items', 'bu', t.u], ex) + '<div class="bsep"></div>' +
     '<div class="bsec">Where are they going?</div><div class="muted" style="font-size:12px;margin-bottom:4px">Tap a place to send them all there, or change the numbers. They always add up to what you bought.</div>' +
     '<div id="bw' + k + '" data-h="' + esc(destRows(l, k)) + '">' + destRows(l, k) + '</div>' +
     '<div id="bs' + k + '" style="padding:10px;border-radius:10px;background:var(--soon-bg);margin-top:12px;font-size:14px">' + buySummary(l) + '</div>' + costBlock(l, k) +
@@ -4657,6 +4661,12 @@ document.addEventListener('keydown', function (e) {   /* the Enter key on the ph
   var t = e.target; if (!t) return;
   var isEnter = e.key === 'Enter' || e.keyCode === 13, isTab = (e.key === 'Tab' || e.keyCode === 9) && !e.shiftKey;   /* the phone's number pad shows a Tab arrow on the cash box: treat it like Enter */
   if (!isEnter && !(isTab && t.dataset && t.dataset.sh === 'counted')) return;
+  if (isEnter && t.closest && t.closest('.bf') && /^(INPUT|SELECT)$/.test(t.tagName) && t.type !== 'file' && t.type !== 'button') {   /* Add stock: Enter closes the keyboard and keeps the page where it is. Only from an item's cost box does it also fold the item, if it is complete */
+    e.preventDefault(); var sy2 = window.pageYOffset, fk = t.dataset && t.dataset.f === 'cost' && t.dataset.bl !== undefined ? +t.dataset.bl : -1; t.blur();
+    if (fk >= 0 && BUY && BUY.lines[fk]) { var fl2 = BUY.lines[fk]; fl2.chk = true; if (!lineMissing(fl2)) fl2.fold = true; render(); }
+    var back2 = function () { if (Math.abs(window.pageYOffset - sy2) > 2) window.scrollTo(0, sy2); }; setTimeout(back2, 0); setTimeout(back2, 150); setTimeout(back2, 450);
+    return;
+  }
   if (t.dataset && t.dataset.sh === 'counted') { e.preventDefault(); var sy1 = window.pageYOffset; t.blur(); setTimeout(function () { if (Math.abs(window.pageYOffset - sy1) > 2) window.scrollTo(0, sy1); }, 0); setTimeout(function () { if (Math.abs(window.pageYOffset - sy1) > 2) window.scrollTo(0, sy1); }, 350); setTimeout(function () { if (Math.abs(window.pageYOffset - sy1) > 2) window.scrollTo(0, sy1); }, 800); return; }
   if (/^rx-(cash|c\d+|g\d+)$/.test(t.id || '')) {   /* receiving a handover: Enter goes to the next count box, and closes the keyboard after the last one */
     e.preventDefault(); var all = Array.prototype.slice.call(document.querySelectorAll('#spage input[id^="rx-"]')), nx = all[all.indexOf(t) + 1];
