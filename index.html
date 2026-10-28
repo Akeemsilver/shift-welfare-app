@@ -64,6 +64,7 @@ b,strong{font-weight:600}
 .cc .cv{font-size:15px;font-weight:500;line-height:1.15;color:var(--ink);margin-top:2px}.cc.out .cv{color:var(--exp)}
 .cc .cs{font-size:11px;color:var(--muted);margin-top:1px}
 .cc .ck{position:absolute;right:10px;top:8px;font-size:12px;font-weight:700;color:var(--cnt)}
+.rcfix{display:block;color:var(--exp);font-weight:700;font-size:10px}
 .cc .cpr{position:absolute;right:10px;top:9px;font-size:12px;font-weight:700;line-height:1.2;color:var(--link)}   /* the price sits where the check goes once the item is counted */
 .cprog{height:8px;border-radius:6px;background:var(--soft);overflow:hidden;margin-top:8px}.cprog>div{height:100%;background:var(--cnt);border-radius:6px}
 .pill{display:inline-block;font-size:12px;font-weight:600;color:var(--ok)}
@@ -269,7 +270,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.55', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.56', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -491,6 +492,7 @@ function dayDelta(e) {
   else if (e.type === 'buy') { if (!(e.writeoff > 0)) return null; f.wo = e.writeoff; }
   else if (e.type === 'cashshort') f.cshort = e.amt;
   else if (e.type === 'shortfix') f.cshort = e.dCash || 0;
+  else if (e.type === 'hocorr') { f.short = e.cogs || 0; f.cshort = e.dCashShort || 0; }   /* a handover correction moves the shortage cost and the cash short of the shift that handed over */
   else if (e.type === 'stockedit' && e.cogs) f.sedit = e.cogs;
   else return null;
   return { wk: e.wk || 'None', f: f, it: it, nc: nc };
@@ -533,7 +535,7 @@ function setShift(obj) { var u = {}; for (var k in obj) u['shift.' + k] = obj[k]
 /* put back everything an entry did; returns a message if it can't be undone */
 function reverseEvent(b, e) {
   var it = item(e.item), cid = e.cid || rootOf(e.cr || e.person || ''); LE = e.id;   /* the cancelled record carries the same id as the event */
-  if (['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'shiftrec', 'watchchg'].indexOf(e.type) >= 0) return 'This entry cannot be cancelled';
+  if (['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'hocorr', 'shiftrec', 'watchchg'].indexOf(e.type) >= 0) return 'This entry cannot be cancelled';
   if (e.type === 'sale') { if (!it) return 'That item no longer exists'; itemInc(b, it.id, { stock: e.qty }); if (e.cr) balInc(b, cid, -e.amt); }
   else if (e.type === 'count') { if (e.qty > 0) { if (!it) return 'That item no longer exists'; itemInc(b, it.id, { stock: e.qty }); } }
   else if (e.type === 'cnote') balInc(b, cid, -e.amt);
@@ -970,7 +972,7 @@ function shortView(mo, ms, mr, allS, allR) {
     '<div class="card"><h2>By watch</h2><table style="font-size:12px"><tr><th>Watch</th><th>Short</th><th>Repaid</th><th>Owed now</th></tr>' + rows.map(function (r) {
       return '<tr><td>' + wsw(r.w) + '</td><td>' + money(r.short) + '</td><td>' + money(r.repaid) + '</td><td' + (r.owed > 0 && r.owed === mx ? ' class="bad"><b>' : '>') + money(r.owed) + (r.owed > 0 && r.owed === mx ? '</b>' : '') + '</td></tr>';
     }).join('') + '<tr class="tot"><td>Total</td><td>' + money(tot('short')) + '</td><td>' + money(tot('repaid')) + '</td><td>' + money(tot('owed')) + '</td></tr></table>' +
-    '<p class="muted" style="margin:8px 0 0"><b>Short</b>: cash and items the receiver found missing at that watch\'s handovers this month (items at selling price). <b>Owed now</b>: all shortages ever, minus repayments.' + (tot('over') ? ' Cash found over this month: ' + money(tot('over')) + ' (kept separate, it does not reduce what is owed).' : '') + '</p>' +
+    '<p class="muted" style="margin:8px 0 0"><b>Short</b>: cash and items the incoming shift found missing at that watch\'s handovers this month (items at selling price). <b>Owed now</b>: all shortages ever, minus repayments.' + (tot('over') ? ' Cash found over this month: ' + money(tot('over')) + ' (kept separate, it does not reduce what is owed).' : '') + '</p>' +
     '<button class="btn block" data-act="payopen" style="margin-top:10px">💵 Pay for a shift</button>' + '</div>' +
     '<div class="card"><h2>Shortages this month (' + ms.length + ')</h2>' + (ms.length ? '<div class="list">' + ms.map(function (x) {
       return '<div data-act="shview" data-id="' + x.id + '" style="cursor:pointer"><div class="grow"><b>' + esc(x.shiftDate) + ' ' + esc(HL(x.shiftHalf)) + '</b> ' + wsw(x.wk) + '<div class="muted">handed over by ' + esc(x.fromName) + ' · received by ' + esc(x.toName) + '</div><div class="muted">' + (x.cashShort ? 'cash ' + money(x.cashShort) : '') + (x.cashShort && x.itemsValue ? ' · ' : '') + (x.itemsValue ? 'stock ' + money(x.itemsValue) : '') + (x.cashOver ? ' cash over ' + money(x.cashOver) : '') + '</div></div><b class="' + (x.total > 0 ? 'bad' : '') + '">' + money(x.total) + '</b></div>';
@@ -980,7 +982,7 @@ function shortView(mo, ms, mr, allS, allR) {
 function shDetail(id) {
   var x = HSH[id]; if (!x) return;
   var it = (x.items || []).map(function (i) { return '<tr><td>' + esc(i.name) + ' <span class="tag">' + esc(i.kind) + '</span></td><td>' + i.handed + '</td><td>' + i.counted + '</td><td>' + money(i.value) + '</td></tr>'; }).join('');
-  $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div style="max-height:90vh;overflow:auto"><h2 style="color:var(--exp)">Shortage · ' + esc(x.wk) + ' watch</h2><div class="card sum" style="box-shadow:none;padding:8px 14px 10px"><div><span>Shift</span><b>' + esc(x.shiftDate) + ' ' + esc(HL(x.shiftHalf)) + '</b></div><div><span>Handed over by</span><b>' + esc(x.fromName) + (x.fromWatch && x.fromWatch !== x.wk ? '<div class="muted" style="font-weight:500">' + esc(x.fromWatch) + ' watch, visiting</div>' : '') + '</b></div><div><span>Received by</span><b>' + esc(x.toName) + '</b></div>' + (x.cashExpected != null && x.cashExpected !== x.cashHanded ? '<div><span>Cash expected (from the sales)</span><b>' + money(x.cashExpected) + '</b></div>' : '') + '<div><span>Cash handed over (counted by giver)</span><b>' + money(x.cashHanded) + '</b></div><div><span>Cash counted</span><b>' + money(x.cashCounted) + '</b></div>' +
+  $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div style="max-height:90vh;overflow:auto"><h2 style="color:var(--exp)">Shortage · ' + esc(x.wk) + ' watch</h2><div class="card sum" style="box-shadow:none;padding:8px 14px 10px"><div><span>Shift</span><b>' + esc(x.shiftDate) + ' ' + esc(HL(x.shiftHalf)) + '</b></div><div><span>Handed over by</span><b>' + esc(x.fromName) + (x.fromWatch && x.fromWatch !== x.wk ? '<div class="muted" style="font-weight:500">' + esc(x.fromWatch) + ' watch, visiting</div>' : '') + '</b></div><div><span>Received by</span><b>' + esc(x.toName) + '</b></div>' + (x.cashExpected != null && x.cashExpected !== x.cashHanded ? '<div><span>Cash expected (from the sales)</span><b>' + money(x.cashExpected) + '</b></div>' : '') + '<div><span>Cash handed over (counted by the outgoing shift)</span><b>' + money(x.cashHanded) + '</b></div><div><span>Cash counted</span><b>' + money(x.cashCounted) + '</b></div>' +
     (x.cashShort ? '<div><span>Cash short</span><b class="bad">' + money(x.cashShort) + '</b></div>' : '') + (x.cashOver ? '<div><span>Cash over</span><b>' + money(x.cashOver) + '</b></div>' : '') + (x.itemsValue ? '<div><span>Stock short (selling price)</span><b class="bad">' + money(x.itemsValue) + '</b></div>' : '') + '<div class="t"><span>Total short</span><span>' + money(x.total) + '</span></div></div>' + (x.fromWatch && x.fromWatch !== x.wk ? '<div class="muted" style="margin-bottom:8px">Recorded against the <b style="color:var(--ink)">' + esc(x.wk) + ' watch</b>, which was on duty.</div>' : '') + ((x.trail || []).length ? '<div class="muted" style="margin-bottom:8px">Held control this shift: ' + (function () { var seen = {}, out = []; x.trail.forEach(function (t) { [[t.from, t.fromWk], [t.to, t.toWk]].forEach(function (q) { if (q[0] && !seen[q[0]]) { seen[q[0]] = 1; out.push('<b style="color:var(--ink)">' + esc(q[0]) + '</b>' + (q[1] ? ' (' + esc(q[1]) + ')' : '')); } }); }); return out.join(', '); })() + '.</div>' : '') +
     (it ? '<table><tr><th>Item</th><th>Handed</th><th>Counted</th><th>Value</th></tr>' + it + '</table>' : '') +
     ((x.corrections || []).length ? '<div class="card" style="margin-top:10px;box-shadow:none;background:var(--soft)"><b>Corrected</b>' + x.corrections.map(function (c) { return '<div class="muted" style="margin-top:4px"><b style="color:var(--ink)">' + esc(c.byName || '') + '</b> · ' + new Date(c.at).toLocaleDateString([], { day: 'numeric', month: 'short' }) + ': total ' + money(c.before.total) + ' → ' + money(c.after.total) + '<br>' + esc(c.reason) + '</div>'; }).join('') + '</div>' : '') +
@@ -995,9 +997,9 @@ function shFixForm(id) {
   var exp = x.cashExpected != null ? x.cashExpected : x.cashHanded;
   $('#cf') && $('#cf').remove();
   $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div style="max-height:90vh;overflow:auto"><h2>Correct counts · ' + esc(x.wk) + ' watch, ' + esc(x.shiftDate) + '</h2><p class="muted" style="margin-top:0">Fix what was really counted. The shortage is recalculated and the old numbers are kept in its record with your name and reason.</p>' +
-    '<div class="card" style="box-shadow:none;background:var(--soft)"><label>Cash counted by the receiver (expected ' + money(exp) + ')</label><div class="ig"><i>$</i><input data-fx="cash" type="number" inputmode="decimal" value="' + esc(FX.cash) + '"></div></div>' +
+    '<div class="card" style="box-shadow:none;background:var(--soft)"><label>Cash counted by the incoming shift (expected ' + money(exp) + ')</label><div class="ig"><i>$</i><input data-fx="cash" type="number" inputmode="decimal" value="' + esc(FX.cash) + '"></div></div>' +
     ((x.items || []).length ? '<div class="card" style="box-shadow:none;background:var(--soft)"><label>Items counted</label><table><tr><th>Item</th><th>Handed</th><th>Counted</th></tr>' + x.items.map(function (i, k) { return '<tr><td>' + esc(i.name) + ' <span class="tag">' + esc(i.kind) + '</span></td><td>' + i.handed + '</td><td><div class="ig" style="width:84px;margin-left:auto;height:38px"><input data-fxi="' + k + '" type="number" inputmode="numeric" value="' + esc(FX.items[k]) + '" style="text-align:right"></div></td></tr>'; }).join('') + '</table></div>' : '') +
-    '<div class="f"><label>Why? (required)</label><input data-fx="reason" value="' + esc(FX.reason) + '" placeholder="e.g. receiver typed 6 instead of 60" autocomplete="off"></div>' +
+    '<div class="f"><label>Why? (required)</label><input data-fx="reason" value="' + esc(FX.reason) + '" placeholder="e.g. the incoming shift typed 6 instead of 60" autocomplete="off"></div>' +
     '<button class="btn block" data-act="shfixgo" data-id="' + esc(id) + '">Review the correction</button><button class="btn sec block" data-act="cno" style="margin-top:10px">Cancel</button></div></div>');
 }
 function shFixCalc(x) {
@@ -1109,13 +1111,19 @@ function trailHtml(trail, shiftWk, handedBy, handedWk) {
 }
 /* ---------- notifications: the person who handed over is told when their handover was counted short ---------- */
 function updateBell() {
-  var n = (S.notices || []).filter(function (x) { return !x.read; }).length + (pcMine() ? 1 : 0) + (canApprove() ? (S.requests || []).length : 0), c = $('#bellc'); if (!c) return;
+  var n = (S.notices || []).filter(function (x) { return !x.read; }).length + (pcMine() ? 1 : 0) + (canApprove() ? (S.requests || []).length : 0) + (S.corrs || []).filter(corrCanDecide).length, c = $('#bellc'); if (!c) return;
   c.hidden = !n; c.textContent = n > 9 ? '9+' : n;
 }
 function noticesModal() {
-  var list = S.notices || [], un = list.filter(function (x) { return !x.read; }), pcr = pcMine() ? '<div data-act="pcview" style="cursor:pointer;border:2px solid var(--exp);background:var(--exp-bg);border-radius:12px;padding:10px;margin-bottom:10px"><b style="color:var(--exp)">🔔 ' + ({ offer: 'You were offered the president role', vote: 'Vote: change the president', challenge: 'The president is about to change' }[pcMine()]) + '</b><div class="muted">' + pcLine() + '</div></div>' : '';
+  var list = (S.notices || []).slice(), un = list.filter(function (x) { return !x.read; }), pcr = pcMine() ? '<div data-act="pcview" style="cursor:pointer;border:2px solid var(--exp);background:var(--exp-bg);border-radius:12px;padding:10px;margin-bottom:10px"><b style="color:var(--exp)">🔔 ' + ({ offer: 'You were offered the president role', vote: 'Vote: change the president', challenge: 'The president is about to change' }[pcMine()]) + '</b><div class="muted">' + pcLine() + '</div></div>' : '';
   var rq = canApprove() ? (S.requests || []).map(function (r) { return '<div data-act="rqopen" data-id="' + esc(r.email) + '" style="cursor:pointer;border:2px solid var(--brand);border-radius:12px;padding:10px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><div class="grow"><b>👤 ' + esc(r.name) + ' asked for access</b><div class="muted">' + esc(r.watch || '') + (r.at ? ' · ' + new Date(r.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '') + ' · waiting for you to accept or decline</div></div><span class="muted">›</span></div>'; }).join('') : '';   /* a request stays here until it is accepted or declined */
-  modal('<h2>Notifications</h2>' + rq + pcr + (list.length ? '<div class="list">' + list.map(function (n) {
+  var cmine = (S.corrs || []).map(function (c) {
+    if (corrCanDecide(c)) return '<div data-act="corrreview" data-id="' + esc(c.id) + '" style="cursor:pointer;border:2px solid var(--exp);background:var(--exp-bg);border-radius:12px;padding:10px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><div class="grow"><b style="color:var(--exp)">✎ Handover mistake: ' + esc(c.byName) + ' (' + corrShiftWord(c.side) + ') asks to correct the ' + corrTitle(c) + ' handover</b><div class="muted">' + corrLines(c).join(' · ').replace(/<[^>]+>/g, '') + ' · ' + esc(c.reason || '') + ' · waiting for you to accept or decline</div></div><span class="muted">›</span></div>';
+    if (c.byEmail === EMAIL) return '<div data-act="corrreview" data-id="' + esc(c.id) + '" style="cursor:pointer;border:2px solid var(--soon);background:var(--soon-bg);border-radius:12px;padding:10px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><div class="grow"><b>✎ Your correction is waiting for ' + esc(c.side === 'in' ? c.fromName : c.toName) + '</b><div class="muted">' + corrLines(c).join(' · ').replace(/<[^>]+>/g, '') + '</div></div><span class="muted">›</span></div>';
+    return '';
+  }).join(''), hcn = list.filter(function (n) { return n.kind === 'hcdone' || n.kind === 'hcno'; }); list = list.filter(function (n) { return n.kind !== 'hcdone' && n.kind !== 'hcno'; });
+  var hcl = hcn.map(function (n) { return '<div data-act="ntview" data-id="' + n.id + '" style="cursor:pointer;border:2px solid var(--exp);background:var(--exp-bg);border-radius:12px;padding:10px;margin-bottom:10px"><b style="color:var(--exp)">' + (n.read ? '' : '● ') + (n.kind === 'hcdone' ? '✎ Handover corrected' : '✎ Correction declined') + '</b><div class="muted">' + esc(n.wk || '') + ' · ' + esc(n.shiftDate || '') + ' · ' + esc(n.text || '') + ' · ' + (n.kind === 'hcdone' ? 'accepted by ' : 'declined by ') + esc(n.byName || '') + ' · ' + new Date(n.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</div></div>'; }).join('');
+  modal('<h2>Notifications</h2>' + cmine + hcl + rq + pcr + (list.length ? '<div class="list">' + list.map(function (n) {
     var canPay = n.kind === 'shortage' && inControl() && !OWNERVIEW && openShortList().some(function (x) { return x.wk === n.wk; });
     return '<div data-act="ntview" data-id="' + n.id + '" style="cursor:pointer;align-items:center"><div class="grow"><b>' + (n.read ? '' : '<span style="color:var(--exp)">● </span>') + (n.kind === 'correction' ? 'Your ' + esc(n.wk) + ' shift shortage was corrected' : n.kind === 'received' ? 'Your ' + esc(n.wk) + ' shift handover was received, all matched ✓' : 'Your ' + esc(n.wk) + ' shift was counted short') + '</b><div class="muted">' + esc(n.shiftDate) + ' ' + esc(HL(n.shiftHalf)) + (n.kind === 'correction' ? ' · ' + esc(n.reason || '') + ' · by ' : n.kind === 'received' ? ' · received by ' : ' · counted by ') + esc(n.byName || '') + ' · ' + new Date(n.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</div>' + (n.kind === 'shortage' && inControl() && !OWNERVIEW ? (function () { var ow = openShortList().filter(function (x) { return x.wk === n.wk; })[0]; return ow ? '<div class="muted">' + money(ow.owed) + ' still owed by the ' + esc(n.wk) + ' shift</div>' : '<div class="muted">Nothing owed now</div>'; })() : '') + '</div><b style="color:var(--exp)">' + (n.kind === 'correction' ? money(n.before) + ' → ' : '') + money(n.total) + '</b>' + (canPay ? '<button class="btn red sm" data-act="payopen" data-id="' + esc(n.wk) + '" style="margin-left:10px;flex:none">Pay</button>' : '') + '</div>';
   }).join('') + '</div>' : '<div class="empty">No notifications.</div>') + '<p class="muted">You are told here when the person taking over your shift counts cash or stock short. It is recorded as a shortage against your shift. Tap one to see the details.</p><button class="btn sec block" data-act="close">Close</button>');
@@ -1970,6 +1978,7 @@ function evRow(e, cancelable) {
   else if (e.type === 'cashshort') { ic = '⚠️'; tx = 'Cash counted short at handover'; sub = e.wk + ' watch handed over'; amt = money(e.amt); col = 'var(--exp)'; }
   else if (e.type === 'stockedit') { ic = '⚠️'; tx = 'Stock edited by hand: ' + e.name; sub = (e.reason || '') + (e.note ? ' · ' + e.note : ''); amt = (e.qty ? (e.qty > 0 ? '+' : '−') + Math.abs(e.qty) : '') + (e.qty && e.cases ? ' / ' : '') + (e.cases ? (e.cases > 0 ? '+' : '−') + Math.abs(e.cases) + (Math.abs(e.cases) === 1 ? ' case' : ' cases') : ''); col = 'var(--exp)'; }
   else if (e.type === 'shortfix') { ic = '✎'; tx = 'Shortage corrected: ' + (e.wk || '') + ' watch'; sub = e.note || ''; col = 'var(--cnt)'; }
+  else if (e.type === 'hocorr') { ic = '✎'; tx = 'Handover corrected'; sub = e.note || ''; col = 'var(--exp)'; }
   else if (e.type === 'repay') { ic = '💵'; tx = 'Shortage repaid by ' + (e.forWk || '') + ' watch'; sub = e.note || ''; amt = '+ ' + money(e.amt); col = 'var(--ok)'; }
   else if (e.type === 'takeover') { ic = '🛡️'; tx = 'Control taken'; sub = e.note; }
   else if (e.type === 'switch') { ic = '🔁'; tx = 'Operator switched'; sub = e.note; }
@@ -1989,7 +1998,7 @@ function evRow(e, cancelable) {
 }
 /* ---------- History: one full page. All = the entries of a day or a month, Shifts = the permanent shift summaries (a day, a month or a year), Charts. The Filter is in the top bar ---------- */
 var HY = { tab: 'all', per: 'day', dt: new Date(), types: {}, short: false, wk: '', sid: '', cnt: {}, sper: 'month', pper: 'month', pf: 'all', pq: '', pid: '', pl: null, hm: '', pm: '', cv: 'score', sy: 0, back: false }, HUN = null, HEVS = null, HSDOCS = null, HSD = {}, HYSIG = '';
-var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash']], ['Shortages and repayments', '⚠️', ['cashshort', 'shortfix', 'repay']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
+var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash']], ['Shortages and repayments', '⚠️', ['cashshort', 'shortfix', 'repay', 'hocorr']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
 function hgroup(e) { for (var i = 0; i < HGROUPS.length; i++) if (HGROUPS[i][2].indexOf(e.type) >= 0) return HGROUPS[i][0]; return 'Stock edits by hand'; }
 function histNoon(d) { var x = new Date(d); x.setHours(12, 0, 0, 0); return x; }
 function histToday() { return histNoon(new Date()); }   /* History always opens on today, by the phone's own clock */
@@ -2049,13 +2058,15 @@ function histShown() {   /* the entries on show after the type filter */
   return on.length ? ev.filter(function (e) { return HY.types[hgroup(e)]; }) : ev;
 }
 function histEmptyWord() { var p = histPer(); return p === 'day' ? 'this day' : p === 'month' ? 'this month' : 'this year'; }
+function histSold(evs) { return Math.max(0, evs.reduce(function (a, e) { return a + ((e.type === 'sale' || e.type === 'count') ? (e.qty || 0) : e.type === 'snote' ? -(e.qty || 0) : 0); }, 0)); }   /* items sold: the same count as "Total items sold" on a handover */
 function histTiles(evs, now) {   /* Cash sales, Credit given, Cash lent out / Purchases, Still owed, Paid back */
   var sm = function (f) { return evs.filter(f).reduce(function (a, e) { return a + (e.amt || 0); }, 0); };
   var cash = Math.max(0, r2(sm(function (e) { return (e.type === 'sale' && !e.cr) || e.type === 'count'; }) - sm(function (e) { return e.type === 'snote' || e.type === 'cnote'; })));
   var people = {}; evs.forEach(function (e) { if ((e.type === 'sale' && e.cr) || e.type === 'cnote' || e.type === 'pay' || e.type === 'loan') { var k = rootOf(e.person || e.cr || ''); if (k) people[k] = 1; } });
   var owed = r2(Object.keys(people).reduce(function (a, k) { return a + Math.max(0, balance(k)); }, 0));
   var cell = function (l, v, c) { return '<div><div class="l">' + l + '</div><div class="v"' + (c ? ' style="color:' + c + '"' : '') + '>' + money(v) + '</div></div>'; };
-  return '<div class="hsum" style="margin-bottom:12px">' + cell('Cash sales', cash) + cell('Credit given', r2(sm(function (e) { return (e.type === 'sale' && e.cr) || e.type === 'cnote'; }))) + cell('Cash lent out', r2(sm(function (e) { return e.type === 'loan'; }))) + cell('Purchases', r2(sm(function (e) { return e.type === 'buy'; }))) + cell(now ? 'Still owed' : 'Owed now', owed, owed > 0 ? 'var(--exp)' : '') + cell('Paid back', r2(sm(function (e) { return e.type === 'pay'; }))) + '</div>';
+  var ns = histSold(evs), cs = '<div><div class="l">Cash sales</div><div class="v">' + money(cash) + (ns ? ' <span style="font-size:12px;font-weight:600;color:var(--muted)">· ' + ns + (ns === 1 ? ' item' : ' items') + '</span>' : '') + '</div></div>';
+  return '<div class="hsum" style="margin-bottom:12px">' + cs + cell('Credit given', r2(sm(function (e) { return (e.type === 'sale' && e.cr) || e.type === 'cnote'; }))) + cell('Cash lent out', r2(sm(function (e) { return e.type === 'loan'; }))) + cell('Purchases', r2(sm(function (e) { return e.type === 'buy'; }))) + cell(now ? 'Still owed' : 'Owed now', owed, owed > 0 ? 'var(--exp)' : '') + cell('Paid back', r2(sm(function (e) { return e.type === 'pay'; }))) + '</div>';
 }
 function shKeyOf(sh) { var q = String(sh && sh.date || '').split('/'); return q.length === 3 ? q[2] + '-' + q[1] + '-' + q[0] : ''; }
 function histDay() {   /* the shifts that started on the chosen day: the finished ones (their permanent summaries) and the one still running, oldest first */
@@ -2172,14 +2183,16 @@ function hoRowHtml(h) {   /* "Handover received from X" and "Handed over to Y" *
 }
 var HSETUP = ['opening', 'newitem', 'edit', 'remove', 'costfill', 'opencredit'];
 function histShiftBlock(X, evs, head) {
-  var mine = evs.filter(function (e) { return e.sid === X.sid; }), setup = mine.filter(function (e) { return HSETUP.indexOf(e.type) >= 0; }), imp = mine.filter(function (e) { return e.type !== 'count' && HSETUP.indexOf(e.type) < 0; }), cnt = mine.filter(function (e) { return e.type === 'count'; });
+  var mine = evs.filter(function (e) { return e.sid === X.sid; }), setup = mine.filter(function (e) { return HSETUP.indexOf(e.type) >= 0; }), imp = mine.filter(function (e) { return e.type !== 'count' && e.type !== 'hocorr' && HSETUP.indexOf(e.type) < 0; }), cnt = mine.filter(function (e) { return e.type === 'count'; });
   var on = Object.keys(HY.types).filter(function (k) { return HY.types[k]; }), keepHo = !on.length || HY.types['Handovers'], rows = imp.map(function (e) { return { t: e.t, html: evRow(e, e.sid === SH().sid) }; });
   if (keepHo) { if (X.doc) rows.push({ t: X.doc.at, html: hoRowHtml({ kind: 'give', doc: X.doc, t: X.doc.at, shiftWk: X.wk }) }); if (X.prev && X.prev.status === 'accepted') rows.push({ t: X.prev.receivedAt || X.prev.at, html: hoRowHtml({ kind: 'recv', doc: X.prev, t: X.prev.receivedAt || X.prev.at, shiftWk: X.wk }) }); }
   rows.sort(function (a, b) { return b.t - a.t; });
+  var cs = [], seenC = {}; [X.doc, X.prev].forEach(function (dc) { (dc && dc.hcorr || []).forEach(function (c) { if (!seenC[c.cid]) { seenC[c.cid] = 1; CORRREC[c.cid] = c; cs.push(c); } }); }); cs.sort(function (a, b) { return b.at - a.at; });   /* a handover correction stays at the top of the Important list, for good */
+  var top = cs.map(function (c) { return '<div data-act="corrnote" data-id="' + esc(c.cid) + '" style="cursor:pointer;background:var(--exp-bg);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px;box-shadow:inset 2px 0 0 var(--exp)"><span style="font-size:18px;width:26px;flex:none;text-align:center">✎</span><div class="grow"><b style="color:var(--exp)">Handover corrected</b><div class="muted">' + corrWhen(c.at) + ' · ' + esc(c.wk || '') + ' · ' + esc(corrLinesPlain(c)) + ' · ' + esc(c.reason || '') + ' · asked by ' + esc(c.byName || '') + ', accepted by ' + esc(c.decidedByName || '') + '</div></div></div>'; }).join('');
   var out = head || '', days = {}; rows.forEach(function (r) { days[dkey(new Date(r.t))] = 1; });
-  if (rows.length) {
-    out += '<div class="sec-h">Important</div>';
-    if (Object.keys(days).length > 1) {   /* a shift that spans days: the entries are split by calendar day */
+  if (rows.length || top) {
+    out += '<div class="sec-h">Important</div>' + (top ? '<div class="list">' + top + '</div>' : '');
+    if (!rows.length) { /* only corrections */ } else if (Object.keys(days).length > 1) {   /* a shift that spans days: the entries are split by calendar day */
       var cur = '', open = false; rows.forEach(function (r) { var k = dkey(new Date(r.t)); if (k !== cur) { if (open) out += '</div>'; cur = k; open = true; out += '<div class="muted" style="margin:10px 2px 2px;font-weight:700;font-size:12px;text-transform:uppercase">' + esc(new Date(r.t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })) + '</div><div class="list">'; } out += r.html; }); if (open) out += '</div>';
     } else out += '<div class="list">' + rows.map(function (r) { return r.html; }).join('') + '</div>';
   }
@@ -2210,7 +2223,7 @@ function histAllHtml() {
   var longs = sel.map(function (x) { var st0 = x.start || (isFinite(t0) ? t0 : 0), en = x.end || Date.now(); return { x: x, d: st0 ? Math.floor((en - st0) / 86400000) : 0 }; }).filter(function (z) { return z.d >= 1; }).sort(function (a, b) { return b.d - a.d; })[0];
   var warn = longs ? '<div style="padding:8px 10px;border-radius:10px;background:var(--soon-bg);color:var(--soon);font-size:12.5px;margin:-4px 0 10px">⚠ This shift ' + (longs.x.end ? 'lasted ' : 'has been running for ') + (longs.d + 1) + ' days' + (longs.x.end && !longs.x.running ? '' : '. It should be handed over.') + '</div>' : '';
   var can = inControl() && all.some(function (e) { return e.sid === SH().sid; });
-  var blocks = sel.slice().reverse().map(function (X) { return histShiftBlock(X, evs, sel.length > 1 ? '<div class="sec-h" style="margin-top:14px">' + hdot(X.wk) + ' ' + esc(X.wk) + ' · ' + (X.start ? hfmt(X.start) : '') + ' → ' + (X.running ? 'now' : X.end ? hfmt(X.end) : '') + '</div>' : '') }).join('');
+  var blocks = sel.slice().reverse().map(function (X) { return histShiftBlock(X, evs, sel.length > 1 ? '<div class="sec-h" style="margin-top:14px">' + hdot(X.wk) + ' ' + esc(X.wk) + ' · ' + (X.start ? hfmt(X.start) : '') + ' → ' + (X.running ? 'now' : X.end ? hfmt(X.end) : '') + (function () { var n = histSold(all.filter(function (e) { return e.sid === X.sid; })); return n ? ' · ' + n + ' sold' : ''; })() + '</div>' : '') }).join('');
   if (!/class="list"|class="hcs"/.test(blocks)) blocks = histFilterCount() ? '<div class="empty">No entries match this filter on ' + esc(histPlain()) + '.<br><button class="btn sec" data-act="hclear" style="margin-top:12px">Clear filter</button></div>' : '<div class="empty">No entries yet for ' + esc(histPlain()) + '.</div>';
   return chips + line + warn + histTiles(all, day.some(function (x) { return x.running; })) + blocks + (can ? '<button class="btn ' + (CM ? 'sec' : 'red') + ' block" data-act="cmtog" style="margin-top:12px">' + (CM ? 'Done cancelling' : 'Cancel an item') + '</button>' + (CM ? '<div class="cancelbar">Tap Cancel next to the entry to remove. Only this shift can be cancelled.</div>' : '') : '') + '<p class="muted">Entries are kept for about 31 days. Every handover keeps its summary for a year, under Handovers.</p>';
 }
@@ -2311,10 +2324,11 @@ function recRows(d, h) {   /* every item with the giver's number and the receive
   items.forEach(function (x, k) { var r = docRows({ items: [x] })[0]; if (!r) return; r.rs = rc && rc[2 * k] != null ? rc[2 * k] : null; r.rg = rc && rc[2 * k + 1] != null ? rc[2 * k + 1] : null; out.push(r); });
   return out;
 }
-function rctbl(rows) {   /* [label, giver, receiver or null, formatter] */
-  return '<table class="rct"><colgroup><col><col style="width:66px"><col style="width:72px"><col style="width:54px"></colgroup><tr><th>Item</th><th>Giver</th><th>Receiver</th><th>Diff</th></tr>' + rows.map(function (x) {
+function rctbl(rows, heads) {   /* [label, outgoing, incoming or null, formatter]; heads: the two column titles */
+  heads = heads || ['Outgoing', 'Incoming'];
+  return '<table class="rct"><colgroup><col><col style="width:66px"><col style="width:72px"><col style="width:54px"></colgroup><tr><th>Item</th><th>' + heads[0] + '</th><th>' + heads[1] + '</th><th>Diff</th></tr>' + rows.map(function (x) {
     var f = x[3] || String, df = x[2] == null ? 0 : r2(x[2] - x[1]);
-    return '<tr><td>' + x[0] + '</td><td>' + f(x[1]) + '</td><td>' + (x[2] == null ? '–' : f(x[2])) + '</td><td class="' + (df < 0 ? 'rcb' : df > 0 ? 'rcu' : '') + '">' + (df ? (df < 0 ? '−' : '+') + f(Math.abs(df)) : '') + '</td></tr>';
+    return '<tr><td>' + x[0] + '</td><td>' + f(x[1]) + '</td><td>' + (x[2] == null ? '–' : f(x[2])) + '</td><td class="' + (df < 0 ? 'rcb' : df > 0 ? 'rcu' : '') + '">' + (df ? (df < 0 ? '−' : '+') + f(Math.abs(df)) : '') + (x[4] ? '<span class="rcfix">Corrected</span>' : '') + '</td></tr>';
   }).join('') + '</table>';
 }
 function recordHtml(d, evs, h) {
@@ -2324,16 +2338,16 @@ function recordHtml(d, evs, h) {
   var to = d.receivedByName ? esc(d.receivedByName) : esc((d.toLabels || []).join(', ')) || 'the next shift';
   var head = '<div class="card"><div class="row" style="align-items:center"><b class="grow" style="font-size:15px">' + wsw(wk) + ' ' + esc(d.date) + ' ' + esc(HL(d.half)) + '</b>' + res + '</div><div style="position:relative;display:flex;margin-top:6px"><div class="muted" style="flex:1;text-align:center">' + esc(d.fromName || '') + (d.fromWatch && d.fromWatch !== wk ? ' (' + esc(d.fromWatch) + ', visiting)' : '') + '</div><div class="muted" style="flex:1;text-align:center">' + to + '</div><span class="muted" style="position:absolute;left:50%;top:0;transform:translateX(-50%)">→</span></div><div class="hosteps"><div class="d"><i>✓</i>Handed over<br>' + (d.at ? hhmm(d.at) : '') + '</div>' + (acc ? '<div class="' + (d.short > 0 ? 'x' : 'd') + '"><i>' + (d.short > 0 ? '!' : '✓') + '</i>Accepted &amp; counted<br>' + (at2 ? hhmm(at2) : '') + '</div>' : '<div class="n"><i>2</i>Waiting<br>to be taken</div>') + '</div></div>';
   var gs = Math.max(0, r2((d.expected || 0) - (d.counted || 0))), ex = acc ? r2((d.shortCash || 0) - gs) : 0;
-  var cashNote = acc && d.shortCash > 0 ? 'Cash short ' + money(d.shortCash) + (gs > 0 && ex > 0 ? ': ' + money(gs) + ' the giver counted short, ' + money(ex) + ' more when the receiver counted.' : gs > 0 ? ': the giver counted it short.' : ': found when the receiver counted.') : acc && d.over > 0 ? 'Cash over ' + money(d.over) + '.' : '';
-  var cash = '<div class="card"><h2>Cash</h2>' + rctbl([['Cash expected', d.expected || 0, acc ? d.expected || 0 : null, money], ['Cash counted', d.counted || 0, acc ? d.receivedCash || 0 : null, money]]) + (cashNote ? '<div class="muted" style="margin-top:4px">' + cashNote + '</div>' : '') + '</div>';
+  var cashNote = acc && d.shortCash > 0 ? 'Cash short ' + money(d.shortCash) + (gs > 0 && ex > 0 ? ': ' + money(gs) + ' the outgoing shift counted short, ' + money(ex) + ' more when the incoming shift counted.' : gs > 0 ? ': the outgoing shift counted it short.' : ': found when the incoming shift counted.') : acc && d.over > 0 ? 'Cash over ' + money(d.over) + '.' : '';
+  var fx = corrFixedKeys(d), cash = '<div class="card"><h2>Cash</h2>' + rctbl([['Cash expected', d.expected || 0, acc ? d.expected || 0 : null, money], ['Cash counted', d.counted || 0, acc ? d.receivedCash || 0 : null, money, fx.cash]], ['Outgoing shift', 'Incoming shift']) + (cashNote ? '<div class="muted" style="margin-top:4px">' + cashNote + '</div>' : '') + '</div>';
   var shop = rows.filter(function (r) { return r.stock > 0 || r.rs > 0; }), stor = rows.filter(function (r) { return r.store && (r.cage > 0 || r.rg > 0); });
   var shorts = [], ups = [];
   shop.forEach(function (r) { if (r.rs != null && r.rs < r.stock) shorts.push(esc(r.name) + ' −' + (r.stock - r.rs) + ' = ' + money(r2((r.stock - r.rs) * r.price))); else if (r.rs != null && r.rs > r.stock) ups.push(esc(r.name) + ' +' + (r.rs - r.stock)); });
   stor.forEach(function (r) { if (r.rg != null && r.rg < r.cage) shorts.push(esc(r.name) + ' (' + esc(r.unit || 'case') + ') −' + (r.cage - r.rg) + ' = ' + money(r2((r.cage - r.rg) * (r.per || 1) * r.price))); else if (r.rg != null && r.rg > r.cage) ups.push(esc(r.name) + ' (' + esc(r.unit || 'case') + ') +' + (r.rg - r.cage)); });
   var itNote = acc && (shorts.length || ups.length) ? '<div class="muted" style="margin-top:4px">' + (shorts.length ? shorts.join(', ') + ' short.' : '') + (ups.length ? ' ' + ups.join(', ') + ' is noted, not a shortage.' : '') + '</div>' : '';
-  var shopG = function (list, title) { return list.length ? '<div class="card"><h2>' + title + '</h2>' + rctbl(list.map(function (r) { return [esc(r.name), r.stock, acc ? r.rs : null]; })) + '</div>' : ''; };
-  var shopC = shop.length ? shopG(shop.filter(function (r) { return !r.shelf; }), '🧊 In the fridge') + shopG(shop.filter(function (r) { return r.shelf; }), '🧁 On the shelf') + (itNote ? '<div class="card" style="padding-top:8px;padding-bottom:8px">' + itNote + '</div>' : '') : '<div class="card"><h2>In the shop</h2><div class="muted">No items.</div></div>';
-  var storC = stor.length ? '<div class="card"><h2>📦 Cases / Packs in storage</h2>' + rctbl(stor.map(function (r) { return [cageName(r.name, r.unit), r.cage, acc ? r.rg : null]; })) + '</div>' : '';
+  var shopG = function (list, title) { return list.length ? '<div class="card"><h2>' + title + '</h2>' + rctbl(list.map(function (r) { return [esc(r.name), r.stock, acc ? r.rs : null, undefined, fx[r.id + ':stock']]; })) + '</div>' : ''; };
+  var shopC = shop.length ? shopG(shop.filter(function (r) { return !r.shelf; }), '🧊 In the fridge (counted)') + shopG(shop.filter(function (r) { return r.shelf; }), '🧁 On the shelf (counted)') + (itNote ? '<div class="card" style="padding-top:8px;padding-bottom:8px">' + itNote + '</div>' : '') : '<div class="card"><h2>In the shop</h2><div class="muted">No items.</div></div>';
+  var storC = stor.length ? '<div class="card"><h2>📦 Cases / Packs in storage (counted)</h2>' + rctbl(stor.map(function (r) { return [cageName(r.name, r.unit), r.cage, acc ? r.rg : null, undefined, fx[r.id + ':cage']]; })) + '</div>' : '';
   var sold = rows.filter(function (r) { return r.sold > 0; }), tcash = sold.reduce(function (a, r) { return a + Math.max(0, r.soldAmt - r.crAmt - r.spAmt); }, 0);
   var soldF = fold('sold', 'Sold on the shift <span class="muted" style="font-size:11px">' + sold.length + (sold.length === 1 ? ' item' : ' items') + ' · ' + money(tcash) + '</span>', soldCards(rows, { shift: { name: wk, date: d.date, half: d.half } }, 'Sold on the shift'));
   var line = function (l, v, c) { return '<div><span>' + l + '</span><b' + (c ? ' style="color:' + c + '"' : '') + '>' + v + '</b></div>'; };
@@ -2346,15 +2360,15 @@ function recordHtml(d, evs, h) {
   var so = shortAllList().filter(function (x) { return x.wk === wk; })[0] || { owed: 0, repaid: 0 };
   var result = acc ? '<div class="card sum"><h2>Result</h2>' + line('Shortage from this handover', money(d.short || 0), d.short > 0 ? 'var(--exp)' : 'var(--ok)') + line('Repaid so far (all shortages)', money(so.repaid), 'var(--ok)') + '<div><span>' + wsw(wk) + ' still owes (all shortages)</span><b style="color:' + (so.owed > 0 ? 'var(--exp)' : 'var(--ok)') + '">' + money(so.owed) + '</b></div></div>' : '';
   HREC = { d: d, h: h, rows: rows };
-  return '<h2>Handover record</h2>' + head + cash + shopC + storC + soldF + fold('sum', 'How the cash adds up', sum) + handoverLists(d.owedBy, d.openShort) + tr + edC + (d.notes ? '<div class="card"><label>Remarks</label>' + esc(d.notes) + '</div>' : '') + entF + sigs + result + '<div class="row noprint" style="gap:8px"><button class="btn grow" data-act="rccopy">Copy</button><button class="btn grow" data-act="rcshare">Share</button><button class="btn grow" data-act="rcprint">Print</button></div>';
+  return '<h2>Handover record</h2>' + head + corrNote(d) + corrBanner(d) + (corrEligible(d, h) ? '<button class="btn red block noprint" data-act="corrstart" style="margin-bottom:10px">✎ Handover mistake</button>' : '') + cash + shopC + storC + soldF + fold('sum', 'How the cash adds up', sum) + handoverLists(d.owedBy, d.openShort) + tr + edC + (d.notes ? '<div class="card"><label>Remarks</label>' + esc(d.notes) + '</div>' : '') + entF + sigs + result + '<div class="row noprint" style="gap:8px"><button class="btn grow" data-act="rccopy">Copy</button><button class="btn grow" data-act="rcshare">Share</button><button class="btn grow" data-act="rcprint">Print</button></div>';
 }
 function recordText() {
   if (!HREC) return ''; var d = HREC.d, h = HREC.h, rows = HREC.rows, acc = d.status === 'accepted', L = [];
   L.push('HANDOVER RECORD', d.wk + ' shift · ' + d.date + ' ' + HL(d.half), 'From: ' + (d.fromName || '') + ' → ' + (d.receivedByName || (d.toLabels || []).join(', ') || 'the next shift'), 'Handed over: ' + (d.at ? new Date(d.at).toLocaleString() : '') + (acc ? ' · Accepted: ' + (d.receivedAt || (h && h.acceptedAt) ? new Date(d.receivedAt || h.acceptedAt).toLocaleString() : '') : ' · Waiting to be taken'));
   if (acc) L.push('Result: ' + (d.short > 0 ? 'SHORT ' + money(d.short) : d.over > 0 ? 'over ' + money(d.over) : 'matched'));
-  L.push('', 'CASH', 'Expected: ' + money(d.expected), 'Counted by the giver: ' + money(d.counted)); if (acc) L.push('Counted by the receiver: ' + money(d.receivedCash));
-  L.push('', 'IN THE SHOP (giver → receiver)'); rows.filter(function (r) { return r.stock > 0 || r.rs > 0; }).forEach(function (r) { L.push(r.name + ': ' + r.stock + (acc && r.rs != null ? ' → ' + r.rs + (r.rs !== r.stock ? ' (' + (r.rs < r.stock ? '−' : '+') + Math.abs(r.rs - r.stock) + ')' : '') : '')); });
-  var st = rows.filter(function (r) { return r.store && (r.cage > 0 || r.rg > 0); }); if (st.length) { L.push('', 'IN STORAGE (giver → receiver)'); st.forEach(function (r) { L.push(r.name + ' (' + (r.unit || 'case') + '): ' + r.cage + (acc && r.rg != null ? ' → ' + r.rg : '')); }); }
+  L.push('', 'CASH', 'Expected: ' + money(d.expected), 'Counted by the outgoing shift: ' + money(d.counted)); if (acc) L.push('Counted by the incoming shift: ' + money(d.receivedCash));
+  L.push('', 'IN THE SHOP (outgoing → incoming)'); rows.filter(function (r) { return r.stock > 0 || r.rs > 0; }).forEach(function (r) { L.push(r.name + ': ' + r.stock + (acc && r.rs != null ? ' → ' + r.rs + (r.rs !== r.stock ? ' (' + (r.rs < r.stock ? '−' : '+') + Math.abs(r.rs - r.stock) + ')' : '') : '')); });
+  var st = rows.filter(function (r) { return r.store && (r.cage > 0 || r.rg > 0); }); if (st.length) { L.push('', 'IN STORAGE (outgoing → incoming)'); st.forEach(function (r) { L.push(r.name + ' (' + (r.unit || 'case') + '): ' + r.cage + (acc && r.rg != null ? ' → ' + r.rg : '')); }); }
   if (Array.isArray(d.openShort)) { L.push('', 'SHORTAGES NOT YET REPAID (every shift)'); d.openShort.forEach(function (x) { L.push(x.wk + ': ' + money(x.owed)); }); }
   if (Array.isArray(d.owedBy)) { L.push('', 'WHO OWES ON CREDIT'); if (d.owedBy.length) d.owedBy.forEach(function (x) { L.push(x.label + ': ' + money(x.bal)); }); else L.push('Nobody owes anything.'); }
   if (d.notes) L.push('', 'Remarks: ' + d.notes);
@@ -2401,7 +2415,7 @@ function shiftDetailHtml(d, evs) {
   return '<h2>' + wsw(d.wk) + ' ' + esc(d.date) + ' ' + esc(HL(d.half)) + '</h2><div style="margin:0 0 6px">' + shStatus(d) + '</div>' +
     '<div class="muted" style="margin-bottom:10px">' + esc(d.fromName || '') + ' handed over' + (d.at ? ' · ' + new Date(d.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '') + (d.receivedByName ? ' to ' + esc(d.receivedByName) : '') + '</div>' +
     '<div class="card sum"><h2>Cash</h2>' + row('Received from previous handover', money(d.received)) + row('Sales', '+ ' + money(d.sales)) + (d.cr ? row('Sold on credit (not paid)', '− ' + money(d.cr)) : '') + (d.paid ? row('Credit payments received', '+ ' + money(d.paid)) : '') + (d.loans ? row('Cash lent out', '− ' + money(d.loans)) : '') + (d.purch ? row('Purchases', '− ' + money(d.purch)) : '') + (d.used ? row('Cash used', '− ' + money(d.used)) : '') +
-    '<div class="t"><span>Expected</span><span>' + money(d.expected) + '</span></div>' + row('Counted by ' + esc(d.fromName || 'the giver'), money(d.counted)) + (d.status === 'accepted' ? row('Counted by ' + esc(d.receivedByName || 'the receiver'), money(d.receivedCash)) : '') +
+    '<div class="t"><span>Expected</span><span>' + money(d.expected) + '</span></div>' + row('Counted by ' + esc(d.fromName || 'the outgoing shift'), money(d.counted)) + (d.status === 'accepted' ? row('Counted by ' + esc(d.receivedByName || 'the incoming shift'), money(d.receivedCash)) : '') +
     (d.status === 'accepted' ? (d.shortCash ? row('Cash short', money(d.shortCash), 'var(--exp)') : '') + (d.shortItems ? row('Stock short (selling price)', money(d.shortItems), 'var(--exp)') : '') + (d.over ? row('Cash over', money(d.over), 'var(--soon)') : '') + '<div class="t"><span>Total short</span><span style="color:' + (d.short > 0 ? 'var(--exp)' : 'var(--ok)') + '">' + money(d.short || 0) + '</span></div>' : '') + '</div>' +
     '<div class="card"><h2>Sold this shift</h2>' + tbl + '</div>' + handoverLists(d.owedBy, d.openShort) +
     ((d.trail || []).length || (d.fromWatch && d.fromWatch !== d.wk) ? trailHtml(d.trail || [], d.wk) : '') +
@@ -2540,7 +2554,7 @@ function gedit(id) {
 
 /* ---------- asking for access: anyone signed in can send one request; owner, presidents and admins accept or decline ---------- */
 var RQ = { pick: '', mode: 'list', name: '', no: '', rank: '', watch: '' }, MYREQ, RQHIDE = {};
-S.names = []; S.requests = [];
+S.names = []; S.requests = []; S.corrs = [];
 function requestStage() {
   STAGE = 'request'; MYREQ = undefined; RQ = { pick: '', mode: 'new', name: '', no: '', rank: '', watch: '' }; render();
   subs.push(onSnapshot(ref('requests/' + EMAIL), function (sn) {
@@ -2864,7 +2878,7 @@ function rxReview() {   /* before accepting: the differences, and what is record
   });
   var tot = r2((cashC < expC ? expC - cashC : 0) + sVal);
   if (!L.length && tot <= 0) return false;
-  askConfirm('Accept this handover?', (L.length ? '<b style="color:var(--exp)">' + L.length + (L.length === 1 ? ' difference' : ' differences') + '</b><br>' + L.join('<br>') + '<br><br>' : '') + '<span class="muted">' + (tot > 0 ? 'This is recorded as a <b>' + money(tot) + ' shortage</b> against the ' + esc(h.shift.name) + ' shift.' + (expC > h.cash ? ' It includes ' + money(r2(expC - h.cash)) + ' the giver already counted short.' : '') : 'No shortage is recorded.') + (ups.length ? ' ' + ups.join(', ') + ' is noted but is not a shortage.' : '') + '</span>', 'Yes, accept & take control', function () { RXOK = true; rxAccept(); });
+  askConfirm('Accept this handover?', (L.length ? '<b style="color:var(--exp)">' + L.length + (L.length === 1 ? ' difference' : ' differences') + '</b><br>' + L.join('<br>') + '<br><br>' : '') + '<span class="muted">' + (tot > 0 ? 'This is recorded as a <b>' + money(tot) + ' shortage</b> against the ' + esc(h.shift.name) + ' shift.' + (expC > h.cash ? ' It includes ' + money(r2(expC - h.cash)) + ' the outgoing shift already counted short.' : '') : 'No shortage is recorded.') + (ups.length ? ' ' + ups.join(', ') + ' is noted but is not a shortage.' : '') + '</span>', 'Yes, accept & take control', function () { RXOK = true; rxAccept(); });
   return true;
 }
 function rxHidden(h, v) {   /* the places that were handed over as 0 and are not listed */
@@ -2882,7 +2896,7 @@ function showRx(keep) {
   RX = h; var v = RXV || { cash: '', c: {}, g: {}, x: {}, xo: false };
   var stay = keep === true && !RXFLIP; RXFLIP = false;
   wpPage(showRx, [true], '<h2>' + (h.locked ? '🔒 Locked handover' : h.same ? 'Handover within the shift' : 'Handover received') + '</h2>' + (h.same ? '<div class="card" style="background:var(--soon-bg);box-shadow:none"><b>Same shift</b><div style="margin-top:4px">This hand over is inside the ' + esc(h.shift.name) + ' shift, so the shift keeps going. Count what is here. Any difference is recorded against the shift, and the sales, credit and totals carry on until the shift is handed over to the next one.</div></div>' : '') + (h.locked ? '<div class="card" style="background:var(--soon-bg)"><b>Fridge and cage were locked.</b> Open them and check everything below before accepting.</div>' : '') +
-    (rxOnList(h) || !rxHasDetail(h) ? rxWarn(h) : '') + '<div class="card sum"><div><span>From</span><b>' + esc(hnl(h.fromName, h.fromEmail)) + (h.fromWatch ? '<div class="muted" style="font-weight:500">' + esc(h.fromWatch) + ' watch' + (h.fromWatch !== h.shift.name ? ' · visiting, the ' + esc(h.shift.name) + ' watch was on duty' : '') + '</div>' : '') + '</b></div><div><span>Handed over</span><b>' + new Date(h.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (no one in particular)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Shift</span><b>' + esc(h.shift.name) + ' · ' + esc(h.shift.date) + ' ' + esc(HL(h.shift.half)) + '</b></div><div><span>Sales</span><b>' + money(h.sales) + '</b></div>' + (typeof h.sold === 'number' ? '<div><span>Total items sold</span><b>' + h.sold + '</b></div>' : '') + '<div><span>Cash handed over</span><b>' + money(h.cash) + '</b></div>' + (typeof h.computed === 'number' && r2(h.computed - h.cash) > 0 ? '<div><span>Cash short when counted</span><b style="color:var(--exp)">' + money(r2(h.computed - h.cash)) + '</b></div>' : '') + (typeof h.computed === 'number' && r2(h.cash - h.computed) > 0 ? '<div><span>Cash over when counted</span><b style="color:var(--soon)">' + money(r2(h.cash - h.computed)) + '</b></div>' : '') + '</div>' +
+    (rxOnList(h) || !rxHasDetail(h) ? corrCards() + rxWarn(h) : '') + '<div class="card sum"><div><span>From</span><b>' + esc(hnl(h.fromName, h.fromEmail)) + (h.fromWatch ? '<div class="muted" style="font-weight:500">' + esc(h.fromWatch) + ' watch' + (h.fromWatch !== h.shift.name ? ' · visiting, the ' + esc(h.shift.name) + ' watch was on duty' : '') + '</div>' : '') + '</b></div><div><span>Handed over</span><b>' + new Date(h.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (no one in particular)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Shift</span><b>' + esc(h.shift.name) + ' · ' + esc(h.shift.date) + ' ' + esc(HL(h.shift.half)) + '</b></div><div><span>Sales</span><b>' + money(h.sales) + '</b></div>' + (typeof h.sold === 'number' ? '<div><span>Total items sold</span><b>' + h.sold + '</b></div>' : '') + '<div><span>Cash handed over</span><b>' + money(h.cash) + '</b></div>' + (typeof h.computed === 'number' && r2(h.computed - h.cash) > 0 ? '<div><span>Cash short when counted</span><b style="color:var(--exp)">' + money(r2(h.computed - h.cash)) + '</b></div>' : '') + (typeof h.computed === 'number' && r2(h.cash - h.computed) > 0 ? '<div><span>Cash over when counted</span><b style="color:var(--soon)">' + money(r2(h.cash - h.computed)) + '</b></div>' : '') + '</div>' +
     (rxOnList(h) ? rxDetail(h) + '<button class="btn block" data-act="rxcheck">Check items</button><button class="btn sec block" data-act="close" style="margin-top:10px">Back to Count</button>' : (rxHasDetail(h) ? '<button class="btn sec sm" data-act="rxlist" style="margin-bottom:10px">‹ See what was sold again</button>' : '') + '<div class="rxbar" id="rx-bar"></div>' + rxCashCard(h, v) +
     rxCard(h, v, 'fridge') + rxCard(h, v, 'shelf') + rxCard(h, v, 'cage') + rxExtraCard(h, v) +
     editsCard(h.edits) + (rxHasDetail(h) ? '' : rxCredit(h)) + handoverLists(h.owedBy, h.openShort) + ((h.trail || []).length ? trailHtml(h.trail, h.shift.name, h.fromName, h.fromWatch) : '') +
@@ -2933,6 +2947,7 @@ function rxAccept2() {
   if (h.sum) b.update(ref('shifts/' + h.shift.sid), { status: 'accepted', receivedBy: EMAIL, receivedByName: myName(), receivedCash: cashC, shortCash: cShort, shortItems: r2(sVal), over: cOver, short: sTot, receivedAt: Date.now(), rc: rcf });
   b.update(ref('handovers/' + S.state.pending), { status: 'accepted', acceptedBy: EMAIL, acceptedAt: Date.now(), check: diffs.length ? diffs.join('\n') : 'everything matched', receivedSig: M.signature, receivedName: myName(), receivedItems: RI, receivedCash: cashC });
   b.update(ref('shop/state'), { controlEmail: EMAIL, controlName: myName(), pending: '', shift: ns, openingDone: true });
+  (S.corrs || []).forEach(function (cc) { if (cc.status === 'open') b.update(ref('corrections/' + cc.id), { status: 'closed' }); });   /* a handover correction nobody decided is closed, unchanged, when the next handover is taken */
   commit(b); RX = null; RXSTEP = 0; sel = null; qty = 1; tab = 'sell'; closeModal(); spClose(); toast(diffs.length ? 'Accepted, differences noted' : 'Accepted, all matched');
 }
 
@@ -3100,6 +3115,198 @@ function opCreditNext(pid) {
   });
 }
 
+/* ---------- handover mistakes: one of the two people in a handover asks to correct what was counted; the other person (or a President, or the person taking the NEXT handover) accepts or declines ---------- */
+var CF = null, CORRSEEN = {}, CORRBUSY = false, CORRREC = {}, CORRWHY = ['Miscount', 'Counted twice', 'Wrong item', 'Other'];
+function corrOpenFor(hid) { return (S.corrs || []).filter(function (c) { return c.hid === hid && c.status === 'open'; })[0]; }
+function corrParty(c) { return c.fromEmail === EMAIL || c.toEmail === EMAIL; }
+function corrCanDecide(c) {   /* the same people the database allows: not the one who asked; the other person, a President / the owner, or the person taking the next handover */
+  if (!c || c.status !== 'open' || c.byEmail === EMAIL || OWNERVIEW || !S.state) return false;
+  if (corrParty(c) || canAdmin()) return true;
+  return !!(S.state.pending && S.hand && S.hand.status === 'open' && eligible(S.hand));
+}
+function corrLines(c) {
+  var L = (c.rows || []).map(function (r) { return esc(r.name) + (r.kind === 'cage' ? ' <span class="muted">(' + esc(r.unit || 'case') + ')</span>' : '') + ': ' + r.was + ' → <b>' + r.now + '</b>'; });
+  if (c.cash) L.unshift('Cash: ' + money(c.cash.was) + ' → <b>' + money(c.cash.now) + '</b>');
+  return L;
+}
+function corrLinesPlain(c) {
+  var L = (c.rows || []).map(function (r) { return r.name + ' ' + r.was + ' → ' + r.now; });
+  if (c.cash) L.unshift('Cash ' + money(c.cash.was) + ' → ' + money(c.cash.now));
+  return L.join(' · ');
+}
+function corrWhen(t) { return t ? new Date(t).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''; }
+function corrShiftWord(side) { return side === 'in' ? 'incoming shift' : 'outgoing shift'; }
+function corrTitle(c) { return esc(c.wk || '') + ' → ' + esc(c.toName || 'the incoming shift') + ' · ' + esc(c.date || '') + ' ' + esc(HL(c.half)); }
+function corrEligible(d, h) {   /* the Handover mistake button: the latest handover, before the next one is made, for the two people in it */
+  return !!(d && h && d.status === 'accepted' && h.status === 'accepted' && !h.same && S.state && !S.state.pending && !OWNERVIEW && (EMAIL === h.fromEmail || EMAIL === h.acceptedBy)
+    && S.state.shift && S.state.shift.prevEmail === h.fromEmail && !corrOpenFor(d.handoverId));
+}
+function corrNote(d) {   /* the permanent red note on a handover record: what was corrected, by whom, and why */
+  return (d && d.hcorr || []).slice().reverse().map(function (c) {
+    return '<div class="card" style="border-left:4px solid var(--exp);background:var(--exp-bg)"><b style="color:var(--exp)">✎ Corrected after the handover</b><div style="margin:4px 0">' + corrLines(c).join('<br>') + '</div><div class="muted">Reason: ' + esc(c.reason || '') + ' · asked by ' + esc(c.byName || '') + ' (' + corrShiftWord(c.side) + '), accepted by ' + esc(c.decidedByName || '') + ' · ' + corrWhen(c.at) + '. The numbers on this page are the corrected ones.</div></div>';
+  }).join('');
+}
+function corrFixedKeys(d) {   /* which rows of a record were corrected: id + ':' + stock|cage */
+  var o = {}; (d && d.hcorr || []).forEach(function (c) { (c.rows || []).forEach(function (r) { o[r.id + ':' + (r.kind === 'cage' ? 'cage' : 'stock')] = 1; }); if (c.cash) o.cash = 1; }); return o;
+}
+function corrBanner(d) {   /* a correction that is still waiting for this handover */
+  var c = d && corrOpenFor(d.handoverId); if (!c) return '';
+  if (c.byEmail === EMAIL) return '<div class="card" style="border:2px solid var(--soon);background:var(--soon-bg)"><b>✎ Correction sent, waiting for ' + esc(c.side === 'in' ? c.fromName : c.toName) + '</b><div class="muted" style="margin:4px 0">' + corrLines(c).join('<br>') + '<br>' + esc(c.reason || '') + '<br>If they do not answer, the person from the next incoming shift can check it, or a President.</div><button class="btn sec sm" data-act="corrcancel" data-id="' + esc(c.id) + '">Cancel my request</button></div>';
+  if (corrCanDecide(c)) return '<div class="card" data-act="corrreview" data-id="' + esc(c.id) + '" style="border:2px solid var(--exp);background:var(--exp-bg);cursor:pointer"><b style="color:var(--exp)">✎ A correction is waiting for you</b><div class="muted" style="margin:4px 0">' + esc(c.byName) + ' (' + corrShiftWord(c.side) + ') · ' + corrLines(c).join(' · ') + '</div><span class="btn sm">Look at it</span></div>';
+  return '<div class="card" style="border:2px solid var(--soon);background:var(--soon-bg)"><b>✎ A correction is waiting</b><div class="muted" style="margin-top:4px">' + esc(c.byName) + ' asked for it. ' + corrLines(c).join(' · ') + '</div></div>';
+}
+function corrStart() {
+  if (!HREC || !HREC.d) return; var d = HREC.d, h = HREC.h;
+  if (!h) return toast('This handover is no longer kept, so it cannot be corrected');
+  if (!S.state || S.state.pending) return toast('The next handover has been made, so this one can no longer be corrected');
+  var open = corrOpenFor(d.handoverId); if (open) return corrReview(open.id);
+  getDocs(query(col('handovers'), orderBy('at', 'desc'), limit(1))).then(function (sn) {
+    var last = sn.docs[0]; if (!last || last.id !== d.handoverId) return toast('Only the latest handover can be corrected');
+    if (!corrEligible(d, h)) return toast('Only the two people in this handover can correct it');
+    CF = { d: d, h: h, side: EMAIL === h.acceptedBy ? 'in' : 'out', v: {}, cash: String(d.receivedCash == null ? '' : d.receivedCash), why: '', note: '' };
+    corrForm();
+  }).catch(function (e) { toast(errText(e)); });
+}
+function corrRowList() {   /* the rows that can be corrected: [row, kind] for every item with something in the fridge / on the shelf, and in storage */
+  var rows = recRows(CF.d, CF.h) || [], out = [];
+  rows.forEach(function (r) { if (r.stock > 0 || r.rs > 0) out.push([r, r.shelf ? 'shelf' : 'fridge']); if (r.store && (r.cage > 0 || r.rg > 0)) out.push([r, 'cage']); });
+  return out;
+}
+function corrWas(r, kind) { var inn = CF.side === 'in'; return kind === 'cage' ? (inn ? r.rg : r.cage) : (inn ? r.rs : r.stock); }
+function corrKey(r, kind) { return r.id + ':' + (kind === 'cage' ? 'cage' : 'stock'); }
+function corrChanges() {
+  var out = []; corrRowList().forEach(function (x) {
+    var r = x[0], kind = x[1], was = corrWas(r, kind), v = CF.v[corrKey(r, kind)];
+    if (was == null || v === undefined || v === '') return; var now = Math.max(0, Math.floor(num(v)));
+    if (now !== was) out.push({ id: r.id, name: r.name, kind: kind, side: CF.side, was: was, now: now, price: r.price || 0, per: r.per || 1, unit: r.unit || '', shelf: !!r.shelf });
+  });
+  var cash = null; if (CF.side === 'in' && CF.cash !== '' && CF.d.receivedCash != null && r2(num(CF.cash)) !== r2(CF.d.receivedCash)) cash = { was: r2(CF.d.receivedCash), now: r2(Math.max(0, num(CF.cash))) };
+  return { rows: out, cash: cash };
+}
+function corrSum() {
+  var ch = corrChanges(), L = ch.rows.map(function (r) { var df = r.now - r.was; return esc(r.name) + ': counted ' + r.was + ', correct ' + r.now + ': <b>' + Math.abs(df) + (df < 0 ? ' fewer' : ' more') + '</b>'; });
+  if (ch.cash) { var dc = r2(ch.cash.now - ch.cash.was); L.unshift('Cash: counted ' + money(ch.cash.was) + ', correct ' + money(ch.cash.now) + ': <b>' + money(Math.abs(dc)) + (dc < 0 ? ' less' : ' more') + '</b>'); }
+  return L.length ? L.join('<br>') + '<br><span class="muted">The Over / Short result is recalculated.</span>' : '<span class="muted">Change only what was wrong. Nothing changes until the other person accepts.</span>';
+}
+function corrForm() {
+  var d = CF.d, h = CF.h, inn = CF.side === 'in', list = corrRowList(), who = inn ? (d.fromName || h.fromName) : (d.receivedByName || h.receivedName);
+  var tbl = function (title, kinds) {
+    var rows = list.filter(function (x) { return kinds.indexOf(x[1]) >= 0; }); if (!rows.length) return '';
+    return '<div class="card"><h2>' + title + '</h2><table><tr><th>Item</th><th>Counted</th><th>Correct</th></tr>' + rows.map(function (x) {
+      var r = x[0], kind = x[1], was = corrWas(r, kind), key = corrKey(r, kind); if (CF.v[key] === undefined) CF.v[key] = String(was == null ? 0 : was);
+      return '<tr><td>' + (kind === 'cage' ? cageName(r.name, r.unit) : esc(r.name)) + '</td><td data-crw="' + key + '"' + (num(CF.v[key]) !== was ? ' style="color:var(--exp)"' : '') + '><b>' + (was == null ? '–' : was) + '</b></td><td><div class="stepper"><button data-act="crf-" data-k="' + key + '" aria-label="Less">−</button><input class="stepin" type="number" inputmode="numeric" min="0" data-step="crf" data-k="' + key + '" value="' + esc(CF.v[key]) + '" aria-label="Correct count"><button data-act="crf+" data-k="' + key + '" aria-label="More">+</button></div></td></tr>';
+    }).join('') + '</table></div>';
+  };
+  var cashCard = inn && d.receivedCash != null ? '<div class="card"><h2>Cash</h2><table><tr><th></th><th>Counted</th><th>Correct</th></tr><tr><td>Cash</td><td>' + money(d.receivedCash) + '</td><td><div class="ig" style="width:112px;height:40px"><i>$</i><input data-crcash="1" type="number" inputmode="decimal" min="0" value="' + esc(CF.cash) + '" style="text-align:right"></div></td></tr></table></div>' : '';
+  modal('<div class="ps"><h2>Handover mistake</h2><p class="muted" style="margin-top:0">' + esc(d.wk) + ' → ' + esc(d.receivedByName || h.receivedName || 'the incoming shift') + ' · ' + esc(d.date) + ' ' + esc(HL(d.half)) + '. Fix what was counted. ' + esc(who || 'The other person') + ' must accept it before anything changes.</p>' +
+    '<div class="card"><label>Which count was wrong?</label>' + seg([['in', 'Incoming shift'], ['out', 'Outgoing shift']], 'crside', CF.side, 2) + '</div>' + cashCard +
+    tbl('🧊 In the fridge (counted)', ['fridge']) + tbl('🧁 On the shelf (counted)', ['shelf']) + tbl('📦 Cases / Packs in storage (counted)', ['cage']) +
+    '<div class="card"><label>Why was it wrong? *</label>' + seg(CORRWHY.map(function (w) { return [w, esc(w)]; }), 'crwhy', CF.why, 2) + '<div class="f" style="margin:10px 0 0"><label>Note (optional)</label><input data-crnote="1" value="' + esc(CF.note) + '" maxlength="80" placeholder="e.g. counted the old case twice" autocomplete="off"></div></div>' +
+    '<div class="card" id="crf-sum" style="background:var(--soon-bg);box-shadow:none">' + corrSum() + '</div>' +
+    '<button class="btn block" data-act="corrsend">Send for approval</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button></div>');
+}
+function corrSet(key, val) {   /* a + / - or a typed number: only the row and the summary change, so the keyboard stays and the page does not jump */
+  CF.v[key] = String(val); var inp = $('#modal input[data-step=crf][data-k="' + key + '"]'); if (inp && document.activeElement !== inp) inp.value = val;
+  var td = $('#modal td[data-crw="' + key + '"]'); if (td) { var was = null; corrRowList().forEach(function (x) { if (corrKey(x[0], x[1]) === key) was = corrWas(x[0], x[1]); }); td.style.color = num(val) !== was ? 'var(--exp)' : ''; }
+  var s = $('#crf-sum'); if (s) s.innerHTML = corrSum();
+}
+function corrSend() {
+  if (!CF) return; var ch = corrChanges(); if (!ch.rows.length && !ch.cash) return toast('Nothing has changed');
+  if (!CF.why) return toast('Pick why it was wrong'); var d = CF.d, h = CF.h, why = CF.why + (CF.note.trim() ? ': ' + CF.note.trim() : ''), other = CF.side === 'in' ? (d.fromName || h.fromName) : (d.receivedByName || h.receivedName);
+  var c = { hid: d.handoverId, sid: d.sid || d.id, at: Date.now(), expireAt: EXPY(), byEmail: EMAIL, byName: myName(), side: CF.side, fromEmail: h.fromEmail, toEmail: h.acceptedBy, fromName: d.fromName || h.fromName || '', toName: d.receivedByName || h.receivedName || '', wk: d.wk, date: d.date, half: d.half, reason: why, cash: ch.cash, rows: ch.rows, status: 'open' };
+  askConfirm('Send this correction?', corrLines(c).join('<br>') + '<br><span class="muted">Reason: ' + esc(why) + '</span><div class="card" style="background:var(--soon-bg);box-shadow:none;padding:10px;margin:10px 0 0"><b>What happens next</b><div style="margin-top:4px">' + esc(other || 'The other person') + ' (' + (CF.side === 'in' ? 'outgoing' : 'incoming') + ' shift) is asked to accept it. If they cannot answer right now, the person from the <b>next incoming shift</b> can check the stock and accept or decline it when taking over. A President can also decide.<br><span class="muted">Nothing changes until it is accepted.</span></div></div>', 'Yes, send', function () {
+    var id = newId('events'); guard(setDoc(ref('corrections/' + id), c)).then(function () { CF = null; closeModal(); toast('Sent to ' + (other || 'the other person')); });
+  });
+}
+/* the decision */
+function corrReview(id) {
+  var c = (S.corrs || []).filter(function (x) { return x.id === id; })[0]; if (!c) return toast('That correction is no longer waiting');
+  var mine = c.byEmail === EMAIL, can = corrCanDecide(c), next = !corrParty(c) && !canAdmin();
+  modal('<h2>Handover mistake</h2><div class="card sum"><div><span>Handover</span><b>' + corrTitle(c) + '</b></div><div><span>Asked by</span><b>' + esc(c.byName) + ' (' + corrShiftWord(c.side) + ')</b></div><div><span>Reason</span><b>' + esc(c.reason || '') + '</b></div><div><span>Sent</span><b>' + corrWhen(c.at) + '</b></div></div>' +
+    '<div class="card"><h2>What changes</h2><div style="line-height:1.8">' + corrLines(c).join('<br>') + '</div><div class="muted" id="cr-after" style="margin-top:8px">The Over / Short result is recalculated when it is accepted.</div></div>' +
+    (can ? '<div class="card" style="background:var(--soon-bg);box-shadow:none">' + (next ? 'You are taking the next handover, so you can check this. ' : '') + 'Only accept it if you agree it was a genuine mistake.' + (S.state && S.state.pending ? '<div class="muted" style="margin-top:6px">The next handover has been made, so only the records of the earlier handover change. Count what is really here as normal.</div>' : '') + '</div><button class="btn block" data-act="corraccept" data-id="' + esc(id) + '">Accept the change</button><button class="btn red block" data-act="corrdecline" data-id="' + esc(id) + '" style="margin-top:10px">Decline</button>' : mine ? '<button class="btn sec block" data-act="corrcancel" data-id="' + esc(id) + '">Cancel my request</button>' : '') +
+    '<button class="btn sec block" data-act="close" style="margin-top:10px">' + (can ? 'Later' : 'Close') + '</button>');
+}
+function corrPopup(c) {
+  if (!$('#modal') || CORRSEEN[c.id]) return; CORRSEEN[c.id] = 1;
+  $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf" style="z-index:70"><div style="max-width:340px"><h2 style="color:var(--exp)">✎ Handover mistake</h2><p style="margin-top:0;font-size:15px"><b>' + esc(c.byName) + '</b> (' + corrShiftWord(c.side) + ') says the ' + corrTitle(c) + ' handover was counted wrong.<br><br>' + corrLines(c).join('<br>') + '<br>Reason: ' + esc(c.reason || '') + '</p><div class="card" style="background:var(--soon-bg);box-shadow:none;padding:10px;margin:0 0 10px">Cannot check it right now? You can tap <b>Later</b>. If you do not answer, the person from the <b>next incoming shift</b> can check and accept it when they take over.</div><button class="btn block" data-act="corrlook" data-id="' + esc(c.id) + '">Look at it</button><button class="btn sec block" data-act="cno" style="margin-top:10px">Later</button></div></div>');
+  try { if (navigator.vibrate) navigator.vibrate(120); } catch (e) {}
+}
+function corrCards() {   /* on the page of the person taking a handover: the corrections of the earlier handover that still wait */
+  return (S.corrs || []).filter(function (c) { return corrCanDecide(c); }).map(function (c) {
+    return '<div class="card" style="border:2px solid var(--exp);background:var(--exp-bg)"><b style="color:var(--exp)">✎ A correction is waiting</b><div style="margin:6px 0">For the <b>' + corrTitle(c) + '</b> handover. <b>' + esc(c.byName) + '</b> (' + corrShiftWord(c.side) + ') asked to fix a count and the other person has not answered.</div><div style="line-height:1.8">' + corrLines(c).join('<br>') + '</div><div class="muted" style="margin:6px 0">Reason: ' + esc(c.reason || '') + '. Check the stock in front of you. If it matches, accept. If you decline or do nothing, the handover stays as it was and this closes when you take over.</div><div class="row"><button class="btn grow" data-act="corraccept" data-id="' + esc(c.id) + '">Accept the change</button><button class="btn red grow" data-act="corrdecline" data-id="' + esc(c.id) + '">Decline</button></div></div>';
+  }).join('');
+}
+function corrCalc(c, d, h) {   /* the corrected counts, and what the shortage becomes (the same sums as when a handover is accepted) */
+  var items = (d.its ? unpackItems(d.its) : (h.items || []).map(function (x) { return Object.assign({}, x); })) || [], base = (h.items || []).length ? h.items : items;
+  var rc = Array.isArray(d.rc) && d.rc.length ? d.rc.slice() : [].concat.apply([], items.map(function (i) { var q = h.receivedItems && h.receivedItems[i.id]; return q ? [q.stock, q.cage] : [null, null]; })), byId = {}, outRows = false;
+  var sums = function (its, rcc) {
+    var sIt = [], sVal = 0, cogs = 0;
+    its.forEach(function (i, k) {
+      var it = item(i.id); if (!it) return; var cs = rcc[2 * k] == null ? i.stock : rcc[2 * k], cg = rcc[2 * k + 1] == null ? (i.cage || 0) : rcc[2 * k + 1];
+      if (cs < i.stock) { var v = r2((i.stock - cs) * i.price); sIt.push({ name: i.name, kind: i.shelf ? 'shelf' : 'fridge', handed: i.stock, counted: cs, short: i.stock - cs, price: i.price, value: v }); sVal += v; cogs += (i.stock - cs) * (it.cost || 0); }
+      if (itStore(i) && cg < (i.cage || 0)) { var v2 = r2((i.cage - cg) * (i.per || 1) * i.price); sIt.push({ name: i.name, kind: 'cage', handed: i.cage, counted: cg, short: i.cage - cg, price: i.price, value: v2 }); sVal += v2; cogs += (i.cage - cg) * per(it) * (it.cost || 0); }
+    });
+    return { sIt: sIt, sVal: r2(sVal), cogs: r2(cogs) };
+  };
+  var old = sums(items, rc), oldCash = d.receivedCash;
+  items.forEach(function (x, k) { byId[x.id] = k; });
+  (c.rows || []).forEach(function (r) { var k = byId[r.id]; if (k === undefined) return; if (r.side === 'out') { outRows = true; if (r.kind === 'cage') items[k].cage = r.now; else items[k].stock = r.now; } else rc[2 * k + (r.kind === 'cage' ? 1 : 0)] = r.now; });
+  var nw = sums(items, rc), cashC = c.cash ? c.cash.now : oldCash, expC = typeof h.computed === 'number' ? h.computed : h.cash;
+  var cShort = cashC < expC ? r2(expC - cashC) : 0, cOver = cashC > expC ? r2(cashC - expC) : 0, oShort = oldCash < expC ? r2(expC - oldCash) : 0;
+  return { items: items, rc: rc, outRows: outRows, cashC: cashC, expC: expC, cShort: cShort, cOver: cOver, sIt: nw.sIt, sVal: nw.sVal, sTot: r2(cShort + nw.sVal), dCogs: r2(nw.cogs - old.cogs), dCashShort: r2(cShort - oShort), oldTot: r2(oShort + old.sVal) };
+}
+function corrAccept(id) {
+  var c = (S.corrs || []).filter(function (x) { return x.id === id; })[0]; if (!c || !corrCanDecide(c)) return toast('That correction is no longer waiting for you');
+  if (CORRBUSY) return; CORRBUSY = true; setTimeout(function () { CORRBUSY = false; }, 4000);
+  Promise.all([getDoc(ref('shifts/' + c.sid)), getDoc(ref('handovers/' + c.hid)), getDoc(ref('corrections/' + id))]).then(function (r) {
+    if (!r[0].exists() || !r[1].exists() || !r[2].exists() || r[2].data().status !== 'open') { CORRBUSY = false; return toast('That correction is no longer waiting'); }
+    var d = r[0].data(); d.id = c.sid; var h = r[1].data(), live = !S.state.pending, k = corrCalc(c, d, h), via = corrParty(c) ? 'other' : canAdmin() ? 'president' : 'next';
+    var b = writeBatch(DB), ids = [], ld = {}, dCash = 0, now = Date.now(), hd = String(c.date || '').split('/'), sday = hd.length === 3 ? hd[2] + '-' + hd[1] + '-' + hd[0] : '';
+    DAYQ = [];
+    (c.rows || []).forEach(function (x) { if (ids.indexOf(x.id) < 0) ids.push(x.id); });
+    if (live && c.side === 'in') {
+      (c.rows || []).forEach(function (x) { var it = item(x.id); if (!it || typeof it.open !== 'number' || typeof it.cageOpen !== 'number') return; var o = ld[x.id] || (ld[x.id] = { s: 0, c: 0 }), df = x.now - x.was; if (x.kind === 'cage') o.c = Math.max(o.c + df, -it.cage); else o.s = Math.max(o.s + df, -it.stock); });
+      if (c.cash) dCash = r2(c.cash.now - c.cash.was);
+    }
+    var rec = { cid: id, at: now, byEmail: c.byEmail, byName: c.byName, decidedBy: EMAIL, decidedByName: myName(), via: via, reason: c.reason, side: c.side, wk: c.wk, cash: c.cash || null, rows: (c.rows || []).map(function (x) { return { id: x.id, name: x.name, kind: x.kind, side: x.side, was: x.was, now: x.now, unit: x.unit || '' }; }) };
+    b.update(ref('corrections/' + id), { status: 'accepted', decidedBy: EMAIL, decidedByName: myName(), decidedAt: now, via: via, live: live, ld: ld, dCash: dCash });
+    var ev = { t: now, type: 'hocorr', item: '', items: ids, name: 'Handover corrected', qty: 0, amt: 0, sid: S.state.shift.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: c.wk, dly: 1, day: sday, forSid: c.sid, cogs: k.dCogs, dCashShort: k.dCashShort, cid: id, note: corrLinesPlain(c) };
+    b.set(ref('events/' + id), ev); ev.id = id; DAYQ.push({ e: ev, sign: 1 });
+    var RI = Object.assign({}, h.receivedItems || {}); k.items.forEach(function (i, n) { if (k.rc[2 * n] != null) RI[i.id] = { stock: k.rc[2 * n], cage: k.rc[2 * n + 1] == null ? ((RI[i.id] || {}).cage || 0) : k.rc[2 * n + 1] }; });
+    var hUp = { receivedItems: RI, receivedCash: k.cashC, hcorr: (h.hcorr || []).concat([rec]), lastCorr: id };
+    if (k.outRows) { var gv = {}; k.items.forEach(function (i) { gv[i.id] = i; }); hUp.items = (h.items || []).map(function (x) { var g = gv[x.id]; return g ? Object.assign({}, x, { stock: g.stock, cage: g.cage }) : x; }); }
+    b.update(ref('handovers/' + c.hid), hUp);
+    var sUp = { rc: k.rc, receivedCash: k.cashC, shortCash: k.cShort, shortItems: k.sVal, over: k.cOver, short: k.sTot, corrected: true, hcorr: (d.hcorr || []).concat([rec]), lastCorr: id };
+    if (k.outRows && d.its) sUp.its = packItems(k.items);
+    b.update(ref('shifts/' + c.sid), sUp);
+    var sh0 = (S.shAll || []).filter(function (x) { return x.id === c.hid; })[0];
+    if (sh0) b.update(ref('shortages/' + c.hid), { cashCounted: k.cashC, cashShort: k.cShort, cashOver: k.cOver, items: k.sIt, itemsValue: k.sVal, total: k.sTot, lastEvent: id });
+    else if (k.sTot > 0 || k.cOver > 0) b.set(ref('shortages/' + c.hid), { handoverId: c.hid, at: d.receivedAt || now, wk: c.wk, shiftDate: c.date, shiftHalf: c.half, month: hd.length === 3 ? hd[2] + '-' + hd[1] : dkey(new Date()).slice(0, 7), fromEmail: c.fromEmail, fromName: c.fromName, toEmail: c.toEmail, toName: c.toName, sid: c.sid, ctl: h.ctl || [c.fromEmail], fromWatch: h.fromWatch || '', trail: h.trail || [], cashExpected: k.expC, cashHanded: h.cash, cashCounted: k.cashC, cashShort: k.cShort, cashOver: k.cOver, items: k.sIt, itemsValue: k.sVal, total: k.sTot, lastEvent: id });
+    Object.keys(ld).forEach(function (iid) { var it = item(iid); b.update(ref('items/' + iid), { stock: it.stock + ld[iid].s, open: it.open + ld[iid].s, cage: it.cage + ld[iid].c, cageOpen: it.cageOpen + ld[iid].c, lastEvent: id }); });
+    if (live && dCash) b.update(ref('shop/state'), { 'shift.received': r2(S.state.shift.received + dCash), lastCorr: id });
+    var tos = []; [c.fromEmail, c.toEmail, c.byEmail].forEach(function (em) { if (em && em !== EMAIL && tos.indexOf(em) < 0) tos.push(em); });
+    tos.forEach(function (em, n) { b.set(ref('notices/' + id + '_' + n), { kind: 'hcdone', cid: id, toEmail: em, at: now, read: false, byName: myName(), reqName: c.byName, side: c.side, wk: c.wk, shiftDate: c.date, shiftHalf: c.half, reason: c.reason, text: corrLinesPlain(c), handoverId: c.hid }); });
+    commit(b).then(function () { CORRBUSY = false; closeModal(); if (!$('#spage').hidden && S.hand && RX) showRx(true); toast(live ? 'Correction accepted. The handover and the stock now show the right numbers' : 'Correction accepted. The earlier handover is corrected'); });
+  }).catch(function (e) { CORRBUSY = false; toast(errText(e)); });
+}
+function corrDecline(id) {
+  var c = (S.corrs || []).filter(function (x) { return x.id === id; })[0]; if (!c || !corrCanDecide(c)) return toast('That correction is no longer waiting for you');
+  askConfirm('Decline this correction?', esc(c.byName) + ' is told it was declined. The handover stays as it was.', 'Yes, decline', function () {
+    var b = writeBatch(DB), now = Date.now(); b.update(ref('corrections/' + id), { status: 'declined', decidedBy: EMAIL, decidedByName: myName(), decidedAt: now, via: corrParty(c) ? 'other' : canAdmin() ? 'president' : 'next', live: !S.state.pending });
+    b.set(ref('notices/' + id + '_0'), { kind: 'hcno', cid: id, toEmail: c.byEmail, at: now, read: false, byName: myName(), reqName: c.byName, side: c.side, wk: c.wk, shiftDate: c.date, shiftHalf: c.half, reason: c.reason, text: corrLinesPlain(c), handoverId: c.hid });
+    commit(b).then(function () { closeModal(); toast('Declined'); });
+  });
+}
+function corrCancel(id) { guard(updateDoc(ref('corrections/' + id), { status: 'cancelled' })).then(function () { closeModal(); toast('Request cancelled'); }); }
+function corrRecView(cid) {   /* a correction kept on a handover, from the History list */
+  var c = CORRREC[cid]; if (!c) return;
+  modal('<h2>✎ Handover corrected</h2><div class="card sum"><div><span>Handover</span><b>' + esc(c.wk || '') + '</b></div><div><span>Asked by</span><b>' + esc(c.byName || '') + ' (' + corrShiftWord(c.side) + ')</b></div><div><span>Accepted by</span><b>' + esc(c.decidedByName || '') + '</b></div><div><span>When</span><b>' + corrWhen(c.at) + '</b></div><div><span>Reason</span><b>' + esc(c.reason || '') + '</b></div></div><div class="card"><div style="line-height:1.8">' + corrLines(c).join('<br>') + '</div></div><button class="btn sec block" data-act="close">Close</button>');
+}
+function corrNoticeView(n) {   /* an accepted / declined correction, from Notifications */
+  modal('<h2>' + (n.kind === 'hcdone' ? '✎ Handover corrected' : '✎ Correction declined') + '</h2><div class="card sum"><div><span>Handover</span><b>' + esc(n.wk || '') + ' · ' + esc(n.shiftDate || '') + ' ' + esc(HL(n.shiftHalf)) + '</b></div><div><span>Asked by</span><b>' + esc(n.reqName || '') + ' (' + corrShiftWord(n.side) + ')</b></div><div><span>' + (n.kind === 'hcdone' ? 'Accepted by' : 'Declined by') + '</span><b>' + esc(n.byName || '') + '</b></div><div><span>Reason</span><b>' + esc(n.reason || '') + '</b></div></div><div class="card"><div style="line-height:1.8">' + esc(n.text || '') + '</div></div><button class="btn sec block" data-act="close">Close</button>');
+}
+
 /* ---------- reset to default (president only) ---------- */
 function resetAsk() {
   modal('<h2>Reset app to default?</h2><div class="card"><b>This clears:</b><div class="muted">All items and stock · every sale, purchase, loan and payment · all handovers and signatures · all credit owed · cancelled records · profit and loss history · receipt photos.</div><div style="margin-top:10px"><b>This stays:</b></div><div class="muted">People and their invitations (who has access) · saved names · suppliers · the shift roster and shift times (day 9am–6pm, night 6pm–9am) · everyone\'s saved signature.</div><p style="margin-bottom:0"><b style="color:var(--exp)">It cannot be undone.</b> Everyone sees the empty app straight away.</p></div>' +
@@ -3144,11 +3351,11 @@ function oldTidy(go) {   /* shift summaries from before v2.27 have no expiry, so
     })();
   }).catch(function (e) { box('<h2>⚠ Could not finish</h2><div class="muted">' + (/permission/i.test((e && e.code || '') + (e && e.message || '')) ? 'The database refused it. Publish the newest rules (firestore-rules-v' + RULES_VERSION + '.txt) in the Firebase console first, then try again.' : esc(errText(e))) + '</div>'); });
 }
-function rulesCheck() {   /* reading the permanent credit lines is allowed only by rules 2.12 and later: older rules refuse it */
+function rulesCheck() {   /* reading the handover mistakes is allowed only by rules 2.14 and later: older rules refuse it */
   var show = function (ok, txt) { modal('<h2>' + (ok ? '✓ Rules ' + RULES_VERSION + ' are published' : '⚠ Rules ' + RULES_VERSION + ' are not published yet') + '</h2><div class="muted" style="margin-bottom:12px">' + txt + '</div><button class="btn block" data-act="close">Close</button>'); };
   modal('<h2>Checking the rules…</h2><div class="empty">One moment</div>');
-  getDocs(query(col('plog'), limit(1))).then(function () { show(true, 'The permanent credit, payment and loan lines will be saved.'); }, function (e) {
-    show(false, /permission/i.test((e && e.code || '') + (e && e.message || '')) ? 'The database refused the check, so the older rules are still there. In the Firebase console open Firestore, then Rules, paste the whole firestore-rules-v' + RULES_VERSION + '.txt file and press Publish. Until then the app works as before, but credit lines are not saved.' : 'The check could not finish: ' + esc(errText(e)));
+  getDocs(query(col('corrections'), limit(1))).then(function () { show(true, 'Handover mistakes can be sent, accepted and corrected, and the permanent credit, payment and loan lines will be saved.'); }, function (e) {
+    show(false, /permission/i.test((e && e.code || '') + (e && e.message || '')) ? 'The database refused the check, so the older rules are still there. In the Firebase console open Firestore, then Rules, paste the whole firestore-rules-v' + RULES_VERSION + '.txt file and press Publish. Until then the app works as before, but a Handover mistake cannot be sent.' : 'The check could not finish: ' + esc(errText(e)));
   });
 }
 function spRow(ic, title, sub, act, extra) { return '<div class="sp-row' + (extra || '') + '" data-act="' + act + '"><i class="sp-ic">' + ic + '</i><div class="grow"><b>' + title + '</b><div class="muted">' + sub + '</div></div><span class="sp-ch">›</span></div>'; }
@@ -3277,7 +3484,7 @@ function hoViewShow(i) {
     }).join('') + '</table></div>';
   };
   var diffs = diffsOf(h), sig = function (src, who, t) { return src ? '<div style="margin-top:8px"><img class="sigimg" src="' + src + '" alt="signature"><div class="muted">' + esc(who || '') + (t ? ' · ' + when(t) : '') + '</div></div>' : ''; };
-  var cashRow = '<div><span>Cash handed over</span><b>' + money(h.cash) + '</b></div>' + (h.receivedCash != null ? '<div><span>Cash counted by receiver</span><b>' + money(h.receivedCash) + '</b></div>' + (h.receivedCash !== h.cash ? '<div><span>' + (h.receivedCash < h.cash ? 'Short' : 'Over') + '</span><b style="color:var(--exp)">' + money(Math.abs(h.receivedCash - h.cash)) + '</b></div>' : '') : '');
+  var cashRow = '<div><span>Cash handed over</span><b>' + money(h.cash) + '</b></div>' + (h.receivedCash != null ? '<div><span>Cash counted by the incoming shift</span><b>' + money(h.receivedCash) + '</b></div>' + (h.receivedCash !== h.cash ? '<div><span>' + (h.receivedCash < h.cash ? 'Short' : 'Over') + '</span><b style="color:var(--exp)">' + money(Math.abs(h.receivedCash - h.cash)) + '</b></div>' : '') : '');
   wpPage(hoViewShow, [i], '<h2><span class="sw ' + swc(sh.name) + '">' + esc(sh.name || '') + '</span> shift · ' + esc(sh.date || '') + ' ' + esc(HL(sh.half)) + '</h2>' +
     '<div class="card sum"><div><span>From</span><b>' + esc(hnl(h.fromName, h.fromEmail)) + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (not handed to a person)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Sent</span><b>' + when(h.at) + '</b></div>' +
     (h.receivedName ? '<div><span>Received by</span><b>' + esc(hnl(h.receivedName, h.acceptedBy)) + ' · ' + when(h.acceptedAt) + '</b></div>' : '<div><span>Status</span><b>' + (h.status === 'open' ? 'Waiting to be taken' : esc(h.status)) + '</b></div>') + cashRow +
@@ -4148,7 +4355,7 @@ var HELP = {
   credit: { t: 'Credit', steps: ['To put something on credit: go to <b>Count</b>, tap the item, and press <b>On credit to…</b>.', '<b>Lend cash</b> records money taken from the cash and lent to someone.', 'When someone pays, tap their name and enter the amount.', '<b>People owing</b> and <b>Credit + loans this shift</b> show who owes what. Credit stays on the list from shift to shift until it is paid.'],
     fix: ['Wrong person or amount: cancel it from History, then enter it again.', 'Ask a President or the Owner for write-offs and other corrections.'] },
   handover: { t: 'Handover', steps: ['<b>Giving:</b> count everything on the Count tab, then count the cash and enter it (this is required).', 'Choose the handover type: <b>To a person</b> (only people registered in the app) or <b>Locked</b> (fridge and cage locked, not handed to a person).', 'Sign, then press <b>Prepare handover</b>, check the summary and send it.', '<b>Receiving:</b> open the waiting handover, count the cash and every item, sign and accept. Anything short is recorded against the watch that was on duty.', '<b>View previous handover</b> shows the one you received and the one you handed over, read only.', '<b>Switch operator</b> gives the app to someone else on the same shift without a handover.'],
-    fix: ['Sent to the wrong person: cancel the handover before it is taken.', 'Counted wrong after sending: the receiver counts again; differences are recorded when it is accepted.', 'Handing over early or late? You may be asked which shift to record on (see Which shift am I on?).'] },
+    fix: ['Sent to the wrong person: cancel the handover before it is taken.', 'Counted wrong after sending: the incoming shift counts again; differences are recorded when it is accepted.', 'Handing over early or late? You may be asked which shift to record on (see Which shift am I on?).'] },
   ranks: { t: 'Ranks and access', steps: ['<b>Owner</b>: does everything. Other people see the Owner as a normal user.', '<b>President</b>: has the admin tools (People, Cancelled entries, corrections) and can manage Admins and Users.', '<b>Admin</b>: can accept or decline access requests, as User.', '<b>User</b>: counts, sells and hands over.', '<b>New people</b> sign in, pick their name (or add it), and press <b>Send request</b>. They see <b>Awaiting access from Admin</b> until someone lets them in.', 'Admins and above see a card at the top of every tab for each request: <b>Accept</b> (choose the rank), <b>Maybe later</b>, or open Settings → <b>Access</b> to accept or decline.'], fix: [] },
   shift: { t: 'Which shift am I on?', steps: ['The header always shows the shift working now, from your phone clock.', 'Your records stay on the shift record until a handover is accepted. If it differs from the clock, the header says <b>recording on</b> …', 'On a different watch from the working one, you are asked once which shift to record on:', '<b>Record on my watch</b>: the next shift of your watch, for example when you took a handover early.', '<b>Record on the working shift</b>: the person who handed over to you must approve it.', '<b>My watch has changed</b>: moves your name to the new watch. History shows the change.', '<b>Making a correction</b> (Admin and above): records on the working shift; every entry is marked <b>Correction by</b> your name.', 'Your choice lasts until the shift on the clock changes.'], fix: [] }
 };
@@ -4369,7 +4576,18 @@ document.addEventListener('click', function (e) {
   else if (a === 'shfix') { FX = null; shFixForm(id); }
   else if (a === 'shfixgo') shFixGo(id);
   else if (a === 'notices') noticesModal();
-  else if (a === 'ntview') { var nv = (S.notices || []).filter(function (x) { return x.id === id; })[0]; if (nv && nv.kind !== 'received') { HSH[nv.handoverId] = nv.s; shDetail(nv.handoverId); } }
+  else if (a === 'corrstart') corrStart();
+  else if (a === 'crside') { if (CF && CF.side !== b.dataset.v) { CF.side = b.dataset.v; CF.v = {}; corrForm(); } }
+  else if (a === 'crwhy') { if (CF) { CF.why = b.dataset.v; b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); } }
+  else if (a === 'crf+' || a === 'crf-') { if (CF) { var ck = b.dataset.k, cv = stepTo(Math.max(0, Math.floor(num(CF.v[ck]))), a === 'crf+' ? 1 : -1, 0); corrSet(ck, cv); } }
+  else if (a === 'corrsend') corrSend();
+  else if (a === 'corrreview') { var cr0 = $('#cf'); if (cr0) cr0.remove(); corrReview(b.dataset.id); }
+  else if (a === 'corrlook') { var cr1 = $('#cf'); if (cr1) cr1.remove(); corrReview(b.dataset.id); }
+  else if (a === 'corraccept') corrAccept(b.dataset.id);
+  else if (a === 'corrdecline') corrDecline(b.dataset.id);
+  else if (a === 'corrcancel') corrCancel(b.dataset.id);
+  else if (a === 'corrnote') corrRecView(b.dataset.id);
+  else if (a === 'ntview') { var nv = (S.notices || []).filter(function (x) { return x.id === id; })[0]; if (nv && (nv.kind === 'hcdone' || nv.kind === 'hcno')) corrNoticeView(nv); else if (nv && nv.kind !== 'received') { HSH[nv.handoverId] = nv.s; shDetail(nv.handoverId); } }
   else if (a === 'cpeople') creditPeople();
   else if (a === 'clf') { CLF = b.dataset.v; if (LASTV) { var bx = $('#modal .modal > div'); if (bx) bx.innerHTML = LASTV(); } }
   else if (a === 'lnq') { $('#ln-amt').value = b.dataset.v; }
@@ -4793,12 +5011,15 @@ document.addEventListener('change', function (e) {
   if (e.target.dataset && e.target.dataset.wz && WZ) { wzInput(e.target); return; }
   if (e.target.dataset && e.target.dataset.ws && WS) { wsInput(e.target); return; }
   var t = e.target;
+  if (CF && t.dataset && t.dataset.crnote !== undefined) { CF.note = t.value; return; }
+  if (CF && t.dataset && t.dataset.crcash !== undefined) { CF.cash = t.value; var cs0 = $('#crf-sum'); if (cs0) cs0.innerHTML = corrSum(); return; }
   if (t.dataset && t.dataset.op === 'from' && OP) { var pp = S.people.filter(function (p) { return plabel(p).toLowerCase() === t.value.trim().toLowerCase(); })[0]; if (pp && pp.watch && OP.fwk !== pp.watch) { OP.from = t.value; OP.fwk = pp.watch; opForm(); } return; }   /* a name picked from the list brings its shift with it */
   if ((t.id === 'br-cam' || t.id === 'br-pick') && t.files && t.files[0]) { shrink(t.files[0], function (img) { BUY.receipt = img; render(); }); return; }
   if ((t.id === 'uc-cam' || t.id === 'uc-pick') && t.files && t.files[0]) { shrink(t.files[0], function (img) { UC.receipt = img; UC.none = false; ucForm(); }); return; }
   if (t.classList && t.classList.contains('stepin')) {   /* a number typed straight into a +/- box */
     var n = Math.floor(num(t.value)), a2 = t.dataset.step, ch2;
     if (a2 === 'cn') { var qi = item(sel), nv = Math.max(0, Math.min(isNaN(n) ? 0 : n, qi ? qi.stock : n)); if (nv !== CN.to) { CN.to = nv; countSheet(); } else t.value = nv; }
+    else if (a2 === 'crf') { if (CF) corrSet(t.dataset.k, Math.max(0, n || 0)); }
     else if (a2 === 'cm') { var cmi2 = item(sel); CN.mv = Math.max(0, Math.min(n || 0, Math.max(0, cmi2.cage))); countSheet(); }
     else if (a2 === 'cq') { CN.q = Math.max(0, Math.min(n || 0, 999)); countSheet(); }
     else if (a2 === 'sf') { ST.fridge = Math.max(0, n); stRender(); }
@@ -4923,6 +5144,11 @@ function startListeners() {
   watch(ref('config/main'), function (s) { var c = s.exists() ? s.data() : null; setCfg(cfgOk(c) ? c : DEFAULT_CFG); scheduleRender(); });
   watch(col('suppliers'), function (s) { S.suppliers = docs(s); scheduleRender(); });
   if (canApprove()) subs.push(onSnapshot(col('requests'), function (s) { S.requests = docs(s).sort(function (a, b) { return (a.at || 0) - (b.at || 0); }); updateBell(); scheduleRender(); refreshModal(); }, function (e) { console.error(e); }));
+  subs.push(onSnapshot(query(col('corrections'), where('status', '==', 'open')), function (s) {   /* handover mistakes still waiting: everyone with access can see them, the people they concern are told at once */
+    var before = (S.corrs || []).map(function (c) { return c.id; }); S.corrs = docs(s).sort(function (a, b) { return (a.at || 0) - (b.at || 0); }); updateBell();
+    S.corrs.forEach(function (c) { if (before.indexOf(c.id) < 0 && c.byEmail !== EMAIL && corrParty(c) && !OWNERVIEW) corrPopup(c); });
+    if (!$('#spage').hidden && HREC && HSHDRAW) HSHDRAW(); else if (!$('#spage').hidden && RX && S.hand) showRx(true); scheduleRender(); refreshModal();
+  }, function (e) { console.error(e); }));
   subs.push(onSnapshot(query(col('shiftreqs'), where('toEmail', '==', EMAIL)), function (s) {
     var before = S.shreqIn.filter(function (r) { return r.status === 'pending'; }).map(function (r) { return r.id; });
     S.shreqIn = docs(s).sort(function (a, b) { return a.at - b.at; });
