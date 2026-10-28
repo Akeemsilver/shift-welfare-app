@@ -54,6 +54,8 @@ b,strong{font-weight:600}
 .bub .p{font-size:14px;font-weight:600;color:var(--link)}
 .bub .s{font-size:11px;color:var(--muted)}
 .bub .pill{position:absolute;right:8px;top:8px}
+.icorow{display:flex;gap:6px;margin-top:8px}.icorow button{flex:1;max-width:46px;height:42px;border-radius:12px;border:2px solid var(--secb);background:var(--surface);font-size:22px;padding:0;line-height:1}.icorow button.on{border-color:var(--brand);background:var(--soft)}
+.brows{padding:2px 14px;margin-top:0}.bub.brow{display:flex;align-items:center;gap:10px;width:100%;min-height:0;padding:11px 0;background:none;border:0;border-radius:0;box-shadow:none}.bub.brow+.bub.brow{border-top:1px solid var(--line)}.bub.brow .n{font-size:15px}.bub.brow .s{display:block;font-size:12.5px;margin-top:2px}.bub.brow .s b{font-size:14px;font-weight:700;color:var(--link)}.bub.brow .s b.z{color:var(--exp)}.bub.brow .pr{font-size:17px;color:var(--brand)}.bub.brow .ch{color:var(--muted)}
 .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .cc{background:var(--surface);border:0;border-left:5px solid var(--line);border-radius:14px;box-shadow:var(--sh);padding:9px 10px 9px 12px;text-align:left;font:inherit;color:inherit;display:block;width:100%;position:relative}
 .cc.done{border-left-color:var(--cnt);background:linear-gradient(90deg,var(--cnt-bg),var(--surface) 70%)}.cc.low{border-left-color:var(--soon)}.cc.out{border-left-color:var(--exp)}
@@ -259,14 +261,14 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.37', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.39', RULES_VERSION = '2.13';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
   periods: [{ key: 'AM', label: 'Day', start: 9 }, { key: 'PM', label: 'Night', start: 18 }],   /* the parts of a day, by start hour; the last one runs past midnight to the first start */
   cycle: [{ s: ['Red', 'Black'] }, { s: ['Blue', 'Red'] }, { s: ['White', 'Blue'] }, { s: ['Black', 'White'] }],   /* cycle[day].s[period] = the shift on duty; day 0 is the anchor date */
   anchor: '2026-10-01',   /* 1 Oct 2026: Day = Red, Night = Black */
-  labels: { fridge: 'Fridge', storage: 'Cage', shelf: 'Shelf' },   /* what this workplace calls its three places */
+  labels: { fridge: 'Fridge', storage: 'Cage', shelf: 'Shelf', ficon: '🧊', sicon: '🧁', cicon: '📦' },   /* what this workplace calls its three places */
   perCase: 24,            /* items in a case, unless an item says otherwise */
   ranks: ['FF', 'FSSO', 'Actg FSSO', 'Ag FSSO', 'FSubO'],
   signup: { nameLabel: 'Surname', noLabel: 'Service number', rankLabel: 'Rank', requireNo: true, requireRank: true, useNo: true, useRank: true, rankHint: 'example FF / F sub O' }   /* what the sign-up asks people */
@@ -286,6 +288,12 @@ var SU = DEFAULT_CFG.signup;
 var suReq = function (on) { return on ? ' *' : ' (optional)'; }, suLow = function (x) { return String(x).toLowerCase(); };
 var LBL = [];   /* [regex, text] pairs that turn Couva's words (Fridge, Cage, Shelf) into this workplace's own; empty for Couva */
 function lbl(t) { for (var k = 0; k < LBL.length; k++) t = t.replace(LBL[k][0], LBL[k][1]); return t; }
+var PLACE_ICONS = { ficon: ['🧊', '❄️', '🥤', '🍹', '🍺', '🥛', '🧃'], sicon: ['🧁', '🍫', '🍪', '🍿', '🪟', '🗄️', '🛍️'], cicon: ['📦', '🗃️', '🚪', '🏠', '🏬', '🧰', '🧳'] };
+var PLACE_HINT = { ficon: 'Cooler, chiller, drinks, milk, juice', sicon: 'Snacks, glass case, cabinet or locker, counter', cicon: 'Boxes, filing box, room, house, store, toolbox, trunk' };
+function iconRow(labels, key, act) {   /* a row of pictures to pick for one place: the first is today's picture, so nothing changes until someone picks another */
+  var cur = labels[key] || PLACE_ICONS[key][0];
+  return '<div class="icorow">' + PLACE_ICONS[key].map(function (e) { return '<button type="button" data-act="' + act + '" data-k="' + key + '" data-v="' + e + '" class="' + (e === cur ? 'on' : '') + '">' + e + '</button>'; }).join('') + '</div><div class="muted" style="font-size:11.5px;margin-top:4px">' + PLACE_HINT[key] + '</div>';
+}
 function setCfg(c) {
   c = Object.assign({}, c, { labels: Object.assign({}, DEFAULT_CFG.labels, c.labels || {}), perCase: c.perCase > 0 ? c.perCase : DEFAULT_CFG.perCase, ranks: Array.isArray(c.ranks) && c.ranks.length ? c.ranks : DEFAULT_CFG.ranks, signup: Object.assign({}, DEFAULT_CFG.signup, c.signup || {}) });
   CFG = c; RANKS = c.ranks; SU = c.signup;
@@ -295,6 +303,8 @@ function setCfg(c) {
     var mine = String(c.labels[w[0]] || w[1]).trim() || w[1]; if (mine === w[1]) return;
     LBL.push([new RegExp('\\b' + w[1] + 's\\b', 'g'), up(mine) + 's'], [new RegExp('\\b' + low(w[1]) + 's\\b', 'g'), low(mine) + 's'], [new RegExp('\\b' + w[1] + '\\b', 'g'), up(mine)], [new RegExp('\\b' + low(w[1]) + '\\b', 'g'), low(mine)]);
   });
+  var fi = c.labels.ficon || '🧊', si = c.labels.sicon || '🧁', ci = c.labels.cicon || '📦';
+  if (fi !== '🧊' || si !== '🧁' || ci !== '📦') LBL.push([/🧊|🧁|📦/g, function (m) { return m === '🧊' ? fi : m === '🧁' ? si : ci; }]);   /* one pass, so a picture swapped in is never swapped again */
   if (typeof relabel === 'function') relabel(); var a = String(c.anchor || '2026-10-01').split('-'); ANCHOR = Date.UTC(+a[0], +a[1] - 1, +a[2]) / 864e5;
   WATCHES = c.shifts.map(function (x) { return x.name; }); WKC = {}; WSLUG = {};
   c.shifts.forEach(function (x, i) { WSLUG[x.name] = (nkey(x.name) || 'x') + i; WKC[x.name] = lumOf(x.color) > 0.9 ? '#E9EDF0' : x.color; });
@@ -503,9 +513,10 @@ function newEv() { LE = newId('events'); DAYQ = []; return LE; }
 function mkEvent(b, type, it, q, amt, extra, given) {
   var id = given || LE || newId('events'), e = { t: Date.now(), type: type, item: it ? it.id : '', items: it ? [it.id] : [], name: it ? it.name : '', qty: q, amt: amt || 0, sid: SH().sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: SH().name, dly: 1 };
   if (extra) for (var k in extra) e[k] = extra[k];
+  if (SETUPT.indexOf(type) >= 0 && startupOn()) { e.su = true; if (e.cogs) e.cogs = 0; }   /* while setting up, an edit is kept but not counted: no miscounts, no profit effect */
   if (type !== 'shiftrec' && type !== 'watchchg' && corrOn()) e.corr = myName();   /* entries made as a correction are marked until the shift changes */
   if (PLT[type] && (type !== 'sale' || e.cr) && (e.cid || e.person)) PLQ.push({ id: id, d: { t: e.t, type: PLT[type], person: e.cid || rootOf(e.person), name: e.crName || '', amt: e.amt || 0, qty: e.qty || 0, item: type === 'sale' || type === 'cnote' ? e.name || '' : '', sid: e.sid, wk: e.wk || '', by: e.byName || '', note: e.note || '', expireAt: EXPY() } });
-  b.set(ref('events/' + id), e); EVC[id] = e; e.id = id; DAYQ.push({ e: e, sign: 1 }); return id;
+  b.set(ref('events/' + id), e); EVC[id] = e; e.id = id; if (!e.su) DAYQ.push({ e: e, sign: 1 }); return id;
 }
 function itemInc(b, id, d, ev) { var u = { lastEvent: ev || LE }; if (d.cost) u.cost = d.cost; if (d.stock) u.stock = increment(d.stock); if (d.cage) u.cage = increment(d.cage); b.update(ref('items/' + id), u); }
 function balInc(b, cid, d, ev) { b.set(ref('credit/' + cid), { bal: increment(d), lastEvent: ev || LE }, { merge: true }); }
@@ -763,7 +774,7 @@ function vCount() {
   h += '<div class="muted" style="margin:-4px 4px 12px">What you see is what was handed over to you. At the end of your shift, count so it shows what you are handing over.</div>';
   return h + '<div class="cgrid">' + LI.map(function (i) {
     var c = cnum(i.id), cl = c.counted ? ' done' : i.stock <= 0 ? ' out' : i.stock <= 6 ? ' low' : '';
-    return '<button class="cc' + cl + '" data-act="pick" data-id="' + i.id + '"><div class="cn">' + esc(i.name) + '</div><div class="cv">' + i.stock + '</div><div class="cs">' + (hasCage(i) ? '🔒 Cage: ' + uLab(i, i.cage) : '🧁 On the shelf') + '</div>' + (c.counted ? '<div class="cs" style="margin-top:3px"><span class="pill">Sold ' + Math.max(0, c.sold - c.sp) + '</span>' + (c.cr ? ' <span class="pill low">Credit ' + c.cr + '</span>' : '') + (c.sp ? ' <span class="pill out">Spoiled ' + c.sp + '</span>' : '') + '</div><span class="ck">✓ −' + c.sold + '</span>' : '') + '</button>';
+    return '<button class="cc' + cl + '" data-act="pick" data-id="' + i.id + '"><div class="cn">' + esc(i.name) + '</div><div class="cv">' + i.stock + '</div><div class="cs">' + (hasCage(i) ? '📦 Cage: ' + uLab(i, i.cage) : '🧁 On the shelf') + '</div>' + (c.counted ? '<div class="cs" style="margin-top:3px"><span class="pill">Sold ' + Math.max(0, c.sold - c.sp) + '</span>' + (c.cr ? ' <span class="pill low">Credit ' + c.cr + '</span>' : '') + (c.sp ? ' <span class="pill out">Spoiled ' + c.sp + '</span>' : '') + '</div><span class="ck">✓ −' + c.sold + '</span>' : '') + '</button>';
   }).join('') + '</div>';
 }
 function cnPreview(it) {
@@ -1145,13 +1156,27 @@ function ucReview() {
 }
 
 /* ---------- Stock ---------- */
+var SETUPT = ['newitem', 'edit', 'stockedit', 'cageadj', 'remove', 'costfill'];
+function startupOn() {   /* the workplace has never been started: only the president, and only while nothing has been sold, bought or counted */
+  return !!(isPres() && !OWNERVIEW && S.state && S.state.controlEmail && !S.state.openingDone && !S.log.some(function (e) { return !e.su && e.type !== 'opening' && SETUPT.indexOf(e.type) < 0; }));
+}
+function startupBanner() { return '<div class="card" style="background:var(--soon-bg);box-shadow:none;margin-bottom:12px"><b style="color:var(--soon)">🚀 Startup</b><div class="muted" style="color:var(--soon)">Add your items and fix anything you like. While you are setting up, changes are not recorded as miscounts and nobody gets a notification.</div></div>'; }
+function startupAsk() {
+  if (!inControl()) return toast('You must be in control to do this');
+  modal('<h2>Was there a handover before?</h2><div class="muted" style="margin-bottom:12px">A handover from the shift that worked before you started using the app.</div><button class="btn block" data-act="styes">Yes, enter it now</button><button class="btn sec block" data-act="stno" style="margin-top:10px">No, start fresh</button><button class="btn sec block" data-act="close" style="margin-top:10px;border:0;box-shadow:none">Back</button>');
+}
+function startFresh() {
+  OP = { cash: String(SH().received || ''), prevSales: '', notes: '', counts: {}, sh: [], from: '', fwk: '', fdate: '', fhalf: '', fresh: true };
+  S.items.forEach(function (i) { OP.counts[i.id] = { stock: String(i.stock), cage: String(i.cage) }; });
+  closeModal(); opCommit([], Math.max(0, num(OP.cash)));
+}
 function vStock() {
-  var h = '<button class="btn block" data-act="newitem" style="margin-bottom:14px">+ Add a new item</button>';
+  var su = startupOn(), h = (su ? startupBanner() : '') + '<button class="btn block" data-act="newitem" style="margin-bottom:14px">+ Add a new item</button>';
   if (!S.items.length) return h + '<div class="card empty">Your items will show here.</div>';
   var SI = S.items.filter(function (i) { return !gone0(i); }).concat(S.items.filter(gone0));   /* what ran out goes to the bottom */
-  h += '<div class="grid">' + SI.map(function (i) {
-    return '<button class="bub"' + (gone0(i) ? ' style="opacity:.6"' : '') + ' data-act="stockitem" data-id="' + i.id + '"><span class="n">' + esc(i.name) + '</span><span class="p">' + i.stock + '</span> <span class="s">' + (i.shelf ? 'on shelf' : 'in fridge') + '</span>' + (hasCage(i) ? '<div class="s">🔒 ' + uLab(i, i.cage) + ' (' + per(i) + ' each)</div>' : '<div class="s">🧁 Shelf item</div>') + '</button>';
-  }).join('') + '</div><p class="muted">Tap an item to count it, move a case to the fridge, or record spoilage.</p>';
+  h += '<div class="card brows">' + SI.map(function (i) {
+    return '<button class="bub brow"' + (gone0(i) ? ' style="opacity:.6"' : '') + ' data-act="stockitem" data-id="' + i.id + '"><span class="grow"><span class="n">' + esc(i.name) + '</span><span class="s"><b class="' + (i.stock <= 0 ? 'z' : '') + '">' + i.stock + '</b> ' + (i.shelf ? 'on shelf' : 'in fridge') + (hasCage(i) ? ' &nbsp;·&nbsp; 📦 ' + uLab(i, i.cage) + ' in storage' : '') + '</span></span><b class="pr">' + money(i.price) + '</b><span class="ch">›</span></button>';
+  }).join('') + '</div>' + (su ? '<button class="btn block" data-act="stbegin" style="background:var(--ok);margin-top:4px">✓ Start workplace</button><p class="muted">Press when your items are ready. You can still edit items afterwards.</p>' : '') + '<p class="muted">Tap an item to count it, move a case to the fridge, or record spoilage.</p>';
   return h;
 }
 function stockSheet() {
@@ -1174,16 +1199,19 @@ function stRender() { if (ES) esForm(); else stockSheet(); }
 function esWarn() {
   var it = item(ST.id); if (!it) return;
   ES = { id: it.id, reason: '', note: '' }; ST.fridge = it.stock; ST.cage = it.cage;
+  if (startupOn()) { ES.reason = 'Setting up'; return esForm(); }   /* while setting up there is no warning and no record */
   modal('<h2 style="color:var(--exp)">⚠ Edit stock</h2><div class="card" style="background:var(--exp-bg);box-shadow:none"><b style="color:var(--exp)">Use with caution.</b><div style="margin-top:6px">This changes the stock counts and the handover, and it throws off the app\'s calculations. Only use it to fix a real counting mistake, and be careful.</div><div class="muted" style="margin-top:8px">It is recorded in History in red with your name, the reason and what changed. It cannot be cancelled, only edited again.</div></div>' +
     '<button class="btn red block" data-act="esack">I understand, continue</button><button class="btn sec block" data-act="esback" style="margin-top:10px">Go back</button>');
 }
 function esForm() {
   var it = item(ES.id); if (!it) return closeModal();
-  modal('<h2 style="color:var(--exp)">⚠ Edit stock · ' + esc(it.name) + '</h2><div class="card"><label>' + (it.shelf ? 'On the shelf' : 'In the fridge') + ' (now ' + it.stock + ')</label>' + stepper('sf', ST.fridge) +
+  var quiet = startupOn();
+  modal('<h2' + (quiet ? '' : ' style="color:var(--exp)"') + '>' + (quiet ? '' : '⚠ ') + 'Edit stock · ' + esc(it.name) + '</h2><div class="card"><label>' + (it.shelf ? 'On the shelf' : 'In the fridge') + ' (now ' + it.stock + ')</label>' + stepper('sf', ST.fridge) +
     (hasCage(it) ? '<label style="margin-top:10px">Cage, ' + unitPl(unitName(it), 2) + ' of ' + per(it) + ' (now ' + it.cage + ')</label>' + stepper('sg', ST.cage) : '') + '</div>' +
-    '<div class="card"><label>Why? (required)</label><div class="chips" style="flex-wrap:wrap;overflow:visible">' + ES_REASONS.map(function (r) { return '<button data-act="esreason" data-v="' + r + '" class="' + (ES.reason === r ? 'on' : '') + '">' + r + '</button>'; }).join('') + '</div>' +
+    (quiet ? '<div class="muted" style="margin:0 2px 10px">You are setting up, so this is saved quietly: no warning, no miscount, no notification.</div><button class="btn block" data-act="esquiet">Save</button><button class="btn sec block" data-act="esback" style="margin-top:10px">Cancel</button>'
+    : '<div class="card"><label>Why? (required)</label><div class="chips" style="flex-wrap:wrap;overflow:visible">' + ES_REASONS.map(function (r) { return '<button data-act="esreason" data-v="' + r + '" class="' + (ES.reason === r ? 'on' : '') + '">' + r + '</button>'; }).join('') + '</div>' +
     '<div class="f" style="margin:6px 0 0"><label>Note' + (ES.reason === 'Other' ? ' (required)' : ' (optional)') + '</label><input data-es="note" value="' + esc(ES.note) + '" autocomplete="off" placeholder="e.g. counted again with the next shift"></div></div>' +
-    '<button class="btn red block" data-act="esreview">Review the change</button><button class="btn sec block" data-act="esback" style="margin-top:10px">Cancel</button>');
+    '<button class="btn red block" data-act="esreview">Review the change</button><button class="btn sec block" data-act="esback" style="margin-top:10px">Cancel</button>'));
 }
 function esReview() {
   var it = item(ES.id), df = ST.fridge - it.stock, dg = hasCage(it) ? ST.cage - it.cage : 0;
@@ -1199,7 +1227,7 @@ function esSave() {
   var cut = (df < 0 ? -df : 0) + (dg < 0 ? -dg * per(it) : 0);
   itemInc(b, it.id, { stock: df, cage: dg });
   mkEvent(b, 'stockedit', it, df, 0, { cases: dg, fridgeFrom: it.stock, fridgeTo: ST.fridge, cageFrom: it.cage, cageTo: hasCage(it) ? ST.cage : 0, reason: ES.reason, note: ES.note.trim(), cogs: r2(cut * (it.cost || 0)), shelf: !!it.shelf, store: hasCage(it) });
-  commit(b); ES = null; closeModal(); toast('Stock edited. It is recorded in red in History.');
+  var q = startupOn(); commit(b); ES = null; closeModal(); toast(q ? 'Saved' : 'Stock edited. It is recorded in red in History.');
 }
 function showStockEdit(id) {
   var e = HEV[id] || S.log.filter(function (x) { return x.id === id; })[0]; if (!e) return;
@@ -1659,7 +1687,7 @@ function hoLists(rows, o) {   /* In the shop and In storage: on the giver's tab 
   var added = shop.reduce(function (a, r) { return a + r.moved + (r.direct ? r.bought : 0) + (r.ub || 0) + Math.max(0, r.edit) + Math.max(0, r.adj); }, 0), spoiled = shop.reduce(function (a, r) { return a + r.spoil + r.spQ; }, 0), sold = shop.reduce(function (a, r) { return a + r.sold; }, 0), money0 = shop.reduce(function (a, r) { return a + r.soldAmt; }, 0);
   var out = '<div class="card"><h2>In the shop <span class="muted" style="font-size:11px;font-weight:500">🧊 fridge · 🧁 shelf</span></h2>' + hint + (shop.length ? '<table class="hot"><tr><th>Item</th><th>Was</th><th>Sold</th><th>Now</th></tr>' + shop.map(function (r) { return hoRow(r, 'fridge', o.ed); }).join('') + '<tr class="tot"><td>Total</td><td></td><td>' + sold + '</td><td></td></tr></table><div class="muted" style="margin-top:4px">' + (added ? 'Added <b style="color:var(--ink)">' + added + '</b> · ' : '') + (spoiled ? 'Spoiled <b style="color:var(--exp)">' + spoiled + '</b> · ' : '') + 'Sold <b style="color:var(--ink)">' + sold + '</b> · ' + money(money0) + '</div>' : '<div class="muted">No items.</div>') + '</div>';
   var stt = hintSt + '<table class="hot"><tr><th>Item</th><th>Was</th><th>Added</th><th>Moved out</th><th>Now</th></tr>' + stor.map(function (r) { return hoRow(r, 'cage', o.ed); }).join('') + '</table>';
-  if (stor.length) out += o.fold ? rxFold('stor', '<b>In storage</b> <span class="muted" style="font-size:11px">🔒 cage · ' + stor.length + (stor.length === 1 ? ' item' : ' items') + '</span>', '<div class="card">' + stt + '</div>') : '<div class="card"><h2>In storage <span class="muted" style="font-size:11px;font-weight:500">🔒 cage</span></h2>' + stt + '</div>';
+  if (stor.length) out += o.fold ? rxFold('stor', '<b>In storage</b> <span class="muted" style="font-size:11px">📦 cage · ' + stor.length + (stor.length === 1 ? ' item' : ' items') + '</span>', '<div class="card">' + stt + '</div>') : '<div class="card"><h2>In storage <span class="muted" style="font-size:11px;font-weight:500">📦 cage</span></h2>' + stt + '</div>';
   return out;
 }
 function vHandover() {
@@ -1920,7 +1948,7 @@ function evRow(e, cancelable) {
   else if (e.type === 'repay') { ic = '💵'; tx = 'Shortage repaid by ' + (e.forWk || '') + ' watch'; sub = e.note || ''; amt = '+ ' + money(e.amt); col = 'var(--ok)'; }
   else if (e.type === 'takeover') { ic = '🛡️'; tx = 'Control taken'; sub = e.note; }
   else if (e.type === 'switch') { ic = '🔁'; tx = 'Operator switched'; sub = e.note; }
-  else if (e.type === 'opening') { ic = '📝'; tx = 'Opening handover entered by hand'; sub = 'Cash ' + money(e.cash || 0) + ' · ' + (e.lines || []).length + ' items counted' + (e.prevSales ? ' · previous sales ' + money(num(e.prevSales)) : ''); }
+  else if (e.type === 'opening') { ic = '📝'; tx = e.fresh ? 'Workplace started' : 'Opening handover entered by hand'; sub = (e.fromName ? 'From ' + e.fromName + ' · ' + e.fromWk + ' shift · ' + e.fromDate + ' ' + HL(e.fromHalf) + ' · ' : '') + 'Cash ' + money(e.cash || 0) + ' · ' + (e.lines || []).length + ' items counted' + (e.prevSales ? ' · previous sales ' + money(num(e.prevSales)) : ''); }
   else if (e.type === 'opencredit') { ic = '📒'; tx = 'Opening credit: ' + (e.crName || plab(e.cr)); sub = e.note || 'Owed from before'; amt = money(e.amt); col = 'var(--soon)'; }
   else if (e.type === 'newitem') { ic = '🆕'; tx = 'New item: ' + e.name; sub = e.note; }
   else if (e.type === 'remove') { ic = '🚫'; tx = 'Item removed: ' + e.name; sub = e.note; }
@@ -1928,7 +1956,7 @@ function evRow(e, cancelable) {
   else if (e.type === 'costfill') { ic = '🧮'; tx = 'Cost filled in: ' + e.name; sub = e.note; }
   else if (e.type === 'shiftrec') { ic = '🕘'; tx = 'Shift for the changes'; sub = e.note; }
   else if (e.type === 'watchchg') { ic = '🔄'; tx = 'Watch changed'; sub = e.note; }
-  else if (e.type === 'cageadj') { ic = '🔒'; tx = 'Cage count changed: ' + e.name + ' (' + (e.qty > 0 ? '+' : '') + e.qty + ' cases)'; }
+  else if (e.type === 'cageadj') { ic = '📦'; tx = 'Cage count changed: ' + e.name + ' (' + (e.qty > 0 ? '+' : '') + e.qty + ' cases)'; }
   else { ic = '✏️'; tx = 'Count changed: ' + e.name + ' (' + (e.qty > 0 ? '+' : '') + e.qty + ')'; }
   if (e.corr) sub = (sub ? sub + ' · ' : '') + 'Correction by ' + e.corr;
   HEV[e.id] = e;
@@ -2095,7 +2123,7 @@ function histEvSub() {   /* the entries of the shifts of the chosen day (a night
   var sids = histDay().map(function (x) { return x.sid; }).slice(0, 10), key = sids.join(',');
   if (key === HEKEY) return; HEKEY = key; if (HEUN) { HEUN(); HEUN = null; }
   if (!sids.length) { HEVS = []; histDraw(); return; }
-  HEUN = onSnapshot(query(col('events'), where('sid', 'in', sids), limit(3000)), function (snap) { HEVS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); histDraw(); }, function (e) { toast(errText(e)); });
+  HEUN = onSnapshot(query(col('events'), where('sid', 'in', sids), limit(3000)), function (snap) { HEVS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }).filter(function (x) { return !x.su; }); histDraw(); }, function (e) { toast(errText(e)); });
 }
 var hdot = function (wk) { var c = shiftColor(wk); return '<span class="hdot" style="background:' + c + '"></span>'; };
 var hfmt = function (t) { var d = new Date(t); return d.getDate() + ' ' + d.toLocaleDateString('en-GB', { month: 'short' }) + ' ' + hhmm(t); };
@@ -2231,7 +2259,7 @@ function histPage() {   /* (re)start the live data for what is on show, then dra
     HUN = function () { u0(); if (HEUN) { HEUN(); HEUN = null; } HEKEY = null; };
   } else if (HY.tab === 'all') {
     var r = histRange(); HEVS = null; histDraw();
-    HUN = onSnapshot(query(col('events'), where('t', '>=', r.a), where('t', '<', r.b), limit(3000)), function (snap) { HEVS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); histDraw(); }, function (e) { toast(errText(e)); });
+    HUN = onSnapshot(query(col('events'), where('t', '>=', r.a), where('t', '<', r.b), limit(3000)), function (snap) { HEVS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }).filter(function (x) { return !x.su; }); histDraw(); }, function (e) { toast(errText(e)); });
   } else {
     histDraw();
     var u1 = onSnapshot(query(col('shifts'), orderBy('at', 'desc'), limit(400)), function (snap) { HSDOCS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; HSD[x.id] = x; return x; }); histDraw(); }, function (e) { toast(errText(e)); });
@@ -2279,7 +2307,7 @@ function recordHtml(d, evs, h) {
   stor.forEach(function (r) { if (r.rg != null && r.rg < r.cage) shorts.push(esc(r.name) + ' (' + esc(r.unit || 'case') + ') −' + (r.cage - r.rg) + ' = ' + money(r2((r.cage - r.rg) * (r.per || 1) * r.price))); else if (r.rg != null && r.rg > r.cage) ups.push(esc(r.name) + ' (' + esc(r.unit || 'case') + ') +' + (r.rg - r.cage)); });
   var itNote = acc && (shorts.length || ups.length) ? '<div class="muted" style="margin-top:4px">' + (shorts.length ? shorts.join(', ') + ' short.' : '') + (ups.length ? ' ' + ups.join(', ') + ' is noted, not a shortage.' : '') + '</div>' : '';
   var shopC = '<div class="card"><h2>In the shop <span class="muted" style="font-size:11px;font-weight:500">🧊 fridge · 🧁 shelf</span></h2>' + (shop.length ? rctbl(shop.map(function (r) { return [(r.shelf ? '🧁 ' : '🧊 ') + esc(r.name), r.stock, acc ? r.rs : null]; })) + itNote : '<div class="muted">No items.</div>') + '</div>';
-  var storC = stor.length ? '<div class="card"><h2>In storage <span class="muted" style="font-size:11px;font-weight:500">🔒 cage</span></h2>' + rctbl(stor.map(function (r) { return [cageName(r.name, r.unit), r.cage, acc ? r.rg : null]; })) + '</div>' : '';
+  var storC = stor.length ? '<div class="card"><h2>In storage <span class="muted" style="font-size:11px;font-weight:500">📦 cage</span></h2>' + rctbl(stor.map(function (r) { return [cageName(r.name, r.unit), r.cage, acc ? r.rg : null]; })) + '</div>' : '';
   var sold = rows.filter(function (r) { return r.sold > 0; }), tcash = sold.reduce(function (a, r) { return a + Math.max(0, r.soldAmt - r.crAmt - r.spAmt); }, 0);
   var soldF = fold('sold', 'Sold on the shift <span class="muted" style="font-size:11px">' + sold.length + (sold.length === 1 ? ' item' : ' items') + ' · ' + money(tcash) + '</span>', soldCards(rows, { shift: { name: wk, date: d.date, half: d.half } }, 'Sold on the shift'));
   var line = function (l, v, c) { return '<div><span>' + l + '</span><b' + (c ? ' style="color:' + c + '"' : '') + '>' + v + '</b></div>'; };
@@ -2654,7 +2682,7 @@ function prepare() {
 function sheetLists(rows) {   /* the "Handover ready" sheet: In the shop, then only what is really in storage (each in its own unit) */
   var shop = rows.filter(function (r) { return r.open || r.stock || r.gone || r.moved || r.ub || r.spoil || r.edit; }), stor = rows.filter(function (r) { return r.store && (r.cageOpen || r.cage || r.movedCases || r.cedit || r.cadj || r.bought); });
   var out = '<div class="card"><h2>In the shop <span class="muted" style="font-size:11px;font-weight:500">🧊 fridge · 🧁 shelf</span></h2>' + (shop.length ? '<table class="hot"><tr><th>Item</th><th>Was</th><th>Sold</th><th>Now</th></tr>' + shop.map(function (r) { return '<tr><td>' + (r.shelf ? '🧁 ' : '🧊 ') + esc(r.name) + '</td><td>' + r.open + '</td><td>' + (r.sold || '') + '</td><td><b>' + r.stock + '</b></td></tr>'; }).join('') + '</table>' : '<div class="muted">No items.</div>') + '</div>';
-  if (stor.length) out += '<div class="card"><h2>In storage <span class="muted" style="font-size:11px;font-weight:500">🔒 cage</span></h2><table class="hot"><tr><th>Item</th><th>Was</th><th>Added</th><th>Moved out</th><th>Now</th></tr>' + stor.map(function (r) { return '<tr><td>' + cageName(r.name, r.unit) + '</td><td>' + r.cageOpen + '</td><td>' + (cageAdd(r) ? '+ ' + cageAdd(r) : '') + '</td><td>' + (cageOut(r) ? '− ' + cageOut(r) : '') + '</td><td><b>' + r.cage + '</b></td></tr>'; }).join('') + '</table></div>';
+  if (stor.length) out += '<div class="card"><h2>In storage <span class="muted" style="font-size:11px;font-weight:500">📦 cage</span></h2><table class="hot"><tr><th>Item</th><th>Was</th><th>Added</th><th>Moved out</th><th>Now</th></tr>' + stor.map(function (r) { return '<tr><td>' + cageName(r.name, r.unit) + '</td><td>' + r.cageOpen + '</td><td>' + (cageAdd(r) ? '+ ' + cageAdd(r) : '') + '</td><td>' + (cageOut(r) ? '− ' + cageOut(r) : '') + '</td><td><b>' + r.cage + '</b></td></tr>'; }).join('') + '</table></div>';
   return out;
 }
 function prepareShow() {
@@ -2778,7 +2806,7 @@ function rxCard(h, v, kind) {   /* the count boxes: In the shop (fridge and shel
     if (!rxShow(v, p, k, i)) return '';
     return '<tr><td>' + (g ? cageName(i.name, i.unit) : (i.shelf ? '🧁 ' : '🧊 ') + esc(i.name)) + '</td><td>' + (g ? i.cage : i.stock) + '</td><td>' + rxCell('rx-' + p + k, g ? i.cage : i.stock, vals[k] != null ? vals[k] : '') + '</td></tr>';
   }).join('');
-  return rows ? rxTbl(g ? 'In storage <span class="muted" style="font-size:11px;font-weight:500">🔒 cage</span>' : 'In the shop <span class="muted" style="font-size:11px;font-weight:500">🧊 fridge · 🧁 shelf</span>', rows) : '';
+  return rows ? rxTbl(g ? 'In storage <span class="muted" style="font-size:11px;font-weight:500">📦 cage</span>' : 'In the shop <span class="muted" style="font-size:11px;font-weight:500">🧊 fridge · 🧁 shelf</span>', rows) : '';
 }
 function rxCashCard(h, v) { return rxTbl('Cash', '<tr><td>Cash</td><td style="font-size:16px;font-weight:600">' + money(h.cash) + '</td><td><div class="rxin"><div class="ig" style="width:112px;height:40px"><i>$</i><input id="rx-cash" data-exp="' + h.cash + '" enterkeyhint="next" type="number" inputmode="decimal" value="' + esc(v.cash) + '" style="text-align:right"></div><span class="rxd" id="d-rx-cash"></span></div></td></tr>'); }
 function rxProg() {   /* the pinned bars: how many are counted, the differences so far, and what is left before Accept */
@@ -2963,7 +2991,7 @@ var OP = null;
 function opOpen() {
   if (!isPres()) return toast('Only the president can enter the previous handover');
   if (!inControl()) return toast('You must be in control to do this');
-  OP = { cash: String(SH().received || ''), prevSales: '', notes: '', counts: {}, sh: [] };
+  var td = new Date(); OP = { cash: String(SH().received || ''), prevSales: '', notes: '', counts: {}, sh: [], from: '', fwk: '', fdate: pad(td.getDate()) + '/' + pad(td.getMonth() + 1) + '/' + td.getFullYear(), fhalf: '' };
   S.items.forEach(function (i) { OP.counts[i.id] = { stock: String(i.stock), cage: String(i.cage) }; }); opForm();
 }
 function opForm() {
@@ -2972,6 +3000,9 @@ function opForm() {
     return '<tr><td>' + esc(i.name) + '</td><td><input class="stepin" style="width:74px;height:40px;font-size:14px" type="number" inputmode="numeric" min="0" data-oc="' + i.id + '" data-f="stock" value="' + esc(c.stock) + '"></td><td>' + (!hasCage(i) ? '<span class="muted">shelf</span>' : '<input class="stepin" style="width:74px;height:40px;font-size:14px" type="number" inputmode="numeric" min="0" data-oc="' + i.id + '" data-f="cage" value="' + esc(c.cage) + '">') + '</td></tr>';
   }).join('');
   modal('<h2>📝 Previous handover (by hand)</h2><p class="muted" style="margin-top:0">Copy these from the handover you received. It becomes this shift\'s starting point.</p>' +
+    '<div class="card" style="border-top:3px solid var(--brand)"><h2 style="margin-top:0">Handed over by</h2><div class="f"><label>Who gave you the shift *</label><input data-op="from" list="op-ppl" value="' + esc(OP.from) + '" placeholder="Name" autocomplete="off"><datalist id="op-ppl">' + S.people.map(function (p) { return '<option value="' + esc(plabel(p)) + '">'; }).join('') + '</datalist></div>' +
+    '<div class="f"><label>Their shift *</label><div class="seg" style="grid-template-columns:repeat(' + Math.min(4, WATCHES.length) + ',1fr)">' + WATCHES.map(function (w) { return '<button type="button" data-act="opfwk" data-v="' + esc(w) + '" class="' + (OP.fwk === w ? 'on' : '') + '">' + esc(w) + '</button>'; }).join('') + '</div></div>' +
+    '<div class="row f"><div class="grow"><label>Date *</label><input data-op="fdate" value="' + esc(OP.fdate) + '" placeholder="dd/mm/yyyy" inputmode="numeric" autocomplete="off"></div><div class="grow"><label>Part of the day *</label><div class="seg" style="grid-template-columns:repeat(' + CFG.periods.length + ',1fr)">' + CFG.periods.map(function (p) { return '<button type="button" data-act="opfhalf" data-v="' + esc(p.key) + '" class="' + (OP.fhalf === p.key ? 'on' : '') + '">' + esc(p.label) + '</button>'; }).join('') + '</div></div></div></div>' +
     '<div class="card"><div class="f"><label>Cash received</label><input data-op="cash" type="number" inputmode="decimal" min="0" value="' + esc(OP.cash) + '" placeholder="0"></div>' +
     '<div class="f"><label>Sales on that handover (for the record, optional)</label><input data-op="prevSales" type="number" inputmode="decimal" min="0" value="' + esc(OP.prevSales) + '" placeholder="0"></div>' +
     '<div class="f" style="margin-bottom:0"><label>Remarks (optional)</label><input data-op="notes" value="' + esc(OP.notes) + '" placeholder="e.g. taken over from Red watch" autocomplete="off"></div></div>' +
@@ -3000,20 +3031,27 @@ function opShLines() {   /* the filled-in shortage lines, or a message saying wh
 }
 function opReview() {
   if (!inControl()) return toast('You must be in control to do this');
+  if (!OP.from.trim()) return toast('Who handed over to you?');
+  if (!OP.fwk) return toast('Choose their shift');
+  if (!/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.test(OP.fdate.trim())) return toast('Write their date like 05/10/2026');
+  if (!OP.fhalf) return toast('Choose the part of the day');
   var shl = opShLines(); if (typeof shl === 'string') return toast(shl);
   var cash = Math.max(0, num(OP.cash)), n = S.items.length;
-  askConfirm('Save the previous handover?', (shl.length ? '<b>' + shl.length + '</b> shortage' + (shl.length === 1 ? '' : 's') + ' still owed (' + money(shl.reduce(function (a, x) { return a + x.c + x.st; }, 0)) + ')<br>' : '') + 'Cash received <b>' + money(cash) + '</b>' + (OP.prevSales ? ' · previous sales ' + money(num(OP.prevSales)) : '') + '<br>' + n + ' item' + (n === 1 ? '' : 's') + ' will be set to the counts you entered.<br><span class="muted">This becomes the starting point for this shift. It is recorded in History.</span>', 'Yes, save', function () {
-    var b = writeBatch(DB), eid = newEv(), ids = [], lines = [];
+  askConfirm('Save the previous handover?', '<b>From ' + esc(OP.from.trim()) + '</b> · ' + esc(OP.fwk) + ' shift · ' + esc(OP.fdate.trim()) + ' ' + esc(HL(OP.fhalf)) + '<br>' + (shl.length ? '<b>' + shl.length + '</b> shortage' + (shl.length === 1 ? '' : 's') + ' still owed (' + money(shl.reduce(function (a, x) { return a + x.c + x.st; }, 0)) + ')<br>' : '') + 'Cash received <b>' + money(cash) + '</b>' + (OP.prevSales ? ' · previous sales ' + money(num(OP.prevSales)) : '') + '<br>' + n + ' item' + (n === 1 ? '' : 's') + ' will be set to the counts you entered.<br><span class="muted">This becomes the starting point for this shift. It is recorded in History.</span>', 'Yes, save', function () { opCommit(shl, cash); });
+}
+function opCommit(shl, cash) {
+  {
+    var b = writeBatch(DB), eid = newEv(), ids = [], lines = [], fr = OP.fresh;
     S.items.forEach(function (i) {
       var c = OP.counts[i.id] || {}, st = Math.max(0, Math.floor(num(c.stock))), cg = hasCage(i) ? Math.max(0, Math.floor(num(c.cage))) : 0;
       ids.push(i.id); lines.push({ item: i.id, name: i.name, stock: st, cage: cg });
       b.update(ref('items/' + i.id), { stock: st, open: st, cage: cg, cageOpen: cg, lastEvent: eid });
     });
     shl.forEach(function (x) { var sid = 'open_' + newId('shortages'); b.set(ref('shortages/' + sid), { handoverId: sid, opening: true, lastEvent: eid, at: x.ms, wk: x.l.wk, shiftDate: x.d, shiftHalf: '', month: x.mo, fromEmail: '', fromName: x.l.who.trim(), toEmail: '', toName: '', ctl: [], trail: [], cashHanded: 0, cashCounted: 0, cashShort: r2(x.c), cashOver: 0, items: [], itemsValue: r2(x.st), total: r2(x.c + x.st), note: x.l.note.trim() }); });
-    mkEvent(b, 'opening', null, 0, 0, { name: 'Opening handover', items: ids, lines: lines, shortLines: shl.length, cash: cash, prevSales: OP.prevSales ? num(OP.prevSales) : 0, note: OP.notes.trim() });
-    var u = { 'shift.received': cash, openingDone: true }; if (OP.notes.trim()) u['shift.notes'] = 'Opening handover: ' + OP.notes.trim(); b.update(ref('shop/state'), u);
-    commit(b); OP = null; closeModal(); toast('Previous handover saved', eid);
-  });
+    mkEvent(b, 'opening', null, 0, 0, { name: fr ? 'Workplace started' : 'Opening handover', items: ids, lines: lines, shortLines: shl.length, cash: cash, prevSales: OP.prevSales ? num(OP.prevSales) : 0, note: OP.notes.trim(), fresh: !!fr, fromName: fr ? '' : OP.from.trim(), fromWk: fr ? '' : OP.fwk, fromDate: fr ? '' : OP.fdate.trim(), fromHalf: fr ? '' : OP.fhalf });
+    var u = { 'shift.received': cash, openingDone: true }; if (!fr) u['shift.notes'] = 'Opening handover from ' + OP.from.trim() + ' (' + OP.fwk + ' shift)' + (OP.notes.trim() ? ': ' + OP.notes.trim() : ''); b.update(ref('shop/state'), u);
+    commit(b); OP = null; closeModal(); toast(fr ? 'Workplace started' : 'Previous handover saved', eid);
+  }
 }
 function opCreditForm(pid) {
   var nm = PK.ng ? PK.ng.name : plab(pid), bal = PK.ng ? 0 : balance(pid);
@@ -3372,9 +3410,9 @@ function wizardHtml() {
       '<p class="muted">The last part runs on until the first part starts again.</p>';
   } else if (st === 3) {
     h += '<p class="muted" style="margin-top:0">What do you call these places?</p>' +
-      '<div class="f"><label>Where cold drinks are sold from</label><input data-wz="lfridge" id="wz-lf" maxlength="20" value="' + esc(W.labels.fridge) + '"><div class="muted" style="font-size:12px">For example: Fridge, Ice box</div></div>' +
-      '<div class="f"><label>Where other items are sold from</label><input data-wz="lshelf" id="wz-ls" maxlength="20" value="' + esc(W.labels.shelf) + '"><div class="muted" style="font-size:12px">For example: Shelf, Cabinet</div></div>' +
-      '<div class="f"><label>Where stock is kept (in cases, packs…)</label><input data-wz="lstorage" id="wz-lc" maxlength="20" value="' + esc(W.labels.storage) + '"><div class="muted" style="font-size:12px">For example: Cage, Storeroom</div></div>' +
+      '<div class="f"><label>Where cold drinks are sold from</label><input data-wz="lfridge" id="wz-lf" maxlength="20" value="' + esc(W.labels.fridge) + '"><div class="muted" style="font-size:12px">For example: Fridge, Ice box</div>' + iconRow(W.labels, 'ficon', 'wzico') + '</div>' +
+      '<div class="f"><label>Where other items are sold from</label><input data-wz="lshelf" id="wz-ls" maxlength="20" value="' + esc(W.labels.shelf) + '"><div class="muted" style="font-size:12px">For example: Shelf, Cabinet</div>' + iconRow(W.labels, 'sicon', 'wzico') + '</div>' +
+      '<div class="f"><label>Where stock is kept (in cases, packs…)</label><input data-wz="lstorage" id="wz-lc" maxlength="20" value="' + esc(W.labels.storage) + '"><div class="muted" style="font-size:12px">For example: Cage, Storeroom</div>' + iconRow(W.labels, 'cicon', 'wzico') + '</div>' +
       '<div class="f"><label>Items in a case (the usual number)</label><input data-wz="percase" id="wz-pc" type="number" inputmode="numeric" min="1" value="' + W.perCase + '"><div class="muted" style="font-size:12px">You can set a different number for any item when you add it.</div></div>';
   } else if (st === 4) {
     h += peopleForm(W.signup, W.ranks, 'wz') + (!W.signup.useNo && !W.signup.useRank ? '<div class="card" style="box-shadow:none;background:var(--soft)"><div class="muted">With neither a number nor a rank, two people with the same name cannot both be added. The second one will be asked to change the name, for example by adding an initial.</div></div>' : '');
@@ -3414,7 +3452,7 @@ async function wzFinish() {
     periods: W.parts.map(function (x, i) { return { key: 'P' + (i + 1), label: x.label.trim(), start: x.start }; }),
     cycle: W.cycle.map(function (d) { return { s: d.map(function (si) { return names[si]; }) }; }),
     anchor: (function () { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); })(),
-    labels: { fridge: W.labels.fridge.trim(), storage: W.labels.storage.trim(), shelf: W.labels.shelf.trim() }, perCase: Math.floor(W.perCase),
+    labels: { fridge: W.labels.fridge.trim(), storage: W.labels.storage.trim(), shelf: W.labels.shelf.trim(), ficon: W.labels.ficon || '🧊', sicon: W.labels.sicon || '🧁', cicon: W.labels.cicon || '📦' }, perCase: Math.floor(W.perCase),
     ranks: W.signup.useRank ? W.ranks.split(',').map(function (x) { return x.trim(); }).filter(Boolean) : ['Member'],
     signup: { nameLabel: W.signup.nameLabel.trim() || 'Name', noLabel: W.signup.noLabel.trim() || 'Number', rankLabel: W.signup.rankLabel.trim() || 'Rank', requireNo: !!(W.signup.useNo && W.signup.requireNo), requireRank: !!(W.signup.useRank && W.signup.requireRank), useNo: !!W.signup.useNo, useRank: !!W.signup.useRank, rankHint: RANK_EG }
   };
@@ -3917,9 +3955,9 @@ function wsParts() {
 }
 function wsWords() {
   wpPage(wsWords, [], '<h2>Names of the places and case size</h2>' +
-    '<div class="f"><label>Where cold drinks are sold from</label><input data-ws="lfridge" maxlength="20" value="' + esc(WS.labels.fridge) + '"></div>' +
-    '<div class="f"><label>Where other items are sold from</label><input data-ws="lshelf" maxlength="20" value="' + esc(WS.labels.shelf) + '"></div>' +
-    '<div class="f"><label>Where stock is kept (in cases, packs…)</label><input data-ws="lstorage" maxlength="20" value="' + esc(WS.labels.storage) + '"></div>' +
+    '<div class="f"><label>Where cold drinks are sold from</label><input data-ws="lfridge" maxlength="20" value="' + esc(WS.labels.fridge) + '">' + iconRow(WS.labels, 'ficon', 'wsico') + '</div>' +
+    '<div class="f"><label>Where other items are sold from</label><input data-ws="lshelf" maxlength="20" value="' + esc(WS.labels.shelf) + '">' + iconRow(WS.labels, 'sicon', 'wsico') + '</div>' +
+    '<div class="f"><label>Where stock is kept (in cases, packs…)</label><input data-ws="lstorage" maxlength="20" value="' + esc(WS.labels.storage) + '">' + iconRow(WS.labels, 'cicon', 'wsico') + '</div>' +
     '<div class="f"><label>Items in a case (the usual number)</label><input data-ws="percase" type="number" inputmode="numeric" min="1" value="' + WS.perCase + '"><div class="muted" style="font-size:12px">Each item can still have its own number.</div></div>' +
     '<div id="ws-msg" class="muted" style="color:var(--exp);margin:8px 0"></div><button class="btn block" data-act="wssave">Save</button><button class="btn sec block" data-act="wsback" style="margin-top:10px">Back</button>'); REFRESH = null;
 }
@@ -3977,7 +4015,7 @@ function wsSave() {
   WS.shifts.forEach(function (x, k) { x.name = x.name.trim(); if (old[k] && old[k] !== x.name) ren[old[k]] = x.name; });
   WS.cycle.forEach(function (d) { d.s = d.s.map(function (n) { return ren[n] || n; }); });   /* the cycle follows a renamed shift */
   WS.periods.forEach(function (x) { x.label = x.label.trim(); });
-  WS.labels = { fridge: WS.labels.fridge.trim(), storage: WS.labels.storage.trim(), shelf: WS.labels.shelf.trim() };
+  WS.labels = { fridge: WS.labels.fridge.trim(), storage: WS.labels.storage.trim(), shelf: WS.labels.shelf.trim(), ficon: WS.labels.ficon || '🧊', sicon: WS.labels.sicon || '🧁', cicon: WS.labels.cicon || '📦' };
   WS.perCase = Math.floor(WS.perCase); if (WS.signup.useRank && !WS.ranks.length) WS.ranks = ['Member'];
   var al = Object.assign({}, WS.aliases || {}); Object.keys(ren).forEach(function (o) { al[o] = ren[o]; }); WS.aliases = al;
   var ops = [], b = null, n = 0, flush = function () { if (b) ops.push(b.commit()); b = null; n = 0; }, add = function (fn, w) { if (!b) b = writeBatch(DB); fn(b); n += w || 1; if (n >= 400) flush(); };
@@ -3996,7 +4034,7 @@ var relabel = (function () {
     if (busy || !LBL.length) return; busy = true;
     try {
       var w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null), n, list = [];
-      while ((n = w.nextNode())) { if (done.get(n) === n.nodeValue) continue; if (n.parentNode && /^(SCRIPT|STYLE|TEXTAREA|OPTION)$/.test(n.parentNode.nodeName)) continue; list.push(n); }
+      while ((n = w.nextNode())) { if (done.get(n) === n.nodeValue) continue; if (n.parentNode && (/^(SCRIPT|STYLE|TEXTAREA|OPTION)$/.test(n.parentNode.nodeName) || (n.parentNode.closest && n.parentNode.closest('#nav')))) continue; list.push(n); }
       list.forEach(function (t) { var v = lbl(t.nodeValue); if (v !== t.nodeValue) t.nodeValue = v; done.set(t, t.nodeValue); });
       document.querySelectorAll('[placeholder]').forEach(function (e) { var v = lbl(e.getAttribute('placeholder')); if (v !== e.getAttribute('placeholder')) e.setAttribute('placeholder', v); });
     } finally { busy = false; }
@@ -4311,6 +4349,10 @@ document.addEventListener('click', function (e) {
     mkEvent(nb, 'newitem', { id: nid, name: name }, fr, 0, { cases: cg, note: 'New item ' + name + ' at ' + money(num($('#ni-price').value)) }); commit(nb); closeModal(); toast(name + ' added');
   }
   else if (a === 'editstock') esWarn();
+  else if (a === 'esquiet') { var qd = item(ES.id); if (qd && ST.fridge === qd.stock && (!hasCage(qd) || ST.cage === qd.cage)) toast('Nothing has changed'); else esSave(); }
+  else if (a === 'stbegin') startupAsk();
+  else if (a === 'styes') { closeModal(); opOpen(); }
+  else if (a === 'stno') startFresh();
   else if (a === 'esack') esForm();
   else if (a === 'esback') { ES = null; stockSheet(); }
   else if (a === 'esreason') { ES.reason = b.dataset.v; esForm(); }
@@ -4514,6 +4556,8 @@ document.addEventListener('click', function (e) {
   else if (a === 'ophide') { if (isPres()) guard(updateDoc(ref('shop/state'), { openingDone: true })); }
   else if (a === 'opopen') opOpen();
   else if (a === 'opreview') opReview();
+  else if (a === 'opfwk') { OP.fwk = b.dataset.v; opForm(); }
+  else if (a === 'opfhalf') { OP.fhalf = b.dataset.v; opForm(); }
   else if (a === 'opcredit') { if (!inControl()) return toast('You must be in control to do this'); openPicker('open'); }
   else if (a === 'opcnext') opCreditNext(id);
   else if (a === 'resetask') resetAsk();
@@ -4593,6 +4637,8 @@ document.addEventListener('click', function (e) {
   else if (a === 'wzcell') { var ci = +b.dataset.i, cj = +b.dataset.j; WZ.cycle[ci][cj] = (WZ.cycle[ci][cj] + 1) % WZ.shifts.length; render(); }
   else if (a === 'wzday') { if (+b.dataset.v > 0) { var ls = WZ.cycle[WZ.cycle.length - 1]; WZ.cycle.push(ls.map(function (x) { return (x + 1) % WZ.shifts.length; })); } else if (WZ.cycle.length > 1) WZ.cycle.pop(); render(); }
   else if (a === 'wzmy') { WZ.myShift = +b.dataset.v; render(); }
+  else if (a === 'wzico') { WZ.labels[b.dataset.k] = b.dataset.v; render(); }
+  else if (a === 'wsico') { WS.labels[b.dataset.k] = b.dataset.v; wsWords(); }
   else if (a === 'wzno') { WZ.signup.useNo = b.dataset.v !== 'off'; WZ.signup.requireNo = b.dataset.v === 'req'; render(); }
   else if (a === 'wzrank') { WZ.signup.useRank = b.dataset.v !== 'off'; WZ.signup.requireRank = b.dataset.v === 'req'; render(); }
   else if (a === 'wzback') { WZ.msg = ''; WZ.step = Math.max(0, WZ.step - 1); render(); }
@@ -4698,6 +4744,7 @@ document.addEventListener('change', function (e) {
   if (e.target.dataset && e.target.dataset.wz && WZ) { wzInput(e.target); return; }
   if (e.target.dataset && e.target.dataset.ws && WS) { wsInput(e.target); return; }
   var t = e.target;
+  if (t.dataset && t.dataset.op === 'from' && OP) { var pp = S.people.filter(function (p) { return plabel(p).toLowerCase() === t.value.trim().toLowerCase(); })[0]; if (pp && pp.watch && OP.fwk !== pp.watch) { OP.from = t.value; OP.fwk = pp.watch; opForm(); } return; }   /* a name picked from the list brings its shift with it */
   if ((t.id === 'br-cam' || t.id === 'br-pick') && t.files && t.files[0]) { shrink(t.files[0], function (img) { BUY.receipt = img; render(); }); return; }
   if ((t.id === 'uc-cam' || t.id === 'uc-pick') && t.files && t.files[0]) { shrink(t.files[0], function (img) { UC.receipt = img; UC.none = false; ucForm(); }); return; }
   if (t.classList && t.classList.contains('stepin')) {   /* a number typed straight into a +/- box */
@@ -4850,7 +4897,7 @@ function startListeners() {
     if (sid !== logSid) {
       logSid = sid; if (unsubLog) unsubLog();
       unsubLog = onSnapshot(query(col('events'), where('sid', '==', sid)), function (es) {
-        S.log = docs(es).sort(function (a, b) { return a.t - b.t; }); scheduleRender();
+        S.log = docs(es).filter(function (e) { return !e.su; }).sort(function (a, b) { return a.t - b.t; }); scheduleRender();
       }, function (e) { console.error(e); });
     }
     var pend = S.state.pending || '';
