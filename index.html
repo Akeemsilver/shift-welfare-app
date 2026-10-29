@@ -258,7 +258,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
    Everyone invited can see everything live. */
 import { firebaseConfig, president } from './firebase-config.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import { getAuth, connectAuthEmulator, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, updatePassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import { getAuth, connectAuthEmulator, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, applyActionCode, sendPasswordResetEmail, updatePassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, connectFirestoreEmulator, doc, collection, onSnapshot, getDoc, getDocs, setDoc as _setDoc, updateDoc as _updateDoc, deleteDoc as _deleteDoc, writeBatch as _writeBatch, increment, Timestamp, query, where, orderBy, limit, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 /* the owner looking inside someone else's workplace can read everything and write nothing: every write goes through these */
@@ -271,7 +271,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.74', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.75', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1874,7 +1874,7 @@ function stageHtml() {
     (cr ? '<button class="btn sec block" data-act="lgmode" data-v="in" style="margin-top:10px">I already have an account</button>' : '<div class="row" style="margin-top:10px;gap:8px"><button class="btn sec" data-act="lgmode" data-v="create" style="flex:1;padding:0 6px">Create account</button><button class="btn sec" data-act="pwforgot" style="flex:1;padding:0 6px">Forgot password</button></div>') +
     '<div style="text-align:center;margin-top:6px"><button class="lnk" data-act="sendlogin" style="background:none;border:0;color:var(--link);font:inherit;font-size:13px;text-decoration:underline;padding:6px">Email me a sign-in link instead</button></div><div id="lg-msg" class="muted"></div>' +
     '<details style="margin-top:10px"><summary class="muted" style="cursor:pointer">Opened the link somewhere else, or it did not sign you in?</summary><p class="muted">Press and hold the link in the email, copy it, then paste it here with your email above.</p><div class="f"><input id="lg-link" placeholder="Paste the sign-in link" autocomplete="off"></div><button class="btn sec block" data-act="pastelogin">Sign in with this link</button></details></div>'; }
-  if (STAGE === 'verify') return '<div style="text-align:center"><img src="icons/logo.png" alt="Shift Welfare" width="160" style="max-width:55%;height:auto"></div><div class="card"><h2>Verify your email</h2><p class="muted" style="margin-top:0">We sent a link to <b>' + esc(EMAIL) + '</b>. Open it, then come back here and tap the button. <b>Check your spam or junk folder if it is not there.</b></p><p class="muted">After you open the link, come back here. This page carries on by itself.</p><button class="btn block" data-act="vcheck">I have verified</button><button class="btn sec block" data-act="vresend" style="margin-top:10px">Send the email again</button><button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button><div id="lg-msg" class="muted" style="margin-top:10px"></div></div>';
+  if (STAGE === 'verify') return '<div style="text-align:center"><img src="icons/logo.png" alt="Shift Welfare" width="160" style="max-width:55%;height:auto"></div><div class="card"><h2>Verify your email</h2><p class="muted" style="margin-top:0">We sent a link to <b>' + esc(EMAIL) + '</b>. Open it, then come back here and tap the button. <b>Check your spam or junk folder if it is not there.</b></p><p class="muted">After you open the link, come back here. This page carries on by itself.</p><button class="btn block" data-act="vcheck">I have verified</button><button class="btn sec block" data-act="vresend" style="margin-top:10px">Send the email again</button><button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button><div id="lg-msg" class="muted" style="margin-top:10px">' + esc(VERR || '') + '</div><p class="muted" style="font-size:12px">Tips: use only the newest email we sent (each new email cancels the older ones). A link works once. Check that <b>' + esc(EMAIL) + '</b> is spelled right; if it is not, sign out and sign up again.</p></div>';
   if (STAGE === 'noaccess') return '<div class="card"><h2>Something went wrong</h2><p>The app could not check your access. Check your connection and sign in again.</p><button class="btn sec block" data-act="signout">Sign out</button></div>';
   if (STAGE === 'request') return requestHtml();
   if (STAGE === 'welcome') return welcomeHtml(false);
@@ -5225,7 +5225,7 @@ function vCheck() {
   msg.textContent = 'Checking…';
   u.reload().then(function () { if (u.emailVerified) return u.getIdToken(true).then(function () { afterSignIn(u); }); msg.textContent = 'Not verified yet. Open the email we sent and tap its link, then try again.'; }, function (e) { msg.textContent = authMsg(e); });
 }
-var VPOLL = null;
+var VPOLL = null, VERR = '', VFRESH = false;
 function vPoll(quiet) {   /* the verify page checks by itself: once the link in the email has been opened (on any phone or browser), the app carries on */
   var u = AUTH && AUTH.currentUser; if (!u || STAGE !== 'verify') { clearInterval(VPOLL); VPOLL = null; return; }
   u.reload().then(function () { if (u.emailVerified && STAGE === 'verify') { clearInterval(VPOLL); VPOLL = null; return u.getIdToken(true).then(function () { afterSignIn(u); }); } }, function () {});
@@ -5349,6 +5349,7 @@ async function runMigration() {
 }
 async function afterSignIn(user) {
   EMAIL = (user.email || '').toLowerCase();
+  if (VFRESH) { VFRESH = false; try { await user.reload(); await user.getIdToken(true); } catch (x) {} }   /* the verification link was just opened here: take the new 'verified' sign-in token before anything is read */
   if (!user.emailVerified) { STAGE = 'verify'; render(); vWatch(); return; }   /* a password account must prove the email is theirs first */
   STAGE = 'loading'; render();
   if (!(await choosePlace())) return;
@@ -5373,6 +5374,13 @@ if (CONFIGURED) {
       try { await signInWithEmailLink(AUTH, em, location.href); try { localStorage.removeItem('sw.email'); } catch (x) {} } catch (e) { toast('That sign-in link did not work. Send a new one.'); }
       history.replaceState(null, '', location.origin + location.pathname + (EMU ? '?emu' : ''));
     }
+    try {   /* a verification link that brings the person back to the app: finish the verification here */
+      var vp = new URLSearchParams(location.search);
+      if (vp.get('mode') === 'verifyEmail' && vp.get('oobCode')) {
+        try { await applyActionCode(AUTH, vp.get('oobCode')); VERR = ''; VFRESH = true; toast('Email verified'); } catch (e) { VERR = (e && e.code === 'auth/expired-action-code') ? 'That link has expired. Tap Send the email again and use only the newest email.' : 'That link was already used or is no longer valid. Tap Send the email again and use only the newest email.'; }
+        history.replaceState(null, '', location.origin + location.pathname + (EMU ? '?emu' : ''));
+      }
+    } catch (x) { console.error(x); }
     try { SENT = localStorage.getItem('sw.email') || ''; } catch (x) {}
     var LASTUID = '';
     onAuthStateChanged(AUTH, function (u) {
