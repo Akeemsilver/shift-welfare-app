@@ -271,7 +271,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.66', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.68', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1991,7 +1991,7 @@ function evRow(e, cancelable) {
   else if (e.type === 'cashshort') { ic = '⚠️'; tx = 'Cash counted short at handover'; sub = e.wk + ' watch handed over'; amt = money(e.amt); col = 'var(--exp)'; }
   else if (e.type === 'stockedit') { ic = '⚠️'; tx = 'Stock edited by hand: ' + e.name; sub = (e.reason || '') + (e.note ? ' · ' + e.note : ''); amt = (e.qty ? (e.qty > 0 ? '+' : '−') + Math.abs(e.qty) : '') + (e.qty && e.cases ? ' / ' : '') + (e.cases ? (e.cases > 0 ? '+' : '−') + Math.abs(e.cases) + (Math.abs(e.cases) === 1 ? ' case' : ' cases') : ''); col = 'var(--exp)'; }
   else if (e.type === 'shortfix') { ic = '✎'; tx = 'Shortage corrected: ' + (e.wk || '') + ' watch'; sub = e.note || ''; col = 'var(--cnt)'; }
-  else if (e.type === 'hocorr') { ic = '✎'; tx = 'Handover corrected'; sub = e.note || ''; col = 'var(--exp)'; }
+  else if (e.type === 'hocorr') { ic = '✎'; tx = 'Handover corrected'; sub = (e.note || '') + (e.chk && e.chk.length ? ' · stock ' + e.chk.map(function (x) { return x.name + ' ' + x.from + ' → ' + x.to; }).join(', ') : ''); col = 'var(--exp)'; }
   else if (e.type === 'repay') { ic = '💵'; tx = 'Shortage repaid by ' + (e.forWk || '') + ' watch'; sub = e.note || ''; amt = '+ ' + money(e.amt); col = 'var(--ok)'; }
   else if (e.type === 'takeover') { ic = '🛡️'; tx = 'Control taken'; sub = e.note; }
   else if (e.type === 'switch') { ic = '🔁'; tx = 'Operator switched'; sub = e.note; }
@@ -3355,12 +3355,17 @@ function corrAccept(id) {
     DAYQ = [];
     (c.rows || []).forEach(function (x) { if (ids.indexOf(x.id) < 0) ids.push(x.id); });
     if (live && c.side === 'in') {
-      (c.rows || []).forEach(function (x) { var it = item(x.id); if (!it || typeof it.open !== 'number' || typeof it.cageOpen !== 'number') return; var o = ld[x.id] || (ld[x.id] = { s: 0, c: 0 }), df = x.now - x.was; if (x.kind === 'cage') o.c = Math.max(o.c + df, -it.cage); else o.s = Math.max(o.s + df, -it.stock); });
+      (c.rows || []).forEach(function (x) { var it = item(x.id); if (!it || typeof it.open !== 'number' || typeof it.cageOpen !== 'number') return; var o = ld[x.id] || (ld[x.id] = { s: 0, c: 0 }), df = x.now - x.was;
+        if (x.kind === 'cage') o.c = Math.max(o.c + df, -it.cage);
+        else if (S.log.some(function (e) { return e.type === 'count' && e.item === x.id && e.to === x.now; })) o.s += 0;   /* already counted at the corrected number this shift: the stock is already right, so it is not taken off a second time */
+        else o.s = Math.max(o.s + df, -it.stock); });
       if (c.cash) dCash = r2(c.cash.now - c.cash.was);
     }
     var rec = { cid: id, at: now, byEmail: c.byEmail, byName: c.byName, byRole: corrRole(c), decidedBy: EMAIL, decidedByName: myName(), via: via, reason: c.reason, side: c.side, wk: c.wk, cash: c.cash || null, rows: (c.rows || []).map(function (x) { return { id: x.id, name: x.name, kind: x.kind, side: x.side, was: x.was, now: x.now, unit: x.unit || '' }; }) };
     b.update(ref('corrections/' + id), { status: 'accepted', decidedBy: EMAIL, decidedByName: myName(), decidedAt: now, via: via, live: live, ld: ld, dCash: dCash });
     var ev = { t: now, type: 'hocorr', item: '', items: ids, name: 'Handover corrected', qty: 0, amt: 0, sid: S.state.shift.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: c.wk, dly: 1, day: sday, forSid: c.sid, cogs: k.dCogs, dCashShort: k.dCashShort, cid: id, note: corrLinesPlain(c) };
+    var chk = Object.keys(ld).map(function (iid) { var it = item(iid); return { id: iid, name: it.name, from: it.stock, to: it.stock + ld[iid].s }; });   /* the stock before and after, kept on the record so a wrong result can be traced */
+    if (chk.length) ev.chk = chk;
     b.set(ref('events/' + id), ev); ev.id = id; DAYQ.push({ e: ev, sign: 1 });
     var RI = Object.assign({}, h.receivedItems || {}); k.items.forEach(function (i, n) { if (k.rc[2 * n] != null) RI[i.id] = { stock: k.rc[2 * n], cage: k.rc[2 * n + 1] == null ? ((RI[i.id] || {}).cage || 0) : k.rc[2 * n + 1] }; });
     var hUp = { receivedItems: RI, receivedCash: k.cashC, hcorr: (h.hcorr || []).concat([rec]), lastCorr: id };
@@ -3376,8 +3381,16 @@ function corrAccept(id) {
     if (live && dCash) b.update(ref('shop/state'), { 'shift.received': r2(S.state.shift.received + dCash), lastCorr: id });
     var tos = []; [c.fromEmail, c.toEmail, c.byEmail].forEach(function (em) { if (em && em !== EMAIL && tos.indexOf(em) < 0) tos.push(em); });
     tos.forEach(function (em, n) { b.set(ref('notices/' + id + '_' + n), { kind: 'hcdone', cid: id, toEmail: em, at: now, read: false, byName: myName(), reqName: c.byName, byRole: corrRole(c), side: c.side, wk: c.wk, shiftDate: c.date, shiftHalf: c.half, reason: c.reason, text: corrLinesPlain(c), handoverId: c.hid }); });
-    commit(b).then(function () { CORRBUSY = false; closeModal(); if (!$('#spage').hidden && S.hand && RX) showRx(true); toast(live ? 'Correction accepted. The handover and the stock now show the right numbers' : 'Correction accepted. The earlier handover is corrected'); });
+    commit(b).then(function () { CORRBUSY = false; closeModal(); corrVerify(chk); if (!$('#spage').hidden && S.hand && RX) showRx(true); toast(live ? 'Correction accepted. The handover and the stock now show the right numbers' : 'Correction accepted. The earlier handover is corrected'); });
   }).catch(function (e) { CORRBUSY = false; toast(errText(e)); });
+}
+function corrVerify(chk) {   /* right after accepting: read the items back, and warn if the stock is not what the correction should have made it */
+  (chk || []).forEach(function (x) {
+    getDoc(ref('items/' + x.id)).then(function (d) {
+      if (!d.exists() || d.data().stock === x.to) return;
+      modal('<h2 style="color:var(--exp)">⚠ Check the stock</h2><div class="card" style="border:2px solid var(--exp)"><b>' + esc(x.name) + '</b> should now be <b>' + x.to + '</b> after the correction, but it shows <b>' + d.data().stock + '</b>.<div class="muted" style="margin-top:6px">It was ' + x.from + ' before. Count it, and fix it in Stock if it is wrong. Tell the owner what happened.</div></div><button class="btn block" data-act="close">OK</button>');
+    }).catch(function () {});
+  });
 }
 function corrDecline(id) {
   var c = (S.corrs || []).filter(function (x) { return x.id === id; })[0]; if (!c || !corrCanDecide(c)) return toast('That correction is no longer waiting for you');
