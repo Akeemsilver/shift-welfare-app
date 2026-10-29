@@ -271,7 +271,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.64', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.65', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1122,7 +1122,7 @@ function spBellSync(n) {
 function updateBell() {
   var n = bellN(), c = $('#bellc');
   try { if (navigator.setAppBadge) { if (n) navigator.setAppBadge(n); else navigator.clearAppBadge(); } } catch (x) {}   /* the number on the app icon (an installed app, while it runs) */
-  spBellSync(n); if (!c) return;
+  spBellSync(n); pnSync(); if (!c) return;
   c.hidden = !n; c.textContent = n > 9 ? '9+' : n;
 }
 function noticesModal() {
@@ -1135,7 +1135,8 @@ function noticesModal() {
     return '';
   }).join(''), hcn = list.filter(function (n) { return n.kind === 'hcdone' || n.kind === 'hcno'; }); list = list.filter(function (n) { return n.kind !== 'hcdone' && n.kind !== 'hcno'; });
   var hcl = hcn.map(function (n) { return '<div data-act="ntview" data-id="' + n.id + '" style="cursor:pointer;border:2px solid var(--exp);background:var(--exp-bg);border-radius:12px;padding:10px;margin-bottom:10px"><b style="color:var(--exp)">' + (n.read ? '' : '● ') + (n.kind === 'hcdone' ? '✎ Handover corrected' : '✎ Correction declined') + '</b><div class="muted">' + esc(n.wk || '') + ' · ' + esc(n.shiftDate || '') + ' · ' + esc(n.text || '') + ' · ' + (n.kind === 'hcdone' ? 'accepted by ' : 'declined by ') + esc(n.byName || '') + ' · ' + new Date(n.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</div></div>'; }).join('');
-  modal('<h2>Notifications</h2>' + cmine + hcl + rq + pcr + (list.length ? '<div class="list">' + list.map(function (n) {
+  var pnCard = (pnState() === 'default' && pnPending().length) ? '<div class="card" style="background:var(--soft);box-shadow:none"><b>Get it on your phone too</b><div class="muted" style="margin:4px 0 8px">Turn on phone notifications and a waiting handover mistake also shows in your phone\'s notification bar while the app is in the background.</div><button class="btn sm" data-act="pnask">Turn on</button></div>' : '';
+  modal('<h2>Notifications</h2>' + cmine + pnCard + hcl + rq + pcr + (list.length ? '<div class="list">' + list.map(function (n) {
     var canPay = n.kind === 'shortage' && inControl() && !OWNERVIEW && openShortList().some(function (x) { return x.wk === n.wk; });
     return '<div data-act="ntview" data-id="' + n.id + '" style="cursor:pointer;align-items:center"><div class="grow"><b>' + (n.read ? '' : '<span style="color:var(--exp)">● </span>') + (n.kind === 'correction' ? 'Your ' + esc(n.wk) + ' shift shortage was corrected' : n.kind === 'received' ? 'Your ' + esc(n.wk) + ' shift handover was received, ' + (Array.isArray(NTDIFF[n.sid]) ? (NTDIFF[n.sid].length ? 'nothing short' : 'all matched ✓') : (n.diffs === '' ? 'all matched ✓' : 'nothing short')) : 'Your ' + esc(n.wk) + ' shift was counted short') + '</b><div class="muted">' + esc(n.shiftDate) + ' ' + esc(HL(n.shiftHalf)) + (n.kind === 'correction' ? ' · ' + esc(n.reason || '') + ' · by ' : n.kind === 'received' ? ' · received by ' : ' · counted by ') + esc(n.byName || '') + ' · ' + new Date(n.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</div>' + (n.kind === 'received' ? (function () { ntDiffLoad(n.sid); var dl = NTDIFF[n.sid]; return Array.isArray(dl) ? (dl.length ? '<div style="color:var(--soon);font-size:12px;font-weight:600;margin-top:2px">⚠ ' + dl.map(esc).join('<br>⚠ ') + '</div>' : '') : (n.diffs ? '<div style="color:var(--soon);font-size:12px;font-weight:600;margin-top:2px">⚠ Counted differently: ' + esc(n.diffs) + '</div>' : ''); })() : '') + (n.kind === 'shortage' && inControl() && !OWNERVIEW ? (function () { var ow = openShortList().filter(function (x) { return x.wk === n.wk; })[0]; return ow ? '<div class="muted">' + money(ow.owed) + ' still owed by the ' + esc(n.wk) + ' shift</div>' : '<div class="muted">Nothing owed now</div>'; })() : '') + '</div>' + (n.kind === 'received' || typeof n.total !== 'number' ? '' : '<b style="color:var(--exp)">' + (n.kind === 'correction' ? money(n.before) + ' → ' : '') + money(n.total) + '</b>') + (canPay ? '<button class="btn red sm" data-act="payopen" data-id="' + esc(n.wk) + '" style="margin-left:10px;flex:none">Pay</button>' : '') + '</div>';
   }).join('') + '</div>' : '<div class="empty">No notifications.</div>') + '<p class="muted">You are told here when the person taking over your shift counts cash or stock short. It is recorded as a shortage against your shift. Tap one to see the details.</p><button class="btn sec block" data-act="close">Close</button>');
@@ -3128,6 +3129,42 @@ function opCreditNext(pid) {
 }
 
 /* ---------- handover mistakes: one of the two people in a handover asks to correct what was counted; the other person (or a President, or the person taking the NEXT handover) accepts or declines ---------- */
+/* ---------- phone notifications (option A): while a handover mistake waits for this person, the phone's notification bar shows a bell, made by the app while it runs ---------- */
+var PNOPEN = '', PNT = null;
+try { var pq = /[?&]corr=([^&]+)/.exec(location.search); if (pq) PNOPEN = decodeURIComponent(pq[1]); } catch (x) {}
+function pnSupported() { try { return 'Notification' in window && 'serviceWorker' in navigator && location.protocol.indexOf('http') === 0; } catch (x) { return false; } }
+function pnState() { try { return pnSupported() ? Notification.permission : 'off'; } catch (x) { return 'off'; } }
+function pnLabel() { var st = pnState(); return st === 'granted' ? 'On. A waiting handover mistake shows in the phone\'s notification bar while the app is in the background' : st === 'denied' ? 'Blocked. Allow notifications for this app in the phone settings' : st === 'default' ? 'Off. Tap to turn on' : 'Not available on this phone or browser'; }
+function pnAsk() {
+  if (!pnSupported()) return toast('This phone or browser cannot show notifications here');
+  if (Notification.permission === 'denied') return toast('Notifications are blocked. Allow them for this app in the phone settings');
+  Promise.resolve(Notification.requestPermission()).then(function (p) { toast(p === 'granted' ? 'Phone notifications are on' : 'Notifications were not allowed'); pnSync(); if ($('#spage') && !$('#spage').hidden && SPMODE === '') { try { spRender(); } catch (x) {} } }).catch(function () {});
+}
+function pnPending() { return (S.corrs || []).filter(function (c) { return corrCanDecide(c) && !corrOptional(c); }); }
+function pnSync() {   /* a short pause first, so a burst of changes makes one check */
+  clearTimeout(PNT); PNT = setTimeout(pnRun, 600);
+}
+function pnRun() {
+  if (pnState() !== 'granted') return;
+  var visible = document.visibilityState === 'visible', pend = pnPending();
+  navigator.serviceWorker.ready.then(function (reg) {
+    return reg.getNotifications().then(function (list) {
+      var have = {};
+      list.forEach(function (n) { var t = n.tag || ''; if (t.indexOf('sw-corr-') !== 0) return; var id = t.slice(8); if (visible || !pend.some(function (c) { return c.id === id; })) n.close(); else have[id] = 1; });   /* seeing the app, or already decided: take it away */
+      if (visible) return;
+      pend.forEach(function (c) {
+        if (have[c.id]) return;
+        reg.showNotification('✎ Handover mistake waiting for you', { body: corrBy(c).replace(/<[^>]+>/g, '') + ': ' + corrLinesPlain(c) + '. Tap to look at it.', tag: 'sw-corr-' + c.id, requireInteraction: true, renotify: false, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', data: { cid: c.id } });
+      });
+    });
+  }).catch(function () {});
+}
+function pnOpen() {   /* tapped on the phone: open that correction */
+  if (!PNOPEN || !S.corrs) return; var c = (S.corrs || []).filter(function (x) { return x.id === PNOPEN; })[0];
+  if (c) { PNOPEN = ''; try { history.replaceState(null, '', location.pathname); } catch (x) {} corrReview(c.id); }
+}
+try { if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (e) { if (e.data && e.data.type === 'corr') { PNOPEN = e.data.id; pnOpen(); } }); } catch (x) {}
+document.addEventListener('visibilitychange', function () { pnSync(); });
 var NTDIFF = {};   /* sid -> the lines that differ on a received handover (read from its record), for the Notifications list */
 function ntDiffLoad(sid) {
   if (!sid || NTDIFF[sid] !== undefined) return; NTDIFF[sid] = null;
@@ -3467,6 +3504,7 @@ function spRender() {
     '<div class="sp-h">App</div><div class="sp-card">' +
     spRow('⬆️', 'App version ' + APP_VERSION, 'Needs rules ' + RULES_VERSION + '. Tap to check for updates', 'updcheck') +
     (canAdmin() ? spRow('🧹', 'Tidy old shift summaries', 'One-time: remove handover summaries older than a year', 'oldtidy') : '') +
+    (pnSupported() ? spRow('📲', 'Phone notifications', esc(pnLabel()), 'pnask') : '') +
     (canAdmin() ? spRow('🛡️', 'Check the rules', 'Tests that the Firebase rules ' + RULES_VERSION + ' are published', 'rulescheck') : '') +
     (isPres() ? spRow('💾', 'Back up all data', 'Owner only. Saves everything into one file on this phone', 'backup') : '') +
     (isPres() ? spRow('⚠️', 'Reset app to default', 'Clears stock, sales, handovers, credit and profit history', 'resetask', ' red') : '') + '</div></div>';
@@ -4637,6 +4675,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'shfixgo') shFixGo(id);
   else if (a === 'notices') noticesModal();
   else if (a === 'bell2') noticesModal();
+  else if (a === 'pnask') pnAsk();
   else if (a === 'corrstart') corrStart();
   else if (a === 'corrstart2') corrStart2(b.dataset.id);
   else if (a === 'crside') { if (CF && CF.side !== b.dataset.v) { CF.side = b.dataset.v; CF.v = {}; corrForm(); } }
@@ -5210,6 +5249,7 @@ function startListeners() {
     var before = (S.corrs || []).map(function (c) { return c.id; }); S.corrs = docs(s).sort(function (a, b) { return (a.at || 0) - (b.at || 0); }); updateBell();
     S.corrs.forEach(function (c) { if (!CORRSH[c.sid]) { CORRSH[c.sid] = {}; getDoc(ref('shifts/' + c.sid)).then(function (sn) { if (sn.exists()) { CORRSH[c.sid] = sn.data(); refreshModal(); } }).catch(function () {}); } });   /* the time of the handover */
     S.corrs.forEach(function (c) { if (before.indexOf(c.id) < 0 && c.byEmail !== EMAIL && corrParty(c) && !OWNERVIEW) corrPopup(c); });
+    pnSync(); pnOpen();
     if (!$('#spage').hidden && HREC && HSHDRAW) HSHDRAW(); else if (!$('#spage').hidden && RX && S.hand) showRx(true); scheduleRender(); refreshModal();
   }, function (e) { console.error(e); }));
   subs.push(onSnapshot(query(col('shiftreqs'), where('toEmail', '==', EMAIL)), function (s) {
