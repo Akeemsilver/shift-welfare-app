@@ -271,7 +271,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.70', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.71', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -4338,13 +4338,13 @@ function peopleForm(S2, ranksVal, ns) {
 }
 function ppRefresh(S2) {
   var e = $('#pp-prev'); if (e) e.innerHTML = peoplePreview(S2);
-  document.querySelectorAll('[data-act=ppick]').forEach(function (c) { c.classList.toggle('on', String(S2[c.dataset.k] || '').trim().toLowerCase() === c.dataset.v.toLowerCase()); });
+  document.querySelectorAll('[data-act=ppchip]').forEach(function (c) { c.classList.toggle('on', String(S2[c.dataset.k] || '').trim().toLowerCase() === c.dataset.v.toLowerCase()); });
 }
 function ppPick(b) {   /* a quick pick fills the field; the field can still be typed in */
   var ns = b.dataset.ns, k = b.dataset.k, S2 = ns === 'ws' ? WS.signup : WZ.signup, inp = document.querySelector('[data-' + ns + '="' + k.toLowerCase() + '"]');
   S2[k] = b.dataset.v; if (inp) inp.value = b.dataset.v; ppRefresh(S2);
 }
-function ppChips(ns, key, S2, opts) { return '<div class="pp-chips">' + opts.map(function (o) { return '<button type="button" data-act="ppick" data-ns="' + ns + '" data-k="' + key + '" data-v="' + o + '" class="' + (String(S2[key] || '').trim().toLowerCase() === o.toLowerCase() ? 'on' : '') + '">' + o + '</button>'; }).join('') + '</div>'; }
+function ppChips(ns, key, S2, opts) { return '<div class="pp-chips">' + opts.map(function (o) { return '<button type="button" data-act="ppchip" data-ns="' + ns + '" data-k="' + key + '" data-v="' + o + '" class="' + (String(S2[key] || '').trim().toLowerCase() === o.toLowerCase() ? 'on' : '') + '">' + o + '</button>'; }).join('') + '</div>'; }
 function wsPeople() {
   wpPage(wsPeople, [], peopleForm(WS.signup, WS.ranks.join(', '), 'ws') +
     '<div id="ws-msg" class="muted" style="color:var(--exp);margin:8px 0"></div><button class="btn block" data-act="wssave">Save</button><button class="btn sec block" data-act="wsback" style="margin-top:10px">Back</button>'); REFRESH = null;
@@ -4961,7 +4961,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'wscol') { WS.shifts[+b.dataset.i].color = b.dataset.v; wsShifts(); }
   else if (a === 'wscell') { var wi = +b.dataset.i, wj = +b.dataset.j, nm0 = WS.shifts.map(function (x) { return x.name; }), cur = nm0.indexOf(WS.cycle[wi].s[wj]); WS.cycle[wi].s[wj] = nm0[(cur + 1) % nm0.length]; wsCycle(); }
   else if (a === 'wsday') { if (+b.dataset.v > 0) { var lst = WS.cycle[WS.cycle.length - 1].s, nm1 = WS.shifts.map(function (x) { return x.name; }); WS.cycle.push({ s: lst.map(function (x) { return nm1[(nm1.indexOf(x) + 1) % nm1.length]; }) }); } else if (WS.cycle.length > 1) WS.cycle.pop(); wsCycle(); }
-  else if (a === 'ppick') ppPick(b);
+  else if (a === 'ppchip') ppPick(b);
   else if (a === 'wsno') { WS.signup.useNo = b.dataset.v !== 'off'; WS.signup.requireNo = b.dataset.v === 'req'; wsPeople(); }
   else if (a === 'wsrank') { WS.signup.useRank = b.dataset.v !== 'off'; WS.signup.requireRank = b.dataset.v === 'req'; wsPeople(); }
   else if (a === 'opall') wpBack();
