@@ -8,3 +8,6 @@ export const firebaseConfig = {
 };
 /* The president: always allowed in, can invite admins and users. Must match firestore.rules. */
 export const president = 'akeem.silver09@gmail.com';
+/* Real phone push (works with the app closed). Fill these in after the push Worker is set up (push/README.md), these are filled in. */
+export const pushUrl = 'https://shift-welfare-push.akeem-silver09.workers.dev';
+export const vapidKey = 'BHT-cBo-MOjf7BpXozmBlUFt5FZ35BbKHZGp7W-DfreS3FCUSKg1_tTRMZQdQeBZO2jwAXLuORGOhJmv7ls8cOc';

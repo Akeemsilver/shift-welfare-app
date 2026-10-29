@@ -271,7 +271,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.76', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.77', RULES_VERSION = '2.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2768,7 +2768,8 @@ function doHandover2() {
   h.sum = !same;
   var b = writeBatch(DB); b.set(ref('handovers/' + id), h);
   if (!same) b.set(ref('shifts/' + sh.sid), { expireAt: EXPY(), sid: sh.sid, wk: sh.name, date: sh.date, half: sh.half, day: hd.length === 3 ? hd[2] + '-' + hd[1] + '-' + hd[0] : '', status: 'open', handoverId: id, fromEmail: EMAIL, fromName: myName(), fromWatch: whoOf(EMAIL).wk, trail: ctlTrail(), toLabels: h.toLabels, locked: locked, received: sh.received, sales: t.sales, cr: t.crN, paid: t.paidN, loans: t.loans, purch: t.purch, used: t.used, expected: t.cash, counted: h.cash, sold: t.sold, rows: cashRows, owedBy: h.owedBy, openShort: h.openShort, its: packItems(h.items), edits: h.edits, notes: sh.notes || '', at: Date.now() }); b.update(ref('shop/state'), { controlEmail: '', controlName: '', pending: id });
-  commit(b); sel = null; qty = 1; tab = 'sell'; closeModal(); if (!$('#spage').hidden) spClose(); toast('Handed over. You are now view only.');
+  var hoDone = commit(b); sel = null; qty = 1; tab = 'sell'; closeModal(); if (!$('#spage').hidden) spClose(); toast('Handed over. You are now view only.');
+  if (hoDone && hoDone.then) hoDone.then(function () { pushNotify('handover', id); }, function () {});
 }
 function cancelHandover() {
   SELF = Date.now();
@@ -3140,11 +3141,11 @@ var PNOPEN = '', PNT = null;
 try { var pq = /[?&]corr=([^&]+)/.exec(location.search); if (pq) PNOPEN = decodeURIComponent(pq[1]); } catch (x) {}
 function pnSupported() { try { return 'Notification' in window && 'serviceWorker' in navigator && location.protocol.indexOf('http') === 0; } catch (x) { return false; } }
 function pnState() { try { return pnSupported() ? Notification.permission : 'off'; } catch (x) { return 'off'; } }
-function pnLabel() { var st = pnState(); return st === 'granted' ? 'On. A waiting handover mistake shows in the phone\'s notification bar while the app is in the background' : st === 'denied' ? 'Blocked. Allow notifications for this app in the phone settings' : st === 'default' ? 'Off. Tap to turn on' : 'Not available on this phone or browser'; }
+function pnLabel() { var st = pnState(); return st === 'granted' ? (pushOn() ? 'On. You are told when a handover, a mistake or a request needs you, even when the app is closed' : 'On. A waiting handover mistake shows in the phone\'s notification bar while the app is in the background') : st === 'denied' ? 'Blocked. Allow notifications for this app in the phone settings' : st === 'default' ? 'Off. Tap to turn on' : 'Not available on this phone or browser'; }
 function pnAsk() {
   if (!pnSupported()) return toast('This phone or browser cannot show notifications here');
   if (Notification.permission === 'denied') return toast('Notifications are blocked. Allow them for this app in the phone settings');
-  Promise.resolve(Notification.requestPermission()).then(function (p) { toast(p === 'granted' ? 'Phone notifications are on' : 'Notifications were not allowed'); pnSync(); if ($('#spage') && !$('#spage').hidden && SPMODE === '') { try { spRender(); } catch (x) {} } }).catch(function () {});
+  Promise.resolve(Notification.requestPermission()).then(function (p) { toast(p === 'granted' ? 'Phone notifications are on' : 'Notifications were not allowed'); PUSHTRIED = false; pnSync(); if ($('#spage') && !$('#spage').hidden && SPMODE === '') { try { spRender(); } catch (x) {} } }).catch(function () {});
 }
 function pnPending() { return (S.corrs || []).filter(function (c) { return corrCanDecide(c) && !corrOptional(c); }); }
 function pnSync() {   /* a short pause first, so a burst of changes makes one check */
@@ -3152,11 +3153,12 @@ function pnSync() {   /* a short pause first, so a burst of changes makes one ch
 }
 function pnRun() {
   if (pnState() !== 'granted') return;
+  if (!PUSHTRIED && EMAIL) { PUSHTRIED = true; pushRegister(); }
   var visible = document.visibilityState === 'visible', pend = pnPending();
   navigator.serviceWorker.ready.then(function (reg) {
     return reg.getNotifications().then(function (list) {
       var have = {};
-      list.forEach(function (n) { var t = n.tag || ''; if (t.indexOf('sw-corr-') !== 0) return; var id = t.slice(8); if (visible || !pend.some(function (c) { return c.id === id; })) n.close(); else have[id] = 1; });   /* seeing the app, or already decided: take it away */
+      list.forEach(function (n) { var t = n.tag || ''; if (visible && /^sw-(ho|rq|pl|corrdone)-/.test(t)) { n.close(); return; } if (t.indexOf('sw-corr-') !== 0) return; var id = t.slice(8); if (visible || !pend.some(function (c) { return c.id === id; })) n.close(); else have[id] = 1; });   /* seeing the app, or already decided: take it away */
       if (visible) return;
       pend.forEach(function (c) {
         if (have[c.id]) return;
@@ -3169,8 +3171,36 @@ function pnOpen() {   /* tapped on the phone: open that correction */
   if (!PNOPEN || !S.corrs) return; var c = (S.corrs || []).filter(function (x) { return x.id === PNOPEN; })[0];
   if (c) { PNOPEN = ''; try { history.replaceState(null, '', location.pathname); } catch (x) {} corrReview(c.id); }
 }
-try { if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (e) { if (e.data && e.data.type === 'corr') { PNOPEN = e.data.id; pnOpen(); } }); } catch (x) {}
+try { if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (e) { if (e.data && e.data.type === 'corr') { PNOPEN = e.data.id; pnOpen(); } else if (e.data && e.data.type === 'bell') pnBell(); }); } catch (x) {}
+if (PNBELL) setTimeout(function () { pnBell(); }, 800);
 document.addEventListener('visibilitychange', function () { pnSync(); });
+/* ---------- real phone push: works with the app closed. It needs the push Worker (push/README.md); until pushUrl and vapidKey are in firebase-config.js nothing below does anything ---------- */
+var PUSHCFG = null, PUSHTRIED = false, PNBELL = /[?&]bell=1/.test(location.search);
+function pushCfg() {
+  if (PUSHCFG !== null) return Promise.resolve(PUSHCFG);
+  return import('./firebase-config.js').then(function (m) { PUSHCFG = m.pushUrl && m.vapidKey ? { url: String(m.pushUrl).replace(/\/+$/, ''), vapid: m.vapidKey } : false; return PUSHCFG; }).catch(function () { PUSHCFG = false; return false; });
+}
+function pushOn() { try { return (localStorage.getItem('sw.push') || '').indexOf(EMAIL + ':') === 0; } catch (x) { return false; } }
+function pushRegister() {   /* notifications are allowed: get this phone's push address and keep it under this person */
+  if (!pnSupported() || pnState() !== 'granted' || !EMAIL || !DB || OWNERVIEW) return;
+  pushCfg().then(function (cfg) {
+    if (!cfg) return;
+    return Promise.all([import('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js'), navigator.serviceWorker.ready]).then(function (r) {
+      return r[0].getToken(r[0].getMessaging(app), { vapidKey: cfg.vapid, serviceWorkerRegistration: r[1] });
+    }).then(function (tok) {
+      if (!tok) return; var last = ''; try { last = localStorage.getItem('sw.push') || ''; } catch (x) {}
+      if (last === EMAIL + ':' + tok) return;
+      return setDoc(doc(DB, 'pushtokens/' + EMAIL + '/d/' + tok.slice(-24).replace(/[^A-Za-z0-9_-]/g, '_')), { token: tok, at: Date.now(), ua: String(navigator.userAgent || '').slice(0, 120) }).then(function () { try { localStorage.setItem('sw.push', EMAIL + ':' + tok); } catch (x) {} if ($('#spage') && !$('#spage').hidden && SPMODE === '') { try { spRender(); } catch (x) {} } });
+    });
+  }).catch(function (e) { console.error('push', e); });
+}
+function pushNotify(kind, id) {   /* tell the push Worker something now waits for someone: it works out who and sends the push */
+  pushCfg().then(function (cfg) {
+    if (!cfg || !AUTH.currentUser || OWNERVIEW) return;
+    return AUTH.currentUser.getIdToken().then(function (t) { return fetch(cfg.url + '/notify', { method: 'POST', headers: { authorization: 'Bearer ' + t, 'content-type': 'application/json' }, body: JSON.stringify({ kind: kind, pid: kind === 'place' ? '' : PID, id: id }) }); });
+  }).catch(function () {});
+}
+function pnBell(n) { if (STAGE === 'ready') { PNBELL = false; try { history.replaceState(null, '', location.pathname); } catch (x) {} noticesModal(); } else if ((n || 0) < 40) setTimeout(function () { pnBell((n || 0) + 1); }, 500); }
 var NTDIFF = {};   /* sid -> the lines that differ on a received handover (read from its record), for the Notifications list */
 function ntDiffLoad(sid) {
   if (!sid || NTDIFF[sid] !== undefined) return; NTDIFF[sid] = null;
@@ -3308,7 +3338,7 @@ function corrSend() {
   if (!CF.why) return toast('Pick why it was wrong'); var d = CF.d, h = CF.h, why = CF.why + (CF.note.trim() ? ': ' + CF.note.trim() : ''), other = EMAIL === h.fromEmail ? (d.receivedByName || h.receivedName) : (d.fromName || h.fromName);
   var c = { hid: d.handoverId, sid: d.sid || d.id, at: Date.now(), expireAt: EXPY(), byEmail: EMAIL, byName: myName(), side: CF.side, fromEmail: h.fromEmail, toEmail: h.acceptedBy, fromName: d.fromName || h.fromName || '', toName: d.receivedByName || h.receivedName || '', wk: d.wk, date: d.date, half: d.half, reason: why, cash: ch.cash, rows: ch.rows, status: 'open' };
   askConfirm('Send this correction?', corrLines(c).join('<br>') + '<br><span class="muted">Reason: ' + esc(why) + '</span><div class="card" style="background:var(--soon-bg);box-shadow:none;padding:10px;margin:10px 0 0"><b>What happens next</b><div style="margin-top:4px">' + esc(other || 'The other person') + ' (' + (EMAIL === h.fromEmail ? 'incoming' : 'outgoing') + ' shift) is asked to accept it. If they cannot answer right now, the person from the <b>next incoming shift</b> can check the stock and accept or decline it when taking over. A President can also decide.<br><span class="muted">Nothing changes until it is accepted.</span></div></div>', 'Yes, send', function () {
-    var id = newId('events'); guard(setDoc(ref('corrections/' + id), c)).then(function () { CF = null; closeModal(); toast('Sent to ' + (other || 'the other person')); });
+    var id = newId('events'); guard(setDoc(ref('corrections/' + id), c)).then(function () { CF = null; closeModal(); toast('Sent to ' + (other || 'the other person')); pushNotify('corr', id); });
   });
 }
 /* the decision */
@@ -3387,7 +3417,7 @@ function corrAccept(id) {
     if (live && dCash) b.update(ref('shop/state'), { 'shift.received': r2(S.state.shift.received + dCash), lastCorr: id });
     var tos = []; [c.fromEmail, c.toEmail, c.byEmail].forEach(function (em) { if (em && em !== EMAIL && tos.indexOf(em) < 0) tos.push(em); });
     tos.forEach(function (em, n) { b.set(ref('notices/' + id + '_' + n), { kind: 'hcdone', cid: id, toEmail: em, at: now, read: false, byName: myName(), reqName: c.byName, byRole: corrRole(c), side: c.side, wk: c.wk, shiftDate: c.date, shiftHalf: c.half, reason: c.reason, text: corrLinesPlain(c), handoverId: c.hid }); });
-    commit(b).then(function () { CORRBUSY = false; closeModal(); corrVerify(chk); if (!$('#spage').hidden && S.hand && RX) showRx(true); toast(live ? 'Correction accepted. The handover and the stock now show the right numbers' : 'Correction accepted. The earlier handover is corrected'); });
+    commit(b).then(function () { CORRBUSY = false; closeModal(); corrVerify(chk); pushNotify('corrdone', id); if (!$('#spage').hidden && S.hand && RX) showRx(true); toast(live ? 'Correction accepted. The handover and the stock now show the right numbers' : 'Correction accepted. The earlier handover is corrected'); });
   }).catch(function (e) { CORRBUSY = false; toast(errText(e)); });
 }
 function corrVerify(chk) {   /* right after accepting: read the items back, and warn if the stock is not what the correction should have made it */
@@ -3403,7 +3433,7 @@ function corrDecline(id) {
   askConfirm('Decline this correction?', esc(c.byName) + ' is told it was declined. The handover stays as it was.', 'Yes, decline', function () {
     var b = writeBatch(DB), now = Date.now(); b.update(ref('corrections/' + id), { status: 'declined', decidedBy: EMAIL, decidedByName: myName(), decidedAt: now, via: corrParty(c) ? 'other' : canAdmin() ? 'president' : 'next', live: !S.state.pending });
     b.set(ref('notices/' + id + '_0'), { kind: 'hcno', cid: id, toEmail: c.byEmail, at: now, read: false, byName: myName(), reqName: c.byName, byRole: corrRole(c), side: c.side, wk: c.wk, shiftDate: c.date, shiftHalf: c.half, reason: c.reason, text: corrLinesPlain(c), handoverId: c.hid });
-    commit(b).then(function () { closeModal(); toast('Declined'); });
+    commit(b).then(function () { closeModal(); toast('Declined'); pushNotify('corrdone', id); });
   });
 }
 function corrCancel(id) { guard(updateDoc(ref('corrections/' + id), { status: 'cancelled' })).then(function () { closeModal(); toast('Request cancelled'); }); }
@@ -3704,7 +3734,7 @@ async function npSend() {
     var ph = ($('#np-phone').value || '').trim(), rq = { email: EMAIL, name: nm, place: place, note: $('#np-note').value.trim(), status: 'pending', at: Date.now() };
     if (ph) rq.phone = ph;
     await setDoc(doc(DB, 'placerequests/' + EMAIL), rq);
-    toast('Request sent');
+    toast('Request sent'); pushNotify('place', EMAIL);
   } catch (e) { console.error(e); msg.textContent = 'Could not send it (' + (e.code || e.message) + ').'; }
 }
 function npShare() {
@@ -4076,7 +4106,7 @@ function rqdAnswer(i) {
   q.d.match = i >= 0 ? { said: 'same', shown: shown, pick: q.c[i].id } : { said: 'different', shown: shown };
   rqPost(q.d);
 }
-function rqPost(d) { guard(setDoc(ref('requests/' + EMAIL), d)).then(function () { toast('Request sent'); }); }
+function rqPost(d) { guard(setDoc(ref('requests/' + EMAIL), d)).then(function () { toast('Request sent'); pushNotify('access', EMAIL); }); }
 function matchNote(r) {   /* what the new person was asked and answered, for whoever approves */
   if (!r.match) return '';
   var shown = (r.match.shown || []).map(function (x) { return x.name; }).join(', '), pk = (r.match.shown || []).filter(function (x) { return x.id === r.match.pick; })[0];
