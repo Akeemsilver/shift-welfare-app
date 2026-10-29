@@ -172,7 +172,8 @@ input:disabled{background:var(--dis);color:var(--muted)}
 .sp-body{flex:1;overflow:auto;padding:14px 16px calc(28px + env(safe-area-inset-bottom));max-width:640px;margin:0 auto;width:100%;overscroll-behavior:contain}
 .sp-h{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:18px 6px 8px}
 .sp-card{background:var(--surface);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
-.sp-top.hasr b{text-align:left;margin-right:0}.sp-top .spr{width:auto;height:36px;border-radius:18px;padding:0 12px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px;background:var(--soft);color:var(--link)}.sp-top .spr.act{background:var(--brand);color:#fff}
+.sp-top.hasr b{text-align:left;margin-right:0}.sp-top:has(.spbell) b{margin-right:0}.spbell{position:relative;flex:none;color:var(--link)}.spbell svg{display:block;margin:auto}.spbell i{position:absolute;right:-3px;top:-4px;min-width:17px;height:17px;border-radius:9px;background:#E5483B;color:#fff;font:700 11px/13px system-ui,sans-serif;font-style:normal;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid var(--surface)}
+.sp-top .spr{width:auto;height:36px;border-radius:18px;padding:0 12px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px;background:var(--soft);color:var(--link)}.sp-top .spr.act{background:var(--brand);color:#fff}
 .hsel{display:flex;align-items:center;gap:6px;margin-bottom:8px}.hsel .btn{width:40px;flex:none;padding:0}.hdate{position:relative;flex:1;border:2px solid var(--secb);border-radius:12px;background:var(--surface);display:flex;align-items:center;justify-content:center;min-height:40px;font-weight:700}.hdate.away span{padding-right:56px}.hdate.fut{opacity:.8;font-style:italic}.hdate u{text-decoration:underline dotted;text-underline-offset:3px}.hpick{position:absolute;left:0;top:0;height:100%;opacity:0;border:0;font-size:16px}.htoday{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:var(--brand);color:#fff;border:0;border-radius:9px;padding:4px 9px;font-size:12px;font-weight:700;z-index:2}
 .hsum{background:var(--surface);border-radius:12px;box-shadow:var(--sh);padding:6px 10px;margin-bottom:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px 6px}.hsum div{min-width:0}.hsum .l{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);white-space:nowrap}.hsum .v{font-size:14px;font-weight:700}
 .htabs{display:flex;gap:3px;padding:3px;border-radius:13px;background:var(--line);box-shadow:inset 0 1px 2px rgba(0,0,0,.12);margin-bottom:8px}.htabs button{flex:1;height:32px;border:0;border-radius:10px;background:transparent;color:var(--muted);font:inherit;font-size:13.5px;font-weight:600}.htabs button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18)}
@@ -270,7 +271,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.63', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.64', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1110,14 +1111,25 @@ function trailHtml(trail, shiftWk, handedBy, handedWk) {
   return '<div class="card"><h2>Who held control this shift</h2>' + (rows ? '<div class="list">' + rows + '</div>' : '<div class="muted">One person the whole shift.</div>') + '<div class="muted" style="margin-top:8px">Any shortage stays with the <b style="color:var(--ink)">' + esc(shiftWk) + ' watch</b>, which was on duty.</div></div>';
 }
 /* ---------- notifications: the person who handed over is told when their handover was counted short ---------- */
+function bellN() { try { return (S.notices || []).filter(function (x) { return !x.read; }).length + (pcMine() ? 1 : 0) + (canApprove() ? (S.requests || []).length : 0) + corrBellCount(); } catch (e) { return 0; } }   /* never lets a page fail to draw because the bell could not be counted yet */
+var BELLSVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>';
+function bellHtml() { var n = bellN(); return n ? '<button class="spbell" data-act="bell2" aria-label="Notifications">' + BELLSVG + '<i>' + (n > 9 ? '9+' : n) + '</i></button>' : ''; }   /* on a full-screen page the header bell is hidden, so the bell comes with it while something waits */
+function spBellSync(n) {
+  var tp = $('#spage .sp-top'); if (!tp || $('#spage').hidden) return; var el = tp.querySelector('.spbell');
+  if (!n) { if (el) el.remove(); return; }
+  if (el) el.querySelector('i').textContent = n > 9 ? '9+' : n; else { var d = document.createElement('div'); d.innerHTML = bellHtml(); if (d.firstChild) tp.insertBefore(d.firstChild, tp.querySelector('.spr') || null); }
+}
 function updateBell() {
-  var n = (S.notices || []).filter(function (x) { return !x.read; }).length + (pcMine() ? 1 : 0) + (canApprove() ? (S.requests || []).length : 0) + (S.corrs || []).filter(corrCanDecide).length, c = $('#bellc'); if (!c) return;
+  var n = bellN(), c = $('#bellc');
+  try { if (navigator.setAppBadge) { if (n) navigator.setAppBadge(n); else navigator.clearAppBadge(); } } catch (x) {}   /* the number on the app icon (an installed app, while it runs) */
+  spBellSync(n); if (!c) return;
   c.hidden = !n; c.textContent = n > 9 ? '9+' : n;
 }
 function noticesModal() {
   var list = (S.notices || []).slice(), un = list.filter(function (x) { return !x.read; }), pcr = pcMine() ? '<div data-act="pcview" style="cursor:pointer;border:2px solid var(--exp);background:var(--exp-bg);border-radius:12px;padding:10px;margin-bottom:10px"><b style="color:var(--exp)">🔔 ' + ({ offer: 'You were offered the president role', vote: 'Vote: change the president', challenge: 'The president is about to change' }[pcMine()]) + '</b><div class="muted">' + pcLine() + '</div></div>' : '';
   var rq = canApprove() ? (S.requests || []).map(function (r) { return '<div data-act="rqopen" data-id="' + esc(r.email) + '" style="cursor:pointer;border:2px solid var(--brand);border-radius:12px;padding:10px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><div class="grow"><b>👤 ' + esc(r.name) + ' asked for access</b><div class="muted">' + esc(r.watch || '') + (r.at ? ' · ' + new Date(r.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '') + ' · waiting for you to accept or decline</div></div><span class="muted">›</span></div>'; }).join('') : '';   /* a request stays here until it is accepted or declined */
   var cmine = (S.corrs || []).map(function (c) {
+    if (corrOptional(c)) return '<div data-act="corrreview" data-id="' + esc(c.id) + '" style="cursor:pointer;border:2px solid var(--secb);background:var(--soft);border-radius:12px;padding:10px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><div class="grow"><b>✎ Handover mistake between ' + esc(c.fromName) + ' and ' + esc(c.toName) + '</b><div class="muted">' + corrLines(c).join(' · ').replace(/<[^>]+>/g, '') + ' · ' + esc(c.reason || '') + '</div><div class="muted" style="margin-top:2px">For your information. They settle it between them, you do not need to do anything.</div></div><span class="muted">›</span></div>';
     if (corrCanDecide(c)) return '<div data-act="corrreview" data-id="' + esc(c.id) + '" style="cursor:pointer;border:2px solid var(--exp);background:var(--exp-bg);border-radius:12px;padding:10px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><div class="grow"><b style="color:var(--exp)">✎ Handover mistake: ' + corrBy(c) + ' asks to correct the ' + corrTitle(c) + ' handover</b><div class="muted">' + corrLines(c).join(' · ').replace(/<[^>]+>/g, '') + ' · ' + esc(c.reason || '') + ' · waiting for you to accept or decline</div></div><span class="muted">›</span></div>';
     if (c.byEmail === EMAIL) return '<div data-act="corrreview" data-id="' + esc(c.id) + '" style="cursor:pointer;border:2px solid var(--soon);background:var(--soon-bg);border-radius:12px;padding:10px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><div class="grow"><b>✎ Your correction is waiting for ' + esc(corrOther(c)) + '</b><div class="muted">' + corrLines(c).join(' · ').replace(/<[^>]+>/g, '') + '</div></div><span class="muted">›</span></div>';
     return '';
@@ -1127,7 +1139,7 @@ function noticesModal() {
     var canPay = n.kind === 'shortage' && inControl() && !OWNERVIEW && openShortList().some(function (x) { return x.wk === n.wk; });
     return '<div data-act="ntview" data-id="' + n.id + '" style="cursor:pointer;align-items:center"><div class="grow"><b>' + (n.read ? '' : '<span style="color:var(--exp)">● </span>') + (n.kind === 'correction' ? 'Your ' + esc(n.wk) + ' shift shortage was corrected' : n.kind === 'received' ? 'Your ' + esc(n.wk) + ' shift handover was received, ' + (Array.isArray(NTDIFF[n.sid]) ? (NTDIFF[n.sid].length ? 'nothing short' : 'all matched ✓') : (n.diffs === '' ? 'all matched ✓' : 'nothing short')) : 'Your ' + esc(n.wk) + ' shift was counted short') + '</b><div class="muted">' + esc(n.shiftDate) + ' ' + esc(HL(n.shiftHalf)) + (n.kind === 'correction' ? ' · ' + esc(n.reason || '') + ' · by ' : n.kind === 'received' ? ' · received by ' : ' · counted by ') + esc(n.byName || '') + ' · ' + new Date(n.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</div>' + (n.kind === 'received' ? (function () { ntDiffLoad(n.sid); var dl = NTDIFF[n.sid]; return Array.isArray(dl) ? (dl.length ? '<div style="color:var(--soon);font-size:12px;font-weight:600;margin-top:2px">⚠ ' + dl.map(esc).join('<br>⚠ ') + '</div>' : '') : (n.diffs ? '<div style="color:var(--soon);font-size:12px;font-weight:600;margin-top:2px">⚠ Counted differently: ' + esc(n.diffs) + '</div>' : ''); })() : '') + (n.kind === 'shortage' && inControl() && !OWNERVIEW ? (function () { var ow = openShortList().filter(function (x) { return x.wk === n.wk; })[0]; return ow ? '<div class="muted">' + money(ow.owed) + ' still owed by the ' + esc(n.wk) + ' shift</div>' : '<div class="muted">Nothing owed now</div>'; })() : '') + '</div>' + (n.kind === 'received' || typeof n.total !== 'number' ? '' : '<b style="color:var(--exp)">' + (n.kind === 'correction' ? money(n.before) + ' → ' : '') + money(n.total) + '</b>') + (canPay ? '<button class="btn red sm" data-act="payopen" data-id="' + esc(n.wk) + '" style="margin-left:10px;flex:none">Pay</button>' : '') + '</div>';
   }).join('') + '</div>' : '<div class="empty">No notifications.</div>') + '<p class="muted">You are told here when the person taking over your shift counts cash or stock short. It is recorded as a shortage against your shift. Tap one to see the details.</p><button class="btn sec block" data-act="close">Close</button>');
-  REFRESH = noticesModal;
+  REFRESH = noticesModal; corrMarkSeen();   /* opening Notifications clears what a President only needs to know about */
   if (un.length && DB) { var b = writeBatch(DB); un.forEach(function (n) { b.update(ref('notices/' + n.id), { read: true }); }); b.commit().catch(function (e) { console.error(e); }); }
 }
 var SELF = 0;   /* when this phone itself last changed who is in control, so it does not tell itself */
@@ -2276,7 +2288,7 @@ function histShiftsHtml() {
 function histChartsHtml() { return HSDOCS ? chartsHtml(HSDOCS) : '<div class="empty">Loading…</div>'; }
 function histDraw(top) {
   var body = HY.tab === 'all' ? histAllHtml() : HY.tab === 'shifts' ? histShiftsHtml() : HY.tab === 'people' ? histPeopleHtml() : histChartsHtml(), right = histFilterBtn(), pg = $('#spage'), cur = WPS[WPS.length - 1];
-  var topHtml = '<button data-act="wpback" aria-label="Back">‹</button><b>History</b>' + right, head = histHead(), html = '<div id="hhead">' + head + '</div><div id="hbody">' + body + '</div>';
+  var topHtml = '<button data-act="wpback" aria-label="Back">‹</button><b>History</b>' + bellHtml() + right, head = histHead(), html = '<div id="hhead">' + head + '</div><div id="hbody">' + body + '</div>';
   if (!pg.hidden && cur && cur.fn === histPage && pg.querySelector('.sp-body')) {
     var sb = pg.querySelector('.sp-body'), st = sb.scrollTop, tp = pg.querySelector('.sp-top');
     tp.className = 'sp-top' + (right ? ' hasr' : ''); tp.innerHTML = topHtml;
@@ -3138,6 +3150,13 @@ function corrCanDecide(c) {   /* the same people the database allows: not the on
   if (corrParty(c) || canAdmin()) return true;
   return !!(S.state.pending && S.hand && S.hand.status === 'open' && eligible(S.hand));
 }
+function corrNext(c) { return !!(S.state && S.state.pending && S.hand && S.hand.status === 'open' && eligible(S.hand) && !corrParty(c)); }   /* the person taking the next handover */
+function corrOptional(c) { return !!(c && c.status === 'open' && c.byEmail !== EMAIL && !OWNERVIEW && !corrParty(c) && !corrNext(c) && canAdmin()); }   /* a President / the Owner who is not in the handover: they can step in, they do not have to */
+function corrSeen(id) { try { return !!localStorage.getItem('sw.cs.' + id); } catch (x) { return false; } }
+function corrMarkSeen() { var any = false; (S.corrs || []).forEach(function (c) { if (corrOptional(c) && !corrSeen(c.id)) { try { localStorage.setItem('sw.cs.' + c.id, '1'); any = true; } catch (x) {} } }); if (any) updateBell(); }
+function corrBellCount() {   /* what the bell counts for corrections: the two people in the handover (and the one taking the next handover) until it is decided; a President / the Owner only until they have opened it */
+  return (S.corrs || []).filter(function (c) { return corrOptional(c) ? !corrSeen(c.id) : (corrCanDecide(c) || c.byEmail === EMAIL); }).length;
+}
 function corrLines(c) {
   var L = (c.rows || []).map(function (r) { return esc(r.name) + (r.kind === 'cage' ? ' <span class="muted">(' + esc(r.unit || 'case') + ')</span>' : '') + ': ' + r.was + ' → <b>' + r.now + '</b>'; });
   if (c.cash) L.unshift('Cash: ' + money(c.cash.was) + ' → <b>' + money(c.cash.now) + '</b>');
@@ -3171,6 +3190,7 @@ function corrFixedKeys(d) {   /* which rows of a record were corrected: id + ':'
 function corrBanner(d) {   /* a correction that is still waiting for this handover */
   var c = d && corrOpenFor(d.handoverId); if (!c) return '';
   if (c.byEmail === EMAIL) return '<div class="card" style="border:2px solid var(--soon);background:var(--soon-bg)"><b>✎ Correction sent, waiting for ' + esc(corrOther(c)) + '</b><div class="muted" style="margin:4px 0">' + corrLines(c).join('<br>') + '<br>' + esc(c.reason || '') + '<br>If they do not answer, the person from the next incoming shift can check it, or a President.</div><button class="btn sec sm" data-act="corrcancel" data-id="' + esc(c.id) + '">Cancel my request</button></div>';
+  if (corrOptional(c)) return '<div class="card" data-act="corrreview" style="cursor:pointer;border:2px solid var(--secb);background:var(--soft)"><b>✎ A correction is waiting between ' + esc(c.fromName) + ' and ' + esc(c.toName) + '</b><div class="muted" style="margin:4px 0">' + corrLines(c).join(' · ') + '. They settle it between them; you do not need to do anything.</div></div>';
   if (corrCanDecide(c)) return '<div class="card" data-act="corrreview" data-id="' + esc(c.id) + '" style="border:2px solid var(--exp);background:var(--exp-bg);cursor:pointer"><b style="color:var(--exp)">✎ A correction is waiting for you</b><div class="muted" style="margin:4px 0">' + corrBy(c) + ' · ' + corrLines(c).join(' · ') + '</div><span class="btn sm">Look at it</span></div>';
   return '<div class="card" style="border:2px solid var(--soon);background:var(--soon-bg)"><b>✎ A correction is waiting</b><div class="muted" style="margin-top:4px">' + esc(c.byName) + ' asked for it. ' + corrLines(c).join(' · ') + '</div></div>';
 }
@@ -3251,12 +3271,13 @@ function corrSend() {
 /* the decision */
 function corrReview(id) {
   var c = (S.corrs || []).filter(function (x) { return x.id === id; })[0]; if (!c) return toast('That correction is no longer waiting');
-  var mine = c.byEmail === EMAIL, can = corrCanDecide(c), next = !corrParty(c) && !canAdmin();
+  var mine = c.byEmail === EMAIL, can = corrCanDecide(c), next = !corrParty(c) && !canAdmin(), opt = corrOptional(c);
   modal('<h2>Handover mistake</h2><div class="card sum"><div><span>Handover</span><b>' + corrTitle(c) + '</b></div><div><span>From</span><b>' + esc(c.fromName || '') + ' (outgoing shift)</b></div><div><span>To</span><b>' + esc(c.toName || '') + ' (incoming shift)</b></div><div><span>Asked by</span><b>' + corrBy(c) + '</b></div><div><span>Reason</span><b>' + esc(c.reason || '') + '</b></div><div><span>Sent</span><b>' + corrWhen(c.at) + '</b></div></div>' +
     '<div class="card"><h2>What changes</h2><div class="muted" style="margin:-6px 0 6px">The ' + corrShiftWord(c.side) + '\'s count</div><div style="line-height:1.8">' + corrLines(c).join('<br>') + '</div><div class="muted" id="cr-after" style="margin-top:8px">The Over / Short result is recalculated when it is accepted.</div></div>' +
-    (can ? '<div class="card" style="background:var(--soon-bg);box-shadow:none">' + (next ? 'You are taking the next handover, so you can check this. ' : '') + 'Only accept it if you agree it was a genuine mistake.' + (S.state && S.state.pending ? '<div class="muted" style="margin-top:6px">The next handover has been made, so only the records of the earlier handover change. Count what is really here as normal.</div>' : '') + '</div><button class="btn block" data-act="corraccept" data-id="' + esc(id) + '">Accept the change</button><button class="btn red block" data-act="corrdecline" data-id="' + esc(id) + '" style="margin-top:10px">Decline</button>' : mine ? '<button class="btn sec block" data-act="corrcancel" data-id="' + esc(id) + '">Cancel my request</button>' : '') +
-    '<button class="btn sec block" data-act="close" style="margin-top:10px">' + (can ? 'Later' : 'Close') + '</button>');
+    (opt ? '<div class="card" style="background:var(--soft);box-shadow:none"><b>For your information</b><div style="margin-top:4px">' + esc(c.fromName) + ' and ' + esc(c.toName) + ' can settle this between them. <b>You do not need to do anything.</b> If they ask you to, you can step in below.</div></div><button class="btn sec block" data-act="close">Close</button><div class="muted" style="margin:14px 2px 6px">Only if they ask you:</div><div class="row"><button class="btn sec grow" data-act="corraccept" data-id="' + esc(id) + '">Step in: accept it</button><button class="btn sec grow" data-act="corrdecline" data-id="' + esc(id) + '">Step in: decline it</button></div>' : can ? '<div class="card" style="background:var(--soon-bg);box-shadow:none">' + (next ? 'You are taking the next handover, so you can check this. ' : '') + 'Only accept it if you agree it was a genuine mistake.' + (S.state && S.state.pending ? '<div class="muted" style="margin-top:6px">The next handover has been made, so only the records of the earlier handover change. Count what is really here as normal.</div>' : '') + '</div><button class="btn block" data-act="corraccept" data-id="' + esc(id) + '">Accept the change</button><button class="btn red block" data-act="corrdecline" data-id="' + esc(id) + '" style="margin-top:10px">Decline</button>' : mine ? '<button class="btn sec block" data-act="corrcancel" data-id="' + esc(id) + '">Cancel my request</button>' : '') +
+    (opt ? '' : '<button class="btn sec block" data-act="close" style="margin-top:10px">' + (can ? 'Later' : 'Close') + '</button>'));
   REFRESH = function () { corrReview(id); };
+  if (opt) corrMarkSeen();
 }
 function corrPopup(c) {
   if (!$('#modal') || CORRSEEN[c.id]) return; CORRSEEN[c.id] = 1;
@@ -3400,7 +3421,7 @@ function wpPage(fn, args, html, keepScroll, right) {   /* show a full-screen pag
   if (at >= 0) { WPS.length = at + 1; WPS[at].args = args; } else WPS.push({ mode: 'page', fn: fn, args: args });
   SPMODE = 'page'; if (pg.hidden) { pg.hidden = false; document.body.classList.add('spo'); }
   if (HUN && fn !== histPage && fn !== histShiftPage && fn !== LIVEKEEP) histStop();
-  pg.innerHTML = '<div class="sp-top' + (right ? ' hasr' : '') + '"><button data-act="wpback" aria-label="Back">‹</button><b>' + title + '</b>' + (right || '') + '</div><div class="sp-body">' + body + '</div>';
+  pg.innerHTML = '<div class="sp-top' + (right ? ' hasr' : '') + '"><button data-act="wpback" aria-label="Back">‹</button><b>' + title + '</b>' + bellHtml() + (right || '') + '</div><div class="sp-body">' + body + '</div>';
   var sb = pg.querySelector('.sp-body'); if (sb) sb.scrollTop = oldTop;   /* a tab or a signature on the same page keeps the scroll where it was */
   hsync();
 }
@@ -4615,6 +4636,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'shfix') { FX = null; shFixForm(id); }
   else if (a === 'shfixgo') shFixGo(id);
   else if (a === 'notices') noticesModal();
+  else if (a === 'bell2') noticesModal();
   else if (a === 'corrstart') corrStart();
   else if (a === 'corrstart2') corrStart2(b.dataset.id);
   else if (a === 'crside') { if (CF && CF.side !== b.dataset.v) { CF.side = b.dataset.v; CF.v = {}; corrForm(); } }
@@ -5197,7 +5219,7 @@ function startListeners() {
     scheduleRender();
   }, function (e) { console.error(e); }));
   subs.push(onSnapshot(query(col('shiftreqs'), where('fromEmail', '==', EMAIL)), function (s) { S.shreqOut = docs(s); shReqSeen(); }, function (e) { console.error(e); }));
-  watch(col('members'), function (s) { S.members = s.docs.map(function (d) { return d.data(); }); var ow = S.members.filter(function (m) { return m.email === PRESIDENT; })[0], legacy = PID === 'coover' && (!ow || ow.ranks !== 2); if (legacy) S.members = S.members.map(function (m) { return Object.assign({}, m, { role: m.email === PRESIDENT ? 'owner' : ({ president: 'president', admin: 'president', user: 'admin' }[m.role] || 'admin') }); }); var me = S.members.filter(function (m) { return m.email === EMAIL; })[0]; if (me) M = me;   /* until the owner converts the ranks, old roles are read as: admin = President, user = Admin */ scheduleRender(); refreshModal(); });
+  watch(col('members'), function (s) { S.members = s.docs.map(function (d) { return d.data(); }); var ow = S.members.filter(function (m) { return m.email === PRESIDENT; })[0], legacy = PID === 'coover' && (!ow || ow.ranks !== 2); if (legacy) S.members = S.members.map(function (m) { return Object.assign({}, m, { role: m.email === PRESIDENT ? 'owner' : ({ president: 'president', admin: 'president', user: 'admin' }[m.role] || 'admin') }); }); var me = S.members.filter(function (m) { return m.email === EMAIL; })[0]; if (me) M = me;   /* until the owner converts the ranks, old roles are read as: admin = President, user = Admin */ updateBell(); scheduleRender(); refreshModal(); });
   watch(col('shortages'), function (s) { S.shAll = docs(s); scheduleRender(); });
   watch(col('repayments'), function (s) { S.repAll = docs(s); scheduleRender(); });
   watch(col('credit'), function (s) { S.bal = {}; s.docs.forEach(function (d) { S.bal[d.id] = d.data().bal || 0; }); scheduleRender(); });
@@ -5206,7 +5228,7 @@ function startListeners() {
       if (isPres()) { bootstrap(); } else { STAGE = 'setup'; render(); }
       return;
     }
-    var prevS = S.state, wasCtl = prevS ? prevS.controlEmail : undefined; S.state = s.data(); STAGE = 'ready'; tidyUp();
+    var prevS = S.state, wasCtl = prevS ? prevS.controlEmail : undefined; S.state = s.data(); STAGE = 'ready'; tidyUp(); updateBell();   /* the bell counts what waits for this person, which depends on who is in control */
     if (prevS && wasCtl !== S.state.controlEmail && Date.now() - SELF > 5000) {   /* someone else moved control: tell this person at once, no reopening needed */
       if (S.state.controlEmail === EMAIL) controlPopup('Control received', '<b>' + esc(prevS.controlName || 'The previous operator') + '</b> has handed over operation to you. You are now in control.');
       else if (wasCtl === EMAIL) controlPopup('Control moved', '<b>' + esc(S.state.controlName || 'Someone') + '</b> has taken over operation from you. You are now view only.');
@@ -5221,7 +5243,7 @@ function startListeners() {
     var pend = S.state.pending || '';
     if (pend !== handId) {
       handId = pend; if (unsubHand) unsubHand(); unsubHand = null; S.hand = null;
-      if (pend) unsubHand = onSnapshot(ref('handovers/' + pend), function (h) { S.hand = h.exists() ? h.data() : null; scheduleRender(); }, function (e) { console.error(e); });
+      if (pend) unsubHand = onSnapshot(ref('handovers/' + pend), function (h) { S.hand = h.exists() ? h.data() : null; updateBell(); scheduleRender(); }, function (e) { console.error(e); });
     }
     migrate(); scheduleRender();
   });
