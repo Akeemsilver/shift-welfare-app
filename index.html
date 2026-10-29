@@ -271,7 +271,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.75', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.76', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1932,9 +1932,14 @@ function render() {
     document.querySelectorAll('#nav button').forEach(function (b) { var on = b.dataset.tab === tab; b.classList.toggle('on', on); var q = b.querySelector('.qb'); if (on && !q && !helpOff()) { b.style.position = 'relative'; b.insertAdjacentHTML('beforeend', '<i class="qb">?</i>'); } else if ((!on || helpOff()) && q) q.remove(); });
   } else $('#hdr').innerHTML = 'Shift Welfare';
   var focus = document.activeElement && document.activeElement.id;
-  var sy0 = window.pageYOffset, same0 = RTAB === tab; RTAB = tab;
+  var sy0 = window.pageYOffset, same0 = RTAB === tab, mh0 = $('#main'); RTAB = tab;
+  if (same0 && sy0 > 0) mh0.style.minHeight = mh0.offsetHeight + 'px';   /* while the page is redrawn it keeps its height, so a phone cannot clamp the scroll back to the top */
   $('#main').innerHTML = ready ? ownerBar() + banner() + srCard() + reqCard() + pcCard() + VIEWS[tab]() : stageHtml();
-  if (same0 && sy0 > 0 && Math.abs(window.pageYOffset - sy0) > 2) window.scrollTo(0, sy0);   /* a live update or the keyboard closing must not move the page */
+  if (same0 && sy0 > 0) {   /* a live update, a +/- tap or the keyboard closing must not move the page; some phones need it put back a few times */
+    var back0 = function () { if (Math.abs(window.pageYOffset - sy0) > 2) window.scrollTo(0, sy0); };
+    back0(); setTimeout(back0, 0); setTimeout(back0, 100); setTimeout(back0, 300);
+    setTimeout(function () { mh0.style.minHeight = ''; back0(); }, 500);
+  } else mh0.style.minHeight = '';
   if (ready && viewOnly()) document.querySelectorAll('#main input:not(#c-q):not([data-b]):not([data-bl])').forEach(function (el) { el.disabled = true; });
   if (focus && $('#' + focus)) $('#' + focus).focus();
   vv(); hsync(); if (ready) spRender();
@@ -5414,6 +5419,7 @@ window.addEventListener('popstate', function () {
   else { LASTBACK = Date.now(); toast('Press back again to leave the app'); }
   hsync();
 });
+try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (x) {}   /* a phone must not put the page back at the top when the history changes */
 history.replaceState({ sw: 0 }, ''); history.pushState({ sw: 1 }, '');
 if (window.MutationObserver) { var mo = new MutationObserver(hsync); mo.observe($('#modal'), { childList: true }); mo.observe($('#padhost'), { childList: true }); }
 
