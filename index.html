@@ -271,7 +271,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.71', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.72', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -3825,7 +3825,7 @@ async function wzFinish() {
     b.set(doc(DB, 'codes/' + code), { placeId: PID, name: placeName() });
     b.update(doc(DB, 'places/' + PID), { setupDone: true, code: code, signup: cfg.signup, shifts: cfg.shifts });
     await b.commit();
-    WZ = null; afterSignIn(AUTH.currentUser);
+    WZ = null; lsSet('sw.place', PID); afterSignIn(AUTH.currentUser);   /* set-up finished: this is the workplace the app now opens on */
   } catch (e) { console.error(e); WZ.msg = 'Could not save (' + (e.code || e.message) + '). Try again.'; render(); }
 }
 /* join code and workplaces, from Settings */
@@ -5360,7 +5360,7 @@ async function afterSignIn(user) {
     else if (EMAIL === PRESIDENT) { M = { email: EMAIL, role: 'owner', ranks: 2, personId: '', addedBy: EMAIL, at: Date.now() }; await setDoc(ref('members/' + EMAIL), M); }
     else { requestStage(); return; }
   } catch (e) { console.error(e); STAGE = 'noaccess'; render(); return; }
-  if (PLACE && PLACE.setupDone === false && M.role === 'president' && PLACE.createdBy === EMAIL) { wzStart(); return; }
+  if (PLACE && PLACE.setupDone === false && M.role === 'president' && PLACE.createdBy === EMAIL) { if (!OWNERVIEW) lsSet('sw.place', ''); wzStart(); return; }   /* a set-up that is cut off reopens on the workplace list, not straight back into it */
   if (isPres() && M.ranks !== 2) await migrateRanks();
   if (isPres() && PID === 'coover') { try { var cg = await getDoc(ref('config/main')); if (!cg.exists()) await setDoc(ref('config/main'), cfgDoc(DEFAULT_CFG)); } catch (x) { console.error(x); } }
   startListeners();
