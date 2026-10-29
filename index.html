@@ -271,7 +271,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.78', RULES_VERSION = '2.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.79', RULES_VERSION = '2.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -3142,18 +3142,40 @@ var PNOPEN = '', PNT = null;
 try { var pq = /[?&]corr=([^&]+)/.exec(location.search); if (pq) PNOPEN = decodeURIComponent(pq[1]); } catch (x) {}
 function pnSupported() { try { return 'Notification' in window && 'serviceWorker' in navigator && location.protocol.indexOf('http') === 0; } catch (x) { return false; } }
 function pnState() { try { return pnSupported() ? Notification.permission : 'off'; } catch (x) { return 'off'; } }
-function pnLabel() { var st = pnState(); return st === 'granted' ? (pushOn() ? 'On. You are told when a handover, a mistake or a request needs you, even when the app is closed' : 'On. A waiting handover mistake shows in the phone\'s notification bar while the app is in the background') : st === 'denied' ? 'Blocked. Allow notifications for this app in the phone settings' : st === 'default' ? 'Off. Tap to turn on' : 'Not available on this phone or browser'; }
+function pnLabel() { var st = pnState(); return st === 'granted' ? (pnIsOff() ? 'Off on this phone. Tap to turn on' : pushOn() ? 'On. You are told when a handover, a mistake or a request needs you, even when the app is closed. Tap to turn off' : 'On. A waiting handover mistake shows in the phone\'s notification bar while the app is in the background. Tap to turn off') : st === 'denied' ? 'Blocked. Allow notifications for this app in the phone settings' : st === 'default' ? 'Off. Tap to turn on' : 'Not available on this phone or browser'; }
+function pnIsOff() { try { return !!localStorage.getItem('sw.alertsoff'); } catch (x) { return false; } }   /* this phone's own switch; the phone's permission itself stays as it is */
+function pnTap() { if (pnState() === 'granted') pnSheet(); else pnAsk(); }
+function pnSheet() {
+  var off = pnIsOff();
+  modal('<h2>📲 Phone alerts</h2><div class="card"><b>' + (off ? 'Off on this phone' : 'On') + '</b><div class="muted" style="margin-top:4px">' + (off ? 'This phone is not told about handovers, mistakes or requests. You still see them in Alerts when you open the app.' : (pushOn() ? 'This phone is told when a handover, a mistake or a request needs you, even when the app is closed.' : 'A waiting handover mistake shows in the phone\'s notification bar while the app is in the background.')) + '</div></div>' +
+    (off ? '<button class="btn block" data-act="pnon">Turn on alerts on this phone</button>' : '<button class="btn red block" data-act="pnoff">Turn off alerts on this phone</button><div class="muted" style="font-size:12px;margin:6px 2px 0">This only stops this phone. To block them completely, use the phone\'s own settings for this app.</div>') +
+    '<button class="btn sec block" data-act="close" style="margin-top:10px">Close</button>');
+}
+function pnTurnOff() {
+  try { localStorage.setItem('sw.alertsoff', '1'); } catch (x) {}
+  var last = ''; try { last = localStorage.getItem('sw.push') || ''; } catch (x) {}
+  var tok = last.indexOf(EMAIL + ':') === 0 ? last.slice(EMAIL.length + 1) : '';
+  if (tok && DB) { deleteDoc(doc(DB, 'pushtokens/' + EMAIL + '/d/' + tok.slice(-24).replace(/[^A-Za-z0-9_-]/g, '_'))).catch(function () {}); }   /* the push Worker no longer knows this phone */
+  try { localStorage.removeItem('sw.push'); } catch (x) {}
+  if (tok) { pushCfg().then(function (cfg) { if (!cfg) return; return import('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js').then(function (m) { return m.deleteToken(m.getMessaging(app)); }); }).catch(function () {}); }
+  try { navigator.serviceWorker.ready.then(function (reg) { return reg.getNotifications().then(function (l) { l.forEach(function (n) { if ((n.tag || '').indexOf('sw-') === 0) n.close(); }); }); }).catch(function () {}); } catch (x) {}
+  closeModal(); toast('Phone alerts are off on this phone'); if ($('#spage') && !$('#spage').hidden && SPMODE === '') { try { spRender(); } catch (x) {} }
+}
+function pnTurnOn() {
+  try { localStorage.removeItem('sw.alertsoff'); } catch (x) {}
+  PUSHTRIED = false; pnSync(); closeModal(); toast('Phone alerts are on'); if ($('#spage') && !$('#spage').hidden && SPMODE === '') { try { spRender(); } catch (x) {} }
+}
 function pnAsk() {
   if (!pnSupported()) return toast('This phone or browser cannot show alerts here');
   if (Notification.permission === 'denied') return toast('Alerts are blocked. Allow notifications for this app in the phone settings');
-  Promise.resolve(Notification.requestPermission()).then(function (p) { toast(p === 'granted' ? 'Phone alerts are on' : 'Alerts were not allowed'); PUSHTRIED = false; pnSync(); if ($('#spage') && !$('#spage').hidden && SPMODE === '') { try { spRender(); } catch (x) {} } }).catch(function () {});
+  Promise.resolve(Notification.requestPermission()).then(function (p) { if (p === 'granted') { try { localStorage.removeItem('sw.alertsoff'); } catch (x) {} } toast(p === 'granted' ? 'Phone alerts are on' : 'Alerts were not allowed'); PUSHTRIED = false; pnSync(); if ($('#spage') && !$('#spage').hidden && SPMODE === '') { try { spRender(); } catch (x) {} } }).catch(function () {});
 }
 function pnPending() { return (S.corrs || []).filter(function (c) { return corrCanDecide(c) && !corrOptional(c); }); }
 function pnSync() {   /* a short pause first, so a burst of changes makes one check */
   clearTimeout(PNT); PNT = setTimeout(pnRun, 600);
 }
 function pnRun() {
-  if (pnState() !== 'granted') return;
+  if (pnState() !== 'granted' || pnIsOff()) return;
   if (!PUSHTRIED && EMAIL) { PUSHTRIED = true; pushRegister(); }
   var visible = document.visibilityState === 'visible', pend = pnPending();
   navigator.serviceWorker.ready.then(function (reg) {
@@ -3183,7 +3205,7 @@ function pushCfg() {
 }
 function pushOn() { try { return (localStorage.getItem('sw.push') || '').indexOf(EMAIL + ':') === 0; } catch (x) { return false; } }
 function pushRegister() {   /* notifications are allowed: get this phone's push address and keep it under this person */
-  if (!pnSupported() || pnState() !== 'granted' || !EMAIL || !DB || OWNERVIEW) return;
+  if (!pnSupported() || pnState() !== 'granted' || pnIsOff() || !EMAIL || !DB || OWNERVIEW) return;
   pushCfg().then(function (cfg) {
     if (!cfg) return;
     return Promise.all([import('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js'), navigator.serviceWorker.ready]).then(function (r) {
@@ -4736,7 +4758,9 @@ document.addEventListener('click', function (e) {
   else if (a === 'shfixgo') shFixGo(id);
   else if (a === 'notices') noticesModal();
   else if (a === 'bell2') noticesModal();
-  else if (a === 'pnask') pnAsk();
+  else if (a === 'pnask') pnTap();
+  else if (a === 'pnoff') pnTurnOff();
+  else if (a === 'pnon') pnTurnOn();
   else if (a === 'corrstart') corrStart();
   else if (a === 'corrstart2') corrStart2(b.dataset.id);
   else if (a === 'crside') { if (CF && CF.side !== b.dataset.v) { CF.side = b.dataset.v; CF.v = {}; corrForm(); } }
