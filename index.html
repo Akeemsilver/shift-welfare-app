@@ -270,7 +270,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.56', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.57', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2097,7 +2097,7 @@ function hoSheet(id, kind, wk2) {   /* the short handover pop-up: who, the resul
     '<div class="hkv"><span>Handed over by</span><b>' + esc(giver) + ' <span class="muted">(' + esc(d.wk) + ' shift)</span></b></div><div class="hkv"><span>' + (acc ? 'Received and counted by' : 'To be counted by') + '</span><b>' + esc(recvName) + (rwk ? ' <span class="muted">(' + esc(rwk) + ' shift)</span>' : '') + '</b></div><div class="hkv"><span>' + (acc ? 'When' : 'Handed over') + '</span><b>' + (kind === 'recv' && d.receivedAt ? hfmt(d.receivedAt) : hfmt(d.at) + (acc && d.receivedAt ? ' · accepted ' + hhmm(d.receivedAt) : '')) + '</b></div>' + box + tbl +
     (d.notes ? '<div style="margin:8px 0 2px;padding:9px 12px;border-radius:12px;background:var(--soft);font-size:13.5px"><span class="muted" style="font-size:12px">Remarks · ' + esc(giver) + '</span><div>' + esc(d.notes) + '</div></div>' : '') +
     '<div style="margin:10px 0 2px;font-weight:700;font-size:13.5px">Who owes on credit</div>' + (owed.length ? owed.map(function (x) { return '<div class="hkv"><span>' + esc(x.label) + '</span><b>' + money(x.bal) + '</b></div>'; }).join('') + '<div class="hkv"><span><b style="color:var(--ink)">Total</b></span><b>' + money(tot) + '</b></div>' : '<div class="muted">Nobody owed anything on credit.</div>') +
-    '<button class="btn block" data-act="close" style="margin-top:10px">Close</button><button class="btn sec block" data-act="shopen" data-id="' + esc(d.id) + '" style="margin-top:8px">Open the full handover record ›</button>');
+    '<button class="btn block" data-act="close" style="margin-top:10px">Close</button><button class="btn sec block" data-act="shopen" data-id="' + esc(d.id) + '" style="margin-top:8px">Open the full handover record ›</button>' + (corrShow(d) ? '<button class="btn red block" data-act="corrstart2" data-id="' + esc(d.id) + '" style="margin-top:8px">✎ Handover mistake</button>' : ''));
 }
 function evSheet(id) {   /* a payment, credit or loan: who, how much, when, and what is still owed */
   var e = HEV[id]; if (!e) return; var who = e.crName || plab(e.person || e.cr), bal = balance(e.person || e.cr || ''), kv = function (l, v) { return '<div class="hkv"><span>' + l + '</span><b>' + v + '</b></div>'; };
@@ -3155,8 +3155,17 @@ function corrBanner(d) {   /* a correction that is still waiting for this handov
   if (corrCanDecide(c)) return '<div class="card" data-act="corrreview" data-id="' + esc(c.id) + '" style="border:2px solid var(--exp);background:var(--exp-bg);cursor:pointer"><b style="color:var(--exp)">✎ A correction is waiting for you</b><div class="muted" style="margin:4px 0">' + esc(c.byName) + ' (' + corrShiftWord(c.side) + ') · ' + corrLines(c).join(' · ') + '</div><span class="btn sm">Look at it</span></div>';
   return '<div class="card" style="border:2px solid var(--soon);background:var(--soon-bg)"><b>✎ A correction is waiting</b><div class="muted" style="margin-top:4px">' + esc(c.byName) + ' asked for it. ' + corrLines(c).join(' · ') + '</div></div>';
 }
-function corrStart() {
-  if (!HREC || !HREC.d) return; var d = HREC.d, h = HREC.h;
+function corrShow(d) {   /* the quick check for the Handover mistake button on the short handover pop-up (the full check is made when it is tapped) */
+  return !!(d && d.status === 'accepted' && d.handoverId && S.state && !S.state.pending && !OWNERVIEW && (EMAIL === d.fromEmail || EMAIL === d.receivedBy) && S.state.shift && S.state.shift.prevEmail === d.fromEmail && !corrOpenFor(d.handoverId));
+}
+function corrStart2(sid) {   /* from the short pop-up: fetch the shift record and the handover, then the same form */
+  Promise.all([getDoc(ref('shifts/' + sid))]).then(function (r) {
+    if (!r[0].exists()) return toast('This handover is no longer kept'); var d = r[0].data(); d.id = sid;
+    return getDoc(ref('handovers/' + d.handoverId)).then(function (hs) { corrStart(d, hs.exists() ? hs.data() : null); });
+  }).catch(function (e) { toast(errText(e)); });
+}
+function corrStart(d0, h0) {
+  var d = d0 || (HREC && HREC.d), h = d0 ? h0 : HREC && HREC.h; if (!d) return;
   if (!h) return toast('This handover is no longer kept, so it cannot be corrected');
   if (!S.state || S.state.pending) return toast('The next handover has been made, so this one can no longer be corrected');
   var open = corrOpenFor(d.handoverId); if (open) return corrReview(open.id);
@@ -3194,12 +3203,14 @@ function corrForm() {
     var rows = list.filter(function (x) { return kinds.indexOf(x[1]) >= 0; }); if (!rows.length) return '';
     return '<div class="card"><h2>' + title + '</h2><table><tr><th>Item</th><th>Counted</th><th>Correct</th></tr>' + rows.map(function (x) {
       var r = x[0], kind = x[1], was = corrWas(r, kind), key = corrKey(r, kind); if (CF.v[key] === undefined) CF.v[key] = String(was == null ? 0 : was);
-      return '<tr><td>' + (kind === 'cage' ? cageName(r.name, r.unit) : esc(r.name)) + '</td><td data-crw="' + key + '"' + (num(CF.v[key]) !== was ? ' style="color:var(--exp)"' : '') + '><b>' + (was == null ? '–' : was) + '</b></td><td><div class="stepper"><button data-act="crf-" data-k="' + key + '" aria-label="Less">−</button><input class="stepin" type="number" inputmode="numeric" min="0" data-step="crf" data-k="' + key + '" value="' + esc(CF.v[key]) + '" aria-label="Correct count"><button data-act="crf+" data-k="' + key + '" aria-label="More">+</button></div></td></tr>';
+      var og = kind === 'cage' ? r.cage : r.stock, ic = kind === 'cage' ? r.rg : r.rs, df = ic == null ? 0 : ic - og, hl = df ? ' style="background:var(--soon-bg)"' : '';   /* where the two counts differ is the place to look */
+      return '<tr' + hl + '><td>' + (kind === 'cage' ? cageName(r.name, r.unit) : esc(r.name)) + (df ? '<div style="font-size:11px;font-weight:700;color:var(--soon)">Outgoing ' + og + ' · incoming ' + ic + ' (' + (df > 0 ? '+' : '−') + Math.abs(df) + ')</div>' : '') + '</td><td data-crw="' + key + '"' + (num(CF.v[key]) !== was ? ' style="color:var(--exp)"' : '') + '><b>' + (was == null ? '–' : was) + '</b></td><td><div class="stepper"><button data-act="crf-" data-k="' + key + '" aria-label="Less">−</button><input class="stepin" type="number" inputmode="numeric" min="0" data-step="crf" data-k="' + key + '" value="' + esc(CF.v[key]) + '" aria-label="Correct count"><button data-act="crf+" data-k="' + key + '" aria-label="More">+</button></div></td></tr>';
     }).join('') + '</table></div>';
   };
-  var cashCard = inn && d.receivedCash != null ? '<div class="card"><h2>Cash</h2><table><tr><th></th><th>Counted</th><th>Correct</th></tr><tr><td>Cash</td><td>' + money(d.receivedCash) + '</td><td><div class="ig" style="width:112px;height:40px"><i>$</i><input data-crcash="1" type="number" inputmode="decimal" min="0" value="' + esc(CF.cash) + '" style="text-align:right"></div></td></tr></table></div>' : '';
+  var cdf = d.receivedCash != null && d.expected != null ? r2(d.receivedCash - d.expected) : 0;
+  var cashCard = inn && d.receivedCash != null ? '<div class="card"><h2>Cash</h2><table><tr><th></th><th>Counted</th><th>Correct</th></tr><tr' + (cdf ? ' style="background:var(--soon-bg)"' : '') + '><td>Cash' + (cdf ? '<div style="font-size:11px;font-weight:700;color:var(--soon)">Expected ' + money(d.expected) + ' · counted ' + money(d.receivedCash) + ' (' + (cdf > 0 ? '+' : '−') + money(Math.abs(cdf)) + ')</div>' : '') + '</td><td>' + money(d.receivedCash) + '</td><td><div class="ig" style="width:112px;height:40px"><i>$</i><input data-crcash="1" type="number" inputmode="decimal" min="0" value="' + esc(CF.cash) + '" style="text-align:right"></div></td></tr></table></div>' : '';
   modal('<div class="ps"><h2>Handover mistake</h2><p class="muted" style="margin-top:0">' + esc(d.wk) + ' → ' + esc(d.receivedByName || h.receivedName || 'the incoming shift') + ' · ' + esc(d.date) + ' ' + esc(HL(d.half)) + '. Fix what was counted. ' + esc(who || 'The other person') + ' must accept it before anything changes.</p>' +
-    '<div class="card"><label>Which count was wrong?</label>' + seg([['in', 'Incoming shift'], ['out', 'Outgoing shift']], 'crside', CF.side, 2) + '</div>' + cashCard +
+    '<div class="card"><label>Which count was wrong?</label>' + seg([['in', 'Incoming shift'], ['out', 'Outgoing shift']], 'crside', CF.side, 2) + '<div class="muted" style="margin-top:8px;line-height:1.5">' + (inn ? '<b style="color:var(--ink)">Incoming shift</b>: the people who took over and counted what was there. Pick this if their count (or the cash they counted) was wrong.' : '<b style="color:var(--ink)">Outgoing shift</b>: the people who handed over and said what was there. Pick this if the numbers they handed over were wrong.') + '<br>Rows where the two counts differ are highlighted. Change only what was wrong.</div></div>' + cashCard +
     tbl('🧊 In the fridge (counted)', ['fridge']) + tbl('🧁 On the shelf (counted)', ['shelf']) + tbl('📦 Cases / Packs in storage (counted)', ['cage']) +
     '<div class="card"><label>Why was it wrong? *</label>' + seg(CORRWHY.map(function (w) { return [w, esc(w)]; }), 'crwhy', CF.why, 2) + '<div class="f" style="margin:10px 0 0"><label>Note (optional)</label><input data-crnote="1" value="' + esc(CF.note) + '" maxlength="80" placeholder="e.g. counted the old case twice" autocomplete="off"></div></div>' +
     '<div class="card" id="crf-sum" style="background:var(--soon-bg);box-shadow:none">' + corrSum() + '</div>' +
@@ -4577,6 +4588,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'shfixgo') shFixGo(id);
   else if (a === 'notices') noticesModal();
   else if (a === 'corrstart') corrStart();
+  else if (a === 'corrstart2') corrStart2(b.dataset.id);
   else if (a === 'crside') { if (CF && CF.side !== b.dataset.v) { CF.side = b.dataset.v; CF.v = {}; corrForm(); } }
   else if (a === 'crwhy') { if (CF) { CF.why = b.dataset.v; b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); } }
   else if (a === 'crf+' || a === 'crf-') { if (CF) { var ck = b.dataset.k, cv = stepTo(Math.max(0, Math.floor(num(CF.v[ck]))), a === 'crf+' ? 1 : -1, 0); corrSet(ck, cv); } }
