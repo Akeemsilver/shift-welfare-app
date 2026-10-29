@@ -271,7 +271,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.72', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.74', RULES_VERSION = '2.14';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -3491,7 +3491,7 @@ function spRender() {
   if (SPMODE === 'places') return wpRender();
   var old = pg.querySelector('.sp-body'), st = old ? old.scrollTop : 0, unread = (S.notices || []).filter(function (x) { return !x.read; }).length;
   var h = '<div class="sp-top"><button data-act="close" aria-label="Back">‹</button><b style="margin-right:0">Settings</b><button data-act="wpopen" aria-label="Workplaces" style="width:auto;height:38px;border-radius:19px;padding:0 14px;background:var(--brand);color:#fff;font-size:14px;font-weight:700;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.25)">🏢 Workplaces</button></div><div class="sp-body">' +
-    '<div class="card"><div class="sp-row" style="padding:0 0 8px;cursor:default"><div class="grow"><b>Account</b></div></div><div><b>' + esc(myPerson() ? myName() : isPres() ? 'Owner' : 'Your name is not set') + '</b></div><div class="muted">' + esc(roleLabel(myRole())) + ' (<span class="myem">' + esc(EMAIL || '') + '</span>)</div>' + (M && !M.personId ? '<p class="muted">Your email is not linked to a name yet. Ask a President or an Admin to link it under Access.</p>' : '') + '<div class="f" style="margin:12px 0 0"><label>App link to share</label><div class="row"><input readonly id="sp-link" value="' + esc(location.origin + location.pathname) + '" style="font-size:12px"><button class="btn sm" data-act="copylink">Copy</button></div><button class="btn sec block" data-act="sharelink" style="margin-top:8px">↗ Share the app link</button></div><button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>' +
+    '<div class="card"><div class="sp-row" style="padding:0 0 8px;cursor:default"><div class="grow"><b>Account</b></div></div>' + (placeName() ? '<div class="muted" style="margin:-2px 0 8px">🏢 <b style="color:var(--ink)">' + esc(placeName()) + '</b></div>' : '') + '<div><b>' + esc(myPerson() ? myName() : isPres() ? 'Owner' : 'Your name is not set') + '</b></div><div class="muted">' + esc(roleLabel(myRole())) + ' (<span class="myem">' + esc(EMAIL || '') + '</span>)</div>' + (M && !M.personId ? '<p class="muted">Your email is not linked to a name yet. Ask a President or an Admin to link it under Access.</p>' : '') + '<div class="f" style="margin:12px 0 0"><label>App link to share</label><div class="row"><input readonly id="sp-link" value="' + esc(location.origin + location.pathname) + '" style="font-size:12px"><button class="btn sm" data-act="copylink">Copy</button></div><button class="btn sec block" data-act="sharelink" style="margin-top:8px">↗ Share the app link</button></div><button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>' +
     '<div class="sp-h">Me</div><div class="sp-card">' +
     (M && !M.personId ? spRow('🪪', 'My name', 'Not set yet. Tap to choose your name', 'whoopen') : '') +
     spRow('✍️', 'My signature', M && M.signature ? 'Saved. Tap to sign again' : 'Not signed yet', 'sigsheet') +
@@ -4967,7 +4967,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'opall') wpBack();
   else if (a === 'wpopen') wpOpen(true);
   else if (a === 'wpback') wpBack();
-  else if (a === 'wpnone') { }
+  else if (a === 'wpnone') wpBack();   /* the workplace you are on: Open now takes you back into it */
   else if (a === 'opmenu') opMenu(id);
   else if (a === 'opview') opView(id);
   else if (a === 'oplimit') opLimit(id);
