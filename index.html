@@ -25,6 +25,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,Lato,sans-serif}
 #ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 8px);width:38px;height:38px;margin-left:-19px;border-radius:50%;background:var(--surface);color:var(--brand);box-shadow:0 2px 10px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;font-size:20px;z-index:90;opacity:0;pointer-events:none;transform:translateY(-60px)}#ptr.go{color:var(--ok)}#ptr.spin b{display:inline-block;animation:ptrspin .8s linear infinite}@keyframes ptrspin{to{transform:rotate(360deg)}}
+html.zoomed,html.zoomed body,html.zoomed .sp-body,html.zoomed .modal>div,html.zoomed .modal .list{overscroll-behavior:auto!important}   /* zoomed in: a one-finger drag pans the page on every page and pop-up */
 @supports (-webkit-touch-callout:none){html{background:var(--brand);overscroll-behavior-y:none}body{overscroll-behavior-y:none;min-height:100vh;min-height:100dvh;box-sizing:border-box}}   /* iPhone only: pulling down at the top does not open a gap above the header (Android keeps pull-to-refresh) */
 body{padding-bottom:calc(var(--bar) + 24px + env(safe-area-inset-bottom))}
 header{position:sticky;top:0;z-index:5;background:var(--brand);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:10px}
@@ -171,6 +172,7 @@ input:disabled{background:var(--dis);color:var(--muted)}
 .sp-top button{width:40px;height:40px;border-radius:50%;border:0;background:var(--soft);color:var(--link);font-size:24px;line-height:1;font-weight:600}
 .sp-top b{flex:1;text-align:center;font-size:18px;font-weight:700;margin-right:40px}
 #spage{position:fixed;inset:0;z-index:15;background:var(--bg);display:flex;flex-direction:column}
+.cgrid .cc{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}.cgrid .cc.cslot{background:transparent;border:2px dashed var(--secb);box-shadow:none}.cgrid .cc.cslot *{visibility:hidden}
 .sp-body{flex:1;overflow:auto;padding:14px 16px calc(28px + env(safe-area-inset-bottom));max-width:640px;margin:0 auto;width:100%;overscroll-behavior:contain}
 .sp-h{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:18px 6px 8px}
 .sp-card{background:var(--surface);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
@@ -273,7 +275,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.85', RULES_VERSION = '2.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.86', RULES_VERSION = '2.16';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -765,6 +767,70 @@ function stockPill(n) { return '<span class="pill' + (n <= 0 ? ' out' : n <= 6 ?
 function seg(arr, act, cur, cols, extra) { return '<div class="seg" style="grid-template-columns:repeat(' + cols + ',1fr)">' + arr.map(function (x) { return '<button data-act="' + act + '" data-v="' + esc(x[0]) + '"' + (extra || '') + ' class="' + (x[0] === cur ? 'on' : '') + '" style="font-size:12px">' + x[1] + '</button>'; }).join('') + '</div>'; }
 function stepper(act, v, extra) { return '<div class="stepper"><button data-act="' + act + '-" ' + (extra || '') + ' aria-label="Less">−</button><input class="stepin" type="number" inputmode="numeric" min="0" data-step="' + act + '" ' + (extra || '') + ' value="' + v + '" aria-label="Number"><button data-act="' + act + '+" ' + (extra || '') + ' aria-label="More">+</button></div>'; }
 
+/* ---------- the order of the items on the Count page: alphabetical unless someone moved things; one shared order for the workplace ---------- */
+function ordItems(list) {
+  var L = S.layout; if (!L || L.mode !== 'custom' || !Array.isArray(L.ids) || !L.ids.length) return list;
+  var pos = {}; L.ids.forEach(function (id, n) { pos[id] = n; });
+  return list.slice().sort(function (a, b) {
+    var pa = pos[a.id], pb = pos[b.id];
+    if (pa == null && pb == null) return (a.ord || 0) - (b.ord || 0) || byName(a, b);   /* new items go to the bottom, oldest first */
+    if (pa == null) return 1; if (pb == null) return -1; return pa - pb;
+  });
+}
+function canOrder() { return !OWNERVIEW && (inControl() || canAdmin()); }
+function ordSave(ids, mode) {
+  S.layout = { mode: mode, ids: ids, by: EMAIL, at: Date.now() };
+  scheduleRender();
+  guard(setDoc(ref('layout/count'), { mode: mode, ids: ids, by: EMAIL, at: Date.now() }));
+}
+function ordCustom() { return !!(S.layout && S.layout.mode === 'custom' && Array.isArray(S.layout.ids) && S.layout.ids.length); }
+function ordHtml() {   /* under the tiles: a hint before anyone has moved anything, and the way back to A to Z after */
+  if (ordCustom()) return '<div style="margin:14px 0 4px;text-align:center"><div class="muted" style="margin-bottom:8px">Custom order · everyone in the workplace sees it</div>' + (canOrder() ? '<button class="btn sec block" data-act="ordreset">A–Z &nbsp;Put the list in alphabetical order</button>' : '') + '</div>';
+  return '';
+}
+function ordHint() {
+  var seen = false; try { seen = !!localStorage.getItem('sw.ordhint'); } catch (x) {}
+  return !seen && canOrder() && !ordCustom() ? '<div class="card" style="padding:10px 14px;margin:-4px 0 12px;background:var(--cnt-bg);box-shadow:none;color:var(--cnt)"><b>↕ Press and hold an item to move it</b><div class="muted" style="margin-top:2px;color:inherit;opacity:.85">Drop it where you want it. Everyone in the workplace sees the same order.</div></div>' : '';
+}
+var DRAGO = { on: false, t: null, id: '', el: null, ghost: null, x: 0, y: 0, sx: 0, sy: 0, raf: 0, end: 0, pend: false };
+function dragStart(el, x, y) {
+  DRAGO.on = true; DRAGO.el = el; DRAGO.id = el.dataset.id; DRAGO.x = x; DRAGO.y = y;
+  var r = el.getBoundingClientRect(), g = el.cloneNode(true); g.className = el.className + ' cghost'; g.style.cssText = 'position:fixed;left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.width + 'px;height:' + r.height + 'px;z-index:60;pointer-events:none;margin:0;transform:scale(1.07) rotate(-2.5deg);box-shadow:0 14px 30px rgba(0,0,0,.35);opacity:.97';
+  document.body.appendChild(g); DRAGO.ghost = g; DRAGO.ox = x - r.left; DRAGO.oy = y - r.top; el.classList.add('cslot');
+  try { if (navigator.vibrate) navigator.vibrate(35); } catch (e) {}
+  (function loop() { if (!DRAGO.on) return; var vh = window.innerHeight; if (DRAGO.y < 120) window.scrollBy(0, -14); else if (DRAGO.y > vh - 150) window.scrollBy(0, 14); dragOver(); DRAGO.raf = requestAnimationFrame(loop); })();
+}
+function dragOver() {   /* the tile under the finger: slide the held tile in before it (left half) or after it (right half) */
+  var g = DRAGO.ghost; if (!g) return; g.style.left = (DRAGO.x - DRAGO.ox) + 'px'; g.style.top = (DRAGO.y - DRAGO.oy) + 'px';
+  var e = document.elementFromPoint(DRAGO.x, DRAGO.y), t = e && e.closest ? e.closest('.cgrid .cc') : null;
+  if (!t || t === DRAGO.el) return; var r = t.getBoundingClientRect(), before = DRAGO.x < r.left + r.width / 2;
+  var key = t.dataset.id + (before ? 'b' : 'a'); if (DRAGO.last === key) return; DRAGO.last = key;
+  t.parentNode.insertBefore(DRAGO.el, before ? t : t.nextSibling);
+}
+function dragEnd(commit) {
+  if (!DRAGO.on) return; DRAGO.on = false; cancelAnimationFrame(DRAGO.raf); if (DRAGO.ghost) DRAGO.ghost.remove(); DRAGO.ghost = null; DRAGO.last = ''; DRAGO.end = Date.now();
+  var el = DRAGO.el; if (el) el.classList.remove('cslot');
+  if (commit && el && el.parentNode) {
+    var cur = ordItems(S.items).map(function (i) { return i.id; }).filter(function (id) { return id !== DRAGO.id; }), nx = el.nextElementSibling && el.nextElementSibling.dataset ? el.nextElementSibling.dataset.id : '', at = nx ? cur.indexOf(nx) : -1;
+    if (at < 0) cur.push(DRAGO.id); else cur.splice(at, 0, DRAGO.id);
+    var before = ordItems(S.items).map(function (i) { return i.id; }).join(',');
+    if (cur.join(',') !== before) { try { localStorage.setItem('sw.ordhint', '1'); } catch (x) {} ordSave(cur, 'custom'); }
+  }
+  if (DRAGO.pend) { DRAGO.pend = false; } render();
+}
+document.addEventListener('touchstart', function (e) {
+  clearTimeout(DRAGO.t); if (DRAGO.on) return; var tile = e.target && e.target.closest ? e.target.closest('.cgrid .cc') : null;
+  if (!tile || e.touches.length !== 1 || !canOrder()) return; var t0 = e.touches[0]; DRAGO.sx = t0.clientX; DRAGO.sy = t0.clientY;
+  DRAGO.t = setTimeout(function () { dragStart(tile, DRAGO.sx, DRAGO.sy); }, 450);
+}, { passive: true });
+document.addEventListener('touchmove', function (e) {
+  var t0 = e.touches[0]; if (!t0) return;
+  if (DRAGO.on) { e.preventDefault(); DRAGO.x = t0.clientX; DRAGO.y = t0.clientY; return; }
+  if (DRAGO.t && (Math.abs(t0.clientX - DRAGO.sx) > 10 || Math.abs(t0.clientY - DRAGO.sy) > 10)) { clearTimeout(DRAGO.t); DRAGO.t = null; }
+}, { passive: false });
+document.addEventListener('touchend', function () { clearTimeout(DRAGO.t); DRAGO.t = null; if (DRAGO.on) dragEnd(true); }, { passive: true });
+document.addEventListener('touchcancel', function () { clearTimeout(DRAGO.t); DRAGO.t = null; if (DRAGO.on) dragEnd(false); }, { passive: true });
+document.addEventListener('contextmenu', function (e) { if (e.target && e.target.closest && e.target.closest('.cgrid .cc') && (DRAGO.t || DRAGO.on)) e.preventDefault(); });
 /* ---------- Count ---------- */
 var CN = { to: null, q: 0, mv: 0 };
 function cnum(id) {   /* what has been counted / noted for one item this shift */
@@ -776,7 +842,7 @@ function cnum(id) {   /* what has been counted / noted for one item this shift *
 function gone0(i) { return !(i.stock > 0 || i.cage > 0); }
 function liveItem(i) { if (!gone0(i)) return true; var c = cnum(i.id); return c.counted || c.sold || c.cr || c.sp; }
 function vCount() {
-  var LI = S.items.filter(liveItem), t = totals(), h = owedStrip(), n = LI.filter(function (i) { return cnum(i.id).counted; }).length;
+  var LI = ordItems(S.items).filter(liveItem), t = totals(), h = owedStrip(), n = LI.filter(function (i) { return cnum(i.id).counted; }).length;
   h += '<div class="tiles"><div class="tile wide"><div class="l">Sales this shift</div><div class="v">' + money(t.sales) + '</div></div>' +
        '<div class="tile"><div class="l">Items sold</div><div class="v">' + t.sold + '</div></div>' +
        '<div class="tile"><div class="l">Cash on hand</div><div class="v">' + money(t.cash) + '</div></div></div>';
@@ -786,10 +852,10 @@ function vCount() {
   if (inControl() && !(S.state && S.state.pending) && soList(true).length) h += '<button class="btn sec sm" data-act="startover" style="margin:-6px 0 12px;float:right">↺ Start over</button><div style="clear:both"></div>';
   h += '<div class="card" style="padding:10px 14px;margin-bottom:12px"><div class="row"><b class="grow" style="color:var(--cnt)">Counted so far ' + n + ' of ' + LI.length + '</b><span class="muted" style="font-size:12px">tap an item to count it</span></div><div class="cprog"><div style="width:' + Math.round(100 * n / LI.length) + '%"></div></div></div>';
   h += '<div class="muted" style="margin:-4px 4px 12px">What you see is what was handed over to you. At the end of your shift, count so it shows what you are handing over.</div>';
-  return h + '<div class="cgrid">' + LI.map(function (i) {
+  return h + ordHint() + '<div class="cgrid">' + LI.map(function (i) {
     var c = cnum(i.id), cl = c.counted ? ' done' : i.stock <= 0 ? ' out' : i.stock <= 6 ? ' low' : '';
     return '<button class="cc' + cl + '" data-act="pick" data-id="' + i.id + '"><div class="cn">' + esc(i.name) + '</div>' + (c.counted ? '' : '<span class="cpr">' + money(i.price) + '</span>') + '<div class="cv">' + i.stock + '</div><div class="cs">' + (hasCage(i) ? '📦 Cage: ' + uLab(i, i.cage) : '🧁 On the shelf') + '</div>' + (c.counted ? '<div class="cs" style="margin-top:3px"><span class="pill">Sold ' + Math.max(0, c.sold - c.sp) + '</span>' + (c.cr ? ' <span class="pill low">Credit ' + c.cr + '</span>' : '') + (c.sp ? ' <span class="pill out">Spoiled ' + c.sp + '</span>' : '') + '</div><span class="ck">✓ −' + c.sold + '</span>' : '') + '</button>';
-  }).join('') + '</div>';
+  }).join('') + '</div>' + ordHtml();
 }
 function cnPreview(it) {
   var c = cnum(it.id), miss = it.stock - CN.to, gone = c.sold + miss, sold = Math.max(0, gone - c.sp), cash = Math.max(0, sold - c.cr), over = c.cr > sold || c.sp > gone;
@@ -1628,7 +1694,7 @@ function cdetail(pid) {
 
 /* ---------- Handover page ---------- */
 function sheetRows() {
-  return S.items.map(function (i) {
+  return ordItems(S.items).map(function (i) {
     var L = S.log.filter(function (e) { return e.item === i.id; }), s = function (f) { return L.reduce(function (a, e) { return a + f(e); }, 0); };
     var lines = function (types, unitsOnly) { return S.log.reduce(function (a, e) { return types.indexOf(e.type) < 0 ? a : a + (e.lines || []).reduce(function (x, l) { return l.item !== i.id ? x : l.v === 2 ? x + (unitsOnly ? l.ds : l.dc) : (hasCage(i) ? (l.by === 'unit') === !!unitsOnly : !unitsOnly) ? x + l.cases * (l.pk || 1) : x; }, 0); }, 0); };
     var R = { id: i.id, shelf: !!i.shelf, store: hasCage(i), direct: !hasCage(i), unit: unitName(i), name: i.name, price: i.price, per: per(i), open: i.open || 0, stock: i.stock, cageOpen: i.cageOpen || 0, cage: i.cage,
@@ -1926,6 +1992,7 @@ function banner() {
 var MUT = {}; ['startover', 'sovgo', 'pick', 'cnsave', 'cnmove', 'cnote', 'snote', 'lend', 'loannext', 'pkpick', 'pkadd', 'paynext', 'cancelask', 'newitem', 'saveitem', 'stockitem', 'savecount', 'domove', 'dospoil', 'savedetails', 'rmitem', 'buysave', 'prepare', 'dohandover', 'chooseto', 'mode', 'ucopen', 'ucreview', 'editfromsell', 'editstock', 'esack', 'esreview', 'opopen', 'opreview', 'opcredit', 'opcnext', 'swopen', 'swpick'].forEach(function (k) { MUT[k] = 1; });
 var VIEWS = { sell: vCount, stock: vStock, buy: vBuy, credit: vCredit, handover: vHandover };
 function render() {
+  if (DRAGO.on) { DRAGO.pend = true; return; }   /* a tile is being moved: redraw when it is dropped */
   var sh = SH(), ready = STAGE === 'ready';
   updInstall(); $('#nav').hidden = !ready; $('#hist').hidden = !ready; $('#prof').hidden = !ready; $('#menu').hidden = !ready; $('#bell').hidden = !ready;
   if (ready) {
@@ -1985,6 +2052,10 @@ function liveModal(qs, build) {   /* a pop-up that stays in step with the databa
 
 /* ---------- history of the day (with cancel mode) ---------- */
 var hdt = function (e) { var d = new Date(e.t), k = HY && HY.dt && HY.tab === 'all' && histPer() === 'day' ? dkey(HY.dt) : ''; return k && dkey(d) !== k ? d.getDate() + ' ' + d.toLocaleDateString('en-GB', { month: 'short' }) : ''; };   /* an entry after midnight carries its date */
+var HDAY = [], HDAYOK = false, HEUN2 = null, LATESKIP = ['shiftrec', 'watchchg', 'takeover', 'switch', 'hocorr', 'handover', 'opening'];
+function lateOf(e) {   /* the shift the roster says was on duty when an entry was made, if the entry went on a different shift (the handover was not made yet) */
+  try { if (!e || !e.wk || LATESKIP.indexOf(e.type) >= 0) return ''; var s0 = slotNow(new Date(e.t)), sch = slotShift(s0.day, s0.i); return sch && sch !== e.wk ? sch : ''; } catch (x) { return ''; }
+}
 function evRow(e, cancelable) {
   var ic, tx, sub = '', amt = '', col = 'var(--ink)';
   if (e.type === 'sale') { ic = e.cr ? '💳' : '🛒'; tx = e.cr ? (e.crName || plab(e.cr)) + ' took ' + e.qty + ' × ' + e.name + ' on credit' : e.qty + ' × ' + e.name; sub = e.cr ? '' : 'Cash sale'; amt = money(e.amt); col = e.cr ? 'var(--soon)' : 'var(--ink)'; }
@@ -2015,6 +2086,7 @@ function evRow(e, cancelable) {
   else if (e.type === 'watchchg') { ic = '🔄'; tx = 'Watch changed'; sub = e.note; }
   else if (e.type === 'cageadj') { ic = '📦'; tx = 'Cage count changed: ' + e.name + ' (' + (e.qty > 0 ? '+' : '') + e.qty + ' cases)'; }
   else { ic = '✏️'; tx = 'Count changed: ' + e.name + ' (' + (e.qty > 0 ? '+' : '') + e.qty + ')'; }
+  var lt = lateOf(e); if (lt) sub = (sub ? sub + ' · ' : '') + '⏱ ' + e.wk + ' held control, ' + lt + ' on duty';
   if (e.corr) sub = (sub ? sub + ' · ' : '') + 'Correction by ' + e.corr;
   HEV[e.id] = e;
   return '<div' + (e.type === 'buy' || e.type === 'other' ? ' data-act="buyview" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'pay' || e.type === 'cnote' || e.type === 'loan' || (e.type === 'sale' && e.cr) ? ' data-act="evsheet" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'stockedit' ? ' data-act="editview" data-id="' + e.id + '" style="cursor:pointer;background:var(--exp-bg);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px;box-shadow:inset 2px 0 0 var(--exp)"' : e.type === 'cashshort' ? ' style="cursor:pointer;background:var(--exp-bg);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px;box-shadow:inset 2px 0 0 var(--exp)"' : '') + '><span style="font-size:18px;width:26px;flex:none;text-align:center">' + ic + '</span><div class="grow"><b>' + esc(tx) + '</b><div class="muted">' + (hdt(e) ? hdt(e) + ' ' : '') + hhmm(e.t) + (sub ? ' · ' + esc(sub) : '') + (e.byName ? ' · recorded by ' + esc(e.byName) : '') + '</div></div>' + (e.receipt ? '<img data-act="rcv" src="' + e.receipt + '" alt="receipt" style="width:44px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">' : '') + '<b style="color:' + col + '">' + amt + '</b>' + (CM && cancelable && ['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'shiftrec', 'watchchg'].indexOf(e.type) < 0 ? '<button class="btn red sm" data-act="cancelask" data-id="' + e.id + '">Cancel</button>' : '') + '</div>';
@@ -2041,7 +2113,7 @@ function livePage(fn, title, qs, build) {   /* a full-screen page that stays in 
   });
   HUN = function () { uns.forEach(function (u) { u(); }); };
 }
-function histStop() { if (HUN) { HUN(); HUN = null; } HSHDRAW = null; }
+function histStop() { if (HUN) { HUN(); HUN = null; } if (HEUN2) { HEUN2(); HEUN2 = null; } HDAY = []; HDAYOK = false; HSHDRAW = null; }
 function histPer() { return HY.tab === 'all' ? (Object.keys(HY.types).some(function (k) { return HY.types[k] && k !== 'Handovers'; }) ? 'month' : 'day') : HY.tab === 'shifts' || HY.tab === 'people' ? 'year' : 'month'; }
 function histMonthKey(n) { var t = new Date(); t = new Date(t.getFullYear(), t.getMonth() - n, 1); return t.getFullYear() + '-' + ('0' + (t.getMonth() + 1)).slice(-2); }
 function histMonthName(m) { return new Date(+m.slice(0, 4), +m.slice(5, 7) - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }); }
@@ -2096,11 +2168,11 @@ function histDay() {   /* the shifts that started on the chosen day: the finishe
   var key = dkey(HY.dt), docs = (HSDOCS || []).slice().sort(function (a, b) { return a.at - b.at; }), out = [];
   docs.forEach(function (d, i) { if (shDay(d) === key) out.push({ sid: d.sid || d.id, wk: d.wk, date: d.date, half: d.half, doc: d, prev: docs[i - 1] || null, running: false }); });
   var cur = S.state && S.state.shift; if (cur && cur.sid && shKeyOf(cur) === key && !out.some(function (x) { return x.sid === cur.sid; })) out.push({ sid: cur.sid, wk: cur.name, date: cur.date, half: cur.half, doc: null, prev: docs[docs.length - 1] || null, running: true });
-  else if (cur && cur.sid && key === dkey(new Date()) && !out.some(function (x) { return x.sid === cur.sid; })) {   /* a shift that started on an earlier day and is still the working one: today shows what was recorded into it today */
+  else if (cur && cur.sid && shKeyOf(cur) && shKeyOf(cur) < key && key <= dkey(histToday()) && !out.some(function (x) { return x.sid === cur.sid; })) {   /* a shift that started on an earlier day and has not handed over yet: it shows in full (from where it started) on each day until it is handed over */
     var cd = docs.filter(function (d) { return (d.sid || d.id) === cur.sid; })[0], ci = docs.indexOf(cd);
-    out.push({ sid: cur.sid, wk: cur.name, date: cur.date, half: cur.half, doc: cd || null, prev: cd ? docs[ci - 1] || null : docs[docs.length - 1] || null, running: true, carry: true });
+    out.push({ sid: cur.sid, wk: cur.name, date: cur.date, half: cur.half, doc: cd || null, prev: cd ? docs[ci - 1] || null : docs[docs.length - 1] || null, running: true, still: true });
   }
-  out.forEach(function (x) { x.start = x.prev ? (x.prev.receivedAt || x.prev.at) : 0; x.end = x.doc && !x.carry ? x.doc.at : 0; if (!x.start) { var ts = (HEVS || []).filter(function (e) { return e.sid === x.sid; }).map(function (e) { return e.t; }); if (ts.length) x.start = Math.min.apply(null, ts); } });
+  out.forEach(function (x) { x.start = x.prev ? (x.prev.receivedAt || x.prev.at) : 0; x.end = x.doc && !x.still ? x.doc.at : 0; if (!x.start) { var ts = (HEVS || []).filter(function (e) { return e.sid === x.sid; }).map(function (e) { return e.t; }); if (ts.length) x.start = Math.min.apply(null, ts); } });
   return out;
 }
 var HEUN = null, HEKEY = null;
@@ -2179,8 +2251,9 @@ function plogSub() {
   HEUN = onSnapshot(query(col('plog'), where('person', '==', rootOf(HY.pid)), limit(500)), function (snap) { HY.pl = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); histDraw(); }, function () { HY.pl = []; histDraw(); });
 }
 function histEvSub() {   /* the entries of the shifts of the chosen day (a night shift keeps its entries after midnight) */
-  var sids = histDay().map(function (x) { return x.sid; }).slice(0, 10), key = sids.join(',');
-  if (key === HEKEY) return; HEKEY = key; if (HEUN) { HEUN(); HEUN = null; }
+  var sids = histDay().map(function (x) { return x.sid; }).slice(0, 10), key = dkey(HY.dt) + '|' + sids.join(',');
+  if (key === HEKEY) return; HEKEY = key; if (HEUN) { HEUN(); HEUN = null; } if (HEUN2) { HEUN2(); HEUN2 = null; } HDAY = []; HDAYOK = false;
+  var lr = histRange(); HEUN2 = onSnapshot(query(col('events'), where('t', '>=', lr.a), where('t', '<', lr.b), limit(1500)), function (snap) { HDAY = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }).filter(function (x) { return !x.su; }).sort(function (a, b) { return b.t - a.t; }); HDAYOK = true; histDraw(); }, function (e) { console.error(e); });
   if (!sids.length) { HEVS = []; histDraw(); return; }
   HEUN = onSnapshot(query(col('events'), where('sid', 'in', sids), limit(3000)), function (snap) { HEVS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }).filter(function (x) { return !x.su; }); histDraw(); }, function (e) { toast(errText(e)); });
 }
@@ -2234,21 +2307,33 @@ function histAllHtml() {
   if (histPer() !== 'day') return histAllMonth();
   if (!HEVS || !HSDOCS) return '<div class="empty">Loading…</div>';
   var day = histDay(), d0 = histRange().a;
-  day = day.filter(function (x) { return !x.carry || HEVS.some(function (e) { return e.sid === x.sid && e.t >= d0; }); });   /* a carried-over shift shows only if something was recorded in it today */
   if (!day.length) return '<div class="empty">No records for ' + histEmptyWord() + '.</div>';
   var one = HY.sid && day.filter(function (x) { return x.sid === HY.sid; })[0], sel = one ? [one] : day, sids = sel.map(function (x) { return x.sid; });
-  var inDay = function (e) { var X = day.filter(function (x) { return x.sid === e.sid; })[0]; return !!X && (!X.carry || e.t >= d0); };
+  var inDay = function (e) { var X = day.filter(function (x) { return x.sid === e.sid; })[0]; return !!X; };
   var evs = histShown().filter(function (e) { return sids.indexOf(e.sid) >= 0 && inDay(e); }), all = HEVS.filter(function (e) { return sids.indexOf(e.sid) >= 0 && inDay(e); });
-  var chips = '<div class="hcc"><button data-act="hsid" data-id="" class="' + (one ? '' : 'on') + '">All of the day</button>' + day.map(function (x) { return '<button data-act="hsid" data-id="' + esc(x.sid) + '" class="' + (one && one.sid === x.sid ? 'on' : '') + '">' + hdot(x.wk) + esc(x.wk) + '</button>'; }).join('') + '</div>';
+  var chips = '<div class="hcc"><button data-act="hsid" data-id="" class="' + (one ? '' : 'on') + '">All of the day</button>' + day.map(function (x) { return '<button data-act="hsid" data-id="' + esc(x.sid) + '" class="' + (one && one.sid === x.sid ? 'on' : '') + '">' + hdot(x.wk) + esc(x.wk) + (x.still ? ' <small style="font-weight:600;opacity:.85">· still running</small>' : '') + '</button>'; }).join('') + '</div>';
   var first = sel[0], last = sel[sel.length - 1], t0 = first.start || Math.min.apply(null, all.map(function (e) { return e.t; }).concat([Infinity])), runs = sel.filter(function (x) { return x.running; })[0];
   var span = (isFinite(t0) ? hfmt(t0) : '') + ' → ' + (last.running ? '<b>now</b>' : last.end ? hfmt(last.end) : '');
+  var lateNote = ''; sel.forEach(function (x) { if (!x.end || x.running || !x.start) return; try { var s0 = slotNow(new Date(x.start + 60000)), nx = slotNext(s0.day, s0.i), sch = new Date(nx.day.getFullYear(), nx.day.getMonth(), nx.day.getDate(), CFG.periods[nx.i].start, 0).getTime(), lg = x.end - sch; if (lg > 15 * 60000) lateNote += '<div class="muted" style="margin:-4px 2px 8px">⏱ ' + esc(x.wk) + ' handed over ' + (lg >= 36e5 ? Math.floor(lg / 36e5) + ' h ' : '') + Math.round((lg % 36e5) / 6e4) + ' min after its ' + hhmm(sch) + ' shift end.</div>'; } catch (e2) {} });
   var line = '<div class="hline"><span>' + sel.map(function (x) { return hdot(x.wk) + ' <b>' + esc(x.wk) + '</b>'; }).join(' / ') + ' · ' + span + '</span>' + (runs ? '<span class="run">● ' + esc(runs.wk) + ' running</span>' : one && one.doc ? '<span class="who">' + esc(one.doc.fromName || '') + (one.doc.receivedByName ? ' → ' + esc(one.doc.receivedByName) : '') + '</span>' : '') + '</div>';
   var longs = sel.map(function (x) { var st0 = x.start || (isFinite(t0) ? t0 : 0), en = x.end || Date.now(); return { x: x, d: st0 ? Math.floor((en - st0) / 86400000) : 0 }; }).filter(function (z) { return z.d >= 1; }).sort(function (a, b) { return b.d - a.d; })[0];
   var warn = longs ? '<div style="padding:8px 10px;border-radius:10px;background:var(--soon-bg);color:var(--soon);font-size:12.5px;margin:-4px 0 10px">⚠ This shift ' + (longs.x.end ? 'lasted ' : 'has been running for ') + (longs.d + 1) + ' days' + (longs.x.end && !longs.x.running ? '' : '. It should be handed over.') + '</div>' : '';
+  var stills = sel.filter(function (x) { return x.still; }).map(function (x) { return '<div style="padding:8px 10px;border-radius:10px;background:var(--cnt-bg);color:var(--cnt);font-size:12.5px;margin:-4px 0 10px">' + hdot(x.wk) + ' <b>' + esc(x.wk) + '</b> is still working. It started on ' + (x.start ? hfmt(x.start) : esc(x.date)) + ' and has not handed over yet, so everything since then is shown here, by date.</div>'; }).join('');
+  warn = stills + warn + lateNote;
+  var dr = histRange(), dayEvs = one ? all : (HDAYOK ? HDAY : all.filter(function (e) { return e.t >= dr.a && e.t < dr.b; }));   /* the boxes count what was sold on this date, whichever shift sold it; one shift's own tile shows that whole shift */
+  var lateHtml = '';
+  if (!one && HDAYOK) {   /* entries made on this day inside a shift that started earlier and is not shown here: one line each, pointing to that shift's record */
+    var by = {}; HDAY.forEach(function (e) { if (sids.indexOf(e.sid) < 0) (by[e.sid] = by[e.sid] || []).push(e); });
+    lateHtml = Object.keys(by).map(function (sid) {
+      var es = by[sid], wk = es[0].wk || '', dc = (HSDOCS || []).filter(function (d) { return (d.sid || d.id) === sid; })[0], sd = dc ? shDay(dc) : '', n = histSold(es), amt = es.reduce(function (a, e) { return a + ((e.type === 'sale' && !e.cr) || e.type === 'count' ? e.amt || 0 : 0); }, 0), t1 = Math.min.apply(null, es.map(function (e) { return e.t; })), t2 = Math.max.apply(null, es.map(function (e) { return e.t; }));
+      return '<div class="card" ' + (sd ? 'data-act="hgoshift" data-id="' + esc(sid) + '" data-v="' + esc(sd) + '" style="cursor:pointer;' : 'style="') + 'border-left:4px solid ' + shiftColor(wk) + ';margin:0 0 10px"><div class="row" style="align-items:center"><div class="grow"><b>' + hdot(wk) + ' ' + esc(wk) + ' shift ' + (sd ? '(started ' + esc(new Date(+sd.slice(0, 4), +sd.slice(5, 7) - 1, +sd.slice(8, 10)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })) + ')' : '') + '</b><div class="muted" style="margin-top:2px">' + es.length + (es.length === 1 ? ' entry' : ' entries') + ' on this day, ' + hhmm(t1) + ' to ' + hhmm(t2) + (n ? ' · ' + n + ' sold · ' + money(amt) : '') + '. Counted in the boxes above and listed in ' + esc(wk) + '\'s record.</div></div>' + (sd ? '<span style="color:var(--link);font-size:20px">›</span>' : '') + '</div></div>';
+    }).join('');
+    if (lateHtml) lateHtml = '<div class="sec-h" style="margin-top:6px">From a shift that started earlier</div>' + lateHtml;
+  }
   var can = inControl() && all.some(function (e) { return e.sid === SH().sid; });
   var blocks = sel.slice().reverse().map(function (X) { return histShiftBlock(X, evs, sel.length > 1 ? '<div class="sec-h" style="margin-top:14px">' + hdot(X.wk) + ' ' + esc(X.wk) + ' · ' + (X.start ? hfmt(X.start) : '') + ' → ' + (X.running ? 'now' : X.end ? hfmt(X.end) : '') + (function () { var n = histSold(all.filter(function (e) { return e.sid === X.sid; })); return n ? ' · ' + n + ' sold' : ''; })() + '</div>' : '') }).join('');
   if (!/class="list"|class="hcs"/.test(blocks)) blocks = histFilterCount() ? '<div class="empty">No entries match this filter on ' + esc(histPlain()) + '.<br><button class="btn sec" data-act="hclear" style="margin-top:12px">Clear filter</button></div>' : '<div class="empty">No entries yet for ' + esc(histPlain()) + '.</div>';
-  return chips + line + warn + histTiles(all, day.some(function (x) { return x.running; })) + blocks + (can ? '<button class="btn ' + (CM ? 'sec' : 'red') + ' block" data-act="cmtog" style="margin-top:12px">' + (CM ? 'Done cancelling' : 'Cancel an item') + '</button>' + (CM ? '<div class="cancelbar">Tap Cancel next to the entry to remove. Only this shift can be cancelled.</div>' : '') : '') + '<p class="muted">Entries are kept for about 31 days. Every handover keeps its summary for a year, under Handovers.</p>';
+  return chips + line + warn + histTiles(dayEvs, day.some(function (x) { return x.running; })) + lateHtml + blocks + (can ? '<button class="btn ' + (CM ? 'sec' : 'red') + ' block" data-act="cmtog" style="margin-top:12px">' + (CM ? 'Done cancelling' : 'Cancel an item') + '</button>' + (CM ? '<div class="cancelbar">Tap Cancel next to the entry to remove. Only this shift can be cancelled.</div>' : '') : '') + '<p class="muted">Entries are kept for about 31 days. Every handover keeps its summary for a year, under Handovers.</p>';
 }
 function histAllMonth() {
   if (!HEVS) return '<div class="empty">Loading…</div>';
@@ -2577,7 +2662,7 @@ function gedit(id) {
 
 /* ---------- asking for access: anyone signed in can send one request; owner, presidents and admins accept or decline ---------- */
 var RQ = { pick: '', mode: 'list', name: '', no: '', rank: '', watch: '' }, MYREQ, RQHIDE = {};
-S.names = []; S.requests = []; S.corrs = [];
+S.names = []; S.requests = []; S.corrs = []; S.layout = null;
 function requestStage() {
   STAGE = 'request'; MYREQ = undefined; RQ = { pick: '', mode: 'new', name: '', no: '', rank: '', watch: '' }; render();
   subs.push(onSnapshot(ref('requests/' + EMAIL), function (sn) {
@@ -2923,7 +3008,7 @@ function showRx(keep) {
     (rxOnList(h) || !rxHasDetail(h) ? corrCards() + rxWarn(h) : '') + '<div class="card sum"><div><span>From</span><b>' + esc(hnl(h.fromName, h.fromEmail)) + (h.fromWatch ? '<div class="muted" style="font-weight:500">' + esc(h.fromWatch) + ' watch' + (h.fromWatch !== h.shift.name ? ' · visiting, the ' + esc(h.shift.name) + ' watch was on duty' : '') + '</div>' : '') + '</b></div><div><span>Handed over</span><b>' + new Date(h.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (no one in particular)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Shift</span><b>' + esc(h.shift.name) + ' · ' + esc(h.shift.date) + ' ' + esc(HL(h.shift.half)) + '</b></div><div><span>Sales</span><b>' + money(h.sales) + '</b></div>' + (typeof h.sold === 'number' ? '<div><span>Total items sold</span><b>' + h.sold + '</b></div>' : '') + '<div><span>Cash handed over</span><b>' + money(h.cash) + '</b></div>' + (typeof h.computed === 'number' && r2(h.computed - h.cash) > 0 ? '<div><span>Cash short when counted</span><b style="color:var(--exp)">' + money(r2(h.computed - h.cash)) + '</b></div>' : '') + (typeof h.computed === 'number' && r2(h.cash - h.computed) > 0 ? '<div><span>Cash over when counted</span><b style="color:var(--soon)">' + money(r2(h.cash - h.computed)) + '</b></div>' : '') + '</div>' +
     (rxOnList(h) ? rxDetail(h) + '<button class="btn block" data-act="rxcheck">Check items</button><button class="btn sec block" data-act="close" style="margin-top:10px">Back to Count</button>' : (rxHasDetail(h) ? '<button class="btn sec sm" data-act="rxlist" style="margin-bottom:10px">‹ See what was sold again</button>' : '') + '<div class="rxbar" id="rx-bar"></div>' + rxCashCard(h, v) +
     rxCard(h, v, 'fridge') + rxCard(h, v, 'shelf') + rxCard(h, v, 'cage') + rxExtraCard(h, v) +
-    editsCard(h.edits) + (rxHasDetail(h) ? '' : rxCredit(h)) + handoverLists(h.owedBy, h.openShort) + ((h.trail || []).length ? trailHtml(h.trail, h.shift.name, h.fromName, h.fromWatch) : '') +
+    hoCashCard(h) + editsCard(h.edits) + (rxHasDetail(h) ? '' : rxCredit(h)) + handoverLists(h.owedBy, h.openShort) + ((h.trail || []).length ? trailHtml(h.trail, h.shift.name, h.fromName, h.fromWatch) : '') +
     (h.notes ? '<div class="card"><label>Remarks</label>' + esc(h.notes) + '</div>' : '') +
     (h.sig ? '<div class="card"><label>Signed by ' + esc(hnl(h.fromName, h.fromEmail)) + '</label><img class="sigimg" src="' + h.sig + '" alt="signature"></div>' : '') +
     sigCard('Your signature (receiving)') +
@@ -3519,7 +3604,7 @@ function oldTidy(go) {   /* shift summaries from before v2.27 have no expiry, so
 function rulesCheck() {   /* reading the handover mistakes is allowed only by rules 2.14 and later: older rules refuse it */
   var show = function (ok, txt) { modal('<h2>' + (ok ? '✓ Rules ' + RULES_VERSION + ' are published' : '⚠ Rules ' + RULES_VERSION + ' are not published yet') + '</h2><div class="muted" style="margin-bottom:12px">' + txt + '</div><button class="btn block" data-act="close">Close</button>'); };
   modal('<h2>Checking the rules…</h2><div class="empty">One moment</div>');
-  getDocs(query(col('corrections'), limit(1))).then(function () { show(true, 'Handover mistakes can be sent, accepted and corrected, and the permanent credit, payment and loan lines will be saved.'); }, function (e) {
+  Promise.all([getDocs(query(col('corrections'), limit(1))), getDoc(ref('layout/count'))]).then(function () { show(true, 'Handover mistakes can be sent, accepted and corrected, the permanent credit, payment and loan lines will be saved, and the Count page order can be changed.'); }, function (e) {
     show(false, /permission/i.test((e && e.code || '') + (e && e.message || '')) ? 'The database refused the check, so the older rules are still there. In the Firebase console open Firestore, then Rules, paste the whole firestore-rules-v' + RULES_VERSION + '.txt file and press Publish. Until then the app works as before, but a Handover mistake cannot be sent.' : 'The check could not finish: ' + esc(errText(e)));
   });
 }
@@ -3655,12 +3740,21 @@ function hoViewShow(i) {
     '<div class="card sum"><div><span>From</span><b>' + esc(hnl(h.fromName, h.fromEmail)) + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (not handed to a person)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Sent</span><b>' + when(h.at) + '</b></div>' +
     (h.receivedName ? '<div><span>Received by</span><b>' + esc(hnl(h.receivedName, h.acceptedBy)) + ' · ' + when(h.acceptedAt) + '</b></div>' : '<div><span>Status</span><b>' + (h.status === 'open' ? 'Waiting to be taken' : esc(h.status)) + '</b></div>') + cashRow +
     (h.owedTotal != null ? '<div><span>Owed by people at the time</span><b>' + money(h.owedTotal) + '</b></div>' : '') + '</div>' +
-    editsCard(h.edits || []) + soldCards(vrows, h, 'Sold this shift') + table('Fridge', its.filter(function (x) { return !x.shelf && (x.open || x.stock); }), false) + table('Shelf', its.filter(function (x) { return x.shelf; }), false) + table('Cage', its.filter(function (x) { return itStore(x) && (x.cageOpen || x.cage); }), true) +
+    hoCashCard(h) + editsCard(h.edits || []) + soldCards(vrows, h, 'Sold this shift') + table('Fridge', its.filter(function (x) { return !x.shelf && (x.open || x.stock); }), false) + table('Shelf', its.filter(function (x) { return x.shelf; }), false) + table('Cage', its.filter(function (x) { return itStore(x) && (x.cageOpen || x.cage); }), true) +
     (h.status === 'accepted' && ri ? '<div class="card"><h2>Check when it was received</h2>' + (diffs.length ? diffs.map(function (d) { return '<div style="color:var(--exp)">' + esc(d) + '</div>'; }).join('') : '<div style="color:var(--ok)"><b>✓ Everything matched</b></div>') + '</div>' : '') +
     '<div class="card"><h2>Signatures</h2>' + sig(h.sig, hnl(h.fromName, h.fromEmail), h.at) + sig(h.receivedSig, hnl(h.receivedName, h.acceptedBy), h.acceptedAt) + '</div>' +
     '<div class="row"><button class="btn sec grow" data-act="hovlist">Back</button><button class="btn sec grow" data-act="close">Close</button></div>');
 }
 
+function hoCashCard(h) {   /* the same cash lines the outgoing shift saw on the Handover page, kept in the record */
+  if (typeof h.received !== 'number' || typeof h.computed !== 'number') return '';
+  var n = function (v) { return typeof v === 'number' && v; };
+  return '<div class="card sum"><h2>How the cash added up</h2><div><span>Received from previous handover</span><b>' + money(h.received) + '</b></div><div><span>Sales</span><b>+ ' + money(h.sales || 0) + '</b></div>' + (typeof h.sold === 'number' ? '<div><span>Total items sold</span><b>' + h.sold + '</b></div>' : '') +
+    (n(h.cr) ? '<div><span>Sold on credit (not cash)</span><b>− ' + money(h.cr) + '</b></div>' : '') + (n(h.loans) ? '<div><span>Cash lent out (owed)</span><b>− ' + money(h.loans) + '</b></div>' : '') + (n(h.paid) ? '<div><span>Credit payments received</span><b>+ ' + money(h.paid) + '</b></div>' : '') +
+    (n(h.purch) ? '<div><span>Purchases (cash taken)</span><b>− ' + money(h.purch) + '</b></div>' : '') + (n(h.used) ? '<div style="background:var(--soon-bg);margin:0 -14px;padding:6px 14px"><span>💵 Cash used</span><b>− ' + money(h.used) + '</b></div>' : '') +
+    '<div class="t"><span>Cash to hand over</span><span>' + money(h.computed) + '</span></div><div><span>Cash counted</span><b>' + money(h.cash) + '</b></div>' +
+    (h.cash !== h.computed ? '<div><span>' + (h.cash < h.computed ? 'Cash short' : 'Cash over') + '</span><b style="color:' + (h.cash < h.computed ? 'var(--exp)' : 'var(--soon)') + '">' + money(Math.abs(r2(h.cash - h.computed))) + '</b></div>' : '') + '</div>';
+}
 function hlist() {
   getDocs(query(col('handovers'), orderBy('at', 'desc'), limit(15))).then(function (snap) {
     S._hl = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; });
@@ -4514,7 +4608,7 @@ window.addEventListener('resize', ddClose);
 
 /* ---------- help: a ? badge on the active tab; tap the active tab again (or the badge) to read the help for that tab ---------- */
 var HELP = {
-  sell: { t: 'Count', steps: ['Every item shows its price at the top right until it is counted. Once you count it, a ✓ and the number sold take the price\'s place.', 'Tap an item.', 'Type what is really in the fridge (or on the shelf) now, or use the − and + buttons. The app works out how many were sold: the last count minus yours.', 'Press <b>Save count</b>.', 'Taking cases from storage? Press <b>Add from cage</b> first, then count.', 'Some items sold on credit or spoiled? Add a note (<b>On credit to…</b> or <b>Spoiled</b>) before you save, so they are not counted as cash.', 'Cash taken for the station? Use the dashed <b>Use cash</b> button at the top and give a reason.'],
+  sell: { t: 'Count', steps: ['Every item shows its price at the top right until it is counted. Once you count it, a ✓ and the number sold take the price\'s place.', 'Tap an item.', 'To change the order of the items, <b>press and hold</b> one, then drag it where you want it. Everyone in the workplace sees the same order. New items go to the bottom. The button under the list puts everything back in A to Z.', 'Type what is really in the fridge (or on the shelf) now, or use the − and + buttons. The app works out how many were sold: the last count minus yours.', 'Press <b>Save count</b>.', 'Taking cases from storage? Press <b>Add from cage</b> first, then count.', 'Some items sold on credit or spoiled? Add a note (<b>On credit to…</b> or <b>Spoiled</b>) before you save, so they are not counted as cash.', 'Cash taken for the station? Use the dashed <b>Use cash</b> button at the top and give a reason.'],
     extra: [{ t: 'Selling on credit from the Count page', ol: ['Tap the item that was taken on credit.', 'In <b>Credit and spoiled notes</b>, set how many items were taken on credit with the + and − buttons.', 'Press <b>On credit to…</b> and choose the person. If their name is not on the list, save it as a new name first.', 'Check the pop-up and confirm. The note is saved, but it <b>does not change the number</b> in the fridge.', 'Now count the fridge as usual and press <b>Save count</b>. The items taken on credit are part of what was sold, but they are not counted as cash.', 'Cash for that item = items sold − items on credit. The credit amount is added to what that person owes.'], ul: ['You can add more than one note for the same item, for example two people.', 'The credit notes can never be more than what was sold.', 'The person now shows under <b>People owing</b> in the Credit tab. When they pay, tap their name there and enter the amount.', 'Put the wrong person? Cancel the note from History and add it again.'] }],
     fix: ['Wrong count on one item: tap <b>Undo</b> on the message straight after, or open History (the clock) and use <b>Cancel an item</b>.', 'Several counts wrong: <b>Start over</b> (top of this page) cancels your counts only, or everything on the shift.', 'Credit or spoiled bigger than what was sold? The app warns you. Fix the note or the count.', 'On a different shift from the one working? You are asked once which shift to record on (see Which shift am I on?).'] },
   stock: { t: 'Stock', steps: ['The Stock tab lists every item in two cards: <b>Fridge</b> and <b>Shelf</b>, A to Z. Each row shows how many are in the fridge or on the shelf, how many cases or packs are in storage, and the price. Items that ran out are at the bottom.', 'Tap an item to move a case from storage to the fridge, record spoiled items, or edit its name, price and cost.', '<b>+ Add a new item</b>: give it a name, the selling price, where it is sold from (fridge or shelf), how many are in a case, and how many you have now. The same name cannot be added twice.', 'Cost is optional. When a receipt gives an item its first cost, the app fills in the cost of its earlier sales for you.'],
@@ -4682,7 +4776,8 @@ document.addEventListener('click', function (e) {
   if (a === 'unitpick') { var ui = $('#' + b.dataset.pre + '-unit'); if (ui) ui.value = b.dataset.v.toLowerCase(); unitSync(b.dataset.pre); return; }
   if (a === 'wsel') { var wi = $('#' + b.dataset.for + '-where'); wi.value = b.dataset.v; b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); shelfFields(b.dataset.for); }
   else if (a === 'blwhere') { BUY.lines[+b.dataset.k].where = b.dataset.v; render(); }
-  else if (a === 'pick') { sel = id; CN = { to: null, q: 0, mv: 0 }; countSheet(); }
+  else if (a === 'ordreset') { ordSave([], 'alpha'); toast('Back in alphabetical order'); }
+  else if (a === 'pick') { if (Date.now() - DRAGO.end < 500) return; sel = id; CN = { to: null, q: 0, mv: 0 }; countSheet(); }
   else if (a === 'editfromsell') { var ei = item(sel); if (ei) { ST = { id: ei.id, fridge: ei.stock, cage: ei.cage, move: 0, spoil: 0 }; stockSheet(); } }
   else if (a === 'cn+' || a === 'cn-') { var ci = item(sel); CN.to = stepTo(CN.to == null ? ci.stock : CN.to, a === 'cn+' ? 1 : -1, 0, ci.stock); countSheet(); }
   else if (a === 'cm+' || a === 'cm-') { var cmi = item(sel); CN.mv = stepTo(CN.mv, a === 'cm+' ? 1 : -1, 0, Math.max(0, cmi.cage)); countSheet(); }
@@ -4934,6 +5029,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'shopen' || a === 'shopen2') histShift(id);
   else if (a === 'hfilter') { modal('<div id="hfs">' + histSheetHtml() + '</div>'); }
   else if (a === 'gotit') { try { localStorage.setItem('sw_note_' + b.dataset.v, String(Date.now())); } catch (x) {} histDraw(); }
+  else if (a === 'hgoshift') { HY.dt = histNoon(new Date(+b.dataset.v.slice(0, 4), +b.dataset.v.slice(5, 7) - 1, +b.dataset.v.slice(8, 10))); HY.sid = b.dataset.id; histPage(); }
   else if (a === 'ftog') { var per0 = histPer(); HY.types[b.dataset.v] = !HY.types[b.dataset.v]; if (histPer() !== per0) { HY.sid = ''; histPage(); } else histDraw(); }   /* the first type ticked shows the whole month; none ticked is the day again */
   else if (a === 'fshort') { HY.short = b.dataset.v ? b.dataset.v === '1' : !HY.short; histDraw(); }
   else if (a === 'hclear' || a === 'hshowall') { HY.types = {}; HY.short = false; HY.wk = ''; HY.hm = ''; HY.pm = ''; histGo(); if (a === 'hshowall') closeModal(); }
@@ -5315,7 +5411,7 @@ function pwSave() {
   if (a !== b) { msg.textContent = 'The two passwords are not the same.'; return; }
   updatePassword(AUTH.currentUser, a).then(function () { closeModal(); toast('Password saved. You can sign in with it now.'); }, function (e) { msg.textContent = authMsg(e); });
 }
-function stopListeners() { subs.forEach(function (u) { u(); }); subs = []; if (unsubLog) unsubLog(); if (unsubHand) unsubHand(); unsubLog = unsubHand = null; logSid = handId = null; S.all = []; S.items = []; S.people = []; S.guests = []; S.requests = []; S.shreqIn = []; S.shreqOut = [];  S.suppliers = []; S.members = []; S.state = null; S.log = []; S.bal = {}; S.hand = null; S.pc = null; }
+function stopListeners() { subs.forEach(function (u) { u(); }); subs = []; if (unsubLog) unsubLog(); if (unsubHand) unsubHand(); unsubLog = unsubHand = null; logSid = handId = null; S.all = []; S.items = []; S.layout = null; S.people = []; S.guests = []; S.requests = []; S.shreqIn = []; S.shreqOut = [];  S.suppliers = []; S.members = []; S.state = null; S.log = []; S.bal = {}; S.hand = null; S.pc = null; }
 function watch(q, fn) { subs.push(onSnapshot(q, fn, function (e) { console.error(e); toast(errText(e)); })); }
 function docs(s) { return s.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); }
 function migrate() {   /* items made by the earlier version counted the cage in single items; cases are the unit now */
@@ -5327,6 +5423,7 @@ function migrate() {   /* items made by the earlier version counted the cage in 
 }
 document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && DB) { try { disableNetwork(DB).then(function () { return enableNetwork(DB); }); } catch (e) {} } });   /* phones freeze the app in the background: reconnect and catch up when it is opened again */
 function startListeners() {
+  watch(ref('layout/count'), function (s) { S.layout = s.exists() ? s.data() : null; scheduleRender(); });
   watch(col('items'), function (s) { S.all = docs(s).map(function (x) { x.cage = x.per == null ? 0 : (x.cage || 0); return x; }).sort(byName); S.items = S.all.filter(function (x) { return !x.removed; }); migrate(); scheduleRender(); });
   watch(col('people'), function (s) { S.people = docs(s).map(function (x) { x.no = x.no || ''; x.rank = x.rank || ''; x.watch = x.watch || ''; x.kind = 'p'; return x; }); scheduleRender(); refreshModal(); });
   watch(col('guests'), function (s) { S.guests = docs(s).map(function (x) { x.kind = 'g'; x.watch = x.watch || ''; x.no = x.no || ''; x.rank = x.rank || ''; return x; }); scheduleRender(); refreshModal(); syncGuestNames(); });
@@ -5491,10 +5588,11 @@ window.addEventListener('popstate', function () {
 try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (x) {}   /* a phone must not put the page back at the top when the history changes */
 /* ---------- pull down to refresh on iPhone (Android's browser does it by itself; iPhone's installed app does not) ---------- */
 var PULL = { y: 0, on: false, d: 0 };
+(function () { var vv = window.visualViewport; if (!vv) return; var f = function () { document.documentElement.classList.toggle('zoomed', vv.scale > 1.02); }; vv.addEventListener('resize', f); f(); })();   /* zoomed in: pages stop holding back the drag, so one finger pans */
 function ptrActive() { try { return window.__ptr === true || (window.CSS && CSS.supports && CSS.supports('-webkit-touch-callout', 'none')); } catch (x) { return false; } }
 function ptrEl() { var e = $('#ptr'); if (!e) { document.body.insertAdjacentHTML('beforeend', '<div id="ptr"><b>↻</b></div>'); e = $('#ptr'); } return e; }
 document.addEventListener('touchstart', function (e) {
-  PULL.on = false; if (!ptrActive() || e.touches.length !== 1 || window.pageYOffset > 0) return;
+  PULL.on = false; if (!ptrActive() || e.touches.length !== 1 || window.pageYOffset > 0 || (window.visualViewport && visualViewport.scale > 1.02)) return;   /* not while zoomed in: the drag pans */
   if ($('#modal').innerHTML || !$('#spage').hidden || $('#padhost').children.length) return;
   var t = e.target; if (t && t.closest && t.closest('input,textarea,select,.hscroll')) return;
   PULL.y = e.touches[0].clientY; PULL.on = true; PULL.d = 0;
