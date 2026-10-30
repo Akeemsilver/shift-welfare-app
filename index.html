@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Shift Welfare</title>
 <meta name="theme-color" content="#0F4C68">
 <meta name="color-scheme" content="light">
@@ -24,6 +24,8 @@
 :root[data-theme=dark] .sigimg{filter:invert(1)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,Lato,sans-serif}
+html{touch-action:manipulation;-webkit-text-size-adjust:100%}   /* no double tap zoom */
+@supports (-webkit-touch-callout:none){html{background:var(--brand);overscroll-behavior-y:none}body{overscroll-behavior-y:none;min-height:100vh;min-height:100dvh;box-sizing:border-box}}   /* iPhone only: pulling down at the top does not open a gap above the header (Android keeps pull-to-refresh) */
 body{padding-bottom:calc(var(--bar) + 24px + env(safe-area-inset-bottom))}
 header{position:sticky;top:0;z-index:5;background:var(--brand);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:10px}
 header h1{font-size:14px;margin:0;flex:1}
@@ -271,7 +273,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.80', RULES_VERSION = '2.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.81', RULES_VERSION = '2.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -5486,6 +5488,7 @@ window.addEventListener('popstate', function () {
   hsync();
 });
 try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (x) {}   /* a phone must not put the page back at the top when the history changes */
+['gesturestart', 'gesturechange', 'gestureend'].forEach(function (g) { document.addEventListener(g, function (e) { e.preventDefault(); }, { passive: false }); });   /* iPhone pinch zoom */
 history.replaceState({ sw: 0 }, ''); history.pushState({ sw: 1 }, '');
 if (window.MutationObserver) { var mo = new MutationObserver(hsync); mo.observe($('#modal'), { childList: true }); mo.observe($('#padhost'), { childList: true }); }
 
