@@ -1,6 +1,6 @@
 /* Shift Welfare service worker: keeps the app opening with no signal.
    Only the app files and the Firebase script files are cached. Data is handled by Firestore's own offline storage. */
-const CACHE = 'shift-welfare-v163';
+const CACHE = 'shift-welfare-v167';
 const SHELL = ['./', './index.html', './firebase-config.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/logo.png', './icons/apple-touch-icon.png', './icons/favicon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

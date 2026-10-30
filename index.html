@@ -202,6 +202,8 @@ input:disabled{background:var(--dis);color:var(--muted)}
 .hosteps{display:flex;margin:8px 0 4px}.hosteps div{flex:1;text-align:center;font-size:10px;color:var(--muted)}.hosteps i{display:block;width:16px;height:16px;border-radius:50%;margin:0 auto 3px;background:var(--line);color:#fff;font-style:normal;font-size:10px;line-height:16px}.hosteps .d i{background:var(--ok)}.hosteps .n i{background:var(--cnt)}.hosteps .x i{background:var(--exp)}
 .warnbox{background:var(--exp-bg);border:2px solid var(--exp);border-radius:14px;padding:8px 12px;margin-bottom:12px;font-size:13px}.warnbox>b{color:var(--exp)}
 .al{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border-radius:14px;box-shadow:var(--sh);padding:12px;margin-bottom:10px}.al .ic{flex:none;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800}.al .ic.g{background:var(--ok-bg);color:var(--ok)}.al .ic.a{background:var(--soon-bg);color:var(--soon)}.al .ic.r{background:var(--exp-bg);color:var(--exp)}.al .ic.b{background:var(--soft);color:var(--brand)}.al .t{font-weight:700;font-size:14.5px;line-height:1.3}.al .m{color:var(--muted);font-size:12.5px;margin-top:2px}.al .ch{color:var(--muted);font-size:20px;align-self:center}.al.old{box-shadow:none;border:1px solid var(--line);background:transparent}.al.old .t{font-weight:600}.al .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--exp);margin-right:6px}.dayh{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:14px 2px 6px}.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}.tabs button{height:42px;border-radius:12px;border:2px solid var(--secb);background:var(--surface);color:var(--ink);font:inherit;font-weight:700;font-size:14px}.tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand)}.tabs i{font-style:normal;background:var(--exp);color:#fff;border-radius:10px;padding:0 6px;font-size:11px;margin-left:4px}.tabs button.on i{background:#fff;color:var(--exp)}.acts{display:flex;gap:8px;margin-top:10px}.acts .btn{height:38px;font-size:13px;padding:0 14px}.alwait{background:var(--exp);color:#fff;border-radius:12px;padding:2px 10px;font-weight:700;font-size:13px;flex:none}
+.gapmode .rxt tr.rxchg td{background:var(--soft)}.gapmode .rxt tr.rxchg input.rxn{border-color:var(--brand)}.gapmode .rxd{color:var(--brand);font-size:11.5px;white-space:nowrap}
+.rxopt{display:block;width:100%;text-align:left;border:2px solid var(--secb);background:var(--surface);color:var(--ink);border-radius:14px;padding:11px 14px;margin-bottom:8px;font:inherit;cursor:pointer}.rxopt b{display:block;font-size:15px}.rxopt span{display:block;font-size:12.5px;opacity:.85;margin-top:2px}.rxopt.on{background:var(--brand);border-color:var(--brand);color:#fff}
 .rxt{width:100%;table-layout:fixed;border-collapse:collapse}.rxt th{font-size:10px;text-transform:uppercase;color:var(--muted);padding:3px 2px;text-align:center;line-height:1.25}.rxt th:first-child,.rxt td:first-child{text-align:left}.rxt td{padding:5px 2px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle}.rxt td.rxh{font-size:16px}.rxt input.rxn{box-sizing:border-box;width:62px;height:40px;text-align:center;font-weight:600;padding:0 2px}.rxck{width:20px;height:20px;margin:0;vertical-align:middle}.rxd{font-weight:700;font-size:15px;color:var(--exp)}.rxt tr.rxok td{background:var(--ok-bg)}.rxt tr.rxchg td{background:var(--exp-bg)}.rxt tr.rxchg input.rxn{border:2px solid var(--exp)}.rxt tr.rxnone .rxck{outline:2px solid var(--exp);outline-offset:1px}.rxall{text-align:right;margin-top:8px}.rxall a{color:var(--link);font-weight:700;font-size:14px;cursor:pointer}
 .rxbar{position:sticky;top:0;z-index:4;background:var(--soon-bg);border-radius:10px;padding:6px 10px;font-size:12px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,.08)}.rxfoot{position:sticky;bottom:0;z-index:4;display:flex;align-items:center;gap:10px;background:var(--surface);border-top:1px solid var(--line);margin:12px -16px -28px;padding:8px 16px calc(8px + env(safe-area-inset-bottom))}.rxfoot span{font-size:12px;color:var(--muted)}.rxfoot .btn{flex:1.4}.rxfoot .btn.dis{background:#9aa7b2}
 .fold{display:flex;font-weight:600;padding:11px 0;cursor:pointer}.fold>span:first-child{flex:1}
@@ -277,7 +279,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.93', RULES_VERSION = '2.16';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.97', RULES_VERSION = '2.17';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -3006,11 +3008,47 @@ function rxMissing() {   /* the first count still to check; every count is requi
   var c = $('#rx-cash'); if (c) c.style.borderColor = bad.indexOf(c) >= 0 ? 'var(--exp)' : '';
   return bad.length ? bad[0] : null;
 }
+/* ---------- a gap: a shift was skipped, nobody took over from the shift that handed over ---------- */
+var RXWK = '', RXGAP = null;   /* RXWK: the shift the receiver says they are recording for ('' = their own watch, or the one on duty); RXGAP: what rxGap found for the open handover */
+function slotOfShift(sh) { var q = String(sh && sh.date || '').split('/'); return q.length === 3 ? { day: new Date(+q[2], +q[1] - 1, +q[0]), i: periodIdx(sh.half) } : null; }
+function slotCmp(a, b) { return (a.day - b.day) || (a.i - b.i); }
+function rxGap(h) {   /* the shift that should have taken this handover (the first one after the giver's), the shift the receiver records for, and whether a whole shift was skipped or the takeover came after that shift ended */
+  var out = { on: false, ask: false, late: false };
+  if (!h || h.same || !h.shift) return out;
+  var H = slotOfShift(h.shift); if (!H) return out;
+  var mw = whoOf(EMAIL).wk || '', C = slotNow(new Date()), cw = slotShift(C.day, C.i) || '', s = slotNext(H.day, H.i), G = null, R = null, k;
+  for (k = 0; k < 30 && !G; k++) { if (slotShift(s.day, s.i)) G = s; else s = slotNext(s.day, s.i); }
+  if (!G) return out;
+  var gw = slotShift(G.day, G.i), rwk = RXWK || mw || cw;
+  s = G; for (k = 0; k < 60 && !R; k++) { if (slotShift(s.day, s.i) === rwk) R = s; else s = slotNext(s.day, s.i); }
+  if (!R) { R = C; rwk = cw; }
+  out.ask = !((mw === gw || !mw) && slotCmp(C, G) === 0); out.mw = mw; out.cw = cw; out.rwk = rwk; out.gw = gw; out.G = G; out.R = R; out.gdate = dstr(G.day); out.ghalf = CFG.periods[G.i].key;
+  out.late = slotCmp(R, G) === 0 && slotCmp(C, G) > 0; out.on = slotCmp(R, G) > 0 || out.late;
+  return out;
+}
+var RXMORE = false;   /* "Another shift…" is open */
+function rxGapCard(h) {   /* which shift is taking over: two plain choices built from what the app knows, and when a shift was skipped, what to do */
+  var g = rxGap(h); RXGAP = g; if (!g.ask && !g.on) return '';
+  var me = g.mw || g.cw, opts = [[me, me + ' — my shift', me === g.gw ? 'I take over as ' + me + ' (late).' : 'I start the ' + me + ' shift.']];
+  if (g.gw !== me) opts.push([g.gw, g.gw + ' — I am covering for them', 'Recorded as the ' + g.gw + ' shift, with you covering.']);
+  if (g.cw && g.cw !== me && g.cw !== g.gw) opts.push([g.cw, g.cw + ' — I am covering for the shift on duty', 'Recorded as the ' + g.cw + ' shift, with you covering.']);
+  var inOpts = opts.some(function (o) { return o[0] === g.rwk; }), more = RXMORE || !inOpts;
+  var q = '<div class="card"><div style="font-size:16px;font-weight:700">Which shift is taking over this handover?</div><div class="muted" style="margin:4px 0 12px">' + esc(g.gw) + ' was next in line. You are ' + esc(whoOf(EMAIL).name) + (g.mw ? ', ' + esc(g.mw) + ' watch' : '') + '. ' + esc(g.cw || 'Nobody') + ' is on duty now.</div>' +
+    opts.map(function (o) { var on = o[0] === g.rwk; return '<button type="button" data-act="rxwk" data-v="' + esc(o[0]) + '" class="rxopt' + (on ? ' on' : '') + '"><b>' + (on ? '✓ ' : '') + esc(o[1]) + '</b><span>' + esc(o[2]) + '</span></button>'; }).join('') +
+    (more ? seg(WATCHES.map(function (w) { return [w, esc(w)]; }), 'rxwk', g.rwk, Math.min(WATCHES.length, 4)) : '<div style="text-align:center"><a data-act="rxmore" style="color:var(--link);font-weight:700;font-size:14px;cursor:pointer">Another shift…</a></div>') + '</div>';
+  if (!g.on) return q;
+  var own = g.rwk === g.gw;
+  return q + '<div class="card" style="background:var(--soon-bg);border-left:4px solid var(--soon);box-shadow:none"><b>⚠ ' + (g.late ? 'The ' + esc(g.gw) + ' shift ended without taking this handover' : esc(g.gw) + ' never took this handover') + '</b><div style="margin-top:4px">' + esc(h.shift.name) + '\'s handover is assumed correct. <b>Count the items and the cash.</b> Anything sold or missing is recorded against ' + (own ? 'your own shift, <b>' + esc(g.gw) + '</b>' : '<b>' + esc(g.gw) + '</b>') + ', not ' + esc(h.shift.name) + (own ? '' : ' and not you') + '.</div></div><div class="card" id="rx-gap" style="box-shadow:none">' + rxGapSum(0, '').html + '</div>';
+}
+function rxGapSum(gs, cashTxt) {   /* the gap in numbers: what was sold, what the cash should be, and the result */
+  var h = RX, exp = r2(h.cash + gs), cv = String(cashTxt).trim(), cnt = cv === '' ? null : num(cv), g = RXGAP, d = cnt === null ? 0 : r2(cnt - exp);
+  return { exp: exp, html: '<div>Items sold while nobody was in control: <b>' + money(gs) + '</b></div><div>Cash ' + esc(h.shift.name) + ' handed over: ' + money(h.cash) + '</div><div>Cash that should be there: <b>' + money(exp) + '</b></div>' + (cnt === null ? '<div class="muted">Count the cash to see if it balances.</div>' : d === 0 ? '<div style="color:var(--ok);font-weight:700">✓ Balanced. Nothing short. The sales are recorded for ' + esc(g.gw) + '.</div>' : d < 0 ? '<div style="color:var(--exp);font-weight:700">Cash short ' + money(-d) + '. Recorded against ' + esc(g.gw) + '.</div>' : '<div style="color:var(--soon);font-weight:700">Cash over ' + money(d) + '. Recorded as ' + esc(g.gw) + '\'s surplus.</div>') };
+}
 function rxShow(v, p, k, i) { return (p === 'g' ? i.cage : i.stock) > 0 || !!(v.x && v.x[p + k]); }   /* an item handed over as 0 is not counted, unless the receiver found some */
 function rxTbl(title, rows, tick) { return '<div class="card"><h2>' + title + ' <b style="color:var(--exp)">*</b></h2><table class="rxt"><colgroup><col><col style="width:54px"><col style="width:68px"><col style="width:44px"></colgroup><tr><th>Item</th><th>Handed<br>over</th><th>Your<br>count</th><th>' + (tick ? 'Same' : '') + '</th></tr>' + rows + '</table>' + (tick ? '<div class="rxall"><a data-act="rxtickall">✓ Tick all the rest</a></div>' : '') + '</div>'; }
-function rxCell(id, exp, val, tk) {   /* the count starts as what was handed over; tick it if it is the same, or type what you found and the tick turns into the difference */
+function rxCell(id, exp, val, tk, pr) {   /* the count starts as what was handed over; tick it if it is the same, or type what you found and the tick turns into the difference */
   var key = id.slice(3);
-  return '<input class="rxn" id="' + id + '" data-exp="' + exp + '" enterkeyhint="next" type="number" inputmode="numeric" min="0" value="' + esc(val === '' || val == null ? exp : val) + '"></td><td><input type="checkbox" class="rxck" data-k="' + key + '" aria-label="Same as handed over"' + (tk ? ' checked' : '') + '><span class="rxd" id="d-' + id + '"></span>';
+  return '<input class="rxn" id="' + id + '" data-exp="' + exp + '" data-pr="' + (pr || 0) + '" enterkeyhint="next" type="number" inputmode="numeric" min="0" value="' + esc(val === '' || val == null ? exp : val) + '"></td><td><input type="checkbox" class="rxck" data-k="' + key + '" aria-label="Same as handed over"' + (tk ? ' checked' : '') + '><span class="rxd" id="d-' + id + '"></span>';
 }
 function rxCard(h, v, kind) {   /* the count boxes: In the shop (fridge and shelf together) and In storage */
   var g = kind === 'cage', p = g ? 'g' : 'c', vals = g ? v.g : v.c;
@@ -3018,7 +3056,7 @@ function rxCard(h, v, kind) {   /* the count boxes: In the shop (fridge and shel
     if (g && !itStore(i)) return '';
     if (kind === 'fridge' && i.shelf) return ''; if (kind === 'shelf' && !i.shelf) return '';
     if (!rxShow(v, p, k, i)) return '';
-    return '<tr><td>' + (g ? cageName(i.name, i.unit) : esc(i.name)) + '</td><td class="rxh">' + (g ? i.cage : i.stock) + '</td><td>' + rxCell('rx-' + p + k, g ? i.cage : i.stock, vals[k] != null ? vals[k] : '', v.t && v.t[p + k]) + '</td></tr>';
+    return '<tr><td>' + (g ? cageName(i.name, i.unit) : esc(i.name)) + '</td><td class="rxh">' + (g ? i.cage : i.stock) + '</td><td>' + rxCell('rx-' + p + k, g ? i.cage : i.stock, vals[k] != null ? vals[k] : '', v.t && v.t[p + k], g ? 0 : i.price) + '</td></tr>';
   }).join('');
   return rows ? rxTbl(g ? '📦 Cases / Packs in storage' : kind === 'shelf' ? '🧁 On the shelf' : '🧊 In the fridge', rows, true) : '';
 }
@@ -3026,15 +3064,17 @@ function rxCashCard(h, v) { return rxTbl('Cash', '<tr><td>Cash</td><td class="rx
 function rxNote() { return '<div class="card" style="background:var(--soon-bg);box-shadow:none"><b>✎ Your count is filled in with what was handed over</b><div style="margin-top:4px">Same? Tick the box. Different? Type what you found: the box is replaced by the difference. Cash is not filled in: count it and type it.</div></div>'; }
 function rxProg() {   /* the pinned bar: how many are checked, how many changed, and the next one; the rows turn green (ticked) or red (changed) */
   var pg = $('#spage'); if (!pg || !RX || !$('#rx-bar')) return;
-  var n = 0, d = 0, tot = 0, first = null;
+  var n = 0, d = 0, tot = 0, first = null, gp = !!(RXGAP && RXGAP.on), gs = 0; pg.classList.toggle('gapmode', gp);
   pg.querySelectorAll('input.rxn').forEach(function (e) {
     var cash = e.id === 'rx-cash', has = String(e.value).trim() !== '', dv = has ? num(e.value) - num(e.dataset.exp) : 0, chg = has && dv !== 0, ck = cash ? null : pg.querySelector('.rxck[data-k="' + e.id.slice(3) + '"]'), sp = pg.querySelector('#d-' + e.id), tr = e.closest('tr'); tot++;
     if (ck) { if (chg) ck.checked = false; ck.style.display = chg ? 'none' : ''; }
     var done = cash ? has : chg || (has && ck && ck.checked);
     if (done) { n++; if (chg) d++; } else if (!first) first = tr.children[0].textContent;
-    if (sp) sp.textContent = chg ? (dv < 0 ? '−' : '+') + (cash ? money(Math.abs(dv)) : Math.abs(dv)) : '';
+    if (gp && !cash && dv < 0) gs += -dv * num(e.dataset.pr);
+    if (sp) sp.textContent = chg ? (dv < 0 ? '−' : '+') + (cash ? money(Math.abs(dv)) : Math.abs(dv)) + (gp && !cash && dv < 0 && num(e.dataset.pr) ? ' sold' : '') : '';
     tr.classList.toggle('rxchg', chg); tr.classList.toggle('rxok', !chg && !!(ck && ck.checked)); tr.classList.remove('rxnone');
   });
+  var gb = $('#rx-gap'); if (gb && gp) gb.innerHTML = rxGapSum(r2(gs), $('#rx-cash') ? $('#rx-cash').value : '').html;
   var left = tot - n;
   $('#rx-bar').innerHTML = 'Checked <b>' + n + ' of ' + tot + '</b>' + (d ? ' · <b style="color:var(--exp)">' + d + ' changed</b>' : '') + (left ? ' · <b data-act="rxnext" style="color:var(--brand);cursor:pointer">next: ' + esc(first) + ' ›</b>' : ' · all checked');
   var sg = !!(M && M.signature), ok = !left && sg;
@@ -3044,6 +3084,13 @@ function rxProg() {   /* the pinned bar: how many are checked, how many changed,
 function rxReview() {   /* before accepting: the differences, and what is recorded as a shortage. False = nothing to show, go ahead */
   var h = RX; if (!h || !S.state || !S.state.pending) return false;
   if (rxMissing() || !(M && M.signature)) return false;
+  RXGAP = rxGap(h);
+  if (RXGAP.on) {   /* after a gap the accept sheet says what is recorded for whom */
+    var gs = 0; h.items.forEach(function (i, k) { var ce = $('#rx-c' + k), c = ce ? Math.max(0, Math.floor(num(ce.value))) : 0; if (c < i.stock) gs += (i.stock - c) * i.price; });
+    var gsum = rxGapSum(r2(gs), $('#rx-cash').value);
+    askConfirm('Accept this handover after a gap?', gsum.html.replace(/class="muted"/g, '') + '<br><span class="muted">' + esc(h.shift.name) + '\'s handover is assumed correct. Anything sold or short is recorded against the ' + esc(RXGAP.gw) + ' shift. You start the ' + esc(RXGAP.rwk) + ' shift.</span>', 'Yes, accept & take control', function () { RXOK = true; rxAccept(); });
+    return true;
+  }
   var cashC = num($('#rx-cash').value), expC = typeof h.computed === 'number' ? h.computed : h.cash, L = [], ups = [], sVal = 0;
   if (cashC !== h.cash) L.push('Cash: counted <b>' + money(cashC) + '</b>, handed over ' + money(h.cash) + ' → <b style="color:var(--exp)">' + (cashC < h.cash ? '−' : '+') + money(Math.abs(cashC - h.cash)) + '</b>');
   h.items.forEach(function (i, k) {
@@ -3067,12 +3114,12 @@ function rxExtraCard(h, v) {
 }
 function showRx(keep) {
   var h = S.hand; if (!h) return;
-  if (keep) rxKeep(); else { RXV = null; RXSTEP = 0; RXTAB = 'fridge'; RXF = {}; }
+  if (keep) rxKeep(); else { RXV = null; RXSTEP = 0; RXTAB = 'fridge'; RXF = {}; RXWK = ''; RXMORE = false; }
   RX = h; var v = RXV || { cash: '', c: {}, g: {}, t: {}, x: {}, xo: false };
   var stay = keep === true && !RXFLIP; RXFLIP = false;
   wpPage(showRx, [true], '<h2>' + (h.locked ? '🔒 Locked handover' : h.same ? 'Handover within the shift' : 'Handover received') + '</h2>' + (h.same ? '<div class="card" style="background:var(--soon-bg);box-shadow:none"><b>Same shift</b><div style="margin-top:4px">This hand over is inside the ' + esc(h.shift.name) + ' shift, so the shift keeps going. Count what is here. Any difference is recorded against the shift, and the sales, credit and totals carry on until the shift is handed over to the next one.</div></div>' : '') + (h.locked ? '<div class="card" style="background:var(--soon-bg)"><b>Fridge and cage were locked.</b> Open them and check everything below before accepting.</div>' : '') +
     (rxOnList(h) || !rxHasDetail(h) ? corrCards() + rxWarn(h) : '') + '<div class="card sum"><div><span>From</span><b>' + esc(hnl(h.fromName, h.fromEmail)) + (h.fromWatch ? '<div class="muted" style="font-weight:500">' + esc(h.fromWatch) + ' watch' + (h.fromWatch !== h.shift.name ? ' · visiting, the ' + esc(h.shift.name) + ' watch was on duty' : '') + '</div>' : '') + '</b></div><div><span>Handed over</span><b>' + new Date(h.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (no one in particular)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Shift</span><b>' + esc(h.shift.name) + ' · ' + esc(h.shift.date) + ' ' + esc(HL(h.shift.half)) + '</b></div><div><span>Sales</span><b>' + money(h.sales) + '</b></div>' + (typeof h.sold === 'number' ? '<div><span>Total items sold</span><b>' + h.sold + '</b></div>' : '') + '<div><span>Cash handed over</span><b>' + money(h.cash) + '</b></div>' + (typeof h.computed === 'number' && r2(h.computed - h.cash) > 0 ? '<div><span>Cash short when counted</span><b style="color:var(--exp)">' + money(r2(h.computed - h.cash)) + '</b></div>' : '') + (typeof h.computed === 'number' && r2(h.cash - h.computed) > 0 ? '<div><span>Cash over when counted</span><b style="color:var(--soon)">' + money(r2(h.cash - h.computed)) + '</b></div>' : '') + '</div>' +
-    (rxOnList(h) ? rxDetail(h) + '<button class="btn block" data-act="rxcheck">Check items</button><button class="btn sec block" data-act="close" style="margin-top:10px">Back to Count</button>' : (rxHasDetail(h) ? '<button class="btn sec sm" data-act="rxlist" style="margin-bottom:10px">‹ See what was sold again</button>' : '') + '<div class="rxbar" id="rx-bar"></div>' + rxCashCard(h, v) + rxNote() +
+    (rxOnList(h) ? rxDetail(h) + '<button class="btn block" data-act="rxcheck">Check items</button><button class="btn sec block" data-act="close" style="margin-top:10px">Back to Count</button>' : (rxHasDetail(h) ? '<button class="btn sec sm" data-act="rxlist" style="margin-bottom:10px">‹ See what was sold again</button>' : '') + '<div class="rxbar" id="rx-bar"></div>' + rxGapCard(h) + rxCashCard(h, v) + rxNote() +
     rxCard(h, v, 'fridge') + rxCard(h, v, 'shelf') + rxCard(h, v, 'cage') + rxExtraCard(h, v) +
     hoCashCard(h) + editsCard(h.edits) + (rxHasDetail(h) ? '' : rxCredit(h)) + handoverLists(h.owedBy, h.openShort) + ((h.trail || []).length ? trailHtml(h.trail, h.shift.name, h.fromName, h.fromWatch) : '') +
     (h.notes ? '<div class="card"><label>Remarks</label>' + esc(h.notes) + '</div>' : '') +
@@ -3088,14 +3135,18 @@ function rxAccept2() {
   var empty = rxMissing(); if (empty) { empty.scrollIntoView({ block: 'center' }); if (empty.id === 'rx-cash' || String(empty.value).trim() === '') empty.focus(); return toast('Count the cash and tick or change every item first'); }
   if (!M || !M.signature) return toast('Please sign first');
   var hd = String(h.shift.date || '').split('/'), sday = hd.length === 3 ? hd[2] + '-' + hd[1] + '-' + hd[0] : '';   /* the shortage belongs to the shift that handed over, on that shift's date */
-  var diffs = [], RI = {}, cashC = num($('#rx-cash').value), c0 = currentShift(), same = h.same === true, cur = S.state.shift, expC0 = typeof h.computed === 'number' ? h.computed : h.cash,
+  var GP = rxGap(h), gap = GP.on ? GP : null, gwk = gap ? gap.gw : h.shift.name, gday = gap ? dkey(gap.G.day) : sday, gsales = 0, diffs = [], RI = {}, cashC = num($('#rx-cash').value), c0 = gap ? { name: GP.rwk, half: CFG.periods[GP.R.i].key, date: dstr(GP.R.day) } : currentShift(), same = h.same === true, cur = S.state.shift, expC0 = typeof h.computed === 'number' ? h.computed : h.cash,
     ns = same ? Object.assign({}, cur, { received: r2((cur.received || 0) + cashC - expC0), counted: '', mode: 'person', tos: [] }) : newShift(c0, cashC), b = writeBatch(DB); DAYQ = []; ns.prevEmail = h.fromEmail || ''; ns.prevName = h.fromName || '';   /* a same-shift handover keeps the shift: same id, the cash count difference goes into what the shift started with */
   var rcf = [];
   h.items.forEach(function (i, k) {
     var it = item(i.id); if (!it) return;
     var c = $('#rx-c' + k) ? Math.max(0, Math.floor(num($('#rx-c' + k).value))) : 0, g = itStore(i) && $('#rx-g' + k) ? Math.max(0, Math.floor(num($('#rx-g' + k).value))) : 0;   /* an item handed over as 0 has no box: counted as 0 */
-    if (c !== i.stock) { diffs.push(i.name + ': counted ' + c + ', handover said ' + i.stock); rawEv(b, { t: Date.now(), type: 'adjust', item: i.id, items: [i.id], name: i.name, qty: c - i.stock, amt: 0, sid: ns.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: h.shift.name, ho: true, dly: 1, day: sday, cogs: c < i.stock ? r2((i.stock - c) * (it.cost || 0)) : 0 }); }
-    if (g !== i.cage) { diffs.push(i.name + ' (cage): counted ' + g + ' ' + unitPl(i.unit || 'case', 2) + ', handover said ' + i.cage); rawEv(b, { t: Date.now(), type: 'cageadj', item: i.id, items: [i.id], name: i.name, qty: g - i.cage, amt: 0, sid: ns.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: h.shift.name, ho: true, dly: 1, day: sday, cogs: g < i.cage ? r2((i.cage - g) * per(it) * (it.cost || 0)) : 0 }); }
+    if (c !== i.stock) {
+      diffs.push(i.name + ': counted ' + c + ', handover said ' + i.stock);
+      if (gap && c < i.stock) { var sv = r2((i.stock - c) * i.price); gsales += sv; rawEv(b, { t: Date.now(), type: 'count', item: i.id, items: [i.id], name: i.name, qty: i.stock - c, amt: sv, sid: ns.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: gwk, dly: 1, day: gday, cogs: r2((i.stock - c) * (it.cost || 0)), nc: it.cost ? 0 : 1, from: i.stock, to: c, price: i.price, su: true, gap: true }); }   /* after a gap the missing items were sold: kept as the skipped shift's sales (su: not in the new shift's own totals) */
+      else rawEv(b, { t: Date.now(), type: 'adjust', item: i.id, items: [i.id], name: i.name, qty: c - i.stock, amt: 0, sid: ns.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: gwk, ho: true, dly: 1, day: gday, cogs: c < i.stock ? r2((i.stock - c) * (it.cost || 0)) : 0 });
+    }
+    if (g !== i.cage) { diffs.push(i.name + ' (cage): counted ' + g + ' ' + unitPl(i.unit || 'case', 2) + ', handover said ' + i.cage); rawEv(b, { t: Date.now(), type: 'cageadj', item: i.id, items: [i.id], name: i.name, qty: g - i.cage, amt: 0, sid: ns.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: gwk, ho: true, dly: 1, day: gday, cogs: g < i.cage ? r2((i.cage - g) * per(it) * (it.cost || 0)) : 0 }); }
     RI[i.id] = { stock: c, cage: g }; rcf[2 * k] = c; rcf[2 * k + 1] = g;
     b.update(ref('items/' + i.id), same ? { stock: c, cage: g } : { stock: c, cage: g, open: c, cageOpen: g });
   });
@@ -3104,26 +3155,27 @@ function rxAccept2() {
   h.items.forEach(function (i, k) {   /* items the receiver found short, valued at the selling price */
     var it = item(i.id); if (!it) return;
     var c = RI[i.id] ? RI[i.id].stock : i.stock, g = RI[i.id] ? RI[i.id].cage : i.cage;
-    if (c < i.stock) { var v = r2((i.stock - c) * i.price); sIt.push({ name: i.name, kind: i.shelf ? 'shelf' : 'fridge', handed: i.stock, counted: c, short: i.stock - c, price: i.price, value: v }); sVal += v; }
+    if (c < i.stock && !gap) { var v = r2((i.stock - c) * i.price); sIt.push({ name: i.name, kind: i.shelf ? 'shelf' : 'fridge', handed: i.stock, counted: c, short: i.stock - c, price: i.price, value: v }); sVal += v; }
     if (itStore(i) && g < i.cage) { var v2 = r2((i.cage - g) * (i.per || 1) * i.price); sIt.push({ name: i.name, kind: 'cage', handed: i.cage, counted: g, short: i.cage - g, price: i.price, value: v2 }); sVal += v2; }
   });
-  var expC = typeof h.computed === 'number' ? h.computed : h.cash, cShort = cashC < expC ? r2(expC - cashC) : 0, cOver = cashC > expC ? r2(cashC - expC) : 0, sTot = r2(cShort + sVal), dd = String(h.shift.date || '').split('/');
+  var expC = gap ? r2(h.cash + gsales) : typeof h.computed === 'number' ? h.computed : h.cash, cShort = cashC < expC ? r2(expC - cashC) : 0, cOver = cashC > expC ? r2(cashC - expC) : 0, sTot = r2(cShort + sVal), sdate = gap ? dstr(gap.G.day) : h.shift.date, shalf = gap ? CFG.periods[gap.G.i].key : h.shift.half, dd = String(sdate || '').split('/');
   var shDoc = null;
-  if (sTot > 0 || cOver > 0) b.set(ref('shortages/' + S.state.pending), shDoc = { handoverId: S.state.pending, at: Date.now(), wk: h.shift.name, shiftDate: h.shift.date, shiftHalf: h.shift.half, month: dd.length === 3 ? dd[2] + '-' + dd[1] : dkey(new Date()).slice(0, 7), fromEmail: h.fromEmail, fromName: h.fromName, toEmail: EMAIL, toName: myName(), sid: h.shift.sid, ctl: h.ctl || [h.fromEmail], fromWatch: h.fromWatch || '', trail: h.trail || [], cashExpected: expC, cashHanded: h.cash, cashCounted: cashC, cashShort: cShort, cashOver: cOver, items: sIt, itemsValue: r2(sVal), total: sTot });
-  if (shDoc && sTot > 0) (h.ctl && h.ctl.length ? h.ctl : [h.fromEmail]).forEach(function (em, k) {   /* tells everyone who held control that shift */
+  if (sTot > 0 || cOver > 0) b.set(ref('shortages/' + S.state.pending), shDoc = Object.assign({ handoverId: S.state.pending, at: Date.now(), wk: gwk, shiftDate: sdate, shiftHalf: shalf, month: dd.length === 3 ? dd[2] + '-' + dd[1] : dkey(new Date()).slice(0, 7), fromEmail: h.fromEmail, fromName: h.fromName, toEmail: EMAIL, toName: myName(), sid: h.shift.sid, ctl: h.ctl || [h.fromEmail], fromWatch: h.fromWatch || '', trail: h.trail || [], cashExpected: expC, cashHanded: h.cash, cashCounted: cashC, cashShort: cShort, cashOver: cOver, items: sIt, itemsValue: r2(sVal), total: sTot }, gap ? { gap: true, gapSales: r2(gsales), gapFor: h.shift.name } : {}));
+  var told = !!(shDoc && sTot > 0 && !gap);   /* after a gap the shortage is the skipped shift's: the giver is told it was received, not that it was short */
+  if (told) (h.ctl && h.ctl.length ? h.ctl : [h.fromEmail]).forEach(function (em, k) {   /* tells everyone who held control that shift */
     if (em && em !== EMAIL) b.set(ref('notices/' + S.state.pending + '_' + k), { toEmail: em, handoverId: S.state.pending, at: Date.now(), read: false, kind: 'shortage', byName: myName(), wk: h.shift.name, shiftDate: h.shift.date, shiftHalf: h.shift.half, total: sTot, s: shDoc });
   });
-  if (!(shDoc && sTot > 0)) (h.ctl && h.ctl.length ? h.ctl : [h.fromEmail]).forEach(function (em, k) {   /* nothing short: still tell the giver it was received */
-    if (em && em !== EMAIL) b.set(ref('notices/' + S.state.pending + '_' + k), { toEmail: em, handoverId: S.state.pending, at: Date.now(), read: false, kind: 'received', byName: myName(), wk: h.shift.name, shiftDate: h.shift.date, shiftHalf: h.shift.half, sid: h.shift.sid, diffs: diffs.join('; ') });
+  if (!told) (h.ctl && h.ctl.length ? h.ctl : [h.fromEmail]).forEach(function (em, k) {   /* nothing short: still tell the giver it was received */
+    if (em && em !== EMAIL) b.set(ref('notices/' + S.state.pending + '_' + k), { toEmail: em, handoverId: S.state.pending, at: Date.now(), read: false, kind: 'received', byName: myName(), wk: h.shift.name, shiftDate: h.shift.date, shiftHalf: h.shift.half, sid: h.shift.sid, diffs: gap ? 'Received after a gap: the ' + gwk + ' shift never took it. The handover was assumed correct.' : diffs.join('; ') });
   });
-  if (cShort > 0) rawEv(b, { t: Date.now(), type: 'cashshort', item: '', items: [], name: 'Cash short', qty: 0, amt: cShort, sid: ns.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: h.shift.name, dly: 1, day: sday });
-  if (diffs.length) ns.notes = (same && cur.notes ? cur.notes + ' · ' : '') + 'Received with differences: ' + diffs.join('; ');
+  if (cShort > 0) rawEv(b, { t: Date.now(), type: 'cashshort', item: '', items: [], name: 'Cash short', qty: 0, amt: cShort, sid: ns.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: gwk, dly: 1, day: gday });
+  if (diffs.length) ns.notes = (same && cur.notes ? cur.notes + ' · ' : '') + (gap ? 'Received after a gap (the ' + gwk + ' shift never took it, assumed correct): ' : 'Received with differences: ') + diffs.join('; ');
   h.items.forEach(function (i, k) { if (rcf[2 * k] == null) { rcf[2 * k] = i.stock; rcf[2 * k + 1] = i.cage || 0; } });   /* an item that was removed: counted as handed over */
-  if (h.sum) b.update(ref('shifts/' + h.shift.sid), { status: 'accepted', receivedBy: EMAIL, receivedByName: myName(), receivedCash: cashC, shortCash: cShort, shortItems: r2(sVal), over: cOver, short: sTot, receivedAt: Date.now(), rc: rcf });
-  b.update(ref('handovers/' + S.state.pending), { status: 'accepted', acceptedBy: EMAIL, acceptedAt: Date.now(), check: diffs.length ? diffs.join('\n') : 'everything matched', receivedSig: M.signature, receivedName: myName(), receivedItems: RI, receivedCash: cashC });
+  if (h.sum) b.update(ref('shifts/' + h.shift.sid), { status: 'accepted', receivedBy: EMAIL, receivedByName: myName(), receivedCash: cashC, shortCash: gap ? 0 : cShort, shortItems: gap ? 0 : r2(sVal), over: gap ? 0 : cOver, short: gap ? 0 : sTot, receivedAt: Date.now(), rc: rcf });   /* after a gap nothing is charged to the shift that handed over */
+  b.update(ref('handovers/' + S.state.pending), { status: 'accepted', acceptedBy: EMAIL, acceptedAt: Date.now(), check: gap ? 'Received after a gap (the ' + gwk + ' shift never took it). Assumed correct.' + (diffs.length ? '\n' + diffs.join('\n') : '') : diffs.length ? diffs.join('\n') : 'everything matched', receivedSig: M.signature, receivedName: myName(), receivedItems: RI, receivedCash: cashC });
   b.update(ref('shop/state'), { controlEmail: EMAIL, controlName: myName(), pending: '', shift: ns, openingDone: true });
   (S.corrs || []).forEach(function (cc) { if (cc.status === 'open') b.update(ref('corrections/' + cc.id), { status: 'closed' }); });   /* a handover correction nobody decided is closed, unchanged, when the next handover is taken */
-  commit(b); RX = null; RXSTEP = 0; sel = null; qty = 1; tab = 'sell'; closeModal(); spClose(); toast(diffs.length ? 'Accepted, differences noted' : 'Accepted, all matched');
+  commit(b); RX = null; RXSTEP = 0; sel = null; qty = 1; tab = 'sell'; closeModal(); spClose(); toast(gap ? 'Accepted after a gap, recorded for ' + gwk : diffs.length ? 'Accepted, differences noted' : 'Accepted, all matched');
 }
 
 /* ---------- president: who are you? ---------- */
@@ -4750,10 +4802,12 @@ function pnPrompt() {
   PN_ASKED = true;
   $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="pnp"><div><h2>🔔 Turn on alerts</h2><p style="margin-top:0">Get told on your phone when a handover, a mistake or a request needs you, even when the app is closed.</p><button class="btn green block" data-act="pnpyes">Allow alerts</button><button class="btn sec block" data-act="pnpno" style="margin-top:10px">Not now</button><p class="muted" style="font-size:12px;margin-bottom:0">If you choose Not now, this is asked again the next time you open the app. You can also turn it on in Settings.</p></div></div>');
 }
-function autoRx() {   /* a handover is waiting for me (a locked one is open to everyone with access): open it straight away, once */
+function autoRx() {   /* a handover made to me opens straight away, once on this phone. A locked one (not made to anyone) never opens by itself: the card on Count opens it */
   var h = S.hand, st = S.state;
-  if (!h || !st || h.status !== 'open' || st.controlEmail || st.pending === AUTORX || h.fromEmail === EMAIL || !eligible(h) || $('#modal').innerHTML) return false;
-  AUTORX = st.pending; return true;
+  if (!h || !st || h.status !== 'open' || h.locked || st.controlEmail || st.pending === AUTORX || h.fromEmail === EMAIL || !eligible(h) || $('#modal').innerHTML) return false;
+  var seen = ''; try { seen = localStorage.getItem('sw.autorx') || ''; } catch (e) {}   /* this phone already opened this handover by itself once: closing and opening the app does not open it again (the card on Count is still there) */
+  if (seen === st.pending) { AUTORX = st.pending; return false; }
+  AUTORX = st.pending; try { localStorage.setItem('sw.autorx', st.pending); } catch (e) {} return true;
 }
 function installApp() {
   if (isStandalone()) return toast('Already installed');
@@ -5068,6 +5122,8 @@ document.addEventListener('click', function (e) {
   else if (a === 'shareapp') shareApp();
   else if (a === 'openrx') showRx();
   else if (a === 'rxaccept') rxAccept();
+  else if (a === 'rxwk') { RXWK = b.dataset.v; showRx(true); }
+  else if (a === 'rxmore') { RXMORE = true; showRx(true); }
   else if (a === 'rxnext') { var nx = rxUndone()[0]; if (nx) nx.closest('tr').scrollIntoView({ block: 'center', behavior: 'smooth' }); }
   else if (a === 'rxtickall') { b.closest('.card').querySelectorAll('.rxck').forEach(function (c) { var e = $('#rx-' + c.dataset.k); if (e && String(e.value).trim() !== '' && num(e.value) === num(e.dataset.exp)) c.checked = true; }); rxProg(); }
   else if (a === 'rxcheck') { RXSTEP = 1; RXFLIP = true; showRx(true); }
