@@ -279,7 +279,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.97', RULES_VERSION = '2.17';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.98', RULES_VERSION = '2.18';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1228,13 +1228,13 @@ function alNotice(n, old) {
   var nw = !old, when = alTime(n.at);
   if (n.kind === 'hcdone' || n.kind === 'hcno') return alCard('✎', n.kind === 'hcdone' ? 'b' : 'a', n.kind === 'hcdone' ? 'Handover corrected' : 'Correction declined', esc(n.wk || '') + ' · ' + esc(n.shiftDate || '') + ' · ' + esc(n.text || '') + ' · ' + (n.kind === 'hcdone' ? 'accepted by ' : 'declined by ') + esc(n.byName || '') + ' · ' + when, { act: 'ntview', id: n.id, old: old, dot: nw });
   var recv = n.kind === 'received', dl = recv ? (ntDiffLoad(n.sid), NTDIFF[n.sid]) : null, matched = recv && (Array.isArray(dl) ? !dl.length : n.diffs === ''), diffs = recv ? (Array.isArray(dl) ? dl : (n.diffs ? ['Counted differently: ' + n.diffs] : [])) : [];
-  var canPay = n.kind === 'shortage' && inControl() && !OWNERVIEW && openShortList().some(function (x) { return x.wk === n.wk; });
-  var title = n.kind === 'correction' ? 'Your ' + esc(n.wk) + ' shift shortage was corrected' : recv ? 'Your ' + esc(n.wk) + ' shift handover was received, ' + (matched ? 'all matched' : 'nothing short') : 'Your ' + esc(n.wk) + ' shift was counted short' + (typeof n.total === 'number' ? ': ' + money(n.total) : '');
-  var meta = esc(n.shiftDate) + ' ' + esc(HL(n.shiftHalf)) + (n.kind === 'correction' ? ' · ' + esc(n.reason || '') + ' · by ' : recv ? ' · received by ' : ' · counted by ') + esc(n.byName || '') + ' · ' + when;
+  var gp = n.kind === 'gap', canPay = (n.kind === 'shortage' || gp) && inControl() && !OWNERVIEW && openShortList().some(function (x) { return x.wk === n.wk; });
+  var title = n.kind === 'correction' ? 'Your ' + esc(n.wk) + ' shift shortage was corrected' : recv ? 'Your ' + esc(n.wk) + ' shift handover was received, ' + (matched ? 'all matched' : 'nothing short') : gp ? 'Your ' + esc(n.wk) + ' shift never took over the ' + esc(n.fromWk) + ' handover: ' + money(n.total) + ' short' : 'Your ' + esc(n.wk) + ' shift was counted short' + (typeof n.total === 'number' ? ': ' + money(n.total) : '');
+  var meta = esc(n.shiftDate) + ' ' + esc(HL(n.shiftHalf)) + (n.kind === 'correction' ? ' · ' + esc(n.reason || '') + ' · by ' : recv ? ' · received by ' : gp ? ' · taken over late by ' : ' · counted by ') + esc(n.byName || '') + ' · ' + when;
   var extra = (diffs.length ? '<div style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px;font-size:13px">' + diffs.map(function (x) { return '<div>⚠ ' + esc(x) + '</div>'; }).join('') + '</div>' : '') +
-    (n.kind === 'shortage' && inControl() && !OWNERVIEW ? (function () { var ow = openShortList().filter(function (x) { return x.wk === n.wk; })[0]; return '<div class="m">' + (ow ? money(ow.owed) + ' still owed by the ' + esc(n.wk) + ' shift' : 'Nothing owed now') + '</div>'; })() : '') +
+    (gp ? '<div class="m">' + esc(n.fromWk) + '\'s handover was assumed correct. ' + (n.gapSales ? money(n.gapSales) + ' of items sold in the gap were recorded as your shift\'s sales.' : '') + '</div>' : '') + ((n.kind === 'shortage' || gp) && inControl() && !OWNERVIEW ? (function () { var ow = openShortList().filter(function (x) { return x.wk === n.wk; })[0]; return '<div class="m">' + (ow ? money(ow.owed) + ' still owed by the ' + esc(n.wk) + ' shift' : 'Nothing owed now') + '</div>'; })() : '') +
     (canPay ? '<div class="acts"><button class="btn red sm" data-act="payopen" data-id="' + esc(n.wk) + '">Pay</button></div>' : '');
-  return alCard(recv ? (matched ? '✓' : '⚠') : n.kind === 'shortage' ? '✗' : '✎', recv ? (matched ? 'g' : 'a') : n.kind === 'shortage' ? 'r' : 'b', title, meta, { act: recv ? '' : 'ntview', id: n.id, old: old, dot: nw, extra: extra });
+  return alCard(recv ? (matched ? '✓' : '⚠') : (n.kind === 'shortage' || gp) ? '✗' : '✎', recv ? (matched ? 'g' : 'a') : (n.kind === 'shortage' || gp) ? 'r' : 'b', title, meta, { act: recv ? '' : 'ntview', id: n.id, old: old, dot: nw, extra: extra });
 }
 function alertsPage(refresh) {
   var list = (S.notices || []).slice(), un = list.filter(function (x) { return !x.read; });
@@ -3161,6 +3161,9 @@ function rxAccept2() {
   var expC = gap ? r2(h.cash + gsales) : typeof h.computed === 'number' ? h.computed : h.cash, cShort = cashC < expC ? r2(expC - cashC) : 0, cOver = cashC > expC ? r2(cashC - expC) : 0, sTot = r2(cShort + sVal), sdate = gap ? dstr(gap.G.day) : h.shift.date, shalf = gap ? CFG.periods[gap.G.i].key : h.shift.half, dd = String(sdate || '').split('/');
   var shDoc = null;
   if (sTot > 0 || cOver > 0) b.set(ref('shortages/' + S.state.pending), shDoc = Object.assign({ handoverId: S.state.pending, at: Date.now(), wk: gwk, shiftDate: sdate, shiftHalf: shalf, month: dd.length === 3 ? dd[2] + '-' + dd[1] : dkey(new Date()).slice(0, 7), fromEmail: h.fromEmail, fromName: h.fromName, toEmail: EMAIL, toName: myName(), sid: h.shift.sid, ctl: h.ctl || [h.fromEmail], fromWatch: h.fromWatch || '', trail: h.trail || [], cashExpected: expC, cashHanded: h.cash, cashCounted: cashC, cashShort: cShort, cashOver: cOver, items: sIt, itemsValue: r2(sVal), total: sTot }, gap ? { gap: true, gapSales: r2(gsales), gapFor: h.shift.name } : {}));
+  if (gap && shDoc && sTot > 0) {   /* everyone on the skipped shift is told what was recorded against it */
+    var gk = 0; (S.members || []).forEach(function (m) { if (m.email && m.email !== EMAIL && whoOf(m.email).wk === gwk) b.set(ref('notices/' + S.state.pending + '_g' + (gk++)), { toEmail: m.email, handoverId: S.state.pending, at: Date.now(), read: false, kind: 'gap', byName: myName(), wk: gwk, shiftDate: sdate, shiftHalf: shalf, total: sTot, cashShort: cShort, gapSales: r2(gsales), fromWk: h.shift.name, s: shDoc }); });
+  }
   var told = !!(shDoc && sTot > 0 && !gap);   /* after a gap the shortage is the skipped shift's: the giver is told it was received, not that it was short */
   if (told) (h.ctl && h.ctl.length ? h.ctl : [h.fromEmail]).forEach(function (em, k) {   /* tells everyone who held control that shift */
     if (em && em !== EMAIL) b.set(ref('notices/' + S.state.pending + '_' + k), { toEmail: em, handoverId: S.state.pending, at: Date.now(), read: false, kind: 'shortage', byName: myName(), wk: h.shift.name, shiftDate: h.shift.date, shiftHalf: h.shift.half, total: sTot, s: shDoc });
@@ -3347,7 +3350,14 @@ function opCreditNext(pid) {
 var PNOPEN = '', PNT = null;
 try { var pq = /[?&]corr=([^&]+)/.exec(location.search); if (pq) PNOPEN = decodeURIComponent(pq[1]); } catch (x) {}
 function pnSupported() { try { return 'Notification' in window && 'serviceWorker' in navigator && location.protocol.indexOf('http') === 0; } catch (x) { return false; } }
-function pnState() { try { return pnSupported() ? Notification.permission : 'off'; } catch (x) { return 'off'; } }
+var PN_PERM = '', PN_SUBBED = false, PN_READY = false;   /* the browser's other answers: some phones say 'default' in Notification.permission while the permission API, or an existing push registration, shows alerts are already allowed. The pop-up waits until both have answered. */
+try {
+  var pnq = [];
+  if (navigator.permissions && navigator.permissions.query) pnq.push(navigator.permissions.query({ name: 'notifications' }).then(function (r) { PN_PERM = r.state; r.onchange = function () { PN_PERM = r.state; }; }).catch(function () {}));
+  if ('serviceWorker' in navigator) pnq.push(navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager ? reg.pushManager.getSubscription() : null; }).then(function (sub) { PN_SUBBED = !!sub; }).catch(function () {}));
+  Promise.all(pnq).then(function () { PN_READY = true; }); setTimeout(function () { PN_READY = true; }, 3000);
+} catch (x) { PN_READY = true; }
+function pnState() { try { if (!pnSupported()) return 'off'; var p = Notification.permission; return p === 'default' && (PN_PERM === 'granted' || PN_SUBBED) ? 'granted' : p; } catch (x) { return 'off'; } }
 function pnLabel() { var st = pnState(); return st === 'granted' ? (pnIsOff() ? 'Off on this phone. Tap to turn on' : pushOn() ? 'On. You are told when a handover, a mistake or a request needs you, even when the app is closed. Tap to turn off' : 'On. A waiting handover mistake shows in the phone\'s notification bar while the app is in the background. Tap to turn off') : st === 'denied' ? 'Blocked. Allow notifications for this app in the phone settings' : st === 'default' ? 'Off. Tap to turn on' : 'Not available on this phone or browser'; }
 function pnIsOff() { try { return !!localStorage.getItem('sw.alertsoff'); } catch (x) { return false; } }   /* this phone's own switch; the phone's permission itself stays as it is */
 function pnTap() { if (pnState() === 'granted') pnSheet(); else pnAsk(); }
@@ -4796,7 +4806,7 @@ function installPrompt() {
   $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="instp"><div><h2>📲 Install Shift Welfare</h2><p style="margin-top:0">Put it on your phone like a normal app. It opens full screen, loads faster and copes better with a weak signal.</p><button class="btn green block" data-act="instnow">Install app</button><button class="btn sec block" data-act="instlater" style="margin-top:10px">Maybe later</button></div></div>');
 }
 var PN_ASKED = false;
-function pnDue() { return STAGE === 'ready' && !PN_ASKED && !!M && !!(M.personId || WHO_DONE) && !OWNERVIEW && isStandalone() && pnSupported() && pnState() === 'default' && !$('#modal').innerHTML && !!$('#spage').hidden && document.visibilityState === 'visible'; }
+function pnDue() { return STAGE === 'ready' && PN_READY && !PN_ASKED && !!M && !!(M.personId || WHO_DONE) && !OWNERVIEW && isStandalone() && pnSupported() && pnState() === 'default' && !$('#modal').innerHTML && !!$('#spage').hidden && document.visibilityState === 'visible'; }
 setInterval(function () { if (pnDue()) pnPrompt(); }, 2500);   /* also when nothing redraws the page: for example after "Who are you?" is closed */
 function pnPrompt() {
   PN_ASKED = true;
