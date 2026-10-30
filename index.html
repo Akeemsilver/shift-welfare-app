@@ -273,7 +273,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.83', RULES_VERSION = '2.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.84', RULES_VERSION = '2.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -385,7 +385,8 @@ var CONFIGURED = firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf('REPLACE
 var EMU = location.hostname === 'localhost' && /[?&]emu\b/.test(location.search);
 var AUTH, DB;
 if (CONFIGURED) {
-  var app = initializeApp(firebaseConfig);
+  var fbcfg = Object.assign({}, firebaseConfig); if (!fbcfg.messagingSenderId && /^\d+:\d+:/.test(fbcfg.appId || '')) fbcfg.messagingSenderId = fbcfg.appId.split(':')[1];   /* phone push needs the sender ID (the project number inside the app ID); a settings file that lacks it still works */
+  var app = initializeApp(fbcfg);
   AUTH = getAuth(app);
   DB = initializeFirestore(app, { ignoreUndefinedProperties: true, localCache: EMU ? memoryLocalCache() : persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
   if (EMU) { connectAuthEmulator(AUTH, 'http://127.0.0.1:9099', { disableWarnings: true }); connectFirestoreEmulator(DB, '127.0.0.1', 8080); }
