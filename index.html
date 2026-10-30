@@ -26,6 +26,7 @@
 html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,Lato,sans-serif}
 #ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 8px);width:38px;height:38px;margin-left:-19px;border-radius:50%;background:var(--surface);color:var(--brand);box-shadow:0 2px 10px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;font-size:20px;z-index:90;opacity:0;pointer-events:none;transform:translateY(-60px)}#ptr.go{color:var(--ok)}#ptr.spin b{display:inline-block;animation:ptrspin .8s linear infinite}@keyframes ptrspin{to{transform:rotate(360deg)}}
 html.zoomed,html.zoomed body,html.zoomed .sp-body,html.zoomed .modal>div,html.zoomed .modal .list{overscroll-behavior:auto!important}   /* zoomed in: a one-finger drag pans the page on every page and pop-up */
+input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea{font-size:16px!important}   /* every box typed in is 16px on every device: iPhone zooms into anything smaller, and the app looks the same everywhere */
 @supports (-webkit-touch-callout:none){html{background:var(--brand);overscroll-behavior-y:none}body{overscroll-behavior-y:none;min-height:100vh;min-height:100dvh;box-sizing:border-box}}   /* iPhone only: pulling down at the top does not open a gap above the header (Android keeps pull-to-refresh) */
 body{padding-bottom:calc(var(--bar) + 24px + env(safe-area-inset-bottom))}
 header{position:sticky;top:0;z-index:5;background:var(--brand);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:10px}
@@ -200,7 +201,7 @@ input:disabled{background:var(--dis);color:var(--muted)}
 .hosticky{position:sticky;bottom:calc(var(--navoff,0px) + 8px);z-index:4;padding-top:6px}.hosticky .btn.dis{background:#9aa7b2}
 .hosteps{display:flex;margin:8px 0 4px}.hosteps div{flex:1;text-align:center;font-size:10px;color:var(--muted)}.hosteps i{display:block;width:16px;height:16px;border-radius:50%;margin:0 auto 3px;background:var(--line);color:#fff;font-style:normal;font-size:10px;line-height:16px}.hosteps .d i{background:var(--ok)}.hosteps .n i{background:var(--cnt)}.hosteps .x i{background:var(--exp)}
 .warnbox{background:var(--exp-bg);border:2px solid var(--exp);border-radius:14px;padding:8px 12px;margin-bottom:12px;font-size:13px}.warnbox>b{color:var(--exp)}
-.rxt{width:100%;table-layout:fixed;border-collapse:collapse}.rxt th{font-size:10px;text-transform:uppercase;color:var(--muted);padding:3px 2px;text-align:right}.rxt th:first-child,.rxt td:first-child{text-align:left}.rxt td{padding:5px 2px;border-bottom:1px solid var(--line);text-align:right;vertical-align:middle}.rxin{display:flex;align-items:center;justify-content:flex-end;gap:6px}.rxd{font-weight:700;font-size:12px;color:var(--exp);white-space:nowrap;width:46px;text-align:left;flex:none}.rxt th:nth-child(3){padding-right:52px}.rxd.up{color:var(--soon)}
+.rxt{width:100%;table-layout:fixed;border-collapse:collapse}.rxt th{font-size:10px;text-transform:uppercase;color:var(--muted);padding:3px 2px;text-align:center;line-height:1.25}.rxt th:first-child,.rxt td:first-child{text-align:left}.rxt td{padding:5px 2px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle}.rxt td.rxh{font-size:16px}.rxt input.rxn{box-sizing:border-box;width:62px;height:40px;text-align:center;font-weight:600;padding:0 2px}.rxck{width:20px;height:20px;margin:0;vertical-align:middle}.rxd{font-weight:700;font-size:15px;color:var(--exp)}.rxt tr.rxok td{background:var(--ok-bg)}.rxt tr.rxchg td{background:var(--exp-bg)}.rxt tr.rxchg input.rxn{border:2px solid var(--exp)}.rxt tr.rxnone .rxck{outline:2px solid var(--exp);outline-offset:1px}.rxall{text-align:right;margin-top:8px}.rxall a{color:var(--link);font-weight:700;font-size:14px;cursor:pointer}
 .rxbar{position:sticky;top:0;z-index:4;background:var(--soon-bg);border-radius:10px;padding:6px 10px;font-size:12px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,.08)}.rxfoot{position:sticky;bottom:0;z-index:4;display:flex;align-items:center;gap:10px;background:var(--surface);border-top:1px solid var(--line);margin:12px -16px -28px;padding:8px 16px calc(8px + env(safe-area-inset-bottom))}.rxfoot span{font-size:12px;color:var(--muted)}.rxfoot .btn{flex:1.4}.rxfoot .btn.dis{background:#9aa7b2}
 .fold{display:flex;font-weight:600;padding:11px 0;cursor:pointer}.fold>span:first-child{flex:1}
 .rct{width:100%;table-layout:fixed;border-collapse:collapse}.rct th{font-size:10px;text-transform:uppercase;color:var(--muted);padding:3px 2px;text-align:right}.rct th:first-child,.rct td:first-child{text-align:left}.rct td{padding:6px 2px;border-bottom:1px solid var(--line);text-align:right}.rcb{color:var(--exp);font-weight:700}.rcu{color:var(--soon);font-weight:700}
@@ -275,7 +276,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.86', RULES_VERSION = '2.16';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.89', RULES_VERSION = '2.16';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2816,6 +2817,15 @@ function mbsave(email) {
 }
 
 /* ---------- handover: prepare / hand over / receive ---------- */
+function countRest(list) {   /* the items nobody counted are confirmed as unchanged: a count with nothing sold, one entry each */
+  var ps = list.map(function (r) {
+    var it = item(r.id); if (!it) return null;
+    var b = writeBatch(DB); newEv();
+    mkEvent(b, 'count', it, 0, 0, { cogs: 0, nc: 0, from: it.stock, to: it.stock, price: it.price, dly: 0 });
+    return commit(b);
+  }).filter(Boolean);
+  Promise.race([Promise.all(ps), new Promise(function (ok) { setTimeout(ok, 1500); })]).then(function () { toast(ps.length + (ps.length === 1 ? ' item' : ' items') + ' marked as counted'); prepareShow(); });
+}
 function prepare() {
   var sh = SH(), rows = sheetRows(), locked = sh.mode === 'locked';
   if (!tosList().length && !locked) return toast('Choose who you are handing over to, or pick Locked');
@@ -2824,7 +2834,10 @@ function prepare() {
   var over = rows.filter(function (r) { return r.crQ > r.sold || r.spQ > r.gone; });
   if (over.length) return infoBox('The notes do not match the count', over.map(function (r) { return '<b>' + esc(r.name) + '</b>: sold ' + r.sold + ', but credit ' + r.crQ + ', spoiled ' + r.spQ + ', gone ' + r.gone + '.'; }).join('<br>') + '<br><span class="muted">Credit and spoiled notes can only explain items that are sold. Count the item again or cancel a note in History.</span>');
   var unc = rows.filter(function (r) { return !r.counted && (r.stock > 0 || r.cage > 0); });   /* nothing left = nothing to count */
-  if (unc.length) return askConfirm('Not counted this shift', unc.length + ' item' + (unc.length === 1 ? ' has' : 's have') + ' not been counted:<br><b>' + unc.slice(0, 15).map(function (r) { return esc(r.name) + (r.crQ || r.spQ ? ' (has credit / spoiled notes)' : ''); }).join(', ') + (unc.length > 15 ? ' …' : '') + '</b><br><span class="muted">Their sales are not in the totals.</span>', 'Hand over anyway', prepareShow);
+  if (unc.length) {
+    var all = rows.filter(function (r) { return r.stock > 0 || r.cage > 0; }).length;
+    return askConfirm('Not every item was counted', '<b>' + unc.length + (unc.length === 1 ? ' item was' : ' items were') + ' not counted</b> (only ' + (all - unc.length) + ' out of ' + all + ' counted).<br><b>Did ' + (unc.length === 1 ? 'it' : 'they') + ' stay the same?</b><br><span class="muted">' + unc.slice(0, 15).map(function (r) { return esc(r.name); }).join(', ') + (unc.length > 15 ? ' …' : '') + '</span><br><span class="muted">Yes marks them all as counted with nothing sold. If any of them sold or changed, go back and count it first.</span>', 'Yes, they all stayed the same', function () { countRest(unc); });
+  }
   prepareShow();
 }
 function sheetLists(rows) {   /* the "Handover ready" sheet: In the shop, then only what is really in storage (each in its own unit) */
@@ -2877,7 +2890,7 @@ function shareText() {
   else toast('Copy not supported here');
 }
 var RXV = null;   /* what the receiver has typed so far, kept when the pop-up redraws */
-function rxKeep() { if (!RX || !$('#rx-cash')) return; var o = RXV || {}; RXV = { cash: $('#rx-cash').value, c: Object.assign({}, o.c), g: Object.assign({}, o.g), x: o.x || {}, xo: !!o.xo };   /* a value set by the page itself (an extra item) survives too */ RX.items.forEach(function (i, k) { if ($('#rx-c' + k)) RXV.c[k] = $('#rx-c' + k).value; if ($('#rx-g' + k)) RXV.g[k] = $('#rx-g' + k).value; }); }
+function rxKeep() { if (!RX || !$('#rx-cash')) return; var o = RXV || {}; RXV = { cash: $('#rx-cash').value, c: Object.assign({}, o.c), g: Object.assign({}, o.g), t: {}, x: o.x || {}, xo: !!o.xo };   /* a value set by the page itself (an extra item) survives too */ RX.items.forEach(function (i, k) { if ($('#rx-c' + k)) RXV.c[k] = $('#rx-c' + k).value; if ($('#rx-g' + k)) RXV.g[k] = $('#rx-g' + k).value; }); document.querySelectorAll('#spage .rxck').forEach(function (c) { if (c.checked) RXV.t[c.dataset.k] = 1; }); }
 function cageName(n, unit) { return esc(n) + ' <span class="muted" style="font-weight:400">(' + esc(unit || 'case') + ')</span>'; }
 function cageCmp(recs, big) {   /* the cage / storage, in two sections by where things go: fridge and shelf. rec: n, unit, shelf, m (moved out), was, now, tg (tags html) */
   var sec = function (title, head, list) { return list.length ? '<h3 style="margin:12px 0 4px;font-size:14px">' + title + '</h3><table class="cmp">' + CMPCOLS + '<tr><th>Item</th><th>' + head + '</th><th>Was</th><th></th><th>Now</th></tr>' + list.map(function (r) { return '<tr><td>' + cageName(r.n, r.unit) + '</td><td>' + (r.m || '') + '</td><td>' + r.was + '</td><td>' + (r.was !== r.now ? '→' : '') + '</td><td><b>' + r.now + '</b></td></tr>' + (r.tg ? '<tr><td colspan="5" style="border:0;text-align:left;padding-top:0">' + r.tg + '</td></tr>' : ''); }).join('') + '</table>' : ''; };
@@ -2940,39 +2953,53 @@ function rxDetail(h) {   /* the first page: the two stock lists (tap a row to re
   var rows = docRows(h), ed = function (r) { return (h.edits || []).filter(function (x) { return x.name === r.name; }); }, ns = rows.filter(function (r) { return r.sold > 0; }).length, tcash = rows.reduce(function (a, r) { return a + Math.max(0, r.soldAmt - r.crAmt - r.spAmt); }, 0);
   return hoLists(rows, { ed: ed, fold: true }) + rxFold('sold', 'Sold on the shift that handed over <span class="muted" style="font-size:11px">' + ns + (ns === 1 ? ' item' : ' items') + ' · ' + money(tcash) + '</span>', soldCards(rows, h)) + rxFold('cred', 'Credit', rxCredit(h));
 }
-function rxMissing() {   /* the first count box that is still empty; every count is required */
-  var ids = ['rx-cash']; (RX.items || []).forEach(function (i, k) { ids.push('rx-c' + k); if (itStore(i)) ids.push('rx-g' + k); });
-  var bad = ids.filter(function (id) { var e = $('#' + id); return e && String(e.value).trim() === ''; });
-  ids.forEach(function (id) { var e = $('#' + id); if (e) e.style.borderColor = bad.indexOf(id) >= 0 ? 'var(--exp)' : ''; });
-  return bad.length ? $('#' + bad[0]) : null;
+function rxUndone() {   /* every count that is not yet checked: not ticked and not changed (the cash must be typed) */
+  var pg = $('#spage'), out = []; if (!pg) return out;
+  pg.querySelectorAll('input.rxn').forEach(function (e) {
+    var cash = e.id === 'rx-cash', has = String(e.value).trim() !== '', ck = cash ? null : pg.querySelector('.rxck[data-k="' + e.id.slice(3) + '"]');
+    if (!(cash ? has : has && (num(e.value) !== num(e.dataset.exp) || (ck && ck.checked)))) out.push(e);
+  });
+  return out;
+}
+function rxMissing() {   /* the first count still to check; every count is required */
+  var bad = rxUndone(), pg = $('#spage'); if (pg) pg.querySelectorAll('tr.rxnone').forEach(function (r) { r.classList.remove('rxnone'); });
+  bad.forEach(function (e) { e.closest('tr').classList.add('rxnone'); });
+  var c = $('#rx-cash'); if (c) c.style.borderColor = bad.indexOf(c) >= 0 ? 'var(--exp)' : '';
+  return bad.length ? bad[0] : null;
 }
 function rxShow(v, p, k, i) { return (p === 'g' ? i.cage : i.stock) > 0 || !!(v.x && v.x[p + k]); }   /* an item handed over as 0 is not counted, unless the receiver found some */
-function rxTbl(title, rows) { return '<div class="card"><h2>' + title + ' <b style="color:var(--exp)">*</b></h2><table class="rxt"><colgroup><col><col style="width:70px"><col style="width:136px"></colgroup><tr><th>Item</th><th>Handed over</th><th>Your count</th></tr>' + rows + '</table></div>'; }
-function rxCell(id, exp, val) { return '<div class="rxin"><input id="' + id + '" data-exp="' + exp + '" enterkeyhint="next" type="number" inputmode="numeric" min="0" value="' + esc(val) + '" placeholder="count" style="width:76px;height:38px;text-align:right"><span class="rxd" id="d-' + id + '"></span></div>'; }
+function rxTbl(title, rows, tick) { return '<div class="card"><h2>' + title + ' <b style="color:var(--exp)">*</b></h2><table class="rxt"><colgroup><col><col style="width:54px"><col style="width:68px"><col style="width:44px"></colgroup><tr><th>Item</th><th>Handed<br>over</th><th>Your<br>count</th><th>' + (tick ? 'Same' : '') + '</th></tr>' + rows + '</table>' + (tick ? '<div class="rxall"><a data-act="rxtickall">✓ Tick all the rest</a></div>' : '') + '</div>'; }
+function rxCell(id, exp, val, tk) {   /* the count starts as what was handed over; tick it if it is the same, or type what you found and the tick turns into the difference */
+  var key = id.slice(3);
+  return '<input class="rxn" id="' + id + '" data-exp="' + exp + '" enterkeyhint="next" type="number" inputmode="numeric" min="0" value="' + esc(val === '' || val == null ? exp : val) + '"></td><td><input type="checkbox" class="rxck" data-k="' + key + '" aria-label="Same as handed over"' + (tk ? ' checked' : '') + '><span class="rxd" id="d-' + id + '"></span>';
+}
 function rxCard(h, v, kind) {   /* the count boxes: In the shop (fridge and shelf together) and In storage */
   var g = kind === 'cage', p = g ? 'g' : 'c', vals = g ? v.g : v.c;
   var rows = h.items.map(function (i, k) {
     if (g && !itStore(i)) return '';
     if (kind === 'fridge' && i.shelf) return ''; if (kind === 'shelf' && !i.shelf) return '';
     if (!rxShow(v, p, k, i)) return '';
-    return '<tr><td>' + (g ? cageName(i.name, i.unit) : esc(i.name)) + '</td><td>' + (g ? i.cage : i.stock) + '</td><td>' + rxCell('rx-' + p + k, g ? i.cage : i.stock, vals[k] != null ? vals[k] : '') + '</td></tr>';
+    return '<tr><td>' + (g ? cageName(i.name, i.unit) : esc(i.name)) + '</td><td class="rxh">' + (g ? i.cage : i.stock) + '</td><td>' + rxCell('rx-' + p + k, g ? i.cage : i.stock, vals[k] != null ? vals[k] : '', v.t && v.t[p + k]) + '</td></tr>';
   }).join('');
-  return rows ? rxTbl(g ? '📦 Cases / Packs in storage' : kind === 'shelf' ? '🧁 On the shelf' : '🧊 In the fridge', rows) : '';
+  return rows ? rxTbl(g ? '📦 Cases / Packs in storage' : kind === 'shelf' ? '🧁 On the shelf' : '🧊 In the fridge', rows, true) : '';
 }
-function rxCashCard(h, v) { return rxTbl('Cash', '<tr><td>Cash</td><td style="font-size:16px;font-weight:600">' + money(h.cash) + '</td><td><div class="rxin"><div class="ig" style="width:112px;height:40px"><i>$</i><input id="rx-cash" data-exp="' + h.cash + '" enterkeyhint="next" type="number" inputmode="decimal" value="' + esc(v.cash) + '" style="text-align:right"></div><span class="rxd" id="d-rx-cash"></span></div></td></tr>'); }
-function rxProg() {   /* the pinned bars: how many are counted, the differences so far, and what is left before Accept */
+function rxCashCard(h, v) { return rxTbl('Cash', '<tr><td>Cash</td><td class="rxh">' + money(h.cash) + '</td><td><input class="rxn" id="rx-cash" data-exp="' + h.cash + '" enterkeyhint="next" type="number" inputmode="decimal" placeholder="$" value="' + esc(v.cash) + '"></td><td><span class="rxd" id="d-rx-cash" style="font-size:12px"></span></td></tr>'); }
+function rxNote() { return '<div class="card" style="background:var(--soon-bg);box-shadow:none"><b>✎ Your count is filled in with what was handed over</b><div style="margin-top:4px">Same? Tick the box. Different? Type what you found: the box is replaced by the difference. Cash is not filled in: count it and type it.</div></div>'; }
+function rxProg() {   /* the pinned bar: how many are checked, how many changed, and the next one; the rows turn green (ticked) or red (changed) */
   var pg = $('#spage'); if (!pg || !RX || !$('#rx-bar')) return;
-  var n = 0, d = 0, tot = 0;
-  pg.querySelectorAll('input[id^=rx-]:not([id^=rxx-])').forEach(function (e) {
-    var has = String(e.value).trim() !== '', dv = has ? num(e.value) - num(e.dataset.exp) : 0, sp = pg.querySelector('#d-' + e.id), box = e.closest('.ig') || e; tot++;
-    if (has) { n++; if (dv !== 0) d++; }
-    if (sp) { sp.textContent = has && dv ? (dv < 0 ? '−' : '+') + (e.id === 'rx-cash' ? money(Math.abs(dv)) : Math.abs(dv)) : ''; sp.className = 'rxd' + (dv > 0 ? ' up' : ''); }
-    box.style.borderColor = has && dv < 0 ? 'var(--exp)' : '';
+  var n = 0, d = 0, tot = 0, first = null;
+  pg.querySelectorAll('input.rxn').forEach(function (e) {
+    var cash = e.id === 'rx-cash', has = String(e.value).trim() !== '', dv = has ? num(e.value) - num(e.dataset.exp) : 0, chg = has && dv !== 0, ck = cash ? null : pg.querySelector('.rxck[data-k="' + e.id.slice(3) + '"]'), sp = pg.querySelector('#d-' + e.id), tr = e.closest('tr'); tot++;
+    if (ck) { if (chg) ck.checked = false; ck.style.display = chg ? 'none' : ''; }
+    var done = cash ? has : chg || (has && ck && ck.checked);
+    if (done) { n++; if (chg) d++; } else if (!first) first = tr.children[0].textContent;
+    if (sp) sp.textContent = chg ? (dv < 0 ? '−' : '+') + (cash ? money(Math.abs(dv)) : Math.abs(dv)) : '';
+    tr.classList.toggle('rxchg', chg); tr.classList.toggle('rxok', !chg && !!(ck && ck.checked)); tr.classList.remove('rxnone');
   });
   var left = tot - n;
-  $('#rx-bar').innerHTML = 'Counted <b>' + n + ' of ' + tot + '</b>' + (d ? ' · <b style="color:var(--exp)">' + d + (d === 1 ? ' difference' : ' differences') + '</b> so far' : left ? ' · counting is required' : ' · everything matches so far');
+  $('#rx-bar').innerHTML = 'Checked <b>' + n + ' of ' + tot + '</b>' + (d ? ' · <b style="color:var(--exp)">' + d + ' changed</b>' : '') + (left ? ' · <b data-act="rxnext" style="color:var(--brand);cursor:pointer">next: ' + esc(first) + ' ›</b>' : ' · all checked');
   var sg = !!(M && M.signature), ok = !left && sg;
-  if ($('#rx-left')) $('#rx-left').textContent = left ? left + ' left to count' : !sg ? 'Sign below, then accept' : 'Ready to accept';
+  if ($('#rx-left')) $('#rx-left').textContent = left ? left + ' left to check' : !sg ? 'Sign below, then accept' : 'Ready to accept';
   var bt = $('#rx-foot button'); if (bt) bt.classList.toggle('dis', !ok);
 }
 function rxReview() {   /* before accepting: the differences, and what is recorded as a shortage. False = nothing to show, go ahead */
@@ -3002,11 +3029,11 @@ function rxExtraCard(h, v) {
 function showRx(keep) {
   var h = S.hand; if (!h) return;
   if (keep) rxKeep(); else { RXV = null; RXSTEP = 0; RXTAB = 'fridge'; RXF = {}; }
-  RX = h; var v = RXV || { cash: '', c: {}, g: {}, x: {}, xo: false };
+  RX = h; var v = RXV || { cash: '', c: {}, g: {}, t: {}, x: {}, xo: false };
   var stay = keep === true && !RXFLIP; RXFLIP = false;
   wpPage(showRx, [true], '<h2>' + (h.locked ? '🔒 Locked handover' : h.same ? 'Handover within the shift' : 'Handover received') + '</h2>' + (h.same ? '<div class="card" style="background:var(--soon-bg);box-shadow:none"><b>Same shift</b><div style="margin-top:4px">This hand over is inside the ' + esc(h.shift.name) + ' shift, so the shift keeps going. Count what is here. Any difference is recorded against the shift, and the sales, credit and totals carry on until the shift is handed over to the next one.</div></div>' : '') + (h.locked ? '<div class="card" style="background:var(--soon-bg)"><b>Fridge and cage were locked.</b> Open them and check everything below before accepting.</div>' : '') +
     (rxOnList(h) || !rxHasDetail(h) ? corrCards() + rxWarn(h) : '') + '<div class="card sum"><div><span>From</span><b>' + esc(hnl(h.fromName, h.fromEmail)) + (h.fromWatch ? '<div class="muted" style="font-weight:500">' + esc(h.fromWatch) + ' watch' + (h.fromWatch !== h.shift.name ? ' · visiting, the ' + esc(h.shift.name) + ' watch was on duty' : '') + '</div>' : '') + '</b></div><div><span>Handed over</span><b>' + new Date(h.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (no one in particular)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Shift</span><b>' + esc(h.shift.name) + ' · ' + esc(h.shift.date) + ' ' + esc(HL(h.shift.half)) + '</b></div><div><span>Sales</span><b>' + money(h.sales) + '</b></div>' + (typeof h.sold === 'number' ? '<div><span>Total items sold</span><b>' + h.sold + '</b></div>' : '') + '<div><span>Cash handed over</span><b>' + money(h.cash) + '</b></div>' + (typeof h.computed === 'number' && r2(h.computed - h.cash) > 0 ? '<div><span>Cash short when counted</span><b style="color:var(--exp)">' + money(r2(h.computed - h.cash)) + '</b></div>' : '') + (typeof h.computed === 'number' && r2(h.cash - h.computed) > 0 ? '<div><span>Cash over when counted</span><b style="color:var(--soon)">' + money(r2(h.cash - h.computed)) + '</b></div>' : '') + '</div>' +
-    (rxOnList(h) ? rxDetail(h) + '<button class="btn block" data-act="rxcheck">Check items</button><button class="btn sec block" data-act="close" style="margin-top:10px">Back to Count</button>' : (rxHasDetail(h) ? '<button class="btn sec sm" data-act="rxlist" style="margin-bottom:10px">‹ See what was sold again</button>' : '') + '<div class="rxbar" id="rx-bar"></div>' + rxCashCard(h, v) +
+    (rxOnList(h) ? rxDetail(h) + '<button class="btn block" data-act="rxcheck">Check items</button><button class="btn sec block" data-act="close" style="margin-top:10px">Back to Count</button>' : (rxHasDetail(h) ? '<button class="btn sec sm" data-act="rxlist" style="margin-bottom:10px">‹ See what was sold again</button>' : '') + '<div class="rxbar" id="rx-bar"></div>' + rxCashCard(h, v) + rxNote() +
     rxCard(h, v, 'fridge') + rxCard(h, v, 'shelf') + rxCard(h, v, 'cage') + rxExtraCard(h, v) +
     hoCashCard(h) + editsCard(h.edits) + (rxHasDetail(h) ? '' : rxCredit(h)) + handoverLists(h.owedBy, h.openShort) + ((h.trail || []).length ? trailHtml(h.trail, h.shift.name, h.fromName, h.fromWatch) : '') +
     (h.notes ? '<div class="card"><label>Remarks</label>' + esc(h.notes) + '</div>' : '') +
@@ -3019,7 +3046,7 @@ function rxAccept() { try { if (!RXOK && rxReview()) return; RXOK = false; rxAcc
 function rxAccept2() {
   SELF = Date.now();
   var h = RX; if (!h || !S.state || !S.state.pending) return;
-  var empty = rxMissing(); if (empty) { empty.scrollIntoView({ block: 'center' }); empty.focus(); return toast('Count the cash and every item first (the red *)'); }
+  var empty = rxMissing(); if (empty) { empty.scrollIntoView({ block: 'center' }); if (empty.id === 'rx-cash' || String(empty.value).trim() === '') empty.focus(); return toast('Count the cash and tick or change every item first'); }
   if (!M || !M.signature) return toast('Please sign first');
   var hd = String(h.shift.date || '').split('/'), sday = hd.length === 3 ? hd[2] + '-' + hd[1] + '-' + hd[0] : '';   /* the shortage belongs to the shift that handed over, on that shift's date */
   var diffs = [], RI = {}, cashC = num($('#rx-cash').value), c0 = currentShift(), same = h.same === true, cur = S.state.shift, expC0 = typeof h.computed === 'number' ? h.computed : h.cash,
@@ -5000,6 +5027,8 @@ document.addEventListener('click', function (e) {
   else if (a === 'shareapp') shareApp();
   else if (a === 'openrx') showRx();
   else if (a === 'rxaccept') rxAccept();
+  else if (a === 'rxnext') { var nx = rxUndone()[0]; if (nx) nx.closest('tr').scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+  else if (a === 'rxtickall') { b.closest('.card').querySelectorAll('.rxck').forEach(function (c) { var e = $('#rx-' + c.dataset.k); if (e && String(e.value).trim() !== '' && num(e.value) === num(e.dataset.exp)) c.checked = true; }); rxProg(); }
   else if (a === 'rxcheck') { RXSTEP = 1; RXFLIP = true; showRx(true); }
   else if (a === 'rxtab') { RXTAB = b.dataset.v; showRx(true); }
   else if (a === 'rxlist') { rxKeep(); RXSTEP = 0; RXFLIP = true; showRx(true); }
@@ -5217,6 +5246,7 @@ function wzInput(t) {
   else if (k === 'percase') WZ.perCase = num(v); else if (k === 'ranks') WZ.ranks = v; else if (k === 'namelabel') WZ.signup.nameLabel = v; else if (k === 'nolabel') WZ.signup.noLabel = v; else if (k === 'ranklabel') WZ.signup.rankLabel = v; if (/label$/.test(k)) ppRefresh(WZ.signup);
   else if (k === 'myname') WZ.myName = v; else if (k === 'myno') WZ.myNo = v; else if (k === 'myrank') WZ.myRank = v;
 }
+document.addEventListener('change', function (e) { if (e.target && e.target.classList && e.target.classList.contains('rxck')) rxProg(); });
 document.addEventListener('input', function (e) {
   var t = e.target;
   if (t.id && /^rx-(cash|c\d+|g\d+)$/.test(t.id)) rxProg();
