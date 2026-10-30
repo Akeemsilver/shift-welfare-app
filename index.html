@@ -201,6 +201,7 @@ input:disabled{background:var(--dis);color:var(--muted)}
 .hosticky{position:sticky;bottom:calc(var(--navoff,0px) + 8px);z-index:4;padding-top:6px}.hosticky .btn.dis{background:#9aa7b2}
 .hosteps{display:flex;margin:8px 0 4px}.hosteps div{flex:1;text-align:center;font-size:10px;color:var(--muted)}.hosteps i{display:block;width:16px;height:16px;border-radius:50%;margin:0 auto 3px;background:var(--line);color:#fff;font-style:normal;font-size:10px;line-height:16px}.hosteps .d i{background:var(--ok)}.hosteps .n i{background:var(--cnt)}.hosteps .x i{background:var(--exp)}
 .warnbox{background:var(--exp-bg);border:2px solid var(--exp);border-radius:14px;padding:8px 12px;margin-bottom:12px;font-size:13px}.warnbox>b{color:var(--exp)}
+.al{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border-radius:14px;box-shadow:var(--sh);padding:12px;margin-bottom:10px}.al .ic{flex:none;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800}.al .ic.g{background:var(--ok-bg);color:var(--ok)}.al .ic.a{background:var(--soon-bg);color:var(--soon)}.al .ic.r{background:var(--exp-bg);color:var(--exp)}.al .ic.b{background:var(--soft);color:var(--brand)}.al .t{font-weight:700;font-size:14.5px;line-height:1.3}.al .m{color:var(--muted);font-size:12.5px;margin-top:2px}.al .ch{color:var(--muted);font-size:20px;align-self:center}.al.old{box-shadow:none;border:1px solid var(--line);background:transparent}.al.old .t{font-weight:600}.al .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--exp);margin-right:6px}.dayh{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:14px 2px 6px}.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}.tabs button{height:42px;border-radius:12px;border:2px solid var(--secb);background:var(--surface);color:var(--ink);font:inherit;font-weight:700;font-size:14px}.tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand)}.tabs i{font-style:normal;background:var(--exp);color:#fff;border-radius:10px;padding:0 6px;font-size:11px;margin-left:4px}.tabs button.on i{background:#fff;color:var(--exp)}.acts{display:flex;gap:8px;margin-top:10px}.acts .btn{height:38px;font-size:13px;padding:0 14px}.alwait{background:var(--exp);color:#fff;border-radius:12px;padding:2px 10px;font-weight:700;font-size:13px;flex:none}
 .rxt{width:100%;table-layout:fixed;border-collapse:collapse}.rxt th{font-size:10px;text-transform:uppercase;color:var(--muted);padding:3px 2px;text-align:center;line-height:1.25}.rxt th:first-child,.rxt td:first-child{text-align:left}.rxt td{padding:5px 2px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle}.rxt td.rxh{font-size:16px}.rxt input.rxn{box-sizing:border-box;width:62px;height:40px;text-align:center;font-weight:600;padding:0 2px}.rxck{width:20px;height:20px;margin:0;vertical-align:middle}.rxd{font-weight:700;font-size:15px;color:var(--exp)}.rxt tr.rxok td{background:var(--ok-bg)}.rxt tr.rxchg td{background:var(--exp-bg)}.rxt tr.rxchg input.rxn{border:2px solid var(--exp)}.rxt tr.rxnone .rxck{outline:2px solid var(--exp);outline-offset:1px}.rxall{text-align:right;margin-top:8px}.rxall a{color:var(--link);font-weight:700;font-size:14px;cursor:pointer}
 .rxbar{position:sticky;top:0;z-index:4;background:var(--soon-bg);border-radius:10px;padding:6px 10px;font-size:12px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,.08)}.rxfoot{position:sticky;bottom:0;z-index:4;display:flex;align-items:center;gap:10px;background:var(--surface);border-top:1px solid var(--line);margin:12px -16px -28px;padding:8px 16px calc(8px + env(safe-area-inset-bottom))}.rxfoot span{font-size:12px;color:var(--muted)}.rxfoot .btn{flex:1.4}.rxfoot .btn.dis{background:#9aa7b2}
 .fold{display:flex;font-weight:600;padding:11px 0;cursor:pointer}.fold>span:first-child{flex:1}
@@ -276,7 +277,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.89', RULES_VERSION = '2.16';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.92', RULES_VERSION = '2.16';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1185,35 +1186,73 @@ function bellN() { try { return (S.notices || []).filter(function (x) { return !
 var BELLSVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>';
 function bellHtml() { var n = bellN(); return n ? '<button class="spbell" data-act="bell2" aria-label="Alerts">' + BELLSVG + '<i>' + (n > 9 ? '9+' : n) + '</i></button>' : ''; }   /* on a full-screen page the header bell is hidden, so the bell comes with it while something waits */
 function spBellSync(n) {
-  var tp = $('#spage .sp-top'); if (!tp || $('#spage').hidden) return; var el = tp.querySelector('.spbell');
+  var tp = $('#spage .sp-top'); if (!tp || $('#spage').hidden || alTop()) return; var el = tp.querySelector('.spbell');
   if (!n) { if (el) el.remove(); return; }
   if (el) el.querySelector('i').textContent = n > 9 ? '9+' : n; else { var d = document.createElement('div'); d.innerHTML = bellHtml(); if (d.firstChild) tp.insertBefore(d.firstChild, tp.querySelector('.spr') || null); }
 }
 function updateBell() {
   var n = bellN(), c = $('#bellc');
   try { if (navigator.setAppBadge) { if (n) navigator.setAppBadge(n); else navigator.clearAppBadge(); } } catch (x) {}   /* the number on the app icon (an installed app, while it runs) */
-  spBellSync(n); pnSync(); if (!c) return;
+  spBellSync(n); pnSync(); if (alTop()) alertsPage(true); if (!c) return;
   c.hidden = !n; c.textContent = n > 9 ? '9+' : n;
 }
-function noticesModal() {
-  var list = (S.notices || []).slice(), un = list.filter(function (x) { return !x.read; }), pcr = pcMine() ? '<div data-act="pcview" style="cursor:pointer;border:2px solid var(--exp);background:var(--exp-bg);border-radius:12px;padding:10px;margin-bottom:10px"><b style="color:var(--exp)">🔔 ' + ({ offer: 'You were offered the president role', vote: 'Vote: change the president', challenge: 'The president is about to change' }[pcMine()]) + '</b><div class="muted">' + pcLine() + '</div></div>' : '';
-  var rq = canApprove() ? (S.requests || []).map(function (r) { return '<div data-act="rqopen" data-id="' + esc(r.email) + '" style="cursor:pointer;border:2px solid var(--brand);border-radius:12px;padding:10px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><div class="grow"><b>👤 ' + esc(r.name) + ' asked for access</b><div class="muted">' + esc(r.watch || '') + (r.at ? ' · ' + new Date(r.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '') + ' · waiting for you to accept or decline</div></div><span class="muted">›</span></div>'; }).join('') : '';   /* a request stays here until it is accepted or declined */
-  var pq = isPres() ? PREQ.filter(function (r) { return r.status === 'pending'; }).map(function (r) { return '<div data-act="prlist" style="cursor:pointer;border:2px solid var(--brand);border-radius:12px;padding:10px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><div class="grow"><b>🏢 ' + esc(r.name) + ' asks to start a workplace</b><div class="muted">' + esc(r.place || '') + (r.at ? ' · ' + new Date(r.at).toLocaleDateString() : '') + '</div></div><span class="muted">›</span></div>'; }).join('') : '';
-  var cmine = (S.corrs || []).map(function (c) {
-    if (corrOptional(c)) return '<div data-act="corrreview" data-id="' + esc(c.id) + '" style="cursor:pointer;border:2px solid var(--secb);background:var(--soft);border-radius:12px;padding:10px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><div class="grow"><b>✎ Handover mistake between ' + esc(c.fromName) + ' and ' + esc(c.toName) + '</b><div class="muted">' + corrLines(c).join(' · ').replace(/<[^>]+>/g, '') + ' · ' + esc(c.reason || '') + '</div><div class="muted" style="margin-top:2px">For your information. They settle it between them, you do not need to do anything.</div></div><span class="muted">›</span></div>';
-    if (corrCanDecide(c)) return '<div data-act="corrreview" data-id="' + esc(c.id) + '" style="cursor:pointer;border:2px solid var(--exp);background:var(--exp-bg);border-radius:12px;padding:10px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><div class="grow"><b style="color:var(--exp)">✎ Handover mistake: ' + corrBy(c) + ' asks to correct the ' + corrTitle(c) + ' handover</b><div class="muted">' + corrLines(c).join(' · ').replace(/<[^>]+>/g, '') + ' · ' + esc(c.reason || '') + ' · waiting for you to accept or decline</div></div><span class="muted">›</span></div>';
-    if (c.byEmail === EMAIL) return '<div data-act="corrreview" data-id="' + esc(c.id) + '" style="cursor:pointer;border:2px solid var(--soon);background:var(--soon-bg);border-radius:12px;padding:10px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><div class="grow"><b>✎ Your correction is waiting for ' + esc(corrOther(c)) + '</b><div class="muted">' + corrLines(c).join(' · ').replace(/<[^>]+>/g, '') + '</div></div><span class="muted">›</span></div>';
-    return '';
-  }).join(''), hcn = list.filter(function (n) { return n.kind === 'hcdone' || n.kind === 'hcno'; }); list = list.filter(function (n) { return n.kind !== 'hcdone' && n.kind !== 'hcno'; });
-  var hcl = hcn.map(function (n) { return '<div data-act="ntview" data-id="' + n.id + '" style="cursor:pointer;border:2px solid var(--exp);background:var(--exp-bg);border-radius:12px;padding:10px;margin-bottom:10px"><b style="color:var(--exp)">' + (n.read ? '' : '● ') + (n.kind === 'hcdone' ? '✎ Handover corrected' : '✎ Correction declined') + '</b><div class="muted">' + esc(n.wk || '') + ' · ' + esc(n.shiftDate || '') + ' · ' + esc(n.text || '') + ' · ' + (n.kind === 'hcdone' ? 'accepted by ' : 'declined by ') + esc(n.byName || '') + ' · ' + new Date(n.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</div></div>'; }).join('');
-  var pnCard = (pnState() === 'default' && pnPending().length) ? '<div class="card" style="background:var(--soft);box-shadow:none"><b>Get it on your phone too</b><div class="muted" style="margin:4px 0 8px">Turn on phone alerts and a waiting handover mistake also shows in your phone\'s notification bar while the app is in the background.</div><button class="btn sm" data-act="pnask">Turn on</button></div>' : '';
-  modal('<h2>Alerts</h2>' + cmine + pq + pnCard + hcl + rq + pcr + (list.length ? '<div class="list">' + list.map(function (n) {
-    var canPay = n.kind === 'shortage' && inControl() && !OWNERVIEW && openShortList().some(function (x) { return x.wk === n.wk; });
-    return '<div data-act="ntview" data-id="' + n.id + '" style="cursor:pointer;align-items:center"><div class="grow"><b>' + (n.read ? '' : '<span style="color:var(--exp)">● </span>') + (n.kind === 'correction' ? 'Your ' + esc(n.wk) + ' shift shortage was corrected' : n.kind === 'received' ? 'Your ' + esc(n.wk) + ' shift handover was received, ' + (Array.isArray(NTDIFF[n.sid]) ? (NTDIFF[n.sid].length ? 'nothing short' : 'all matched ✓') : (n.diffs === '' ? 'all matched ✓' : 'nothing short')) : 'Your ' + esc(n.wk) + ' shift was counted short') + '</b><div class="muted">' + esc(n.shiftDate) + ' ' + esc(HL(n.shiftHalf)) + (n.kind === 'correction' ? ' · ' + esc(n.reason || '') + ' · by ' : n.kind === 'received' ? ' · received by ' : ' · counted by ') + esc(n.byName || '') + ' · ' + new Date(n.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</div>' + (n.kind === 'received' ? (function () { ntDiffLoad(n.sid); var dl = NTDIFF[n.sid]; return Array.isArray(dl) ? (dl.length ? '<div style="color:var(--soon);font-size:12px;font-weight:600;margin-top:2px">⚠ ' + dl.map(esc).join('<br>⚠ ') + '</div>' : '') : (n.diffs ? '<div style="color:var(--soon);font-size:12px;font-weight:600;margin-top:2px">⚠ Counted differently: ' + esc(n.diffs) + '</div>' : ''); })() : '') + (n.kind === 'shortage' && inControl() && !OWNERVIEW ? (function () { var ow = openShortList().filter(function (x) { return x.wk === n.wk; })[0]; return ow ? '<div class="muted">' + money(ow.owed) + ' still owed by the ' + esc(n.wk) + ' shift</div>' : '<div class="muted">Nothing owed now</div>'; })() : '') + '</div>' + (n.kind === 'received' || typeof n.total !== 'number' ? '' : '<b style="color:var(--exp)">' + (n.kind === 'correction' ? money(n.before) + ' → ' : '') + money(n.total) + '</b>') + (canPay ? '<button class="btn red sm" data-act="payopen" data-id="' + esc(n.wk) + '" style="margin-left:10px;flex:none">Pay</button>' : '') + '</div>';
-  }).join('') + '</div>' : '<div class="empty">No alerts.</div>') + '<p class="muted">You are told here when the person taking over your shift counts cash or stock short. It is recorded as a shortage against your shift. Tap one to see the details.</p><button class="btn sec block" data-act="close">Close</button>');
-  REFRESH = noticesModal; corrMarkSeen();   /* opening Alerts clears what a President only needs to know about */
-  if (un.length && DB) { var b = writeBatch(DB); un.forEach(function (n) { b.update(ref('notices/' + n.id), { read: true }); }); b.commit().catch(function (e) { console.error(e); }); }
+/* ---------- Alerts: a full page with three tabs: To do (needs your decision), Updates (new, nothing to decide) and Earlier (already seen) ---------- */
+var ALTAB = 'todo', ALNEW = {}, ALLAST = '';
+function alTop() { var t = WPS[WPS.length - 1]; return !!(t && t.fn === alertsPage && $('#spage') && !$('#spage').hidden); }
+function alTime(t) { return new Date(t).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+function alDay(t) { var d = new Date(t), n = new Date(), y = new Date(n.getFullYear(), n.getMonth(), n.getDate() - 1), k = function (x) { return x.getFullYear() + '-' + x.getMonth() + '-' + x.getDate(); }; return k(d) === k(n) ? 'Today' : k(d) === k(y) ? 'Yesterday' : d.toLocaleDateString([], { day: 'numeric', month: 'short' }); }
+function alCard(ic, cls, title, meta, o) {   /* one alert: an icon that says what kind it is, a bold line, a quiet line, and ›. Tap opens it */
+  o = o || {};
+  return '<div class="al' + (o.old ? ' old' : '') + '"' + (o.act ? ' data-act="' + o.act + '" data-id="' + esc(o.id || '') + '" style="cursor:pointer"' : '') + '><div class="ic ' + cls + '">' + ic + '</div><div style="flex:1;min-width:0"><div class="t">' + (o.dot ? '<span class="dot"></span>' : '') + title + '</div><div class="m">' + meta + '</div>' + (o.extra || '') + (o.btn || '') + '</div>' + (o.act && !o.btn ? '<div class="ch">›</div>' : '') + '</div>';
 }
+var AL_REVIEW = '<div class="acts"><button class="btn green" style="flex:1">Review ›</button></div>';
+function alTodo() {   /* what waits for this person's decision */
+  var out = [], pc = pcMine();
+  if (pc) out.push(alCard('🔔', 'r', ({ offer: 'You were offered the president role', vote: 'Vote: change the president', challenge: 'The president is about to change' }[pc]), pcLine(), { act: 'pcview', btn: AL_REVIEW }));
+  if (canApprove()) (S.requests || []).forEach(function (r) { out.push(alCard('👤', 'b', esc(r.name) + ' asked for access', esc(r.watch || '') + (r.at ? ' · ' + alTime(r.at) : '') + ' · waiting for you to accept or decline', { act: 'rqopen', id: r.email, btn: AL_REVIEW })); });
+  if (isPres()) PREQ.filter(function (r) { return r.status === 'pending'; }).forEach(function (r) { out.push(alCard('🏢', 'b', esc(r.name) + ' asks to start a workplace', esc(r.place || '') + (r.at ? ' · ' + new Date(r.at).toLocaleDateString() : ''), { act: 'prlist', btn: AL_REVIEW })); });
+  (S.corrs || []).forEach(function (c) { if (!corrOptional(c) && corrCanDecide(c)) out.push(alCard('✎', 'r', 'Handover mistake: ' + corrBy(c) + ' asks to correct the ' + corrTitle(c) + ' handover', esc(corrLines(c).join(' · ').replace(/<[^>]+>/g, '')) + ' · ' + esc(c.reason || '') + ' · waiting for you to accept or decline', { act: 'corrreview', id: c.id, btn: AL_REVIEW })); });
+  return out;
+}
+function alInfo() {   /* handover mistakes that are only for information, or waiting for someone else */
+  var out = [];
+  (S.corrs || []).forEach(function (c) {
+    if (corrOptional(c)) out.push(alCard('✎', 'b', 'Handover mistake between ' + esc(c.fromName) + ' and ' + esc(c.toName), esc(corrLines(c).join(' · ').replace(/<[^>]+>/g, '')) + ' · ' + esc(c.reason || '') + '<br>For your information. They settle it between them, you do not need to do anything.', { act: 'corrreview', id: c.id }));
+    else if (!corrCanDecide(c) && c.byEmail === EMAIL) out.push(alCard('⏳', 'a', 'Your correction is waiting for ' + esc(corrOther(c)), esc(corrLines(c).join(' · ').replace(/<[^>]+>/g, '')), { act: 'corrreview', id: c.id }));
+  });
+  return out;
+}
+function alNotice(n, old) {
+  var nw = !old, when = alTime(n.at);
+  if (n.kind === 'hcdone' || n.kind === 'hcno') return alCard('✎', n.kind === 'hcdone' ? 'b' : 'a', n.kind === 'hcdone' ? 'Handover corrected' : 'Correction declined', esc(n.wk || '') + ' · ' + esc(n.shiftDate || '') + ' · ' + esc(n.text || '') + ' · ' + (n.kind === 'hcdone' ? 'accepted by ' : 'declined by ') + esc(n.byName || '') + ' · ' + when, { act: 'ntview', id: n.id, old: old, dot: nw });
+  var recv = n.kind === 'received', dl = recv ? (ntDiffLoad(n.sid), NTDIFF[n.sid]) : null, matched = recv && (Array.isArray(dl) ? !dl.length : n.diffs === ''), diffs = recv ? (Array.isArray(dl) ? dl : (n.diffs ? ['Counted differently: ' + n.diffs] : [])) : [];
+  var canPay = n.kind === 'shortage' && inControl() && !OWNERVIEW && openShortList().some(function (x) { return x.wk === n.wk; });
+  var title = n.kind === 'correction' ? 'Your ' + esc(n.wk) + ' shift shortage was corrected' : recv ? 'Your ' + esc(n.wk) + ' shift handover was received, ' + (matched ? 'all matched' : 'nothing short') : 'Your ' + esc(n.wk) + ' shift was counted short' + (typeof n.total === 'number' ? ': ' + money(n.total) : '');
+  var meta = esc(n.shiftDate) + ' ' + esc(HL(n.shiftHalf)) + (n.kind === 'correction' ? ' · ' + esc(n.reason || '') + ' · by ' : recv ? ' · received by ' : ' · counted by ') + esc(n.byName || '') + ' · ' + when;
+  var extra = (diffs.length ? '<div style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px;font-size:13px">' + diffs.map(function (x) { return '<div>⚠ ' + esc(x) + '</div>'; }).join('') + '</div>' : '') +
+    (n.kind === 'shortage' && inControl() && !OWNERVIEW ? (function () { var ow = openShortList().filter(function (x) { return x.wk === n.wk; })[0]; return '<div class="m">' + (ow ? money(ow.owed) + ' still owed by the ' + esc(n.wk) + ' shift' : 'Nothing owed now') + '</div>'; })() : '') +
+    (canPay ? '<div class="acts"><button class="btn red sm" data-act="payopen" data-id="' + esc(n.wk) + '">Pay</button></div>' : '');
+  return alCard(recv ? (matched ? '✓' : '⚠') : n.kind === 'shortage' ? '✗' : '✎', recv ? (matched ? 'g' : 'a') : n.kind === 'shortage' ? 'r' : 'b', title, meta, { act: recv ? '' : 'ntview', id: n.id, old: old, dot: nw, extra: extra });
+}
+function alertsPage(refresh) {
+  var list = (S.notices || []).slice(), un = list.filter(function (x) { return !x.read; });
+  if (!refresh) { ALNEW = {}; }
+  un.forEach(function (x) { ALNEW[x.id] = 1; });
+  var cm = list.filter(function (x) { return !!ALNEW[x.id] || !x.read; }), old = list.filter(function (x) { return !ALNEW[x.id] && x.read; });
+  var todo = alTodo(), info = alInfo();
+  if (!refresh) ALTAB = todo.length ? 'todo' : (cm.length || info.length) ? 'upd' : 'todo';
+  var tabBtn = function (k, label, n) { return '<button data-act="altab" data-v="' + k + '" class="' + (ALTAB === k ? 'on' : '') + '">' + label + (n ? '<i>' + n + '</i>' : '') + '</button>'; }, body;
+  if (ALTAB === 'todo') body = todo.length ? todo.join('') + '<p class="muted" style="text-align:center;margin-top:14px">When you accept or decline, it goes away from here.</p>' : '<div class="card" style="text-align:center;box-shadow:none"><b style="font-size:16px">✓ Nothing waiting for you</b><div class="muted">You are all caught up.</div></div>';
+  else if (ALTAB === 'upd') body = (cm.length ? '<div style="text-align:right;margin:-4px 2px 8px"><a data-act="alseen" style="color:var(--link);font-weight:700;font-size:13px;cursor:pointer">Mark all as seen</a></div>' : '') + info.join('') + cm.map(function (n) { return alNotice(n, false); }).join('') + (cm.length || info.length ? '' : '<div class="card" style="text-align:center;box-shadow:none"><b style="font-size:16px">No new updates</b><div class="muted">Seen alerts are under Earlier.</div></div>') + '<p class="muted" style="margin-top:14px">You are told here when the person taking over your shift counts cash or stock short. It is recorded as a shortage against your shift. Tap one to see the details.</p>';
+  else { var last = ''; body = old.length ? old.map(function (n) { var d = alDay(n.at), h = d !== last ? '<div class="dayh">' + d + '</div>' : ''; last = d; return h + alNotice(n, true); }).join('') : '<div class="card" style="text-align:center;box-shadow:none"><b style="font-size:16px">Nothing here yet</b><div class="muted">Alerts you have seen are kept here.</div></div>'; }
+  var html = '<h2>Alerts</h2><div class="tabs">' + tabBtn('todo', 'To do', todo.length) + tabBtn('upd', 'Updates', cm.length) + tabBtn('old', 'Earlier', 0) + '</div>' + body;
+  var key = ALTAB + '|' + html; if (refresh && key === ALLAST && alTop()) { if (un.length && DB) alRead(un); return; } ALLAST = key;
+  wpPage(alertsPage, [true], html, true);
+  var bl = $('#spage .spbell'); if (bl) bl.remove();   /* this page is the bell */
+  corrMarkSeen(); if (un.length && DB) alRead(un);
+}
+function alRead(un) { var b = writeBatch(DB); un.forEach(function (n) { b.update(ref('notices/' + n.id), { read: true }); }); b.commit().catch(function (e) { console.error(e); }); }   /* opening Alerts clears the number on the bell; they stay under Updates until you leave */
+function noticesModal(refresh) { alertsPage(!!refresh); }
 var SELF = 0;   /* when this phone itself last changed who is in control, so it does not tell itself */
 function controlPopup(title, html) {
   if (!$('#modal')) return;
@@ -2031,7 +2070,7 @@ function toast(m, undoId) {
   t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(function () { t.classList.remove('show'); }, undoId ? 3000 : 2400);
 }
 var REFRESH = null;
-function refreshModal() { var a = document.activeElement; if (REFRESH && !(a && /INPUT|SELECT|TEXTAREA/.test(a.tagName) && $('#modal').contains(a))) REFRESH(); }
+function refreshModal() { if (alTop()) alertsPage(true); var a = document.activeElement; if (REFRESH && !(a && /INPUT|SELECT|TEXTAREA/.test(a.tagName) && $('#modal').contains(a))) REFRESH(); }
 var LASTV = null;
 function closeModal() { REFRESH = null; CONF = null; RX = null; HOVI = -1; LASTV = null; if (UNSUB) { UNSUB(); UNSUB = null; } $('#modal').innerHTML = ''; }
 function modal(html, top) { REFRESH = null; CONF = null; if (UNSUB) { UNSUB(); UNSUB = null; } $('#modal').innerHTML = '<div class="modal' + (top ? ' top' : '') + '" id="mbg"><div>' + html + '</div></div>'; }   /* top: pop-ups with a search box stay at the top so the keyboard never covers the results */
@@ -4884,6 +4923,8 @@ document.addEventListener('click', function (e) {
   else if (a === 'shfixgo') shFixGo(id);
   else if (a === 'notices') noticesModal();
   else if (a === 'bell2') noticesModal();
+  else if (a === 'altab') { ALTAB = b.dataset.v; alertsPage(true); }
+  else if (a === 'alseen') { ALNEW = {}; alertsPage(true); }
   else if (a === 'pnask') pnTap();
   else if (a === 'pnoff') pnTurnOff();
   else if (a === 'pnon') pnTurnOn();
