@@ -271,7 +271,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.79', RULES_VERSION = '2.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.80', RULES_VERSION = '2.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -3146,8 +3146,9 @@ function pnLabel() { var st = pnState(); return st === 'granted' ? (pnIsOff() ? 
 function pnIsOff() { try { return !!localStorage.getItem('sw.alertsoff'); } catch (x) { return false; } }   /* this phone's own switch; the phone's permission itself stays as it is */
 function pnTap() { if (pnState() === 'granted') pnSheet(); else pnAsk(); }
 function pnSheet() {
-  var off = pnIsOff();
-  modal('<h2>📲 Phone alerts</h2><div class="card"><b>' + (off ? 'Off on this phone' : 'On') + '</b><div class="muted" style="margin-top:4px">' + (off ? 'This phone is not told about handovers, mistakes or requests. You still see them in Alerts when you open the app.' : (pushOn() ? 'This phone is told when a handover, a mistake or a request needs you, even when the app is closed.' : 'A waiting handover mistake shows in the phone\'s notification bar while the app is in the background.')) + '</div></div>' +
+  var off = pnIsOff(), warn = '';
+  if (!off && !pushOn() && PUSHCFG) { var pe = ''; try { pe = localStorage.getItem('sw.pusherr') || ''; } catch (x) {} warn = '<div class="card" style="border:2px solid var(--soon);background:var(--soon-bg);box-shadow:none"><b>Alerts with the app closed are not set up on this phone yet</b><div class="muted" style="margin-top:4px">' + (pe ? 'The phone said: <b>' + esc(pe) + '</b>' : 'It tries each time the app opens.') + '</div><button class="btn sm" data-act="pnretry" style="margin-top:8px">Try again</button></div>'; }
+  modal('<h2>📲 Phone alerts</h2><div class="card"><b>' + (off ? 'Off on this phone' : 'On') + '</b><div class="muted" style="margin-top:4px">' + (off ? 'This phone is not told about handovers, mistakes or requests. You still see them in Alerts when you open the app.' : (pushOn() ? 'This phone is told when a handover, a mistake or a request needs you, even when the app is closed.' : 'A waiting handover mistake shows in the phone\'s notification bar while the app is in the background.')) + '</div></div>' + warn +
     (off ? '<button class="btn block" data-act="pnon">Turn on alerts on this phone</button>' : '<button class="btn red block" data-act="pnoff">Turn off alerts on this phone</button><div class="muted" style="font-size:12px;margin:6px 2px 0">This only stops this phone. To block them completely, use the phone\'s own settings for this app.</div>') +
     '<button class="btn sec block" data-act="close" style="margin-top:10px">Close</button>');
 }
@@ -3213,9 +3214,9 @@ function pushRegister() {   /* notifications are allowed: get this phone's push 
     }).then(function (tok) {
       if (!tok) return; var last = ''; try { last = localStorage.getItem('sw.push') || ''; } catch (x) {}
       if (last === EMAIL + ':' + tok) return;
-      return setDoc(doc(DB, 'pushtokens/' + EMAIL + '/d/' + tok.slice(-24).replace(/[^A-Za-z0-9_-]/g, '_')), { token: tok, at: Date.now(), ua: String(navigator.userAgent || '').slice(0, 120) }).then(function () { try { localStorage.setItem('sw.push', EMAIL + ':' + tok); } catch (x) {} if ($('#spage') && !$('#spage').hidden && SPMODE === '') { try { spRender(); } catch (x) {} } });
+      return setDoc(doc(DB, 'pushtokens/' + EMAIL + '/d/' + tok.slice(-24).replace(/[^A-Za-z0-9_-]/g, '_')), { token: tok, at: Date.now(), ua: String(navigator.userAgent || '').slice(0, 120) }).then(function () { try { localStorage.setItem('sw.push', EMAIL + ':' + tok); localStorage.removeItem('sw.pusherr'); } catch (x) {} if ($('#spage') && !$('#spage').hidden && SPMODE === '') { try { spRender(); } catch (x) {} } });
     });
-  }).catch(function (e) { console.error('push', e); });
+  }).catch(function (e) { console.error('push', e); try { localStorage.setItem('sw.pusherr', String((e && (e.code || e.message)) || e).slice(0, 140)); } catch (x) {} });
 }
 function pushNotify(kind, id) {   /* tell the push Worker something now waits for someone: it works out who and sends the push */
   pushCfg().then(function (cfg) {
@@ -4761,6 +4762,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'pnask') pnTap();
   else if (a === 'pnoff') pnTurnOff();
   else if (a === 'pnon') pnTurnOn();
+  else if (a === 'pnretry') { try { localStorage.removeItem('sw.pusherr'); } catch (x) {} PUSHTRIED = true; pushRegister(); toast('Trying…'); setTimeout(function () { if ($('#modal') && /Phone alerts/.test($('#modal').innerText || '')) pnSheet(); }, 3500); }
   else if (a === 'corrstart') corrStart();
   else if (a === 'corrstart2') corrStart2(b.dataset.id);
   else if (a === 'crside') { if (CF && CF.side !== b.dataset.v) { CF.side = b.dataset.v; CF.v = {}; corrForm(); } }
