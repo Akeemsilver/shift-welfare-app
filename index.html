@@ -273,7 +273,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.84', RULES_VERSION = '2.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.85', RULES_VERSION = '2.15';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2042,7 +2042,7 @@ function livePage(fn, title, qs, build) {   /* a full-screen page that stays in 
   HUN = function () { uns.forEach(function (u) { u(); }); };
 }
 function histStop() { if (HUN) { HUN(); HUN = null; } HSHDRAW = null; }
-function histPer() { return HY.tab === 'all' ? 'day' : HY.tab === 'shifts' || HY.tab === 'people' ? 'year' : 'month'; }
+function histPer() { return HY.tab === 'all' ? (Object.keys(HY.types).some(function (k) { return HY.types[k] && k !== 'Handovers'; }) ? 'month' : 'day') : HY.tab === 'shifts' || HY.tab === 'people' ? 'year' : 'month'; }
 function histMonthKey(n) { var t = new Date(); t = new Date(t.getFullYear(), t.getMonth() - n, 1); return t.getFullYear() + '-' + ('0' + (t.getMonth() + 1)).slice(-2); }
 function histMonthName(m) { return new Date(+m.slice(0, 4), +m.slice(5, 7) - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }); }
 function histYearFrom() { return histMonthKey(11); }   /* the oldest month on show: records are kept for a year */
@@ -4934,7 +4934,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'shopen' || a === 'shopen2') histShift(id);
   else if (a === 'hfilter') { modal('<div id="hfs">' + histSheetHtml() + '</div>'); }
   else if (a === 'gotit') { try { localStorage.setItem('sw_note_' + b.dataset.v, String(Date.now())); } catch (x) {} histDraw(); }
-  else if (a === 'ftog') { HY.types[b.dataset.v] = !HY.types[b.dataset.v]; histDraw(); }
+  else if (a === 'ftog') { var per0 = histPer(); HY.types[b.dataset.v] = !HY.types[b.dataset.v]; if (histPer() !== per0) { HY.sid = ''; histPage(); } else histDraw(); }   /* the first type ticked shows the whole month; none ticked is the day again */
   else if (a === 'fshort') { HY.short = b.dataset.v ? b.dataset.v === '1' : !HY.short; histDraw(); }
   else if (a === 'hclear' || a === 'hshowall') { HY.types = {}; HY.short = false; HY.wk = ''; HY.hm = ''; HY.pm = ''; histGo(); if (a === 'hshowall') closeModal(); }
   else if (a === 'hdone') closeModal();
