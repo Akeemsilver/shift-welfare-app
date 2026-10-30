@@ -277,7 +277,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '2.92', RULES_VERSION = '2.16';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '2.93', RULES_VERSION = '2.16';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2207,7 +2207,7 @@ function shKeyOf(sh) { var q = String(sh && sh.date || '').split('/'); return q.
 function histDay() {   /* the shifts that started on the chosen day: the finished ones (their permanent summaries) and the one still running, oldest first */
   var key = dkey(HY.dt), docs = (HSDOCS || []).slice().sort(function (a, b) { return a.at - b.at; }), out = [];
   docs.forEach(function (d, i) { if (shDay(d) === key) out.push({ sid: d.sid || d.id, wk: d.wk, date: d.date, half: d.half, doc: d, prev: docs[i - 1] || null, running: false }); });
-  var cur = S.state && S.state.shift; if (cur && cur.sid && shKeyOf(cur) === key && !out.some(function (x) { return x.sid === cur.sid; })) out.push({ sid: cur.sid, wk: cur.name, date: cur.date, half: cur.half, doc: null, prev: docs[docs.length - 1] || null, running: true });
+  var cur = S.state && S.state.shift; if (cur && cur.sid && (shKeyOf(cur) === key || (shKeyOf(cur) > dkey(histToday()) && key === dkey(histToday()))) && !out.some(function (x) { return x.sid === cur.sid; })) out.push({ sid: cur.sid, wk: cur.name, date: cur.date, half: cur.half, doc: null, prev: docs[docs.length - 1] || null, running: true });   /* a shift recorded for a roster day still ahead (a visiting watch) shows on today */
   else if (cur && cur.sid && shKeyOf(cur) && shKeyOf(cur) < key && key <= dkey(histToday()) && !out.some(function (x) { return x.sid === cur.sid; })) {   /* a shift that started on an earlier day and has not handed over yet: it shows in full (from where it started) on each day until it is handed over */
     var cd = docs.filter(function (d) { return (d.sid || d.id) === cur.sid; })[0], ci = docs.indexOf(cd);
     out.push({ sid: cur.sid, wk: cur.name, date: cur.date, half: cur.half, doc: cd || null, prev: cd ? docs[ci - 1] || null : docs[docs.length - 1] || null, running: true, still: true });
