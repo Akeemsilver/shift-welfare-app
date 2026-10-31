@@ -281,7 +281,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.17', RULES_VERSION = '2.25';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.18', RULES_VERSION = '2.26';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -488,6 +488,8 @@ function sellFrom(i) { return i.shelf ? 'the shelf' : 'the fridge'; }
 function errText(e) { return e && e.code === 'view-only' ? 'View only: you are looking inside this workplace' : e && e.code === 'permission-denied' ? (e.accessHint || 'Not allowed: the database refused this change. Selling, counting and handing over need the person in control. Access, shifts and fixes do not.') : 'Could not save: ' + ((e && e.message) || e); }
 /* permanent daily totals (for Profit): every event adds its effect to the day's summary in the same save, and a cancel takes it out again */
 var DAYQ = [], DF = ['sales', 'cogs', 'items', 'spoil', 'short', 'cshort', 'exp', 'cr', 'ln', 'pd', 'sedit', 'wo'];
+function bizHour() { var h = CFG && CFG.periods && CFG.periods[0] ? +CFG.periods[0].start : 9; return isFinite(h) ? h : 9; }   /* a working day starts when the first shift starts (09:00) and runs 24 hours */
+function bizKey(t) { return dkey(new Date(t - bizHour() * 36e5)); }   /* the working day (YYYY-MM-DD) a moment belongs to */
 var dkey = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
 var r2 = function (n) { return Math.round(n * 100) / 100; };
 function dayDelta(e) {
@@ -513,7 +515,7 @@ function dayFlush(b) {
   var days = {}; var q = DAYQ; DAYQ = [];
   q.forEach(function (x) {
     var e = x.e, d = e.dly ? dayDelta(e) : null; if (!d) return;
-    var k = e.day || dkey(new Date(e.t)), o = days[k] || (days[k] = { last: e.id, w: {}, it: {}, nc: 0 }), ww = o.w[d.wk] || (o.w[d.wk] = {});
+    var k = e.day || bizKey(e.t), o = days[k] || (days[k] = { last: e.id, w: {}, it: {}, nc: 0 }), ww = o.w[d.wk] || (o.w[d.wk] = {});
     for (var f in d.f) ww[f] = (ww[f] || 0) + x.sign * d.f[f];
     if (d.it && d.it.id) { var y = o.it[d.it.id] || (o.it[d.it.id] = { n: 0, p: 0, name: e.name }); y.n += x.sign * d.it.n; y.p += x.sign * d.it.p; }
     o.nc += x.sign * d.nc;
@@ -533,7 +535,7 @@ var EXPY = function () { return Timestamp.fromMillis(Date.now() + 365 * 864e5); 
 var PLQ = [], PLT = { sale: 'credit', cnote: 'credit', pay: 'pay', loan: 'loan', opencredit: 'open' };   /* the small yearly credit lines, written right after the entry is saved */
 function newEv() { LE = newId('events'); DAYQ = []; return LE; }
 function mkEvent(b, type, it, q, amt, extra, given) {
-  var id = given || LE || newId('events'), e = { t: Date.now(), type: type, item: it ? it.id : '', items: it ? [it.id] : [], name: it ? it.name : '', qty: q, amt: amt || 0, sid: SH().sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: SH().name, dly: 1 };
+  var id = given || LE || newId('events'), e = { t: Date.now(), type: type, item: it ? it.id : '', items: it ? [it.id] : [], name: it ? it.name : '', qty: q, amt: amt || 0, sid: SH().sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: SH().name, dly: 1, bd: 1 };
   if (extra) for (var k in extra) e[k] = extra[k];
   if (SETUPT.indexOf(type) >= 0 && startupOn()) { e.su = true; if (e.cogs) e.cogs = 0; }   /* while setting up, an edit is kept but not counted: no miscounts, no profit effect */
   if (type !== 'shiftrec' && type !== 'watchchg' && corrOn()) e.corr = myName();   /* entries made as a correction are marked until the shift changes */
@@ -1235,7 +1237,7 @@ function profitMonth(mo, docs, prevDocs) {
     '<button class="btn sec block" data-act="close">Close</button>';
 }
 function profitModal() {
-  var now = new Date(), q = function (d) { return query(col('daily'), where('month', '==', dkey(d).slice(0, 7))); };
+  var now = new Date(Date.now() - bizHour() * 36e5), q = function (d) { return query(col('daily'), where('month', '==', dkey(d).slice(0, 7))); };
   if (PF.mode === 'short') { var mo2 = new Date(now.getFullYear(), now.getMonth() - PF.off, 1), mk = dkey(mo2).slice(0, 7); livePage(profitModal, 'Profit &amp; loss', [query(col('shortages'), where('month', '==', mk)), query(col('repayments'), where('month', '==', mk)), col('shortages'), col('repayments'), query(col('offsets'), where('month', '==', mk)), col('offsets')], function (ms, mr, as, ar, mo3, ao) { return shortView(mo2, ms, mr, as, ar, mo3, ao); }); return; }
   if (PF.mode === 'day') { var day = new Date(now.getFullYear(), now.getMonth(), now.getDate() - PF.off); livePage(profitModal, 'Profit &amp; loss', q(day), function (docs) { return profitDay(day, docs); }); }
   else { var mo = new Date(now.getFullYear(), now.getMonth() - PF.off, 1), prev = new Date(mo.getFullYear(), mo.getMonth() - 1, 1); livePage(profitModal, 'Profit &amp; loss', [q(mo), q(prev)], function (a, b) { return profitMonth(mo, a, b); }); }
@@ -1362,6 +1364,36 @@ function fixLoad() {   /* every shift that has a summary, and the running one, n
   });
 }
 function fixWhen(x) { return (x.start ? hfmt(x.start) : esc(x.date || '')) + ' → ' + (x.running ? 'now' : x.end ? hfmt(x.end) : ''); }
+/* ---------- the working day runs 09:00 to 09:00: old entries made between midnight and 09:00 were filed under the calendar date; this moves their day totals to the working day they belong to ---------- */
+var RK = null;
+async function rkScan() {
+  var done = {}, mv = [], last = null, since = Date.now() - 400 * 864e5, H = bizHour();
+  (await getDocs(query(col('events'), where('type', '==', 'dayfix')))).docs.forEach(function (d) { (d.data().ids || []).forEach(function (id) { done[id] = 1; }); });
+  for (var pg = 0; pg < 60; pg++) {
+    var q = last ? query(col('events'), where('t', '>=', since), orderBy('t'), startAfter(last), limit(1000)) : query(col('events'), where('t', '>=', since), orderBy('t'), limit(1000));
+    var sn = await getDocs(q); if (sn.empty) break; last = sn.docs[sn.docs.length - 1];
+    sn.docs.forEach(function (d) { var e = d.data(); e.id = d.id; if (e.dly && !e.bd && !e.day && !done[e.id] && !e.su && new Date(e.t).getHours() < H) mv.push(e); });
+    if (sn.size < 1000) break;
+  }
+  return mv;
+}
+function rkPage(go) {
+  if (!fixCan()) return;
+  wpPage(rkPage, [], '<h2>Day totals by working day</h2><div class="empty">' + (go ? 'Updating… keep this screen open.' : 'Checking…') + '</div>');
+  rkScan().then(async function (mv) {
+    var days = {}, sales = 0; mv.forEach(function (e) { days[dkey(new Date(e.t))] = 1; if (e.type === 'sale' || e.type === 'count') sales += e.amt || 0; });
+    var intro = '<p class="muted" style="margin-top:0">A working day runs from ' + ('0' + bizHour()).slice(-2) + ':00 to ' + ('0' + bizHour()).slice(-2) + ':00. Entries made between midnight and ' + ('0' + bizHour()).slice(-2) + ':00 before this update were counted on the calendar day. This moves their totals to the working day they belong to, so Profit &amp; loss matches History. Nothing else changes.</p>';
+    if (!go) return wpPage(rkPage, [], '<h2>Day totals by working day</h2>' + intro + '<div class="card"><div class="list"><div><div class="grow"><b>Entries to move</b></div><b>' + mv.length + '</b></div><div><div class="grow"><b>Days affected</b></div><b>' + Object.keys(days).length + '</b></div><div><div class="grow"><b>Sales moved</b></div><b>' + money(r2(sales)) + '</b></div></div></div>' + (mv.length ? '<button class="btn block" data-act="rkgo">Update now</button>' : '<p><b>✓ Nothing to update.</b> Every day total is already filed by working day.</p>') + '<button class="btn sec block" data-act="fixhub" style="margin-top:8px">Back</button>');
+    mv.sort(function (a, b) { return a.t - b.t; });
+    for (var i = 0; i < mv.length; i += 400) {
+      var ch = mv.slice(i, i + 400), fid = newId('events'), b = writeBatch(DB); DAYQ = [];
+      b.set(ref('events/' + fid), { t: Date.now(), type: 'dayfix', item: '', items: [], name: 'Day totals filed by working day', qty: 0, amt: 0, sid: S.state.shift.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: S.state.shift.name, ids: ch.map(function (e) { return e.id; }), n: ch.length });
+      ch.forEach(function (e) { DAYQ.push({ e: Object.assign({}, e, { id: fid, day: dkey(new Date(e.t)) }), sign: -1 }); DAYQ.push({ e: Object.assign({}, e, { id: fid, day: bizKey(e.t) }), sign: 1 }); });
+      dayFlush(b); await b.commit();
+    }
+    toast(mv.length + ' entries moved'); wpPage(rkPage, [], '<h2>Day totals by working day</h2><div class="card" style="background:var(--ok-bg);border-left:2px solid var(--ok);box-shadow:none"><b style="color:var(--ok)">✓ Done</b><div style="margin-top:4px">' + mv.length + ' entries now count on their working day.</div></div><button class="btn block" data-act="fixhub">Back to Fix mistakes</button>');
+  }).catch(function (e) { console.error(e); wpPage(rkPage, [], '<h2>Day totals by working day</h2><div class="empty">Stopped: ' + esc(/permission/i.test((e && e.code || '') + (e && e.message || '')) ? 'the database refused it. Publish the newest rules (firestore-rules-v' + RULES_VERSION + '.txt) first.' : errText(e)) + '</div><button class="btn sec block" data-act="fixhub">Back</button>'); });
+}
 function fixHub() {
   if (!fixCan()) return;
   wpPage(fixHub, [], '<h2>Fix mistakes</h2><div class="empty">Looking…</div>');
@@ -1369,7 +1401,7 @@ function fixHub() {
     FIXS = list; var bad = list.filter(function (x) { return x.flag; }), reqs = (S.fixreqs || []).filter(function (r) { return r.status === 'open'; });
     wpPage(fixHub, [], '<h2>Fix mistakes</h2><p class="muted" style="margin-top:0">Only the president, the owner and admins can use these. Each fix shows exactly what it will change before it does anything.</p>' +
       (reqs.length ? '<div class="sp-h">People asking for a fix</div>' + reqs.map(fixreqCard).join('') : '') +
-      '<div class="sp-card">' + spRow('🧾', 'Shortages on the wrong shift', 'A shift skipped a handover and the shortage was charged to the wrong one', 'gaplist') + '</div>' +
+      '<div class="sp-card">' + spRow('🧾', 'Shortages on the wrong shift', 'A shift skipped a handover and the shortage was charged to the wrong one', 'gaplist') + spRow('🗓️', 'Day totals by working day', 'Move old totals made before 09:00 to the right working day', 'rkpage') + '</div>' +
       '<div class="sp-h">Shifts recorded under the wrong shift</div>' +
       (bad.length ? bad.sort(function (p, q) { return (p.level === 'likely' ? 0 : 1) - (q.level === 'likely' ? 0 : 1); }).map(function (x) { return '<div class="card" style="border-left:2px solid ' + (x.level === 'likely' ? 'var(--exp)' : 'var(--soon)') + '"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + hdot(x.wk) + ' ' + esc(x.wk) + ' shift</b><span class="pill ' + (x.level === 'likely' ? '' : 'low') + '">' + (x.level === 'likely' ? 'Likely a mistake' : 'Check') + '</span></div><div class="muted" style="margin-top:2px">' + fixWhen(x) + (x.running ? ' · running' : '') + '</div><div style="margin-top:4px">The roster says <b>' + esc(x.ro.wk) + '</b> works then, ' + (x.who.name ? esc(x.who.name) + (x.who.wk ? ' (' + esc(x.who.wk) + ' shift) ' : ' (no shift set) ') + (x.running ? 'is in control' : 'handed it over') + '.' : 'nobody is named.') + (x.level === 'likely' ? ' They are on the rostered shift, so recording for ' + esc(x.wk) + ' is probably a mistake.' : ' It may be a real cover or swap: look before you change it.') + '</div><button class="btn block" data-act="fixopen" data-id="' + esc(x.sid) + '" style="margin-top:10px">Fix this…</button></div>'; }).join('') : '<div class="card" style="box-shadow:none"><div class="muted">✓ Nothing to fix here. A shift is listed only when the shift that should be working is the shift of the person who was in control, but the entries are filed under another shift.</div></div>'));
   }).catch(function (e) { wpPage(fixHub, [], '<h2>Fix mistakes</h2><div class="empty">Could not load: ' + esc(errText(e)) + '</div>'); });
@@ -1390,7 +1422,7 @@ function fixTarget() {   /* the date and half the fixed shift gets: the roster's
 }
 function fixSheet() {
   var F = FIXF, x = F.x, t = fixTarget(), same = F.to === x.wk && t.date === x.date && t.half === x.half, days = {};
-  F.evs.forEach(function (e) { if (e.dly) days[e.day || dkey(new Date(e.t))] = 1; });
+  F.evs.forEach(function (e) { if (e.dly) days[e.day || (e.bd ? bizKey(e.t) : dkey(new Date(e.t)))] = 1; });
   var chg = function (a, b) { return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)"><span>' + a + '</span><b style="text-align:right">' + b + '</b></div>'; }, arrow = esc(x.wk) + ' → ' + esc(F.to);
   var rows = (x.running ? chg('The shift being worked now', arrow) : '') + (F.evs.length ? chg('Entries on this shift (' + F.evs.length + ')', arrow) : '') + (x.doc ? chg('The shift summary (History and Handovers)', arrow + ' · ' + esc(t.date) + ' ' + esc(HL(t.half))) : '') + (F.hos.length ? chg('Handover' + (F.hos.length === 1 ? '' : 's') + ' made from it (' + F.hos.length + ')', arrow) : '') + (F.srt.length ? chg('Shortage record' + (F.srt.length === 1 ? '' : 's') + ' (' + F.srt.length + ')', arrow) : '') + (Object.keys(days).length ? chg('Day totals (' + Object.keys(days).length + (Object.keys(days).length === 1 ? ' day' : ' days') + ')', 'moved ' + arrow) : '');
   wpPage(fixHub, [], '<h2>Fix the shift</h2><div class="card"><div class="muted" style="margin-bottom:8px">Filed as <b>' + esc(x.wk) + ' shift</b> · ' + fixWhen(x) + '</div><label>Correct shift</label>' + seg(WATCHES.map(function (w) { return [w, esc(w)]; }), 'fixwk', F.to, Math.min(WATCHES.length, 4)) + (x.ro ? '<div class="muted" style="margin:6px 2px 8px;font-size:12.5px">' + esc(x.ro.wk) + ' is what the roster says for ' + esc(x.ro.date) + ' (' + esc(HL(x.ro.half)) + ').</div>' : '') + '<div class="fld"><span>Date</span><b>' + esc(t.date) + '</b></div><div class="fld"><span>Half</span><b>' + esc(HL(t.half)) + '</b></div></div>' +
@@ -2453,6 +2485,7 @@ function evRow(e, cancelable) {
   else if (e.type === 'move') { var mvi = item(e.item) || {}; ic = mvi.shelf ? '🧁' : '🧊'; tx = 'Moved ' + uLab(mvi, e.cases) + ' of ' + e.name + ' to ' + (mvi.shelf ? 'shelf' : 'fridge'); sub = e.qty + ' items'; }
   else if (e.type === 'usecash') { ic = '💵'; tx = 'Cash used: ' + e.note; sub = e.receipt ? 'Receipt attached' : 'No receipt: ' + e.noReceipt; amt = '− ' + money(e.amt); col = 'var(--soon)'; }
   else if (e.type === 'offset') { ic = '↔'; tx = e.wk + ' cash short of ' + money(e.amt) + ' paid by a cash surplus found on the ' + e.from + ' shift'; sub = 'no cash moved · recorded by ' + (e.byName || ''); amt = money(e.amt); col = 'var(--ok)'; }
+  else if (e.type === 'dayfix') { ic = '🗓️'; tx = 'Day totals filed by working day'; sub = (e.n || 0) + ' entries · recorded by ' + (e.byName || ''); amt = ''; col = 'var(--soon)'; }
   else if (e.type === 'shiftfix') { ic = '🛠️'; tx = 'Shift corrected: ' + e.from + ' → ' + e.wk; sub = 'by ' + (e.byName || 'the president') + (e.fdate ? ' · the shift of ' + e.fdate : ''); amt = ''; col = 'var(--soon)'; }
   else if (e.type === 'cashshort' && e.gap) { ic = '⚠️'; tx = 'Cash short at handover: recorded against ' + e.wk; sub = 'nobody took the handover on the ' + e.wk + ' shift · counted by ' + (e.byName || 'the receiver'); amt = money(e.amt); col = 'var(--exp)'; }
   else if (e.type === 'cashshort') { ic = '⚠️'; tx = 'Cash counted short at handover'; sub = e.wk + ' watch handed over'; amt = money(e.amt); col = 'var(--exp)'; }
@@ -2480,10 +2513,10 @@ function evRow(e, cancelable) {
 }
 /* ---------- History: one full page. All = the entries of a day or a month, Shifts = the permanent shift summaries (a day, a month or a year), Charts. The Filter is in the top bar ---------- */
 var HY = { tab: 'all', per: 'day', dt: new Date(), types: {}, short: false, wk: '', sid: '', cnt: {}, sper: 'month', pper: 'month', pf: 'all', pq: '', pid: '', pl: null, hm: '', pm: '', cv: 'score', sy: 0, back: false }, HUN = null, HEVS = null, HSDOCS = null, HSD = {}, HYSIG = '';
-var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash']], ['Shortages and repayments', '⚠️', ['cashshort', 'repay', 'offset', 'gapfix']], ['Corrections', '🛠️', ['hocorr', 'shortfix', 'shiftfix']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
+var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash']], ['Shortages and repayments', '⚠️', ['cashshort', 'repay', 'offset', 'gapfix']], ['Corrections', '🛠️', ['hocorr', 'shortfix', 'shiftfix', 'dayfix']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
 function hgroup(e) { if ((e.type === 'adjust' || e.type === 'cageadj') && e.ho) return 'Shortages and repayments'; for (var i = 0; i < HGROUPS.length; i++) if (HGROUPS[i][2].indexOf(e.type) >= 0) return HGROUPS[i][0]; return 'Stock edits by hand'; }
 function histNoon(d) { var x = new Date(d); x.setHours(12, 0, 0, 0); return x; }
-function histToday() { return histNoon(new Date()); }   /* History always opens on today, by the phone's own clock */
+function histToday() { return histNoon(new Date(Date.now() - bizHour() * 36e5)); }   /* History always opens on today, by the phone's own clock */
 function histReset() { CM = false; HY.tab = 'all'; HY.per = 'day'; HY.dt = histToday(); HY.types = {}; HY.short = false; HY.wk = ''; HY.sid = ''; HY.cnt = {}; HY.sper = 'month'; HY.pper = 'month'; HY.pf = 'all'; HY.pq = ''; HY.pid = ''; HY.pl = null; HY.hm = ''; HY.pm = ''; HY.cv = 'score'; HY.sy = 0; HY.back = false; HEVS = null; }
 function livePage(fn, title, qs, build) {   /* a full-screen page that stays in step with the database */
   if (!Array.isArray(qs)) qs = [qs];
@@ -2508,10 +2541,11 @@ function histYearFrom() { return histMonthKey(11); }   /* the oldest month on sh
 function histMo() { return HY.tab === 'shifts' ? HY.hm : HY.tab === 'people' ? HY.pm : ''; }
 function histInMonth(key) { var m = histMo(); return m ? key.slice(0, 7) === m : key.slice(0, 7) >= histYearFrom(); }   /* key: a YYYY-MM-DD day */
 function histSpanWord() { return histMo() ? histMonthName(histMo()) : 'the last 12 months'; }
-function histRange() {   /* the start and end of what is on show, in ms */
-  if (HY.tab === 'shifts' || HY.tab === 'people') { var mo = histMo(), t = new Date(), a = mo ? new Date(+mo.slice(0, 4), +mo.slice(5, 7) - 1, 1) : new Date(t.getFullYear(), t.getMonth() - 11, 1); return { a: a.getTime(), b: mo ? new Date(a.getFullYear(), a.getMonth() + 1, 1).getTime() : new Date(t.getFullYear(), t.getMonth() + 1, 1).getTime() }; }
+function histRange() {   /* the start and end of what is on show, in ms: a working day runs from 09:00 to 09:00 */
+  var H = bizHour();
+  if (HY.tab === 'shifts' || HY.tab === 'people') { var mo = histMo(), t = new Date(Date.now() - H * 36e5), a = mo ? new Date(+mo.slice(0, 4), +mo.slice(5, 7) - 1, 1, H) : new Date(t.getFullYear(), t.getMonth() - 11, 1, H); return { a: a.getTime(), b: mo ? new Date(a.getFullYear(), a.getMonth() + 1, 1, H).getTime() : new Date(t.getFullYear(), t.getMonth() + 1, 1, H).getTime() }; }
   var d = HY.dt, y = d.getFullYear(), m = d.getMonth(), p = histPer();
-  return p === 'day' ? { a: new Date(y, m, d.getDate()).getTime(), b: new Date(y, m, d.getDate() + 1).getTime() } : p === 'month' ? { a: new Date(y, m, 1).getTime(), b: new Date(y, m + 1, 1).getTime() } : { a: new Date(y, 0, 1).getTime(), b: new Date(y + 1, 0, 1).getTime() };
+  return p === 'day' ? { a: new Date(y, m, d.getDate(), H).getTime(), b: new Date(y, m, d.getDate() + 1, H).getTime() } : p === 'month' ? { a: new Date(y, m, 1, H).getTime(), b: new Date(y, m + 1, 1, H).getTime() } : { a: new Date(y, 0, 1, H).getTime(), b: new Date(y + 1, 0, 1, H).getTime() };
 }
 function histStep(n) { HY.sid = ''; var d = HY.dt, y = d.getFullYear(), m = d.getMonth(), p = histPer(); HY.dt = p === 'day' ? histNoon(new Date(y, m, d.getDate() + n)) : p === 'month' ? histNoon(new Date(y, m + n, 1)) : histNoon(new Date(y + n, m, 1)); }
 function histLabel() {
@@ -5720,6 +5754,8 @@ document.addEventListener('click', function (e) {
   else if (a === 'gapmove') gapMove(id);
   else if (a === 'gaplist') gapListPage();
   else if (a === 'fixhub') fixHub();
+  else if (a === 'rkpage') rkPage(false);
+  else if (a === 'rkgo') rkPage(true);
   else if (a === 'fixpick') fixPick();
   else if (a === 'fixopen') fixOpen(id);
   else if (a === 'fixwk') { FIXF.to = b.dataset.v; fixSheet(); }
