@@ -204,7 +204,7 @@ input:disabled{background:var(--dis);color:var(--muted)}
 .hosteps{display:flex;margin:8px 0 4px}.hosteps div{flex:1;text-align:center;font-size:10px;color:var(--muted)}.hosteps i{display:block;width:16px;height:16px;border-radius:50%;margin:0 auto 3px;background:var(--line);color:#fff;font-style:normal;font-size:10px;line-height:16px}.hosteps .d i{background:var(--ok)}.hosteps .n i{background:var(--cnt)}.hosteps .x i{background:var(--exp)}
 .warnbox{background:var(--exp-bg);border:2px solid var(--exp);border-radius:14px;padding:8px 12px;margin-bottom:12px;font-size:13px}.warnbox>b{color:var(--exp)}
 .al{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border-radius:14px;box-shadow:var(--sh);padding:12px;margin-bottom:10px}.al .ic{flex:none;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800}.al .ic.g{background:var(--ok-bg);color:var(--ok)}.al .ic.a{background:var(--soon-bg);color:var(--soon)}.al .ic.r{background:var(--exp-bg);color:var(--exp)}.al .ic.b{background:var(--soft);color:var(--brand)}.al .t{font-weight:700;font-size:14.5px;line-height:1.3}.al .m{color:var(--muted);font-size:12.5px;margin-top:2px}.al .ch{color:var(--muted);font-size:20px;align-self:center}.al.old{box-shadow:none;border:1px solid var(--line);background:transparent}.al.old .t{font-weight:600}.al .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--exp);margin-right:6px}.dayh{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:14px 2px 6px}.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}.tabs button{height:42px;border-radius:12px;border:2px solid var(--secb);background:var(--surface);color:var(--ink);font:inherit;font-weight:700;font-size:14px}.tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand)}.tabs i{font-style:normal;background:var(--exp);color:#fff;border-radius:10px;padding:0 6px;font-size:11px;margin-left:4px}.tabs button.on i{background:#fff;color:var(--exp)}.acts{display:flex;gap:8px;margin-top:10px}.acts .btn{height:38px;font-size:13px;padding:0 14px}.alwait{background:var(--exp);color:#fff;border-radius:12px;padding:2px 10px;font-weight:700;font-size:13px;flex:none}
-.gapmode .rxt tr.rxchg td{background:var(--soft)}.gapmode .rxt tr.rxchg input.rxn{border-color:var(--brand)}.gapmode .rxd{color:var(--brand);font-size:11.5px;white-space:nowrap}
+.gapmode .rxt tr.rxchg td{background:var(--soft)}.gapmode .rxt tr.rxchg input.rxn{border-color:var(--cnt)}.gapmode .rxd{color:var(--cnt);font-size:11.5px;white-space:nowrap}
 .rxopt{display:block;width:100%;text-align:left;border:2px solid var(--secb);background:var(--surface);color:var(--ink);border-radius:14px;padding:11px 14px;margin-bottom:8px;font:inherit;cursor:pointer}.rxopt b{display:block;font-size:15px}.rxopt span{display:block;font-size:12.5px;opacity:.85;margin-top:2px}.rxopt.on{background:var(--brand);border-color:var(--brand);color:#fff}
 .rxt{width:100%;table-layout:fixed;border-collapse:collapse}.rxt th{font-size:10px;text-transform:uppercase;color:var(--muted);padding:3px 2px;text-align:center;line-height:1.25}.rxt th:first-child,.rxt td:first-child{text-align:left}.rxt td{padding:5px 2px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle}.rxt td.rxh{font-size:16px}.rxt input.rxn{box-sizing:border-box;width:62px;height:40px;text-align:center;font-weight:600;padding:0 2px}.rxck{width:20px;height:20px;margin:0;vertical-align:middle}.rxd{font-weight:700;font-size:15px;color:var(--exp)}.rxt tr.rxok td{background:var(--ok-bg)}.rxt tr.rxchg td{background:var(--exp-bg)}.rxt tr.rxchg input.rxn{border:2px solid var(--exp)}.rxt tr.rxnone .rxck{outline:2px solid var(--exp);outline-offset:1px}.rxall{text-align:right;margin-top:8px}.rxall a{color:var(--link);font-weight:700;font-size:14px;cursor:pointer}
 .rxbar{position:sticky;top:-14px;z-index:4;background:var(--soon-bg);border-radius:0;padding:7px 16px;font-size:12px;margin:0 -16px 10px;box-shadow:0 2px 6px rgba(0,0,0,.08)}.rxfoot{position:sticky;bottom:calc(-28px - env(safe-area-inset-bottom));z-index:4;display:flex;align-items:center;gap:10px;background:var(--surface);border-top:1px solid var(--line);margin:12px -16px calc(-28px - env(safe-area-inset-bottom));padding:8px 16px calc(8px + env(safe-area-inset-bottom))}.rxfoot span{font-size:12px;color:var(--muted)}.rxfoot .btn{flex:1.4}.rxfoot .btn.dis{background:#9aa7b2}
@@ -281,7 +281,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.03', RULES_VERSION = '2.20';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.08', RULES_VERSION = '2.21';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1186,7 +1186,7 @@ function trailHtml(trail, shiftWk, handedBy, handedWk) {
   return '<div class="card"><h2>Who held control this shift</h2>' + (rows ? '<div class="list">' + rows + '</div>' : '<div class="muted">One person the whole shift.</div>') + '<div class="muted" style="margin-top:8px">Any shortage stays with the <b style="color:var(--ink)">' + esc(shiftWk) + ' watch</b>, which was on duty.</div></div>';
 }
 /* ---------- notifications: the person who handed over is told when their handover was counted short ---------- */
-function bellN() { try { return (S.notices || []).filter(function (x) { return !x.read; }).length + (pcMine() ? 1 : 0) + (canApprove() ? (S.requests || []).length : 0) + (isPres() ? pReqCount() : 0) + corrBellCount(); } catch (e) { return 0; } }   /* never lets a page fail to draw because the bell could not be counted yet */
+function bellN() { try { return (S.notices || []).filter(function (x) { return !x.read; }).length + (pcMine() ? 1 : 0) + (canApprove() ? (S.requests || []).length : 0) + (isPres() ? pReqCount() : 0) + corrBellCount() + mvBellCount(); } catch (e) { return 0; } }   /* never lets a page fail to draw because the bell could not be counted yet */
 var BELLSVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>';
 function bellHtml() { var n = bellN(); return n ? '<button class="spbell" data-act="bell2" aria-label="Alerts">' + BELLSVG + '<i>' + (n > 9 ? '9+' : n) + '</i></button>' : ''; }   /* on a full-screen page the header bell is hidden, so the bell comes with it while something waits */
 function spBellSync(n) {
@@ -1210,16 +1210,75 @@ function alCard(ic, cls, title, meta, o) {   /* one alert: an icon that says wha
   return '<div class="al' + (o.old ? ' old' : '') + '"' + (o.act ? ' data-act="' + o.act + '" data-id="' + esc(o.id || '') + '" style="cursor:pointer"' : '') + '><div class="ic ' + cls + '">' + ic + '</div><div style="flex:1;min-width:0"><div class="t">' + (o.dot ? '<span class="dot"></span>' : '') + title + '</div><div class="m">' + meta + '</div>' + (o.extra || '') + (o.btn || '') + '</div>' + (o.act && !o.btn ? '<div class="ch">›</div>' : '') + '</div>';
 }
 var AL_REVIEW = '<div class="acts"><button class="btn green" style="flex:1">Review ›</button></div>';
+/* ---------- someone covered a shift that is not theirs on the people list, or changed their own shift: the owner / presidents are asked or told ---------- */
+var ALMV = {};
+function mvKey(t) { return String(t || '').toLowerCase().replace(/[^a-z0-9]/g, '_'); }
+function mvOpen() { return canAdmin() && !OWNERVIEW ? (S.moves || []).filter(function (m) { return m.kind === 'cover' && m.status === 'open'; }) : []; }
+function mvSeen(id) { try { return !!localStorage.getItem('sw.mv.' + id); } catch (e) { return true; } }
+function mvInfoList() {   /* what is only for information: an answered cover, and a person who changed their own shift (not shown to the person themself) */
+  if (!canAdmin() || OWNERVIEW) return [];
+  return (S.moves || []).filter(function (m) { return (m.kind === 'chg' || m.status !== 'open') && m.email !== EMAIL && m.decidedBy !== EMAIL && (!mvSeen(m.id) || ALMV[m.id]); });
+}
+function mvBellCount() { return mvOpen().length + mvInfoList().filter(function (m) { return !ALMV[m.id]; }).length; }
+function mvMarkSeen() { var any = false; mvInfoList().forEach(function (m) { ALMV[m.id] = 1; if (!mvSeen(m.id)) { try { localStorage.setItem('sw.mv.' + m.id, '1'); any = true; } catch (x) {} } }); if (any) updateBell(); }
+function mvCard(m) {
+  var rem = Date.now() - (m.at || 0) > 864e5;
+  return alCard('👤', 'a', (rem ? 'Reminder: ' : '') + esc(m.name) + ' took over for ' + esc(m.to), 'On the people list as ' + esc(m.from || 'no shift') + '. ' + alTime(m.at) + '. Should ' + esc(m.name) + ' be on ' + esc(m.to) + '?',
+    { btn: '<div class="acts" style="flex-wrap:wrap"><button class="btn green" style="flex:1;min-width:100%" data-act="mvmove" data-id="' + esc(m.id) + '">Move to ' + esc(m.to) + '</button><button class="btn sec" style="flex:1" data-act="mvtoday" data-id="' + esc(m.id) + '">Just for today</button><button class="btn sec" style="flex:1" data-act="mvnot" data-id="' + esc(m.id) + '">Not now</button></div>' });
+}
+function mvInfoCard(m) {
+  var by = esc(m.decidedByName || 'An admin'), at = m.decidedAt ? alTime(m.decidedAt) : alTime(m.at);
+  if (m.kind === 'chg') return alCard('👤', 'b', esc(m.name) + ' changed their shift', esc(m.from || 'no shift') + ' → ' + esc(m.to) + ' · ' + alTime(m.at) + '. Changed in My info. Earlier handovers are not changed. To undo, change it in People.');
+  if (m.status === 'moved') return alCard('✓', 'b', esc(m.name) + ' moved to ' + esc(m.to), 'Done by ' + by + ' · ' + at + '. Counted as ' + esc(m.to) + ' from now on. Earlier handovers are not changed.');
+  if (m.status === 'today') return alCard('✓', 'b', esc(m.name) + ' covered ' + esc(m.to) + ', just for today', 'Answered by ' + by + ' · ' + at + '. Nothing was changed.');
+  return alCard('✓', 'b', esc(m.name) + ' stays on ' + esc(m.from || 'their shift'), 'Answered by ' + by + ' · ' + at + '. The next time they cover ' + esc(m.to) + ' you will be asked again.');
+}
+function mvDecide(id, st) {
+  var m = (S.moves || []).filter(function (x) { return x.id === id; })[0]; if (!m || m.status !== 'open' || !canAdmin()) return;
+  var b = writeBatch(DB); b.update(ref('shiftmoves/' + id), { status: st, decidedBy: EMAIL, decidedByName: myName(), decidedAt: Date.now() });
+  if (st === 'moved' && m.personId) { var pe = person(m.personId); b.update(ref('people/' + m.personId), { watch: m.to }); b.set(ref('names/' + m.personId), { name: pe ? pe.name : m.name, watch: m.to }); }
+  b.commit().then(function () { toast(st === 'moved' ? m.name + ' is now on ' + m.to : st === 'today' ? 'Just for today. Nothing changed.' : 'Not now. Nothing changed.'); }).catch(function (e) { console.error(e); toast(errText(e)); });
+}
+function mvCover(GP, h) {   /* after a handover is accepted as a shift that is not mine on the people list: ask the owner / presidents once a day for each person and shift (not for covering the shift on duty) */
+  try {
+    var mp = M && M.personId ? person(M.personId) : null; if (!mp || !GP || !GP.mw || !GP.rwk || GP.rwk === GP.mw || GP.rwk === GP.cw || OWNERVIEW) return;
+    var day = dkey(new Date()), id = 'cv_' + mvKey(EMAIL) + '_' + day.replace(/-/g, '') + '_' + mvKey(GP.rwk);
+    _setDoc(ref('shiftmoves/' + id), { kind: 'cover', status: 'open', read: false, email: EMAIL, name: mp.name || myName(), personId: mp.id, from: mp.watch || '', to: GP.rwk, hid: h.id || '', at: Date.now(), day: day, expireAt: EXPY() }).catch(function () {});   /* a second cover the same day is refused: that is the once a day */
+  } catch (e) { console.error(e); }
+}
+/* ---------- My info: my own rank (typed) and shift. The name and number are locked: only an admin or the president can change them ---------- */
+var MI = { rank: '', watch: '' };
+function myInfoPage(keep) {
+  var mp = M && M.personId ? person(M.personId) : null;
+  if (!mp) return wpPage(myInfoPage, [], '<h2>My info</h2><div class="card"><div class="muted">Choose your name first. Then you can set your rank and shift here.</div><button class="btn block" data-act="whoopen" style="margin-top:10px">Choose my name</button></div>');
+  if (keep !== true) MI = { rank: mp.rank || '', watch: mp.watch || '' };
+  var lk = function (l, v) { return '<div class="fld" style="opacity:.85"><span>' + l + '</span><b>' + esc(v || '—') + ' 🔒</b></div>'; };
+  wpPage(myInfoPage, [true], '<h2>My info</h2><div class="card">' + lk('Name', mp.name) + (useNo() ? lk(SU.noLabel || 'Number', mp.no) : '') + '<div class="muted" style="margin:2px 2px 12px;font-size:12.5px">🔒 Only an admin or the president can change your name or number.</div>' +
+    (useRank() ? '<label>Rank</label><input id="mi-rank" maxlength="20" value="' + esc(MI.rank) + '" placeholder="Type your rank" autocomplete="off">' : '') +
+    '<label style="margin-top:14px">Shift</label>' + seg(WATCHES.map(function (w) { return [w, esc(w)]; }), 'miwatch', MI.watch, Math.min(WATCHES.length, 4)) +
+    '<div class="muted" style="margin:10px 2px 0;font-size:12.5px">Changing your shift applies from now on. Earlier handovers keep the shift they were recorded under. The president and admins are told.</div><button class="btn block" data-act="misave" style="margin-top:14px">Save</button></div>', true);
+}
+function myInfoSave() {
+  var mp = M && M.personId ? person(M.personId) : null; if (!mp || OWNERVIEW) return;
+  var rank = $('#mi-rank') ? String($('#mi-rank').value || '').trim().slice(0, 20) : String(mp.rank || ''), watch = MI.watch || mp.watch || '', ch = watch !== (mp.watch || ''), rc = rank !== (mp.rank || ''), upd = {};
+  if (!ch && !rc) return toast('Nothing changed');
+  if (rc) upd.rank = rank; if (ch) upd.watch = watch;
+  var b = writeBatch(DB); b.update(ref('people/' + mp.id), upd);
+  if (ch) b.set(ref('shiftmoves/ch_' + Date.now() + '_' + mvKey(EMAIL)), { kind: 'chg', status: 'done', read: false, email: EMAIL, name: mp.name || myName(), personId: mp.id, from: mp.watch || '', to: watch, at: Date.now(), day: dkey(new Date()), expireAt: EXPY() });
+  b.commit().then(function () { toast(ch ? 'Saved. You are now on the ' + watch + ' shift. The president and admins have been told.' : 'Saved'); }).catch(function (e) { console.error(e); toast(errText(e)); });
+}
 function alTodo() {   /* what waits for this person's decision */
   var out = [], pc = pcMine();
   if (pc) out.push(alCard('🔔', 'r', ({ offer: 'You were offered the president role', vote: 'Vote: change the president', challenge: 'The president is about to change' }[pc]), pcLine(), { act: 'pcview', btn: AL_REVIEW }));
   if (canApprove()) (S.requests || []).forEach(function (r) { out.push(alCard('👤', 'b', esc(r.name) + ' asked for access', esc(r.watch || '') + (r.at ? ' · ' + alTime(r.at) : '') + ' · waiting for you to accept or decline', { act: 'rqopen', id: r.email, btn: AL_REVIEW })); });
   if (isPres()) PREQ.filter(function (r) { return r.status === 'pending'; }).forEach(function (r) { out.push(alCard('🏢', 'b', esc(r.name) + ' asks to start a workplace', esc(r.place || '') + (r.at ? ' · ' + new Date(r.at).toLocaleDateString() : ''), { act: 'prlist', btn: AL_REVIEW })); });
+  mvOpen().forEach(function (m) { out.push(mvCard(m)); });
   (S.corrs || []).forEach(function (c) { if (!corrOptional(c) && corrCanDecide(c)) out.push(alCard('✎', 'r', 'Handover mistake: ' + corrBy(c) + ' asks to correct the ' + corrTitle(c) + ' handover', esc(corrLines(c).join(' · ').replace(/<[^>]+>/g, '')) + ' · ' + esc(c.reason || '') + ' · waiting for you to accept or decline', { act: 'corrreview', id: c.id, btn: AL_REVIEW })); });
   return out;
 }
 function alInfo() {   /* handover mistakes that are only for information, or waiting for someone else */
   var out = [];
+  mvInfoList().forEach(function (m) { ALMV[m.id] = 1; out.push(mvInfoCard(m)); });
   (S.corrs || []).forEach(function (c) {
     if (corrOptional(c)) out.push(alCard('✎', 'b', 'Handover mistake between ' + esc(c.fromName) + ' and ' + esc(c.toName), esc(corrLines(c).join(' · ').replace(/<[^>]+>/g, '')) + ' · ' + esc(c.reason || '') + '<br>For your information. They settle it between them, you do not need to do anything.', { act: 'corrreview', id: c.id }));
     else if (!corrCanDecide(c) && c.byEmail === EMAIL) out.push(alCard('⏳', 'a', 'Your correction is waiting for ' + esc(corrOther(c)), esc(corrLines(c).join(' · ').replace(/<[^>]+>/g, '')), { act: 'corrreview', id: c.id }));
@@ -1240,7 +1299,7 @@ function alNotice(n, old) {
 }
 function alertsPage(refresh) {
   var list = (S.notices || []).slice(), un = list.filter(function (x) { return !x.read; });
-  if (!refresh) { ALNEW = {}; }
+  if (!refresh) { ALNEW = {}; ALMV = {}; }
   un.forEach(function (x) { ALNEW[x.id] = 1; });
   var cm = list.filter(function (x) { return !!ALNEW[x.id] || !x.read; }), old = list.filter(function (x) { return !ALNEW[x.id] && x.read; });
   var todo = alTodo(), info = alInfo();
@@ -1253,7 +1312,7 @@ function alertsPage(refresh) {
   var key = ALTAB + '|' + html; if (refresh && key === ALLAST && alTop()) { if (un.length && DB) alRead(un); return; } ALLAST = key;
   wpPage(alertsPage, [true], html, true);
   var bl = $('#spage .spbell'); if (bl) bl.remove();   /* this page is the bell */
-  corrMarkSeen(); if (un.length && DB) alRead(un);
+  corrMarkSeen(); mvMarkSeen(); if (un.length && DB) alRead(un);
 }
 function alRead(un) { var b = writeBatch(DB); un.forEach(function (n) { b.update(ref('notices/' + n.id), { read: true }); }); b.commit().catch(function (e) { console.error(e); }); }   /* opening Alerts clears the number on the bell; they stay under Updates until you leave */
 function noticesModal(refresh) { alertsPage(!!refresh); }
@@ -2251,6 +2310,26 @@ function gapTotalHtml(d, gp, giver) {   /* the gap in totals: what was sold, wha
   var kv = function (l, v) { return '<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0"><span>' + l + '</span><b>' + v + '</b></div>'; }, n = gapUnits(d), handed = gp.cashHanded != null ? gp.cashHanded : (d.counted || 0);
   return '<div class="card" style="box-shadow:none;background:var(--soft);padding:10px 12px;margin:10px 0"><b>Total for this handover (with the gap)</b><div style="margin-top:6px;font-size:13.5px">' + kv('Items sold while nobody took it', n + (n === 1 ? ' item' : ' items') + ' · ' + money(gp.gapSales || 0)) + kv('Cash ' + esc(giver) + ' handed over', money(handed)) + kv('Cash that should be there', money(gp.cashExpected != null ? gp.cashExpected : r2(handed + (gp.gapSales || 0)))) + kv('Cash counted', money(gp.cashCounted != null ? gp.cashCounted : d.receivedCash || 0)) + '<div style="border-top:1px solid var(--line);margin:6px 0"></div>' + (gp.cashShort > 0 ? '<div style="color:var(--exp);font-weight:700">Cash short ' + money(gp.cashShort) + ': the ' + esc(gp.wk) + ' shift owes it</div>' : gp.cashOver > 0 ? '<div style="color:var(--soon);font-weight:700">Cash over ' + money(gp.cashOver) + ': recorded as ' + esc(gp.wk) + '\'s surplus</div>' : '<div style="color:var(--ok);font-weight:700">The cash balanced</div>') + '</div></div>';
 }
+function spentOf(d, evs) {   /* the money spent on a shift: cash used and purchases paid in cash (the reasons come from the entries when they are loaded) */
+  var sid = d.sid || d.id, used = d.used || 0, purch = d.purch || 0;
+  var lines = (evs || HEVS || []).filter(function (e) { return e.sid === sid && (e.type === 'usecash' || (e.type === 'buy' && e.amt > 0)); }).sort(function (a, b) { return a.t - b.t; }).map(function (e) {
+    return e.type === 'usecash' ? { txt: 'Cash used: ' + (e.note || ''), sub: (e.receipt ? 'Receipt attached' : 'No receipt' + (e.noReceipt ? ': ' + e.noReceipt : '')), amt: e.amt } : { txt: 'Bought ' + buyText(e), sub: e.supplier || '', amt: e.amt };
+  });
+  return { total: r2(used + purch), used: used, purch: purch, lines: lines };
+}
+function spentHtml(d, evs) {   /* "Money spent" for a handover: the total, and what it was for */
+  var sp = spentOf(d, evs); if (!(sp.total > 0)) return '';
+  var tr = function (txt, sub, amt) { return '<tr><td style="padding:4px 8px 4px 0;vertical-align:top">' + esc(txt) + (sub ? '<div class="muted" style="font-size:12px">' + esc(sub) + '</div>' : '') + '</td><td style="padding:4px 0;text-align:right;white-space:nowrap;vertical-align:top;font-weight:700;color:var(--soon)">− ' + money(amt) + '</td></tr>'; };
+  var rows = sp.lines.length ? sp.lines.map(function (l) { return tr(l.txt, l.sub, l.amt); }).join('') : (sp.used ? tr('Cash used', '', sp.used) : '') + (sp.purch ? tr('Purchases paid in cash', '', sp.purch) : '');
+  return '<div class="card spentbox" style="box-shadow:none;background:var(--soon-bg);border-left:2px solid var(--soon);margin:8px 0"><table style="width:100%;border-collapse:collapse"><tr><td style="padding:0 8px 4px 0"><b>💵 Money spent this shift</b></td><td style="padding:0 0 4px;text-align:right"><b>' + money(sp.total) + '</b></td></tr>' + rows + '</table><div class="muted" style="font-size:12px;margin-top:2px">Taken out of the cash before the handover, so it is not part of the cash counted.</div></div>';
+}
+function spentLoad(d) {   /* the entries of an older shift are not loaded: fetch just this shift's, then say what the money was for */
+  if (!(spentOf(d).total > 0) || spentOf(d).lines.length) return;
+  getDocs(query(col('events'), where('sid', '==', d.sid || d.id))).then(function (sn) {
+    var evs = sn.docs.map(function (x) { return Object.assign({ id: x.id }, x.data()); }), el = document.querySelector('#modal .spentbox, #spage .spentbox'); if (!el || !spentOf(d, evs).lines.length) return;
+    el.outerHTML = spentHtml(d, evs);
+  }).catch(function (e) { console.error(e); });
+}
 function hoSheet(id, kind, wk2) {   /* the short handover pop-up: who, the result in one sentence, what differs, who owes, remarks */
   var d = HSD[id] || (HSDOCS || []).filter(function (x) { return x.id === id; })[0]; if (!d) return;
   var acc = d.status === 'accepted', giver = d.fromName || 'A member', recvName = d.receivedByName || (d.toLabels || []).join(', ') || 'the next shift', rwk = wk2 || (d.receivedBy ? whoOf(d.receivedBy).wk : '');
@@ -2263,13 +2342,15 @@ function hoSheet(id, kind, wk2) {   /* the short handover pop-up: who, the resul
     : '<div class="hbox good"><b>✓ Nothing short</b><br>' + esc(recvName) + ' counted the same as ' + esc(giver) + ' handed over.</div>';
   var tr = function (n, a, b, df, col) { return '<tr><td>' + n + '</td><td>' + a + '</td><td>' + b + '</td><td style="font-weight:700;color:' + col + '">' + df + '</td></tr>'; };
   var tbl = '<table class="htbl"><tr><th></th><th>' + esc(d.wk) + '<br>handed over</th><th>' + esc(rwk || 'Next') + '<br>counted</th><th>Difference</th></tr>' + tr('Cash', money(d.counted), acc ? money(d.receivedCash) : '–', !acc ? '–' : cashOk ? '✓' : (cashDiff > 0 ? '+' : '−') + money(Math.abs(cashDiff)), !acc ? 'var(--muted)' : cashOk ? 'var(--ok)' : 'var(--exp)') +
-    diffs.map(function (x) { var df = x[2] - x[1]; return tr(x[0], x[1], x[2], (df > 0 ? '+' : '−') + Math.abs(df) + (gp && df < 0 ? ' sold' : ''), gp ? 'var(--brand)' : 'var(--exp)'); }).join('') + '</table>' + (acc && !diffs.length ? '<div style="font-size:13px;color:var(--ok);margin:2px 0 4px">✓ All items were counted correctly.</div>' : acc ? '<div style="font-size:13px;color:var(--ok);margin:2px 0 4px">✓ All other items were counted correctly.</div>' : '') + (gp ? gapTotalHtml(d, gp, giver) : '');   /* "all items" only when nothing differed, otherwise "all other items" */
+    diffs.map(function (x) { var df = x[2] - x[1]; return tr(x[0], x[1], x[2], (df > 0 ? '+' : '−') + Math.abs(df) + (gp && df < 0 ? ' sold' : ''), gp ? 'var(--cnt)' : 'var(--exp)'); }).join('') + '</table>' + (acc && !diffs.length ? '<div style="font-size:13px;color:var(--ok);margin:2px 0 4px">✓ All items were counted correctly.</div>' : acc ? '<div style="font-size:13px;color:var(--ok);margin:2px 0 4px">✓ All other items were counted correctly.</div>' : '') + (gp ? gapTotalHtml(d, gp, giver) : '');   /* "all items" only when nothing differed, otherwise "all other items" */
   var owed = (d.owedBy || []), tot = r2(owed.reduce(function (a, x) { return a + x.bal; }, 0));
   modal('<h2 style="margin:0 0 4px">🔁 ' + (kind === 'recv' ? 'Handover received from ' + esc(giver) : 'Handed over to ' + esc(recvName)) + '</h2><div style="margin:4px 0 8px">' + wsw(d.wk) + ' <b>→</b> ' + (rwk ? wsw(rwk) : '<span class="muted">next shift</span>') + '</div>' +
     '<div class="hkv"><span>Handed over by</span><b>' + esc(giver) + ' <span class="muted">(' + esc(d.wk) + ' shift)</span></b></div><div class="hkv"><span>' + (acc ? 'Received and counted by' : 'To be counted by') + '</span><b>' + esc(recvName) + (rwk ? ' <span class="muted">(' + esc(rwk) + ' shift)</span>' : '') + '</b></div><div class="hkv"><span>' + (acc ? 'When' : 'Handed over') + '</span><b>' + (kind === 'recv' && d.receivedAt ? hfmt(d.receivedAt) : hfmt(d.at) + (acc && d.receivedAt ? ' · accepted ' + hhmm(d.receivedAt) : '')) + '</b></div>' + box + tbl +
+    spentHtml(d) +
     (d.notes ? '<div style="margin:8px 0 2px;padding:9px 12px;border-radius:12px;background:var(--soft);font-size:13.5px"><span class="muted" style="font-size:12px">Remarks · ' + esc(giver) + '</span><div>' + esc(d.notes) + '</div></div>' : '') +
     '<div style="margin:10px 0 2px;font-weight:700;font-size:13.5px">Who owes on credit</div>' + (owed.length ? owed.map(function (x) { return '<div class="hkv"><span>' + esc(x.label) + '</span><b>' + money(x.bal) + '</b></div>'; }).join('') + '<div class="hkv"><span><b style="color:var(--ink)">Total</b></span><b>' + money(tot) + '</b></div>' : '<div class="muted">Nobody owed anything on credit.</div>') +
     '<button class="btn block" data-act="close" style="margin-top:10px">Close</button><button class="btn sec block" data-act="shopen" data-id="' + esc(d.id) + '" style="margin-top:8px">Open the full handover record ›</button>' + (corrShow(d) ? '<button class="btn red block" data-act="corrstart2" data-id="' + esc(d.id) + '" style="margin-top:8px">✎ Handover mistake</button>' : ''));
+  spentLoad(d);
 }
 function evSheet(id) {   /* a payment, credit or loan: who, how much, when, and what is still owed */
   var e = HEV[id]; if (!e) return; var who = e.crName || plab(e.person || e.cr), bal = balance(e.person || e.cr || ''), kv = function (l, v) { return '<div class="hkv"><span>' + l + '</span><b>' + v + '</b></div>'; };
@@ -2356,7 +2437,9 @@ function hoRowHtml(h) {   /* "Handover received from X" and "Handed over to Y" *
   var res = st.k === 'short' ? bits : st.k === 'over' ? 'counted more than handed over' : st.k === 'ok' ? (st.gap ? '✓ matched (after a gap)' : '✓ nothing short') : 'waiting to be counted';
   var amt = st.k === 'short' ? (st.c.cashDiff < 0 ? 'Short ' + money(-st.c.cashDiff) : ni + (ni === 1 ? ' item' : ' items')) : st.k === 'over' ? 'Over' : st.k === 'ok' ? '✓' : '', col = st.k === 'short' ? 'var(--exp)' : st.k === 'over' ? 'var(--soon)' : 'var(--ok)';
   var hl = st.k === 'short' ? ' style="cursor:pointer;background:var(--exp-bg);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px;box-shadow:inset 2px 0 0 var(--exp)"' : ' style="cursor:pointer"';
-  return '<div data-act="hosheet" data-id="' + esc(d.id) + '" data-k="' + h.kind + '" data-wk="' + esc(rwk || '') + '"' + hl + '><span style="font-size:18px;width:26px;flex:none;text-align:center">🔁</span><div class="grow"><b>' + (recv ? 'Handover received from ' : 'Handed over to ') + esc(who) + '</b><div class="muted">' + hfmt(h.t) + ' · ' + esc(d.wk) + ' → ' + esc(rwk || '') + ' · ' + res + '</div></div><b style="color:' + col + ';white-space:nowrap">' + amt + '</b></div>';
+  var lk = !!d.locked, opened = !!d.receivedByName, hoTitle = lk ? (recv ? 'Opened a locked handover from ' + esc(who) : opened ? (st.gap ? 'Left locked, no one took it until ' + esc(d.receivedByName) + ' opened it' : 'Left locked, opened by ' + esc(d.receivedByName)) : 'Left locked, waiting for the next shift to open it') : (recv ? 'Handover received from ' : 'Handed over to ') + esc(who);
+  var hoExtra = lk ? (recv ? ' · left locked at ' + hhmm(d.at) : opened ? ' · opened ' + (d.receivedAt ? hhmm(d.receivedAt) : '') : ' · not opened yet') : '';
+  return '<div data-act="hosheet" data-id="' + esc(d.id) + '" data-k="' + h.kind + '" data-wk="' + esc(rwk || '') + '"' + hl + '><span style="font-size:18px;width:26px;flex:none;text-align:center">🔁</span><div class="grow"><b>' + hoTitle + '</b><div class="muted">' + hfmt(h.t) + ' · ' + esc(d.wk) + ' → ' + esc(rwk || '') + hoExtra + ' · ' + res + (!recv && spentOf(d).total > 0 ? ' · spent ' + money(spentOf(d).total) : '') + '</div></div><b style="color:' + col + ';white-space:nowrap">' + amt + '</b></div>';
 }
 var HSETUP = ['opening', 'newitem', 'edit', 'remove', 'costfill', 'opencredit'];
 
@@ -2448,7 +2531,7 @@ function histHoCard(d, asc) {
   var st = hoShort(d), c = st.c, recvName = d.receivedByName || (d.toLabels || []).join(', ') || 'the next shift', rwk = d.receivedBy ? whoOf(d.receivedBy).wk : '';
   var chip = function (t, col, bg) { return '<span style="background:' + bg + ';color:' + col + ';padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700;white-space:nowrap">' + t + '</span>'; };
   var ch = st.k === 'short' ? chip(c.cashDiff < 0 ? 'short ' + money(-c.cashDiff) : c.less + (c.less === 1 ? ' item' : ' items') + ' short', 'var(--exp)', 'var(--exp-bg)') : st.k === 'over' ? chip('over', 'var(--soon)', 'var(--soon-bg)') : st.k === 'ok' ? chip('✓ matched', 'var(--ok)', 'var(--ok-bg)') : chip('waiting', 'var(--muted)', 'var(--soft)');
-  return '<div class="card" data-act="hosheet" data-id="' + esc(d.id) + '" data-k="give" data-wk="' + esc(rwk) + '" style="cursor:pointer;margin:0 0 10px;padding:12px 14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="min-width:0">' + wsw(d.wk) + ' <span style="font-size:12.5px">' + histSpan(d, asc) + '</span></div>' + ch + '</div><div class="muted" style="margin-top:6px;font-size:13px">' + esc(d.fromName || '') + ' → ' + esc(recvName) + (st.k === 'wait' ? ' · waiting to be counted' : '') + '</div><div style="display:flex;gap:18px;margin-top:8px;font-size:13px"><span><span class="muted">Sales</span> <b>' + money(d.sales || 0) + '</b></span><span><span class="muted">Cash counted</span> <b>' + money(d.counted || 0) + '</b></span></div>' + (st.gap ? '<div style="margin-top:8px;padding:7px 10px;border-radius:10px;background:var(--soon-bg);font-size:12.5px"><b>Gap:</b> the ' + esc(st.gap.wk) + ' shift never took it. Sold ' + money(st.gap.gapSales || 0) + (st.gap.cashShort > 0 ? ', cash short ' + money(st.gap.cashShort) : st.gap.cashOver > 0 ? ', cash over ' + money(st.gap.cashOver) : ', cash balanced') + ', recorded on ' + esc(st.gap.wk) + '.</div>' : '') + '</div>';
+  return '<div class="card" data-act="hosheet" data-id="' + esc(d.id) + '" data-k="give" data-wk="' + esc(rwk) + '" style="cursor:pointer;margin:0 0 10px;padding:12px 14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="min-width:0">' + wsw(d.wk) + ' <span style="font-size:12.5px">' + histSpan(d, asc) + '</span></div>' + ch + '</div><div class="muted" style="margin-top:6px;font-size:13px">' + esc(d.fromName || '') + ' → ' + esc(recvName) + (st.k === 'wait' ? ' · waiting to be counted' : '') + '</div><div style="display:flex;gap:18px;margin-top:8px;font-size:13px"><span><span class="muted">Sales</span> <b>' + money(d.sales || 0) + '</b></span><span><span class="muted">Cash counted</span> <b>' + money(d.counted || 0) + '</b></span>' + (spentOf(d).total > 0 ? '<span><span class="muted">Spent</span> <b style="color:var(--soon)">' + money(spentOf(d).total) + '</b></span>' : '') + '</div>' + (st.gap ? '<div style="margin-top:8px;padding:7px 10px;border-radius:10px;background:var(--soon-bg);font-size:12.5px"><b>Gap:</b> the ' + esc(st.gap.wk) + ' shift never took it. Sold ' + money(st.gap.gapSales || 0) + (st.gap.cashShort > 0 ? ', cash short ' + money(st.gap.cashShort) : st.gap.cashOver > 0 ? ', cash over ' + money(st.gap.cashOver) : ', cash balanced') + ', recorded on ' + esc(st.gap.wk) + '.</div>' : '') + '</div>';
 }
 function histHandoversTotals(list) {
   var k = { ok: 0, short: 0, wait: 0, over: 0 }, sh = 0; list.forEach(function (d) { var st = hoShort(d); k[st.k]++; if (st.k === 'short') sh += st.c.cashDiff < 0 ? -st.c.cashDiff : 0; });
@@ -2570,7 +2653,7 @@ function recordHtml(d, evs, h) {
   var sold = rows.filter(function (r) { return r.sold > 0; }), tcash = sold.reduce(function (a, r) { return a + Math.max(0, r.soldAmt - r.crAmt - r.spAmt); }, 0);
   var soldF = fold('sold', 'Sold on the shift <span class="muted" style="font-size:11px">' + sold.length + (sold.length === 1 ? ' item' : ' items') + ' · ' + money(tcash) + '</span>', soldCards(rows, { shift: { name: wk, date: d.date, half: d.half } }, 'Sold on the shift'));
   var line = function (l, v, c) { return '<div><span>' + l + '</span><b' + (c ? ' style="color:' + c + '"' : '') + '>' + v + '</b></div>'; };
-  var sum = '<div class="card sum"><h2>How the cash adds up</h2>' + line('Received from previous handover', money(d.received)) + line('Sales', '+ ' + money(d.sales)) + (d.cr ? line('Sold on credit (not paid)', '− ' + money(d.cr)) : '') + (d.paid ? line('Credit payments received', '+ ' + money(d.paid)) : '') + (d.loans ? line('Cash lent out', '− ' + money(d.loans)) : '') + (d.purch ? line('Purchases', '− ' + money(d.purch)) : '') + (d.used ? line('Cash used', '− ' + money(d.used)) : '') + '<div class="t"><span>Expected</span><span>' + money(d.expected) + '</span></div></div>';
+  var sum = '<div class="card sum"><h2>How the cash adds up</h2>' + line('Received from previous handover', money(d.received)) + line('Sales', '+ ' + money(d.sales)) + (d.cr ? line('Sold on credit (not paid)', '− ' + money(d.cr)) : '') + (d.paid ? line('Credit payments received', '+ ' + money(d.paid)) : '') + (d.loans ? line('Cash lent out', '− ' + money(d.loans)) : '') + (d.purch ? line('Purchases', '− ' + money(d.purch)) : '') + (d.used ? line('Cash used', '− ' + money(d.used)) : '') + '<div class="t"><span>Expected</span><span>' + money(d.expected) + '</span></div></div>' + spentHtml(d);
   var tr = (d.trail || []).length || (d.fromWatch && d.fromWatch !== wk) ? fold('ctl', 'Who held control', trailHtml(d.trail || [], wk)) : '';
   var eds = d.edits || (h && h.edits) || [], edC = eds.length ? editsCard(eds) : '';
   var ent = (evs || []).slice().sort(function (a, b) { return b.t - a.t; }), entF = ent.length ? fold('ent', 'Entries <span class="muted" style="font-size:11px">' + ent.length + ' · kept a year</span>', '<div class="card"><div class="list">' + ent.map(function (e) { return evRow(e, false); }).join('') + '</div></div>') : '';
@@ -2579,6 +2662,7 @@ function recordHtml(d, evs, h) {
   var so = shortAllList().filter(function (x) { return x.wk === wk; })[0] || { owed: 0, repaid: 0 };
   var result = acc && gp ? '<div class="card sum"><h2>Result</h2>' + line(esc(wk) + ' shift: everything matched', '$0', 'var(--ok)') + line('Items sold in the gap (' + esc(gp.wk) + ')', money(gp.gapSales || 0)) + line('Cash short against ' + esc(gp.wk), money(gp.cashShort || 0), gp.cashShort > 0 ? 'var(--exp)' : 'var(--ok)') + '</div>' : acc ? '<div class="card sum"><h2>Result</h2>' + line('Shortage from this handover', money(d.short || 0), d.short > 0 ? 'var(--exp)' : 'var(--ok)') + line('Repaid so far (all shortages)', money(so.repaid), 'var(--ok)') + '<div><span>' + wsw(wk) + ' still owes (all shortages)</span><b style="color:' + (so.owed > 0 ? 'var(--exp)' : 'var(--ok)') + '">' + money(so.owed) + '</b></div></div>' : '';
   HREC = { d: d, h: h, rows: rows };
+  setTimeout(function () { spentLoad(d); }, 400);
   return '<h2>Handover record</h2>' + head + (gp ? gapBanner(gp, d.wk) : gapMoveCard(d)) + corrNote(d) + corrBanner(d) + (corrEligible(d, h) ? '<button class="btn red block noprint" data-act="corrstart" style="margin-bottom:10px">✎ Handover mistake</button>' : '') + cash + shopC + storC + soldF + fold('sum', 'How the cash adds up', sum) + handoverLists(d.owedBy, d.openShort) + tr + edC + (d.notes ? '<div class="card"><label>Remarks</label>' + esc(d.notes) + '</div>' : '') + entF + sigs + result + '<div class="row noprint" style="gap:8px"><button class="btn grow" data-act="rccopy">Copy</button><button class="btn grow" data-act="rcshare">Share</button><button class="btn grow" data-act="rcprint">Print</button></div>';
 }
 
@@ -3179,21 +3263,26 @@ function rxGap(h) {   /* the shift that should have taken this handover (the fir
   var mw = whoOf(EMAIL).wk || '', C = slotNow(new Date()), cw = slotShift(C.day, C.i) || '', s = slotNext(H.day, H.i), G = null, R = null, k;
   for (k = 0; k < 30 && !G; k++) { if (slotShift(s.day, s.i)) G = s; else s = slotNext(s.day, s.i); }
   if (!G) return out;
-  var gw = slotShift(G.day, G.i), rwk = RXWK || mw || cw;
+  var gw = slotShift(G.day, G.i), early = slotCmp(C, G) < 0, rwk = RXWK || (early ? gw : (mw || cw));
   s = G; for (k = 0; k < 60 && !R; k++) { if (slotShift(s.day, s.i) === rwk) R = s; else s = slotNext(s.day, s.i); }
+  if (early && rwk === cw) R = C;   /* covering the shift on duty: nobody is skipped */
   if (!R) { R = C; rwk = cw; }
   out.ask = !((mw === gw || !mw) && slotCmp(C, G) === 0); out.mw = mw; out.cw = cw; out.rwk = rwk; out.gw = gw; out.G = G; out.R = R; out.gdate = dstr(G.day); out.ghalf = CFG.periods[G.i].key;
-  out.late = slotCmp(R, G) === 0 && slotCmp(C, G) > 0; out.on = slotCmp(R, G) > 0 || out.late;
+  out.late = slotCmp(R, G) === 0 && slotCmp(C, G) > 0; out.on = slotCmp(R, G) > 0 || out.late; out.early = early; out.gstart = ('0' + CFG.periods[G.i].start).slice(-2) + ':00';
   return out;
 }
 var RXMORE = false;   /* "Another shift…" is open */
 function rxGapCard(h) {   /* which shift is taking over: two plain choices built from what the app knows, and when a shift was skipped, what to do */
   var g = rxGap(h); RXGAP = g; if (!g.ask && !g.on) return '';
-  var me = g.mw || g.cw, opts = [[me, me + ' — my shift', me === g.gw ? 'I take over as ' + me + ' (late).' : 'I start the ' + me + ' shift.']];
-  if (g.gw !== me) opts.push([g.gw, g.gw + ' — I am covering for them', 'Recorded as the ' + g.gw + ' shift, with you covering.']);
-  if (g.cw && g.cw !== me && g.cw !== g.gw) opts.push([g.cw, g.cw + ' — I am covering for the shift on duty', 'Recorded as the ' + g.cw + ' shift, with you covering.']);
+  var me = g.mw || g.cw, opts = [], cov = function (w, why) { return [w, w + ' — ' + why, 'Recorded as the ' + w + ' shift, with you covering.']; };
+  if (me === g.gw) opts.push([me, me + (g.early ? ' — taking over early' : ' — my shift'), 'I take over as ' + me + (g.early ? '. The ' + me + ' shift starts at ' + g.gstart + '.' : g.late ? ' (late).' : '.')]);
+  else if (g.early) { opts.push(cov(g.gw, 'I am covering for them')); }
+  else opts.push([me, me + ' — my shift', 'I start the ' + me + ' shift.']);
+  if (g.gw !== me && !g.early) opts.push(cov(g.gw, 'I am covering for them'));
+  if (g.cw && g.cw !== me && g.cw !== g.gw) opts.push(cov(g.cw, 'I am covering the shift on duty'));
+  if (g.early && me !== g.gw) opts.push([me, me + ' — my shift', 'I start the ' + me + ' shift.']);
   var inOpts = opts.some(function (o) { return o[0] === g.rwk; }), more = RXMORE || !inOpts;
-  var q = '<div class="card"><div style="font-size:16px;font-weight:700">Which shift is taking over this handover?</div><div class="muted" style="margin:4px 0 12px">' + esc(g.gw) + ' was next in line. You are ' + esc(whoOf(EMAIL).name) + (g.mw ? ', ' + esc(g.mw) + ' watch' : '') + '. ' + esc(g.cw || 'Nobody') + ' is on duty now.</div>' +
+  var q = '<div class="card"><div style="font-size:16px;font-weight:700">Which shift is taking over this handover?</div><div class="muted" style="margin:4px 0 12px">' + esc(g.gw) + ' was next in line. You are ' + esc(whoOf(EMAIL).name) + (g.mw ? ', ' + esc(g.mw) + ' watch' : '') + '. ' + esc(g.cw || 'Nobody') + (g.early ? ' is on duty until ' + g.gstart + '.' : ' is on duty now.') + '</div>' +
     opts.map(function (o) { var on = o[0] === g.rwk; return '<button type="button" data-act="rxwk" data-v="' + esc(o[0]) + '" class="rxopt' + (on ? ' on' : '') + '"><b>' + (on ? '✓ ' : '') + esc(o[1]) + '</b><span>' + esc(o[2]) + '</span></button>'; }).join('') +
     (more ? seg(WATCHES.map(function (w) { return [w, esc(w)]; }), 'rxwk', g.rwk, Math.min(WATCHES.length, 4)) : '<div style="text-align:center"><a data-act="rxmore" style="color:var(--link);font-weight:700;font-size:14px;cursor:pointer">Another shift…</a></div>') + '</div>';
   if (!g.on) return q;
@@ -3236,7 +3325,7 @@ function rxProg() {   /* the pinned bar: how many are checked, how many changed,
   });
   var gb = $('#rx-gap'); if (gb && gp) gb.innerHTML = rxGapSum(r2(gs), $('#rx-cash') ? $('#rx-cash').value : '').html;
   var left = tot - n;
-  $('#rx-bar').innerHTML = 'Checked <b>' + n + ' of ' + tot + '</b>' + (d ? ' · <b style="color:var(--exp)">' + d + ' changed</b>' : '') + (left ? ' · <b data-act="rxnext" style="color:var(--brand);cursor:pointer">next: ' + esc(first) + ' ›</b>' : ' · all checked');
+  $('#rx-bar').innerHTML = 'Checked <b>' + n + ' of ' + tot + '</b>' + (d ? ' · <b style="color:var(--exp)">' + d + ' changed</b>' : '') + (left ? ' · <b data-act="rxnext" style="color:var(--link);cursor:pointer">next: ' + esc(first) + ' ›</b>' : ' · all checked');
   var sg = !!(M && M.signature), ok = !left && sg;
   if ($('#rx-left')) $('#rx-left').textContent = left ? left + ' left to check' : !sg ? 'Sign below, then accept' : 'Ready to accept';
   var bt = $('#rx-foot button'); if (bt) bt.classList.toggle('dis', !ok);
@@ -3298,7 +3387,7 @@ function rxAccept2() {
   var empty = rxMissing(); if (empty) { empty.scrollIntoView({ block: 'center' }); if (empty.id === 'rx-cash' || String(empty.value).trim() === '') empty.focus(); return toast('Count the cash and tick or change every item first'); }
   if (!M || !M.signature) return toast('Please sign first');
   var hd = String(h.shift.date || '').split('/'), sday = hd.length === 3 ? hd[2] + '-' + hd[1] + '-' + hd[0] : '';   /* the shortage belongs to the shift that handed over, on that shift's date */
-  var GP = rxGap(h), gap = GP.on ? GP : null, gwk = gap ? gap.gw : h.shift.name, gday = gap ? dkey(gap.G.day) : sday, gsales = 0, diffs = [], RI = {}, cashC = num($('#rx-cash').value), c0 = gap ? { name: GP.rwk, half: CFG.periods[GP.R.i].key, date: dstr(GP.R.day) } : currentShift(), same = h.same === true, cur = S.state.shift, expC0 = typeof h.computed === 'number' ? h.computed : h.cash,
+  var GP = rxGap(h), gap = GP.on ? GP : null, gwk = gap ? gap.gw : h.shift.name, gday = gap ? dkey(gap.G.day) : sday, gsales = 0, diffs = [], RI = {}, cashC = num($('#rx-cash').value), c0 = gap || (GP.early && GP.R) ? { name: GP.rwk, half: CFG.periods[GP.R.i].key, date: dstr(GP.R.day) } : currentShift(), same = h.same === true, cur = S.state.shift, expC0 = typeof h.computed === 'number' ? h.computed : h.cash,
     ns = same ? Object.assign({}, cur, { received: r2((cur.received || 0) + cashC - expC0), counted: '', mode: 'person', tos: [] }) : newShift(c0, cashC), b = writeBatch(DB); DAYQ = []; ns.prevEmail = h.fromEmail || ''; ns.prevName = h.fromName || '';   /* a same-shift handover keeps the shift: same id, the cash count difference goes into what the shift started with */
   var rcf = [];
   h.items.forEach(function (i, k) {
@@ -3341,7 +3430,7 @@ function rxAccept2() {
   b.update(ref('handovers/' + S.state.pending), { status: 'accepted', acceptedBy: EMAIL, acceptedAt: Date.now(), check: gap ? 'Received after a gap (the ' + gwk + ' shift never took it). Assumed correct.' + (diffs.length ? '\n' + diffs.join('\n') : '') : diffs.length ? diffs.join('\n') : 'everything matched', receivedSig: M.signature, receivedName: myName(), receivedItems: Object.assign({ _v: vnum(APP_VERSION) }, RI), receivedCash: cashC });
   b.update(ref('shop/state'), { controlEmail: EMAIL, controlName: myName(), pending: '', shift: ns, openingDone: true });
   (S.corrs || []).forEach(function (cc) { if (cc.status === 'open') b.update(ref('corrections/' + cc.id), { status: 'closed' }); });   /* a handover correction nobody decided is closed, unchanged, when the next handover is taken */
-  commit(b); RX = null; RXSTEP = 0; sel = null; qty = 1; tab = 'sell'; closeModal(); spClose(); toast(gap ? 'Accepted after a gap, recorded for ' + gwk : diffs.length ? 'Accepted, differences noted' : 'Accepted, all matched');
+  commit(b); mvCover(GP, h); RX = null; RXSTEP = 0; sel = null; qty = 1; tab = 'sell'; closeModal(); spClose(); toast(gap ? 'Accepted after a gap, recorded for ' + gwk : diffs.length ? 'Accepted, differences noted' : 'Accepted, all matched');
 }
 
 /* ---------- president: who are you? ---------- */
@@ -3859,7 +3948,7 @@ async function resetApp() {
   var msg = $('#rs-msg'), go = $('#rs-go'); go.disabled = true; msg.textContent = 'Clearing… keep this screen open.';
   try {
     await updateDoc(ref('shop/state'), { resetting: true });
-    var counts = {}, cols = ['events', 'cancelled', 'handovers', 'daily', 'credit', 'items', 'shortages', 'repayments', 'notices', 'shifts', 'plog'];
+    var counts = {}, cols = ['events', 'cancelled', 'handovers', 'daily', 'credit', 'items', 'shortages', 'repayments', 'notices', 'shifts', 'plog', 'shiftmoves'];
     for (var c = 0; c < cols.length; c++) {
       var snap = await getDocs(col(cols[c])), ds = snap.docs; counts[cols[c]] = ds.length; msg.textContent = 'Clearing ' + cols[c] + '… (' + ds.length + ')';
       for (var i = 0; i < ds.length; i += 400) { var b = writeBatch(DB); ds.slice(i, i + 400).forEach(function (d) { b.delete(d.ref); }); await b.commit(); }
@@ -3932,6 +4021,7 @@ function spRender() {
     '<div class="card"><div class="sp-row" style="padding:0 0 8px;cursor:default"><div class="grow"><b>Account</b></div></div>' + (placeName() ? '<div class="muted" style="margin:-2px 0 8px">🏢 <b style="color:var(--ink)">' + esc(placeName()) + '</b></div>' : '') + '<div><b>' + esc(myPerson() ? myName() : isPres() ? 'Owner' : 'Your name is not set') + '</b></div><div class="muted">' + esc(roleLabel(myRole())) + ' (<span class="myem">' + esc(EMAIL || '') + '</span>)</div>' + (M && !M.personId ? '<p class="muted">Your email is not linked to a name yet. Ask a President or an Admin to link it under Access.</p>' : '') + '<div class="f" style="margin:12px 0 0"><label>App link to share</label><div class="row"><input readonly id="sp-link" value="' + esc(location.origin + location.pathname) + '" style="font-size:12px"><button class="btn sm" data-act="copylink">Copy</button></div><button class="btn sec block" data-act="sharelink" style="margin-top:8px">↗ Share the app link</button></div><button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>' +
     '<div class="sp-h">Me</div><div class="sp-card">' +
     (M && !M.personId ? spRow('🪪', 'My name', 'Not set yet. Tap to choose your name', 'whoopen') : '') +
+    spRow('📇', 'My info', (function () { var mp = M && M.personId ? person(M.personId) : null; return mp ? esc((mp.rank ? 'Rank: ' + mp.rank + ' · ' : '') + 'Shift: ' + (mp.watch || 'not set') + ' · name and number are set by an admin') : 'Choose your name first'; })(), 'myinfo') +
     spRow('✍️', 'My signature', M && M.signature ? 'Saved. Tap to sign again' : 'Not signed yet', 'sigsheet') +
     spRow('🌓', 'Appearance', THEME === 'auto' ? 'Automatic (follows your phone)' : THEME === 'dark' ? 'Dark' : 'Light', 'themesheet') +
     spRow('🔒', 'Password', 'Set or change the password you sign in with', 'pwsheet') +
@@ -4045,7 +4135,7 @@ function hoCashCard(h) {   /* the same cash lines the outgoing shift saw on the 
     (n(h.cr) ? '<div><span>Sold on credit (not cash)</span><b>− ' + money(h.cr) + '</b></div>' : '') + (n(h.loans) ? '<div><span>Cash lent out (owed)</span><b>− ' + money(h.loans) + '</b></div>' : '') + (n(h.paid) ? '<div><span>Credit payments received</span><b>+ ' + money(h.paid) + '</b></div>' : '') +
     (n(h.purch) ? '<div><span>Purchases (cash taken)</span><b>− ' + money(h.purch) + '</b></div>' : '') + (n(h.used) ? '<div style="background:var(--soon-bg);margin:0 -14px;padding:6px 14px"><span>💵 Cash used</span><b>− ' + money(h.used) + '</b></div>' : '') +
     '<div class="t"><span>Cash to hand over</span><span>' + money(h.computed) + '</span></div><div><span>Cash counted</span><b>' + money(h.cash) + '</b></div>' +
-    (h.cash !== h.computed ? '<div><span>' + (h.cash < h.computed ? 'Cash short' : 'Cash over') + '</span><b style="color:' + (h.cash < h.computed ? 'var(--exp)' : 'var(--soon)') + '">' + money(Math.abs(r2(h.cash - h.computed))) + '</b></div>' : '') + '</div>';
+    (h.cash !== h.computed ? '<div><span>' + (h.cash < h.computed ? 'Cash short' : 'Cash over') + '</span><b style="color:' + (h.cash < h.computed ? 'var(--exp)' : 'var(--soon)') + '">' + money(Math.abs(r2(h.cash - h.computed))) + '</b></div>' : '') + '</div>' + spentHtml({ sid: (h.shift || {}).sid, used: n(h.used), purch: n(h.purch) });
 }
 function hlist() {
   getDocs(query(col('handovers'), orderBy('at', 'desc'), limit(15))).then(function (snap) {
@@ -4638,7 +4728,7 @@ function tidyUp() {
   var key = 'sw.tidy.' + PID, day = new Date().toISOString().slice(0, 10);
   if (lsGet(key) === day) return;
   TIDY = true;
-  var cols = ['events', 'cancelled', 'handovers', 'receiptimgs', 'receipts', 'plog', 'shifts'];
+  var cols = ['events', 'cancelled', 'handovers', 'receiptimgs', 'receipts', 'plog', 'shifts', 'shiftmoves'];
   (async function () {
     try {
       await keepYear(true);
@@ -5328,7 +5418,11 @@ document.addEventListener('click', function (e) {
   else if (a === 'shareapp') shareApp();
   else if (a === 'openrx') showRx();
   else if (a === 'rxaccept') rxAccept();
-  else if (a === 'rxwk') { RXWK = b.dataset.v; showRx(true); }
+  else if (a === 'rxwk') {
+    var pw = RXWK, was = !!(RXGAP && RXGAP.on), nw = b.dataset.v; RXWK = nw; var g2 = rxGap(RX);
+    if (g2.on && !was && nw !== pw) { RXWK = pw; askConfirm('Mark ' + esc(g2.gw) + ' as skipped?', 'You picked <b>' + esc(nw) + '</b>, but <b>' + esc(g2.gw) + '</b> was next in line. If you continue:<ul style="margin:8px 0 8px 18px;padding:0"><li>' + esc(g2.gw) + ' is marked as <b>skipped</b>.</li><li>Anything sold or missing while nobody had it is charged to <b>' + esc(g2.gw) + '</b>.</li><li>' + esc(RX.shift.name) + ' is not charged.</li></ul><span class="muted">If you are really taking over for ' + esc(g2.gw) + ', go back and choose ' + esc(g2.gw) + '.</span>', 'Yes, ' + g2.gw + ' was skipped', function () { RXWK = nw; showRx(true); }); }
+    else showRx(true);
+  }
   else if (a === 'rxmore') { RXMORE = true; showRx(true); }
   else if (a === 'gapmove') gapMove(id);
   else if (a === 'gaplist') gapListPage();
@@ -5345,6 +5439,10 @@ document.addEventListener('click', function (e) {
   else if (a === 'close') { if ($('#modal').innerHTML) closeModal(); else if (!$('#spage').hidden) spClose(); }
   else if (a === 'spclose') spClose();
   else if (a === 'sigsheet') sigSheet();
+  else if (a === 'mvmove' || a === 'mvtoday' || a === 'mvnot') mvDecide(id, a === 'mvmove' ? 'moved' : a === 'mvtoday' ? 'today' : 'notnow');
+  else if (a === 'myinfo') myInfoPage();
+  else if (a === 'miwatch') { MI.rank = ($('#mi-rank') || {}).value || MI.rank; MI.watch = b.dataset.v; myInfoPage(true); }
+  else if (a === 'misave') myInfoSave();
   else if (a === 'themesheet') themeSheet();
   else if (a === 'rostersheet') rosterSheet();
   else if (a === 'pasthos') pastHandovers();
@@ -5778,6 +5876,7 @@ function startListeners() {
     pnSync(); pnOpen();
     if (!$('#spage').hidden && HREC && HSHDRAW) HSHDRAW(); else if (!$('#spage').hidden && RX && S.hand) showRx(true); scheduleRender(); refreshModal();
   }, function (e) { console.error(e); }));
+  if (canAdmin() && !OWNERVIEW) subs.push(onSnapshot(query(col('shiftmoves'), orderBy('at', 'desc'), limit(60)), function (s) { S.moves = docs(s); updateBell(); scheduleRender(); }, function (e) { console.error(e); }));
   subs.push(onSnapshot(query(col('shiftreqs'), where('toEmail', '==', EMAIL)), function (s) {
     var before = S.shreqIn.filter(function (r) { return r.status === 'pending'; }).map(function (r) { return r.id; });
     S.shreqIn = docs(s).sort(function (a, b) { return a.at - b.at; });
