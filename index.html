@@ -281,7 +281,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.09', RULES_VERSION = '2.22';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.13', RULES_VERSION = '2.24';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1099,11 +1099,52 @@ function shFixGo(id) {
 }
 var RP = null;
 function payOpen(wk) {   /* one Pay pop-up for every shift that still owes: pick the shift, the amount fills in */
-  if (!inControl()) return toast('A payment goes into the cash, so the person in control records it');
-  var o = openShortList(); if (!o.length) return toast('No shortages owed');
+  var o = openShortList();
+  if (!inControl()) { if (canApprove() && !OWNERVIEW) return offsetOpen(wk); return toast('A payment goes into the cash, so the person in control records it'); }
+  if (!o.length) return toast('No shortages owed');
   var cur = o.filter(function (x) { return x.wk === wk; })[0] || o[0];
   RP = { wk: cur.wk, amount: String(cur.owed), note: '', by: '' };
-  modal('<h2>💵 Pay for a shift</h2><div class="card"><label>Which shift</label>' + seg(o.map(function (x) { return [x.wk, esc(x.wk)]; }), 'rpwk', RP.wk, Math.min(o.length, 4)) + '<div class="f" style="margin-top:10px"><label>Amount owes <b id="rp-owes" style="font-size:16px;color:var(--ink);letter-spacing:0">' + money(cur.owed) + '</b></label><input id="rp-amt" data-rp="amount" type="number" inputmode="decimal" min="0" step="any" value="' + esc(RP.amount) + '" placeholder="0"></div><div class="f"><label>Paid by (the person, or someone paying for them)</label><input data-rp="by" value="" placeholder="e.g. Ali, or Sgt Baptiste for Ali" autocomplete="off"></div><div class="f" style="margin-bottom:0"><label>Note (optional)</label><input data-rp="note" value="" placeholder="e.g. paid cash on Friday" autocomplete="off"></div></div><button class="btn block" data-act="rpgo">Continue</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>');
+  modal('<h2>💵 Pay for a shift</h2><div class="card"><label>Which shift</label>' + seg(o.map(function (x) { return [x.wk, esc(x.wk)]; }), 'rpwk', RP.wk, Math.min(o.length, 4)) + '<div class="f" style="margin-top:10px"><label>Amount owes <b id="rp-owes" style="font-size:16px;color:var(--ink);letter-spacing:0">' + money(cur.owed) + '</b></label><input id="rp-amt" data-rp="amount" type="number" inputmode="decimal" min="0" step="any" value="' + esc(RP.amount) + '" placeholder="0"></div><div class="f"><label>Paid by (the person, or someone paying for them)</label><input data-rp="by" value="" placeholder="e.g. Ali, or Sgt Baptiste for Ali" autocomplete="off"></div><div class="f" style="margin-bottom:0"><label>Note (optional)</label><input data-rp="note" value="" placeholder="e.g. paid cash on Friday" autocomplete="off"></div></div><button class="btn block" data-act="rpgo">Continue</button><button class="btn sec block" data-act="payover" data-id="' + esc(cur.wk) + '" style="margin-top:10px">Pay with another shift\'s cash over</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>');
+}
+var OFF = null;
+function offsetOpen(wk) {   /* the owner, a president or an admin clears one shift's shortage with another shift's cash over: no cash moves */
+  if (!(canApprove() && !OWNERVIEW)) {
+    modal('<h2>Ask an admin</h2><p>Paying this shortage with another shift\'s cash over has to be done by an admin, a president or the owner. Ask one of them to make this.</p><button class="btn block" data-act="afxshort">Ask for a fix</button><button class="btn sec block" data-act="close" style="margin-top:8px">OK</button>');
+    return;
+  }
+  var o = openShortList(), srcs = WATCHES.filter(function (w) { return overOf(w) > 0.004; });
+  if (!o.length) return toast('No shortages owed');
+  if (!srcs.length) return toast('No shift has cash over to use');
+  var to = o.filter(function (x) { return x.wk === wk; })[0] || o[0]; OFF = { to: to.wk, from: '', amount: '' };
+  OFF.from = srcs.filter(function (w) { return w !== OFF.to; })[0] || ''; if (!OFF.from) return toast('The shift that owes has the only cash over. Another shift is needed to pay it');
+  offsetDraw();
+}
+function offsetDraw() {
+  var F = OFF, o = openShortList(), srcs = WATCHES.filter(function (w) { return overOf(w) > 0.004 && w !== F.to; });
+  if (srcs.indexOf(F.from) < 0) F.from = srcs[0] || '';
+  var owed = (o.filter(function (x) { return x.wk === F.to; })[0] || { owed: 0 }).owed, avail = F.from ? overOf(F.from) : 0, max = r2(Math.min(owed, avail));
+  if (F.amount === '' || num(F.amount) > max) F.amount = String(max);
+  var amt = num(F.amount), okAmt = amt > 0 && amt <= max + 0.004;
+  modal('<h2>Pay with cash over</h2><div class="muted" style="margin:-4px 0 8px">For the president, the owner and admins. You do not need to be in control. No cash moves.</div><div class="card"><label>Shift that owes</label>' + seg(o.map(function (x) { return [x.wk, esc(x.wk) + ' · ' + money(x.owed)]; }), 'ofto', F.to, Math.min(o.length, 4)) +
+    '<label style="margin-top:12px">Pay it with the cash over of</label>' + (srcs.length ? seg(srcs.map(function (w) { return [w, esc(w) + ' · ' + money(overOf(w))]; }), 'offrom', F.from, Math.min(srcs.length, 4)) : '<div class="muted">No other shift has cash over.</div>') +
+    '<div class="f" style="margin-top:12px"><label>Amount <span class="muted">(up to ' + money(max) + ')</span></label><input id="of-amt" data-of="amount" type="number" inputmode="decimal" min="0" step="any" value="' + esc(F.amount) + '"></div></div>' +
+    (okAmt ? '<div class="card" style="background:var(--soon-bg);border-left:2px solid var(--soon);box-shadow:none"><b>What will change</b><div style="margin-top:6px;font-size:13.5px"><div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line)"><span>' + esc(F.to) + ' owes</span><b>' + money(owed) + ' → ' + money(r2(owed - amt)) + '</b></div><div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line)"><span>' + esc(F.from) + ' cash over</span><b>' + money(avail) + ' → ' + money(r2(avail - amt)) + '</b></div><div class="muted" style="margin-top:6px">Nothing moves in the cash. The extra cash counted is already in the till and the missing cash is already out of it, so this only settles the books. It is written to History and each shift is told.</div></div></div>' : '') +
+    '<button class="btn block" data-act="ofgo"' + (okAmt ? '' : ' disabled') + '>' + (okAmt ? 'Yes, clear ' + esc(F.to) + '\'s ' + money(amt) + ' with ' + esc(F.from) + '\'s cash over' : 'Choose an amount') + '</button><button class="btn sec block" data-act="close" style="margin-top:8px">Cancel</button>');
+}
+function offsetGo() {
+  var F = OFF; if (!F || !(canApprove() && !OWNERVIEW)) return; F.amount = ($('#of-amt') || {}).value || F.amount; var amt = num(F.amount);
+  var o = openShortList(), owed = (o.filter(function (x) { return x.wk === F.to; })[0] || { owed: 0 }).owed, avail = overOf(F.from);
+  if (!(amt > 0) || amt > owed + 0.004 || amt > avail + 0.004) return toast('That amount is not available');
+  var t = Date.now(), sid = offPick(F.to, false), oid = offPick(F.from, true);
+  var save = function (withIds) {
+    var b = writeBatch(DB), id = newId('events'); DAYQ = [];
+    b.set(ref('events/' + id), { t: t, type: 'offset', item: '', items: [], name: 'Shortage cleared with cash over', qty: 0, amt: amt, sid: S.state.shift.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: F.to, from: F.from });
+    var rec = { from: F.from, to: F.to, amount: amt, by: EMAIL, byName: myName(), at: t, month: dkey(new Date()).slice(0, 7), lastEvent: id }; if (withIds) { rec.shortId = sid; rec.overId = oid; }
+    b.set(ref('offsets/' + newId('offsets')), rec);
+    S.members.forEach(function (m, i) { if (!m.email || m.email === EMAIL) return; var w = whoOf(m.email).wk; if (w === F.to || w === F.from) b.set(ref('notices/of_' + id + '_' + i), { kind: 'offset', toEmail: m.email, read: false, at: t, wk: w, role: w === F.to ? 'to' : 'from', to: F.to, from: F.from, amount: amt, byName: myName(), handoverId: '' }); });
+    return b.commit();
+  };
+  save(true).catch(function (e) { if (/permission/i.test((e && e.code || '') + (e && e.message || ''))) return save(false); throw e; }).then(function () { OFF = null; closeModal(); toast(money(amt) + ' of ' + F.to + '\'s shortage cleared'); }).catch(function (e) { console.error(e); toast(errText(e)); });
 }
 function repayGo() {
   var amt = num(RP.amount); if (!RP.wk) return toast('Choose the shift'); if (amt <= 0) return toast('Enter the amount');
@@ -1124,12 +1165,16 @@ function owedStrip() {
 }
 function owedCard() {
   var o = openShortList(), by = {}; o.forEach(function (x) { by[x.wk] = x.owed; });
-  if (!o.length) return '<div class="card" style="background:color-mix(in srgb, var(--ok) 26%, var(--surface));border:1px solid var(--ok);box-shadow:none"><b style="color:var(--ok)">✓ No shortages owed</b></div>';
-  return '<div class="card"><div class="row" style="align-items:center;margin-bottom:4px"><div class="grow"><h2 style="margin:0">Shifts owe for shortages</h2><div class="muted">Not yet repaid</div></div><button class="btn red sm" data-act="payopen">Pay</button></div><div class="list">' + WATCHES.map(function (w) { return '<div><div class="grow">' + wsw(w) + '</div><b style="color:' + (by[w] ? 'var(--exp)' : 'var(--ok)') + '">' + money(by[w] || 0) + '</b></div>'; }).join('') + '</div></div>';
+  var anyOver = WATCHES.some(function (w) { return overOf(w) > 0.004; });
+  if (!o.length && !anyOver) return '<div class="card" style="background:color-mix(in srgb, var(--ok) 26%, var(--surface));border:1px solid var(--ok);box-shadow:none"><b style="color:var(--ok)">✓ No shortages owed</b></div>';
+  var col = function (w) { return 'width:78px;text-align:right'; };
+  return '<div class="card"><div class="row" style="align-items:center;margin-bottom:4px"><div class="grow"><h2 style="margin:0">Shifts owe for shortages</h2><div class="muted">Not yet repaid</div></div><button class="btn red sm" data-act="payopen">Pay</button></div>' +
+    '<div style="display:flex;gap:8px;font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;padding:4px 0"><div style="flex:1"></div><div style="' + col() + '">Cash over</div><div style="' + col() + '">Owes</div></div><div class="list">' +
+    WATCHES.map(function (w) { var ov = overOf(w); return '<div><div class="grow">' + wsw(w) + '</div><b style="' + col() + ';color:' + (ov > 0.004 ? 'var(--ok)' : 'var(--muted)') + '">' + (ov > 0.004 ? money(ov) : '—') + '</b><b style="' + col() + ';color:' + (by[w] ? 'var(--exp)' : 'var(--ok)') + '">' + money(by[w] || 0) + '</b></div>'; }).join('') + '</div></div>';
 }
 function owedDetail(w) {
   var sh = (S.shAll || []).filter(function (x) { return x.wk === w; }).sort(function (a, b) { return b.at - a.at; }), rp = (S.repAll || []).filter(function (x) { return x.wk === w; }).sort(function (a, b) { return b.at - a.at; });
-  var owed = r2(sh.reduce(function (a, x) { return a + (x.total || 0); }, 0) - rp.reduce(function (a, x) { return a + (x.amount || 0); }, 0));
+  var owed = r2(sh.reduce(function (a, x) { return a + (x.total || 0); }, 0) - rp.reduce(function (a, x) { return a + (x.amount || 0); }, 0) - offTo(w));
   modal('<h2>' + esc(w) + ' shift owes ' + money(owed) + '</h2><div class="card"><h2>Shortages</h2><div class="list">' + (sh.length ? sh.map(function (x) { return '<div><div class="grow"><b>' + esc(x.shiftDate || '') + ' ' + esc(HL(x.shiftHalf)) + '</b><div class="muted">' + esc(x.fromName || '') + '</div></div><b style="color:var(--exp)">' + money(x.total) + '</b></div>'; }).join('') : '<div class="muted">None.</div>') + '</div></div>' + (rp.length ? '<div class="card"><h2>Repaid</h2><div class="list">' + rp.map(function (x) { return '<div><div class="grow"><b>' + new Date(x.at).toLocaleDateString([], { day: 'numeric', month: 'short' }) + '</b>' + (x.paidBy ? '<div class="muted">paid by ' + esc(x.paidBy) + '</div>' : '') + '</div><b style="color:var(--ok)">' + money(x.amount) + '</b></div>'; }).join('') + '</div></div>' : '') + '<button class="btn block" data-act="payopen" data-id="' + esc(w) + '">Pay</button><button class="btn sec block" data-act="close" style="margin-top:10px">Close</button>');
 }
 
@@ -1284,7 +1329,7 @@ function fixLoad() {   /* every shift that has a summary, and the running one, n
     docs.forEach(function (d, i) { var pv = docs[i - 1]; out.push({ sid: d.sid || d.id, wk: d.wk, date: d.date, half: d.half, start: pv ? (pv.receivedAt || pv.at) : 0, end: d.at, doc: d, running: false }); });
     var cur = S.state && S.state.shift, last = docs[docs.length - 1];
     if (cur && cur.sid && !out.some(function (x) { return x.sid === cur.sid; })) out.push({ sid: cur.sid, wk: cur.name, date: cur.date, half: cur.half, start: last ? (last.receivedAt || last.at) : 0, end: 0, doc: null, running: true });
-    out.forEach(function (x) { x.ro = fixRoster(x.start); x.bad = !!(x.ro && x.ro.wk !== x.wk); });
+    out.forEach(function (x) { x.ro = fixRoster(x.start); x.bad = !!(x.ro && x.ro.wk !== x.wk); var em = x.running ? (S.state.controlEmail || '') : (x.doc && x.doc.fromEmail) || ''; x.who = em ? whoOf(em) : { name: '', wk: '' }; x.flag = x.bad && x.who.wk === x.ro.wk; });   /* offered only when the shift that should be working is the shift of the person who was in control */
     return out.reverse();
   });
 }
@@ -1293,13 +1338,12 @@ function fixHub() {
   if (!fixCan()) return;
   wpPage(fixHub, [], '<h2>Fix mistakes</h2><div class="empty">Looking…</div>');
   fixLoad().then(function (list) {
-    FIXS = list; var bad = list.filter(function (x) { return x.bad; }), reqs = (S.fixreqs || []).filter(function (r) { return r.status === 'open'; });
+    FIXS = list; var bad = list.filter(function (x) { return x.flag; }), reqs = (S.fixreqs || []).filter(function (r) { return r.status === 'open'; });
     wpPage(fixHub, [], '<h2>Fix mistakes</h2><p class="muted" style="margin-top:0">Only the president, the owner and admins can use these. Each fix shows exactly what it will change before it does anything.</p>' +
       (reqs.length ? '<div class="sp-h">People asking for a fix</div>' + reqs.map(fixreqCard).join('') : '') +
       '<div class="sp-card">' + spRow('🧾', 'Shortages on the wrong shift', 'A shift skipped a handover and the shortage was charged to the wrong one', 'gaplist') + '</div>' +
       '<div class="sp-h">Shifts recorded under the wrong shift</div>' +
-      (bad.length ? bad.map(function (x) { return '<div class="card" style="border-left:2px solid var(--soon)"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + hdot(x.wk) + ' ' + esc(x.wk) + ' shift</b><span class="muted">' + (x.running ? 'running' : 'finished') + '</span></div><div class="muted" style="margin-top:2px">' + fixWhen(x) + '</div><div style="margin-top:4px">The roster says <b>' + esc(x.ro.wk) + '</b> works then. ' + (x.running && S.state.controlName ? 'In control: ' + esc(S.state.controlName) + '.' : '') + '</div><button class="btn block" data-act="fixopen" data-id="' + esc(x.sid) + '" style="margin-top:10px">Fix this…</button></div>'; }).join('') : '<div class="card" style="box-shadow:none"><div class="muted">✓ Every shift matches the roster. A shift that differs on purpose, such as a swap, is not an error. You can still pick any shift below.</div></div>') +
-      '<button class="btn sec block" data-act="fixpick">Pick a different shift to fix…</button>');
+      (bad.length ? bad.map(function (x) { return '<div class="card" style="border-left:2px solid var(--soon)"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + hdot(x.wk) + ' ' + esc(x.wk) + ' shift</b><span class="muted">' + (x.running ? 'running' : 'finished') + '</span></div><div class="muted" style="margin-top:2px">' + fixWhen(x) + '</div><div style="margin-top:4px">The roster says <b>' + esc(x.ro.wk) + '</b> works then, and ' + esc(x.who.name) + ' (' + esc(x.who.wk) + ' shift) ' + (x.running ? 'is in control' : 'handed it over') + '.</div><button class="btn block" data-act="fixopen" data-id="' + esc(x.sid) + '" style="margin-top:10px">Fix this…</button></div>'; }).join('') : '<div class="card" style="box-shadow:none"><div class="muted">✓ Nothing to fix here. A shift is listed only when the shift that should be working is the shift of the person who was in control, but the entries are filed under another shift.</div></div>'));
   }).catch(function (e) { wpPage(fixHub, [], '<h2>Fix mistakes</h2><div class="empty">Could not load: ' + esc(errText(e)) + '</div>'); });
 }
 function fixPick() {
@@ -1331,7 +1375,7 @@ async function fixGo() {
   try {
     for (var i = 0; i < F.evs.length; i += 400) { var bb = writeBatch(DB); F.evs.slice(i, i + 400).forEach(function (e) { bb.update(ref('events/' + e.id), { wk: to }); }); await bb.commit(); }
     var fixId = newId('events'), b = writeBatch(DB); DAYQ = [];
-    b.set(ref('events/' + fixId), { t: Date.now(), type: 'shiftfix', item: '', items: [], name: 'Shift corrected from ' + from + ' to ' + to, qty: 0, amt: 0, sid: S.state.shift.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: to, from: from, fsid: x.sid, fdate: t.date, su: true });
+    b.set(ref('events/' + fixId), { t: Date.now(), type: 'shiftfix', item: '', items: [], name: 'Shift corrected from ' + from + ' to ' + to, qty: 0, amt: 0, sid: S.state.shift.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: to, from: from, fsid: x.sid, fdate: t.date });
     F.evs.forEach(function (e) { if (e.dly) { DAYQ.push({ e: Object.assign({}, e, { id: fixId, wk: from }), sign: -1 }); DAYQ.push({ e: Object.assign({}, e, { id: fixId, wk: to }), sign: 1 }); } });
     dayFlush(b);
     if (x.running) b.update(ref('shop/state'), { 'shift.name': to, 'shift.date': t.date, 'shift.half': t.half });
@@ -1417,6 +1461,7 @@ function alInfo() {   /* handover mistakes that are only for information, or wai
 }
 function alNotice(n, old) {
   var nw = !old, when = alTime(n.at);
+  if (n.kind === 'offset') return alCard('✓', 'b', n.role === 'to' ? 'Your ' + esc(n.to) + ' shift shortage was cleared' : 'Your ' + esc(n.from) + ' shift cash over was used', money(n.amount) + (n.role === 'to' ? ' cleared with ' + esc(n.from) + ' shift cash over' : ' of your cash over cleared ' + esc(n.to) + ' shift\'s shortage') + ' · by ' + esc(n.byName || 'an admin') + ' · ' + when + '.');
   if (n.kind === 'shiftfix') return alCard('✎', 'b', 'Your shift was corrected to ' + esc(n.wk), 'The ' + esc(n.byName || 'president') + ' changed ' + esc(n.from || '') + ' → ' + esc(n.wk) + ' · ' + when + '. Your entries, handovers and day totals now say ' + esc(n.wk) + '. Cash, stock and counts are unchanged.');
   if (n.kind === 'hcdone' || n.kind === 'hcno') return alCard('✎', n.kind === 'hcdone' ? 'b' : 'a', n.kind === 'hcdone' ? 'Handover corrected' : 'Correction declined', esc(n.wk || '') + ' · ' + esc(n.shiftDate || '') + ' · ' + esc(n.text || '') + ' · ' + (n.kind === 'hcdone' ? 'accepted by ' : 'declined by ') + esc(n.byName || '') + ' · ' + when, { act: 'ntview', id: n.id, old: old, dot: nw });
   var recv = n.kind === 'received', dl = recv ? (ntDiffLoad(n.sid), NTDIFF[n.sid]) : null, matched = recv && (Array.isArray(dl) ? !dl.length : n.diffs === ''), diffs = recv ? (Array.isArray(dl) ? dl : (n.diffs ? ['Counted differently: ' + n.diffs] : [])) : [];
@@ -1974,15 +2019,28 @@ function soldCard(rows, title, sub) {
 }
 /* who owes and which shifts still owe a shortage: listed on the handover, a snapshot made when it is handed over */
 function owingList() { return owing().map(function (x) { return { label: plabelNo(x.p), bal: r2(x.bal) }; }).sort(function (a, b) { return b.bal - a.bal; }); }
+function offPick(wk, over) {   /* the oldest shortage (or cash over) of a shift that has not been cleared yet: the handover the payment is noted on */
+  var used = function (id) { return r2((S.offs || []).filter(function (x) { return (over ? x.overId : x.shortId) === id; }).reduce(function (a, x) { return a + (x.amount || 0); }, 0)); };
+  var l = (S.shAll || []).filter(function (x) { return x.wk === wk && (over ? x.cashOver : x.total) > 0 && (over ? x.cashOver : x.total) - used(x.id) > 0.004; }).sort(function (a, b) { return (a.at || 0) - (b.at || 0); });
+  return l.length ? l[0].id : '';
+}
+function offNotes(d) {   /* the handover's own note: how its shortage was paid, or where its cash over went */
+  var id = d.handoverId || d.id, l = (S.offs || []).filter(function (x) { return x.shortId === id || x.overId === id; }).sort(function (a, b) { return a.at - b.at; });
+  if (!l.length) return '';
+  return l.map(function (x) { return '<div class="card" style="box-shadow:none;background:var(--ok-bg);border-left:2px solid var(--ok);margin:8px 0"><b style="color:var(--ok)">' + (x.shortId === id ? 'Cash short paid' : 'Cash over used') + '</b><div style="margin-top:4px;font-size:13.5px">' + (x.shortId === id ? 'The cash short of <b>' + money(x.amount) + '</b> was paid by a cash surplus of <b>' + money(x.amount) + '</b> found on the <b>' + esc(x.from) + '</b> shift.' : 'The cash over of <b>' + money(x.amount) + '</b> was used to pay the <b>' + esc(x.to) + '</b> shift\'s cash short.') + '</div><div class="muted" style="font-size:12.5px;margin-top:2px">Recorded by ' + esc(x.byName || '') + ' · ' + hfmt(x.at) + '</div></div>'; }).join('');
+}
+function offTo(w) { return r2((S.offs || []).filter(function (x) { return x.to === w; }).reduce(function (a, x) { return a + (x.amount || 0); }, 0)); }   /* what was cleared for a shift with another shift's cash over */
+function offFrom(w) { return r2((S.offs || []).filter(function (x) { return x.from === w; }).reduce(function (a, x) { return a + (x.amount || 0); }, 0)); }
+function overOf(w) { return Math.max(0, r2((S.shAll || []).filter(function (x) { return x.wk === w; }).reduce(function (a, x) { return a + (x.cashOver || 0); }, 0) - offFrom(w))); }   /* a shift's cash over that has not been used yet */
 function openShortList() {
   var out = []; WATCHES.forEach(function (w) {
-    var sh = r2((S.shAll || []).filter(function (x) { return x.wk === w; }).reduce(function (a, x) { return a + (x.total || 0); }, 0)), rp = r2((S.repAll || []).filter(function (x) { return x.wk === w; }).reduce(function (a, x) { return a + (x.amount || 0); }, 0)), owed = r2(sh - rp);
+    var sh = r2((S.shAll || []).filter(function (x) { return x.wk === w; }).reduce(function (a, x) { return a + (x.total || 0); }, 0)), rp = r2((S.repAll || []).filter(function (x) { return x.wk === w; }).reduce(function (a, x) { return a + (x.amount || 0); }, 0) + offTo(w)), owed = r2(sh - rp);
     if (owed > 0.004) out.push({ wk: w, short: sh, repaid: rp, owed: owed });
   }); return out;
 }
 function shortAllList() {   /* every shift and what it still owes for shortages, even $0: handed over every time, whoever worked the shift */
   return WATCHES.map(function (w) {
-    var sh = r2((S.shAll || []).filter(function (x) { return x.wk === w; }).reduce(function (a, x) { return a + (x.total || 0); }, 0)), rp = r2((S.repAll || []).filter(function (x) { return x.wk === w; }).reduce(function (a, x) { return a + (x.amount || 0); }, 0));
+    var sh = r2((S.shAll || []).filter(function (x) { return x.wk === w; }).reduce(function (a, x) { return a + (x.total || 0); }, 0)), rp = r2((S.repAll || []).filter(function (x) { return x.wk === w; }).reduce(function (a, x) { return a + (x.amount || 0); }, 0) + offTo(w));
     return { wk: w, short: sh, repaid: rp, owed: Math.max(0, r2(sh - rp)) };
   });
 }
@@ -2324,6 +2382,7 @@ function evRow(e, cancelable) {
   else if (e.type === 'spoil') { ic = '🗑'; tx = 'Spoiled ' + e.qty + ' × ' + e.name; }
   else if (e.type === 'move') { var mvi = item(e.item) || {}; ic = mvi.shelf ? '🧁' : '🧊'; tx = 'Moved ' + uLab(mvi, e.cases) + ' of ' + e.name + ' to ' + (mvi.shelf ? 'shelf' : 'fridge'); sub = e.qty + ' items'; }
   else if (e.type === 'usecash') { ic = '💵'; tx = 'Cash used: ' + e.note; sub = e.receipt ? 'Receipt attached' : 'No receipt: ' + e.noReceipt; amt = '− ' + money(e.amt); col = 'var(--soon)'; }
+  else if (e.type === 'offset') { ic = '↔'; tx = e.wk + ' cash short of ' + money(e.amt) + ' paid by a cash surplus found on the ' + e.from + ' shift'; sub = 'no cash moved · recorded by ' + (e.byName || ''); amt = money(e.amt); col = 'var(--ok)'; }
   else if (e.type === 'shiftfix') { ic = '🛠️'; tx = 'Shift corrected: ' + e.from + ' → ' + e.wk; sub = 'by ' + (e.byName || 'the president') + (e.fdate ? ' · the shift of ' + e.fdate : ''); amt = ''; col = 'var(--soon)'; }
   else if (e.type === 'cashshort' && e.gap) { ic = '⚠️'; tx = 'Cash short at handover: recorded against ' + e.wk; sub = 'nobody took the handover on the ' + e.wk + ' shift · counted by ' + (e.byName || 'the receiver'); amt = money(e.amt); col = 'var(--exp)'; }
   else if (e.type === 'cashshort') { ic = '⚠️'; tx = 'Cash counted short at handover'; sub = e.wk + ' watch handed over'; amt = money(e.amt); col = 'var(--exp)'; }
@@ -2351,8 +2410,8 @@ function evRow(e, cancelable) {
 }
 /* ---------- History: one full page. All = the entries of a day or a month, Shifts = the permanent shift summaries (a day, a month or a year), Charts. The Filter is in the top bar ---------- */
 var HY = { tab: 'all', per: 'day', dt: new Date(), types: {}, short: false, wk: '', sid: '', cnt: {}, sper: 'month', pper: 'month', pf: 'all', pq: '', pid: '', pl: null, hm: '', pm: '', cv: 'score', sy: 0, back: false }, HUN = null, HEVS = null, HSDOCS = null, HSD = {}, HYSIG = '';
-var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash']], ['Shortages and repayments', '⚠️', ['cashshort', 'shortfix', 'repay', 'hocorr']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
-function hgroup(e) { for (var i = 0; i < HGROUPS.length; i++) if (HGROUPS[i][2].indexOf(e.type) >= 0) return HGROUPS[i][0]; return 'Stock edits by hand'; }
+var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash']], ['Shortages and repayments', '⚠️', ['cashshort', 'repay', 'offset', 'gapfix']], ['Corrections', '🛠️', ['hocorr', 'shortfix', 'shiftfix']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
+function hgroup(e) { if ((e.type === 'adjust' || e.type === 'cageadj') && e.ho) return 'Shortages and repayments'; for (var i = 0; i < HGROUPS.length; i++) if (HGROUPS[i][2].indexOf(e.type) >= 0) return HGROUPS[i][0]; return 'Stock edits by hand'; }
 function histNoon(d) { var x = new Date(d); x.setHours(12, 0, 0, 0); return x; }
 function histToday() { return histNoon(new Date()); }   /* History always opens on today, by the phone's own clock */
 function histReset() { CM = false; HY.tab = 'all'; HY.per = 'day'; HY.dt = histToday(); HY.types = {}; HY.short = false; HY.wk = ''; HY.sid = ''; HY.cnt = {}; HY.sper = 'month'; HY.pper = 'month'; HY.pf = 'all'; HY.pq = ''; HY.pid = ''; HY.pl = null; HY.hm = ''; HY.pm = ''; HY.cv = 'score'; HY.sy = 0; HY.back = false; HEVS = null; }
@@ -2487,7 +2546,7 @@ function hoSheet(id, kind, wk2) {   /* the short handover pop-up: who, the resul
   var owed = (d.owedBy || []), tot = r2(owed.reduce(function (a, x) { return a + x.bal; }, 0));
   modal('<h2 style="margin:0 0 4px">🔁 ' + (kind === 'recv' ? 'Handover received from ' + esc(giver) : 'Handed over to ' + esc(recvName)) + '</h2><div style="margin:4px 0 8px">' + wsw(d.wk) + ' <b>→</b> ' + (rwk ? wsw(rwk) : '<span class="muted">next shift</span>') + '</div>' +
     '<div class="hkv"><span>Handed over by</span><b>' + esc(giver) + ownShift(d.fromEmail) + '</b></div><div class="hkv"><span>' + (acc ? 'Received and counted by' : 'To be counted by') + '</span><b>' + esc(recvName) + ownShift(d.receivedBy) + '</b></div>' + coverLine(d.fromEmail, d.wk, giver) + (acc ? coverLine(d.receivedBy, rwk, recvName) : '') + '<div class="hkv"><span>' + (acc ? 'When' : 'Handed over') + '</span><b>' + (kind === 'recv' && d.receivedAt ? hfmt(d.receivedAt) : hfmt(d.at) + (acc && d.receivedAt ? ' · accepted ' + hhmm(d.receivedAt) : '')) + '</b></div>' + box + tbl +
-    spentHtml(d) +
+    spentHtml(d) + offNotes(d) +
     (d.notes ? '<div style="margin:8px 0 2px;padding:9px 12px;border-radius:12px;background:var(--soft);font-size:13.5px"><span class="muted" style="font-size:12px">Remarks · ' + esc(giver) + '</span><div>' + esc(d.notes) + '</div></div>' : '') +
     '<div style="margin:10px 0 2px;font-weight:700;font-size:13.5px">Who owes on credit</div>' + (owed.length ? owed.map(function (x) { return '<div class="hkv"><span>' + esc(x.label) + '</span><b>' + money(x.bal) + '</b></div>'; }).join('') + '<div class="hkv"><span><b style="color:var(--ink)">Total</b></span><b>' + money(tot) + '</b></div>' : '<div class="muted">Nobody owed anything on credit.</div>') +
     '<button class="btn block" data-act="close" style="margin-top:10px">Close</button><button class="btn sec block" data-act="shopen" data-id="' + esc(d.id) + '" style="margin-top:8px">Open the full handover record ›</button><button class="btn sec block" data-act="hoask2" data-id="' + esc(d.id) + '" data-sid="' + esc(d.sid || d.id) + '" data-wk="' + esc(d.wk) + '" data-date="' + esc(d.date) + '" data-half="' + esc(d.half) + '" style="margin-top:8px">🙋 Ask for a fix</button>' + (corrShow(d) ? '<button class="btn red block" data-act="corrstart2" data-id="' + esc(d.id) + '" style="margin-top:8px">✎ Handover mistake</button>' : ''));
@@ -2631,7 +2690,7 @@ function histAllHtml() {
   var one = HY.sid && day.filter(function (x) { return x.sid === HY.sid; })[0], sel = one ? [one] : day, sids = sel.map(function (x) { return x.sid; });
   var inDay = function (e) { var X = day.filter(function (x) { return x.sid === e.sid; })[0]; return !!X; };
   var evs = histShown().filter(function (e) { return sids.indexOf(e.sid) >= 0 && inDay(e); }), all = HEVS.filter(function (e) { return sids.indexOf(e.sid) >= 0 && inDay(e); });
-  var chips = '<div class="hcc"><button data-act="hsid" data-id="" class="' + (one ? '' : 'on') + '">All of the day</button>' + day.map(function (x) { return '<button data-act="hsid" data-id="' + esc(x.sid) + '" class="' + (one && one.sid === x.sid ? 'on' : '') + '">' + hdot(dw(x)) + esc(dw(x)) + (x.still ? ' <small style="font-weight:600;opacity:.85">· still running</small>' : '') + (x.bad && fixCan() ? ' <span aria-label="The records say ' + esc(x.wk) + '" style="display:inline-block;width:15px;height:15px;line-height:15px;border-radius:50%;background:var(--exp);color:#fff;font-size:11px;font-weight:800;text-align:center;vertical-align:1px;margin-left:2px">!</span>' : '') + (x.gap ? ' <span aria-label="Nobody took the handover" style="display:inline-block;width:15px;height:15px;line-height:15px;border-radius:50%;background:var(--exp);color:#fff;font-size:11px;font-weight:800;text-align:center;vertical-align:1px;margin-left:2px">!</span>' : '') + '</button>'; }).join('') + (function () {   /* the roster's shift for every part of the day, so the other part of the day is always there next to it */
+  var chips = '<div class="hcc"><button data-act="hsid" data-id="" class="' + (one ? '' : 'on') + '">All of the day</button>' + day.map(function (x) { return '<button data-act="hsid" data-id="' + esc(x.sid) + '" class="' + (one && one.sid === x.sid ? 'on' : '') + '">' + hdot(dw(x)) + esc(dw(x)) + (x.still ? ' <small style="font-weight:600;opacity:.85">· still running</small>' : '') + (x.gap ? ' <span aria-label="Nobody took the handover" style="display:inline-block;width:15px;height:15px;line-height:15px;border-radius:50%;background:var(--exp);color:#fff;font-size:11px;font-weight:800;text-align:center;vertical-align:1px;margin-left:2px">!</span>' : '') + '</button>'; }).join('') + (function () {   /* the roster's shift for every part of the day, so the other part of the day is always there next to it */
     return CFG.periods.map(function (pd, i) { var rw = slotShift(HY.dt, i); if (!rw || day.some(function (x) { return x.gap ? false : (x.ro ? x.ro.i === i && x.ro.day === dkey(HY.dt) : dw(x) === rw); }) || day.some(function (x) { return dw(x) === rw; })) return ''; return '<button disabled style="opacity:.6">' + hdot(rw) + esc(rw) + ' <small style="font-weight:600">· ' + esc(HL(pd.key)) + '</small></button>'; }).join('');
   })() + '</div>';
   var first = sel[0], last = sel[sel.length - 1], t0 = first.start || Math.min.apply(null, all.map(function (e) { return e.t; }).concat([Infinity])), runs = sel.filter(function (x) { return x.running; })[0];
@@ -2641,9 +2700,7 @@ function histAllHtml() {
   var longs = sel.map(function (x) { var st0 = x.start || (isFinite(t0) ? t0 : 0), en = x.end || Date.now(); return { x: x, d: st0 ? Math.floor((en - st0) / 86400000) : 0 }; }).filter(function (z) { return z.d >= 1; }).sort(function (a, b) { return b.d - a.d; })[0];
   var warn = longs ? '<div style="padding:8px 10px;border-radius:10px;background:var(--soon-bg);color:var(--soon);font-size:12.5px;margin:-4px 0 10px">⚠ This shift ' + (longs.x.end ? 'lasted ' : 'has been running for ') + (longs.d + 1) + ' days' + (longs.x.end && !longs.x.running ? '' : '. It should be handed over.') + '</div>' : '';
   var stills = sel.filter(function (x) { return x.still; }).map(function (x) { return '<div style="padding:8px 10px;border-radius:10px;background:var(--cnt-bg);color:var(--cnt);font-size:12.5px;margin:-4px 0 10px">' + hdot(dw(x)) + ' <b>' + esc(dw(x)) + '</b> is still working. It started on ' + (x.start ? hfmt(x.start) : esc(x.date)) + ' and has not handed over yet, so everything since then is shown here, by date.</div>'; }).join('');
-  var badX = fixCan() ? sel.filter(function (x) { return x.bad; })[0] : null;
-  var fixWarn = badX ? '<div class="card" style="background:var(--soon-bg);border-left:2px solid var(--soon);box-shadow:none"><b>The records say ' + esc(badX.wk) + ', the roster says ' + esc(badX.ro.wk) + '</b><div style="margin-top:4px">Entries from ' + (badX.start ? hfmt(badX.start) : '') + ' are filed under <b>' + esc(badX.wk) + '</b>, but ' + esc(badX.ro.wk) + ' works then.</div><button class="btn sm" data-act="fixhub" style="margin-top:8px">Fix mistakes ›</button></div>' : '';
-  warn = stills + warn + lateNote + fixWarn;
+  warn = stills + warn + lateNote;
   var dr = histRange(), dayEvs = one ? all : (HDAYOK ? HDAY : all.filter(function (e) { return e.t >= dr.a && e.t < dr.b; }));   /* the boxes count what was sold on this date, whichever shift sold it; one shift's own tile shows that whole shift */
   var gaps = one ? (one.gap ? [one.gap] : []) : gapList(dkey(HY.dt));
   var can = inControl() && all.some(function (e) { return e.sid === SH().sid; });
@@ -2798,7 +2855,7 @@ function recordHtml(d, evs, h) {
   var sold = rows.filter(function (r) { return r.sold > 0; }), tcash = sold.reduce(function (a, r) { return a + Math.max(0, r.soldAmt - r.crAmt - r.spAmt); }, 0);
   var soldF = fold('sold', 'Sold on the shift <span class="muted" style="font-size:11px">' + sold.length + (sold.length === 1 ? ' item' : ' items') + ' · ' + money(tcash) + '</span>', soldCards(rows, { shift: { name: wk, date: d.date, half: d.half } }, 'Sold on the shift'));
   var line = function (l, v, c) { return '<div><span>' + l + '</span><b' + (c ? ' style="color:' + c + '"' : '') + '>' + v + '</b></div>'; };
-  var sum = '<div class="card sum"><h2>How the cash adds up</h2>' + line('Received from previous handover', money(d.received)) + line('Sales', '+ ' + money(d.sales)) + (d.cr ? line('Sold on credit (not paid)', '− ' + money(d.cr)) : '') + (d.paid ? line('Credit payments received', '+ ' + money(d.paid)) : '') + (d.loans ? line('Cash lent out', '− ' + money(d.loans)) : '') + (d.purch ? line('Purchases', '− ' + money(d.purch)) : '') + (d.used ? line('Cash used', '− ' + money(d.used)) : '') + '<div class="t"><span>Expected</span><span>' + money(d.expected) + '</span></div></div>' + spentHtml(d);
+  var sum = '<div class="card sum"><h2>How the cash adds up</h2>' + line('Received from previous handover', money(d.received)) + line('Sales', '+ ' + money(d.sales)) + (d.cr ? line('Sold on credit (not paid)', '− ' + money(d.cr)) : '') + (d.paid ? line('Credit payments received', '+ ' + money(d.paid)) : '') + (d.loans ? line('Cash lent out', '− ' + money(d.loans)) : '') + (d.purch ? line('Purchases', '− ' + money(d.purch)) : '') + (d.used ? line('Cash used', '− ' + money(d.used)) : '') + '<div class="t"><span>Expected</span><span>' + money(d.expected) + '</span></div></div>' + spentHtml(d) + offNotes(d);
   var tr = (d.trail || []).length || (d.fromWatch && d.fromWatch !== wk) ? fold('ctl', 'Who held control', trailHtml(d.trail || [], wk)) : '';
   var eds = d.edits || (h && h.edits) || [], edC = eds.length ? editsCard(eds) : '';
   var ent = (evs || []).slice().sort(function (a, b) { return b.t - a.t; }), entF = ent.length ? fold('ent', 'Entries <span class="muted" style="font-size:11px">' + ent.length + ' · kept a year</span>', '<div class="card"><div class="list">' + ent.map(function (e) { return evRow(e, false); }).join('') + '</div></div>') : '';
@@ -4093,7 +4150,7 @@ async function resetApp() {
   var msg = $('#rs-msg'), go = $('#rs-go'); go.disabled = true; msg.textContent = 'Clearing… keep this screen open.';
   try {
     await updateDoc(ref('shop/state'), { resetting: true });
-    var counts = {}, cols = ['events', 'cancelled', 'handovers', 'daily', 'credit', 'items', 'shortages', 'repayments', 'notices', 'shifts', 'plog', 'shiftmoves'];
+    var counts = {}, cols = ['events', 'cancelled', 'handovers', 'daily', 'credit', 'items', 'shortages', 'repayments', 'offsets', 'notices', 'shifts', 'plog', 'shiftmoves'];
     for (var c = 0; c < cols.length; c++) {
       var snap = await getDocs(col(cols[c])), ds = snap.docs; counts[cols[c]] = ds.length; msg.textContent = 'Clearing ' + cols[c] + '… (' + ds.length + ')';
       for (var i = 0; i < ds.length; i += 400) { var b = writeBatch(DB); ds.slice(i, i + 400).forEach(function (d) { b.delete(d.ref); }); await b.commit(); }
@@ -4540,7 +4597,7 @@ function placesSheet() {
 }
 
 /* ---------- the owner's backup: every collection saved into one file on the phone ---------- */
-var BK_COLS = ['shop', 'members', 'people', 'names', 'items', 'events', 'credit', 'handovers', 'shifts', 'shortages', 'cancelled', 'daily', 'guests', 'notices', 'repayments', 'requests', 'shiftreqs', 'suppliers', 'resets'], BK = null;
+var BK_COLS = ['shop', 'members', 'people', 'names', 'items', 'events', 'credit', 'handovers', 'shifts', 'shortages', 'cancelled', 'daily', 'guests', 'notices', 'repayments', 'offsets', 'requests', 'shiftreqs', 'suppliers', 'resets'], BK = null;
 var bkCol = function (c) { return PID === 'coover' && !(PLACE && PLACE.migrated === true) ? collection(DB, c) : col(c); };
 function bkValue(v) {   /* Firestore values that JSON cannot hold */
   if (v && typeof v === 'object') {
@@ -5358,6 +5415,11 @@ document.addEventListener('click', function (e) {
   else if (a === 'pfprev') { PF.off++; profitModal(); }
   else if (a === 'shview') shDetail(id);
   else if (a === 'payopen') payOpen(id);
+  else if (a === 'payover') { closeModal(); offsetOpen(id); }
+  else if (a === 'ofto') { OFF.to = b.dataset.v; OFF.amount = ''; offsetDraw(); }
+  else if (a === 'offrom') { OFF.from = b.dataset.v; OFF.amount = ''; offsetDraw(); }
+  else if (a === 'ofgo') offsetGo();
+  else if (a === 'afxshort') { closeModal(); afxOpen({ type: 'shortage' }); }
   else if (a === 'owedetail') owedDetail(id);
   else if (a === 'rpwk') { var ox = openShortList().filter(function (x) { return x.wk === b.dataset.v; })[0]; if (!ox || !RP) return; RP.wk = ox.wk; RP.amount = String(ox.owed); b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); $('#rp-amt').value = RP.amount; $('#rp-owes').textContent = money(ox.owed); }
   else if (a === 'rpgo') repayGo();
@@ -5814,6 +5876,7 @@ function wzInput(t) {
   else if (k === 'myname') WZ.myName = v; else if (k === 'myno') WZ.myNo = v; else if (k === 'myrank') WZ.myRank = v;
 }
 document.addEventListener('change', function (e) { if (e.target && e.target.classList && e.target.classList.contains('rxck')) rxProg(); });
+document.addEventListener('change', function (e) { if (e.target && e.target.dataset && e.target.dataset.of && OFF) { OFF[e.target.dataset.of] = e.target.value; offsetDraw(); } });
 document.addEventListener('input', function (e) {
   var t = e.target;
   if (t.id && /^rx-(cash|c\d+|g\d+)$/.test(t.id)) rxProg();
@@ -5846,6 +5909,7 @@ document.addEventListener('input', function (e) {
   else if (t.dataset.step === 'bu') { BUY.lines[+t.dataset.k].units = Math.max(0, Math.floor(num(t.value)) || 0); buyLive(); }
   else if (t.dataset.step === 'bs' || t.dataset.step === 'bh') { var tl = BUY.lines[+t.dataset.k], tp = lineParts(tl), tn = Math.max(0, Math.floor(num(t.value)) || 0); tl.sto = Math.max(0, Math.min(tp.n, t.dataset.step === 'bs' ? tn : tp.n - tn)); buyLive(); var dd = $('#bw' + t.dataset.k), oth = dd && dd.querySelector('[data-step=' + (t.dataset.step === 'bs' ? 'bh' : 'bs') + ']'); if (oth) oth.value = t.dataset.step === 'bs' ? tp.n - tl.sto : tl.sto; }
   else if (t.dataset.rp) RP[t.dataset.rp] = t.value;
+  else if (t.dataset.of && OFF) OFF[t.dataset.of] = t.value;
   else if (t.dataset.es) ES[t.dataset.es] = t.value;
   else if (t.dataset.uc) UC[t.dataset.uc] = t.value;
   else if (t.dataset.b) { BUY[t.dataset.b] = t.value; buyLive(); }
@@ -6050,6 +6114,7 @@ function startListeners() {
   watch(col('members'), function (s) { S.members = s.docs.map(function (d) { return d.data(); }); var ow = S.members.filter(function (m) { return m.email === PRESIDENT; })[0], legacy = PID === 'coover' && (!ow || ow.ranks !== 2); if (legacy) S.members = S.members.map(function (m) { return Object.assign({}, m, { role: m.email === PRESIDENT ? 'owner' : ({ president: 'president', admin: 'president', user: 'admin' }[m.role] || 'admin') }); }); var me = S.members.filter(function (m) { return m.email === EMAIL; })[0]; if (me) M = me;   /* until the owner converts the ranks, old roles are read as: admin = President, user = Admin */ updateBell(); scheduleRender(); refreshModal(); });
   watch(col('shortages'), function (s) { S.shAll = docs(s); scheduleRender(); });
   watch(col('repayments'), function (s) { S.repAll = docs(s); scheduleRender(); });
+  watch(col('offsets'), function (s) { S.offs = docs(s); scheduleRender(); });
   watch(col('credit'), function (s) { S.bal = {}; s.docs.forEach(function (d) { S.bal[d.id] = d.data().bal || 0; }); scheduleRender(); });
   watch(ref('shop/state'), function (s) {
     if (!s.exists()) {
