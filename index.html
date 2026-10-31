@@ -281,7 +281,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.18', RULES_VERSION = '2.26';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.19', RULES_VERSION = '2.26';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -3133,7 +3133,8 @@ function chBars(rows, color, fmt) {
   return rows.map(function (r) { return '<div style="margin:10px 0"><div class="row" style="margin-bottom:3px"><span class="grow">' + r.label + '</span><b style="color:' + (r.col || 'var(--ink)') + '">' + fmt(r.v) + '</b></div><div style="height:14px;background:var(--soft);border-radius:7px"><div style="height:14px;width:' + Math.round(100 * r.v / mx) + '%;background:' + color(r) + ';border-radius:7px"></div></div></div>'; }).join('');
 }
 function chartsHtml(docs) {
-  var acc = docs.filter(function (d) { return d.status === 'accepted' && d.day; }), cv = HY.cv || 'score';
+  var gapDocs = (S.shAll || []).filter(function (x) { return x.gap && x.wk; }).map(function (x) { var q = String(x.shiftDate || '').split('/'); return q.length === 3 ? { id: 'gap:' + x.id, wk: x.wk, status: 'accepted', day: q[2] + '-' + q[1] + '-' + q[0], sales: x.gapSales || 0, short: x.total || 0, gap: true } : null; }).filter(Boolean);   /* a shift that never took its handover still worked: what it sold and what it owes count for it */
+  var acc = docs.filter(function (d) { return d.status === 'accepted' && d.day; }).concat(gapDocs), cv = HY.cv || 'score';
   var tabs = '<div class="seg" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">' + [['score', 'Scoreboard'], ['watch', 'By shift'], ['month', 'This month'], ['cal', 'Calendar']].map(function (x) { return '<button data-act="chv" data-v="' + x[0] + '" class="' + (cv === x[0] ? 'on' : '') + '" style="font-size:11px;padding:0 2px;min-height:36px">' + x[1] + '</button>'; }).join('') + '</div>';
   if (!acc.length) return tabs + '<div class="empty">Nothing to show yet. Charts fill in as shifts are handed over and accepted.</div>';
   var last = acc.map(function (d) { return d.day; }).sort().pop(), endD = new Date(last + 'T12:00:00');
