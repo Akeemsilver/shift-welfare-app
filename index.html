@@ -281,7 +281,7 @@ function writeBatch(db) {
   var b = _writeBatch(db); if (!OWNERVIEW) return b;
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.08', RULES_VERSION = '2.21';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.09', RULES_VERSION = '2.22';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -515,7 +515,7 @@ function dayFlush(b) {
     var e = x.e, d = e.dly ? dayDelta(e) : null; if (!d) return;
     var k = e.day || dkey(new Date(e.t)), o = days[k] || (days[k] = { last: e.id, w: {}, it: {}, nc: 0 }), ww = o.w[d.wk] || (o.w[d.wk] = {});
     for (var f in d.f) ww[f] = (ww[f] || 0) + x.sign * d.f[f];
-    if (d.it) { var y = o.it[d.it.id] || (o.it[d.it.id] = { n: 0, p: 0, name: e.name }); y.n += x.sign * d.it.n; y.p += x.sign * d.it.p; }
+    if (d.it && d.it.id) { var y = o.it[d.it.id] || (o.it[d.it.id] = { n: 0, p: 0, name: e.name }); y.n += x.sign * d.it.n; y.p += x.sign * d.it.p; }
     o.nc += x.sign * d.nc;
   });
   Object.keys(days).forEach(function (k) {
@@ -1186,7 +1186,7 @@ function trailHtml(trail, shiftWk, handedBy, handedWk) {
   return '<div class="card"><h2>Who held control this shift</h2>' + (rows ? '<div class="list">' + rows + '</div>' : '<div class="muted">One person the whole shift.</div>') + '<div class="muted" style="margin-top:8px">Any shortage stays with the <b style="color:var(--ink)">' + esc(shiftWk) + ' watch</b>, which was on duty.</div></div>';
 }
 /* ---------- notifications: the person who handed over is told when their handover was counted short ---------- */
-function bellN() { try { return (S.notices || []).filter(function (x) { return !x.read; }).length + (pcMine() ? 1 : 0) + (canApprove() ? (S.requests || []).length : 0) + (isPres() ? pReqCount() : 0) + corrBellCount() + mvBellCount(); } catch (e) { return 0; } }   /* never lets a page fail to draw because the bell could not be counted yet */
+function bellN() { try { return (S.notices || []).filter(function (x) { return !x.read; }).length + (pcMine() ? 1 : 0) + (canApprove() ? (S.requests || []).length : 0) + (isPres() ? pReqCount() : 0) + corrBellCount() + mvBellCount() + afxBell(); } catch (e) { return 0; } }   /* never lets a page fail to draw because the bell could not be counted yet */
 var BELLSVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>';
 function bellHtml() { var n = bellN(); return n ? '<button class="spbell" data-act="bell2" aria-label="Alerts">' + BELLSVG + '<i>' + (n > 9 ? '9+' : n) + '</i></button>' : ''; }   /* on a full-screen page the header bell is hidden, so the bell comes with it while something waits */
 function spBellSync(n) {
@@ -1267,18 +1267,148 @@ function myInfoSave() {
   if (ch) b.set(ref('shiftmoves/ch_' + Date.now() + '_' + mvKey(EMAIL)), { kind: 'chg', status: 'done', read: false, email: EMAIL, name: mp.name || myName(), personId: mp.id, from: mp.watch || '', to: watch, at: Date.now(), day: dkey(new Date()), expireAt: EXPY() });
   b.commit().then(function () { toast(ch ? 'Saved. You are now on the ' + watch + ' shift. The president and admins have been told.' : 'Saved'); }).catch(function (e) { console.error(e); toast(errText(e)); });
 }
+/* ---------- Fix mistakes (the owner and presidents): a run of entries filed under the wrong shift, and the moving of a shortage ---------- */
+var FIXS = [], FIXF = null, FIXREQ = '';
+function recFix() {   /* the yellow "recording for X shift" line: is that right? */
+  var sh = S.state.shift, cs = currentShift();
+  modal('<h2>Recording for the ' + esc(sh.name) + ' shift</h2><p>The roster says <b>' + esc(cs.name) + '</b> is on duty now, but your entries are filed under <b>' + esc(sh.name) + '</b>.</p><p class="muted">That is right when you are covering for them or recording for the shift you took over from. If it is a mistake, ask the president or the owner to fix it.</p><button class="btn block" data-act="afxhere">This is wrong. Ask for a fix</button><button class="btn sec block" data-act="close" style="margin-top:8px">It is right</button>');
+}
+function fixCan() { return canApprove() && !OWNERVIEW; }
+function fixRoster(start) {   /* the shift the roster says works when something started at this time (a little early still counts for the next shift) */
+  if (!start) return null;
+  var s0 = slotNow(new Date(start + 45 * 60000)); return { wk: slotShift(s0.day, s0.i), date: dstr(s0.day), half: CFG.periods[s0.i].key, day: dkey(s0.day), i: s0.i };
+}
+function fixLoad() {   /* every shift that has a summary, and the running one, newest first, each with when it started and what the roster says */
+  return getDocs(query(col('shifts'), orderBy('at', 'desc'), limit(400))).then(function (sn) {
+    var docs = sn.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }).sort(function (a, b) { return a.at - b.at; }), out = [];
+    docs.forEach(function (d, i) { var pv = docs[i - 1]; out.push({ sid: d.sid || d.id, wk: d.wk, date: d.date, half: d.half, start: pv ? (pv.receivedAt || pv.at) : 0, end: d.at, doc: d, running: false }); });
+    var cur = S.state && S.state.shift, last = docs[docs.length - 1];
+    if (cur && cur.sid && !out.some(function (x) { return x.sid === cur.sid; })) out.push({ sid: cur.sid, wk: cur.name, date: cur.date, half: cur.half, start: last ? (last.receivedAt || last.at) : 0, end: 0, doc: null, running: true });
+    out.forEach(function (x) { x.ro = fixRoster(x.start); x.bad = !!(x.ro && x.ro.wk !== x.wk); });
+    return out.reverse();
+  });
+}
+function fixWhen(x) { return (x.start ? hfmt(x.start) : esc(x.date || '')) + ' → ' + (x.running ? 'now' : x.end ? hfmt(x.end) : ''); }
+function fixHub() {
+  if (!fixCan()) return;
+  wpPage(fixHub, [], '<h2>Fix mistakes</h2><div class="empty">Looking…</div>');
+  fixLoad().then(function (list) {
+    FIXS = list; var bad = list.filter(function (x) { return x.bad; }), reqs = (S.fixreqs || []).filter(function (r) { return r.status === 'open'; });
+    wpPage(fixHub, [], '<h2>Fix mistakes</h2><p class="muted" style="margin-top:0">Only the president, the owner and admins can use these. Each fix shows exactly what it will change before it does anything.</p>' +
+      (reqs.length ? '<div class="sp-h">People asking for a fix</div>' + reqs.map(fixreqCard).join('') : '') +
+      '<div class="sp-card">' + spRow('🧾', 'Shortages on the wrong shift', 'A shift skipped a handover and the shortage was charged to the wrong one', 'gaplist') + '</div>' +
+      '<div class="sp-h">Shifts recorded under the wrong shift</div>' +
+      (bad.length ? bad.map(function (x) { return '<div class="card" style="border-left:2px solid var(--soon)"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + hdot(x.wk) + ' ' + esc(x.wk) + ' shift</b><span class="muted">' + (x.running ? 'running' : 'finished') + '</span></div><div class="muted" style="margin-top:2px">' + fixWhen(x) + '</div><div style="margin-top:4px">The roster says <b>' + esc(x.ro.wk) + '</b> works then. ' + (x.running && S.state.controlName ? 'In control: ' + esc(S.state.controlName) + '.' : '') + '</div><button class="btn block" data-act="fixopen" data-id="' + esc(x.sid) + '" style="margin-top:10px">Fix this…</button></div>'; }).join('') : '<div class="card" style="box-shadow:none"><div class="muted">✓ Every shift matches the roster. A shift that differs on purpose, such as a swap, is not an error. You can still pick any shift below.</div></div>') +
+      '<button class="btn sec block" data-act="fixpick">Pick a different shift to fix…</button>');
+  }).catch(function (e) { wpPage(fixHub, [], '<h2>Fix mistakes</h2><div class="empty">Could not load: ' + esc(errText(e)) + '</div>'); });
+}
+function fixPick() {
+  modal('<h2>Pick a shift</h2><div class="list" style="max-height:60vh;overflow:auto">' + FIXS.slice(0, 40).map(function (x) { return '<div data-act="fixopen" data-id="' + esc(x.sid) + '" style="cursor:pointer"><div class="grow"><b>' + hdot(x.wk) + ' ' + esc(x.wk) + ' shift' + (x.running ? ' · running' : '') + '</b><div class="muted">' + fixWhen(x) + '</div></div><span style="color:var(--link);font-size:20px">›</span></div>'; }).join('') + '</div><button class="btn sec block" data-act="close" style="margin-top:10px">Close</button>');
+}
+function fixOpen(sid) {
+  var x = FIXS.filter(function (q) { return q.sid === sid; })[0]; if (!x) return;
+  closeModal(); wpPage(fixHub, [], '<h2>Fix mistakes</h2><div class="empty">Reading what is filed under this shift…</div>');
+  Promise.all([getDocs(query(col('events'), where('sid', '==', sid))), getDocs(query(col('handovers'), where('shift.sid', '==', sid)))]).then(function (rs) {
+    var evs = rs[0].docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }), hos = rs[1].docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); });
+    return Promise.all(hos.map(function (h) { return getDoc(ref('shortages/' + h.id)).then(function (sn) { return sn.exists() ? h.id : ''; }); })).then(function (sr) { FIXF = { x: x, to: x.ro ? x.ro.wk : x.wk, evs: evs, hos: hos, srt: sr.filter(Boolean) }; fixSheet(); });
+  }).catch(function (e) { console.error(e); wpPage(fixHub, [], '<h2>Fix mistakes</h2><div class="empty">Could not read: ' + esc(errText(e)) + '</div>'); });
+}
+function fixTarget() {   /* the date and half the fixed shift gets: the roster's slot for when it started (or what it has now) */
+  var x = FIXF.x; return x.ro ? { date: x.ro.date, half: x.ro.half, day: x.ro.day } : { date: x.date, half: x.half, day: shKeyOf({ date: x.date }) };
+}
+function fixSheet() {
+  var F = FIXF, x = F.x, t = fixTarget(), same = F.to === x.wk && t.date === x.date && t.half === x.half, days = {};
+  F.evs.forEach(function (e) { if (e.dly) days[e.day || dkey(new Date(e.t))] = 1; });
+  var chg = function (a, b) { return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)"><span>' + a + '</span><b style="text-align:right">' + b + '</b></div>'; }, arrow = esc(x.wk) + ' → ' + esc(F.to);
+  var rows = (x.running ? chg('The shift being worked now', arrow) : '') + (F.evs.length ? chg('Entries on this shift (' + F.evs.length + ')', arrow) : '') + (x.doc ? chg('The shift summary (History and Handovers)', arrow + ' · ' + esc(t.date) + ' ' + esc(HL(t.half))) : '') + (F.hos.length ? chg('Handover' + (F.hos.length === 1 ? '' : 's') + ' made from it (' + F.hos.length + ')', arrow) : '') + (F.srt.length ? chg('Shortage record' + (F.srt.length === 1 ? '' : 's') + ' (' + F.srt.length + ')', arrow) : '') + (Object.keys(days).length ? chg('Day totals (' + Object.keys(days).length + (Object.keys(days).length === 1 ? ' day' : ' days') + ')', 'moved ' + arrow) : '');
+  wpPage(fixHub, [], '<h2>Fix the shift</h2><div class="card"><div class="muted" style="margin-bottom:8px">Filed as <b>' + esc(x.wk) + ' shift</b> · ' + fixWhen(x) + '</div><label>Correct shift</label>' + seg(WATCHES.map(function (w) { return [w, esc(w)]; }), 'fixwk', F.to, Math.min(WATCHES.length, 4)) + (x.ro ? '<div class="muted" style="margin:6px 2px 8px;font-size:12.5px">' + esc(x.ro.wk) + ' is what the roster says for ' + esc(x.ro.date) + ' (' + esc(HL(x.ro.half)) + ').</div>' : '') + '<div class="fld"><span>Date</span><b>' + esc(t.date) + '</b></div><div class="fld"><span>Half</span><b>' + esc(HL(t.half)) + '</b></div></div>' +
+    (same ? '<div class="card" style="box-shadow:none"><b>Nothing to change.</b><div class="muted">This shift is already filed as ' + esc(F.to) + '.</div></div>' : '<div class="card" style="background:var(--soon-bg);border-left:2px solid var(--soon);box-shadow:none"><b>What will change</b><div style="margin-top:6px;font-size:13.5px">' + rows + '<div class="muted" style="margin-top:6px">Nothing else changes: cash, stock, counts, credit and who is in control stay as they are. The names of people keep their own shift.</div></div></div><button class="btn block" data-act="fixgo">Yes, change ' + esc(x.wk) + ' to ' + esc(F.to) + '</button>') +
+    '<button class="btn sec block" data-act="fixhub" style="margin-top:8px">Back</button>');
+}
+async function fixGo() {
+  var F = FIXF; if (!F || !fixCan()) return; var x = F.x, t = fixTarget(), to = F.to, from = x.wk;
+  wpPage(fixHub, [], '<h2>Fix the shift</h2><div class="empty">Changing… keep this screen open.</div>');
+  try {
+    for (var i = 0; i < F.evs.length; i += 400) { var bb = writeBatch(DB); F.evs.slice(i, i + 400).forEach(function (e) { bb.update(ref('events/' + e.id), { wk: to }); }); await bb.commit(); }
+    var fixId = newId('events'), b = writeBatch(DB); DAYQ = [];
+    b.set(ref('events/' + fixId), { t: Date.now(), type: 'shiftfix', item: '', items: [], name: 'Shift corrected from ' + from + ' to ' + to, qty: 0, amt: 0, sid: S.state.shift.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: to, from: from, fsid: x.sid, fdate: t.date, su: true });
+    F.evs.forEach(function (e) { if (e.dly) { DAYQ.push({ e: Object.assign({}, e, { id: fixId, wk: from }), sign: -1 }); DAYQ.push({ e: Object.assign({}, e, { id: fixId, wk: to }), sign: 1 }); } });
+    dayFlush(b);
+    if (x.running) b.update(ref('shop/state'), { 'shift.name': to, 'shift.date': t.date, 'shift.half': t.half });
+    if (x.doc) b.update(ref('shifts/' + x.doc.id), { wk: to, date: t.date, half: t.half, day: t.day });
+    F.hos.forEach(function (h) { b.update(ref('handovers/' + h.id), { shift: Object.assign({}, h.shift, { name: to, date: t.date, half: t.half }) }); });
+    F.srt.forEach(function (id) { b.update(ref('shortages/' + id), { wk: to, shiftDate: t.date, shiftHalf: t.half }); });
+    var told = x.running ? (S.state.controlEmail || '') : (x.doc && x.doc.fromEmail) || '';
+    if (told && told !== EMAIL) b.set(ref('notices/fx_' + fixId), { kind: 'shiftfix', toEmail: told, read: false, at: Date.now(), wk: to, from: from, shiftDate: t.date, shiftHalf: t.half, byName: myName(), handoverId: '' });
+    if (FIXREQ) b.update(ref('fixreqs/' + FIXREQ), { status: 'done', decidedBy: EMAIL, decidedByName: myName(), decidedAt: Date.now() });
+    await b.commit(); FIXREQ = '';
+    toast(from + ' is now ' + to);
+    wpPage(fixHub, [], '<h2>Fix the shift</h2><div class="card" style="background:var(--ok-bg);border-left:2px solid var(--ok);box-shadow:none"><b style="color:var(--ok)">✓ Done</b><div style="margin-top:4px">' + esc(from) + ' is now ' + esc(to) + ' everywhere. ' + (told && told !== EMAIL ? 'The person in control has been told.' : '') + '</div></div><button class="btn block" data-act="fixhub">Back to Fix mistakes</button>');
+  } catch (e) { console.error(e); wpPage(fixHub, [], '<h2>Fix the shift</h2><div class="empty">Stopped: ' + esc(/permission/i.test((e && e.code || '') + (e && e.message || '')) ? 'the database refused it. Publish the newest rules first (firestore-rules-v' + RULES_VERSION + '.txt).' : errText(e)) + '</div><button class="btn sec block" data-act="fixhub">Back</button>'); }
+}
+/* ---------- Ask for a fix: anyone asks, the owner / a president answers ---------- */
+var FIXQ = {};
+function afxLabel(t) { return { shift: 'A shift is wrong', shortage: 'A shortage is on the wrong shift', other: 'Something else' }[t] || t; }
+function afxOpen(ctx) {
+  FIXQ = Object.assign({ type: 'shift', sid: '', wk: '', date: '', half: '', hid: '' }, ctx || {});
+  var sh = S.state && S.state.shift; if (!FIXQ.sid && sh && FIXQ.type === 'shift') { FIXQ.sid = sh.sid; FIXQ.wk = sh.name; FIXQ.date = sh.date; FIXQ.half = sh.half; }
+  afxDraw();
+}
+function afxDraw() {
+  var q = FIXQ, note = ($('#afx-note') || {}).value || q.note || ''; q.note = note;
+  modal('<h2>Ask for a fix</h2><p class="muted" style="margin-top:0">The president or the owner will look at it. Nothing changes until they check it and confirm.</p><label>What is wrong?</label>' + seg([['shift', 'A shift is wrong'], ['shortage', 'A shortage'], ['other', 'Something else']], 'afxtype', q.type, 3) +
+    (q.wk ? '<div class="muted" style="margin:8px 2px 0">About: <b>' + esc(q.wk) + ' shift</b>' + (q.date ? ' · ' + esc(q.date) : '') + '</div>' : '') +
+    '<label style="margin-top:12px">Tell them what is wrong</label><textarea id="afx-note" rows="3" maxlength="400" placeholder="For example: I am recording for White, not Red" style="width:100%">' + esc(note) + '</textarea>' +
+    '<button class="btn block" data-act="afxsend" style="margin-top:10px">Send</button><button class="btn sec block" data-act="close" style="margin-top:8px">Cancel</button>');
+}
+function afxSend() {
+  var q = FIXQ, note = String(($('#afx-note') || {}).value || '').trim();
+  if (!note) return toast('Say what is wrong');
+  if ((S.myfix || []).some(function (r) { return r.status === 'open' && r.sid === (q.sid || '') && r.type === q.type; })) return toast('You already asked for this one');
+  var id = newId('fixreqs');
+  setDoc(ref('fixreqs/' + id), { email: EMAIL, name: myName(), type: q.type, note: note.slice(0, 400), sid: q.sid || '', wk: q.wk || '', date: q.date || '', half: q.half || '', hid: q.hid || '', at: Date.now(), status: 'open', expireAt: EXPY() }).then(function () { closeModal(); toast('Sent to the president and the owner'); }).catch(function (e) { console.error(e); toast(errText(e)); });
+}
+function fixreqCard(r) {
+  return alCard('🛠️', 'a', esc(r.name) + ' asks for a fix', esc(afxLabel(r.type)) + (r.wk ? ' · ' + esc(r.wk) + ' shift' : '') + ' · ' + alTime(r.at) + '<br>“' + esc(r.note) + '”',
+    { btn: '<div class="acts"><button class="btn green" style="flex:1" data-act="afxopen" data-id="' + esc(r.id) + '">Open the fix</button><button class="btn sec" style="flex:1" data-act="afxno" data-id="' + esc(r.id) + '">Not needed</button></div>' });
+}
+function afxOpenFix(id) {
+  var r = (S.fixreqs || []).filter(function (x) { return x.id === id; })[0]; if (!r || !fixCan()) return; FIXREQ = id; closeModal();
+  if (r.type === 'shortage') return gapListPage();
+  fixHub();
+  if (r.type === 'shift' && r.sid) fixLoad().then(function (list) { FIXS = list; fixOpen(r.sid); });
+}
+function afxNo(id) {
+  modal('<h2>Not needed</h2><p class="muted" style="margin-top:0">Tell the person why. They will see this.</p><input id="afx-why" maxlength="200" placeholder="For example: this is correct, it was a swap" autocomplete="off"><button class="btn block" data-act="afxnogo" data-id="' + esc(id) + '" style="margin-top:10px">Send</button><button class="btn sec block" data-act="close" style="margin-top:8px">Cancel</button>');
+}
+function afxNoGo(id) {
+  var why = String(($('#afx-why') || {}).value || '').trim(); if (!why) return toast('Give a short reason');
+  updateDoc(ref('fixreqs/' + id), { status: 'declined', reason: why.slice(0, 200), decidedBy: EMAIL, decidedByName: myName(), decidedAt: Date.now() }).then(function () { closeModal(); toast('Sent'); }).catch(function (e) { console.error(e); toast(errText(e)); });
+}
+function afxWithdraw(id) { updateDoc(ref('fixreqs/' + id), { status: 'withdrawn' }).then(function () { toast('Withdrawn'); }).catch(function (e) { console.error(e); toast(errText(e)); }); }
+function afxSeen(id) { try { return !!localStorage.getItem('sw.fr.' + id); } catch (e) { return true; } }
+function afxMine() { return (S.myfix || []).filter(function (r) { return r.status === 'open' || ((r.status === 'done' || r.status === 'declined') && (!afxSeen(r.id) || ALMV['fr' + r.id])); }); }
+function afxMarkSeen() { var any = false; afxMine().forEach(function (r) { if (r.status !== 'open') { ALMV['fr' + r.id] = 1; if (!afxSeen(r.id)) { try { localStorage.setItem('sw.fr.' + r.id, '1'); any = true; } catch (x) {} } } }); if (any) updateBell(); }
+function afxBell() { return (fixCan() ? (S.fixreqs || []).filter(function (r) { return r.status === 'open'; }).length : 0) + (S.myfix || []).filter(function (r) { return (r.status === 'done' || r.status === 'declined') && !afxSeen(r.id) && !ALMV['fr' + r.id]; }).length; }
+function afxInfoCard(r) {
+  if (r.status === 'open') return alCard('⏳', 'a', 'Your request for a fix is waiting', esc(afxLabel(r.type)) + (r.wk ? ' · ' + esc(r.wk) + ' shift' : '') + '<br>“' + esc(r.note) + '”', { btn: '<div class="acts"><button class="btn sec" style="flex:1" data-act="afxwd" data-id="' + esc(r.id) + '">Withdraw</button></div>' });
+  if (r.status === 'done') return alCard('✓', 'b', 'Your fix was done', esc(afxLabel(r.type)) + ' · by ' + esc(r.decidedByName || 'the president') + ' · ' + alTime(r.decidedAt || r.at));
+  return alCard('✓', 'a', 'Your request was not needed', esc(afxLabel(r.type)) + ' · ' + esc(r.reason || '') + ' · ' + esc(r.decidedByName || 'the president'));
+}
 function alTodo() {   /* what waits for this person's decision */
   var out = [], pc = pcMine();
   if (pc) out.push(alCard('🔔', 'r', ({ offer: 'You were offered the president role', vote: 'Vote: change the president', challenge: 'The president is about to change' }[pc]), pcLine(), { act: 'pcview', btn: AL_REVIEW }));
   if (canApprove()) (S.requests || []).forEach(function (r) { out.push(alCard('👤', 'b', esc(r.name) + ' asked for access', esc(r.watch || '') + (r.at ? ' · ' + alTime(r.at) : '') + ' · waiting for you to accept or decline', { act: 'rqopen', id: r.email, btn: AL_REVIEW })); });
   if (isPres()) PREQ.filter(function (r) { return r.status === 'pending'; }).forEach(function (r) { out.push(alCard('🏢', 'b', esc(r.name) + ' asks to start a workplace', esc(r.place || '') + (r.at ? ' · ' + new Date(r.at).toLocaleDateString() : ''), { act: 'prlist', btn: AL_REVIEW })); });
   mvOpen().forEach(function (m) { out.push(mvCard(m)); });
+  if (fixCan()) (S.fixreqs || []).filter(function (r) { return r.status === 'open'; }).forEach(function (r) { out.push(fixreqCard(r)); });
   (S.corrs || []).forEach(function (c) { if (!corrOptional(c) && corrCanDecide(c)) out.push(alCard('✎', 'r', 'Handover mistake: ' + corrBy(c) + ' asks to correct the ' + corrTitle(c) + ' handover', esc(corrLines(c).join(' · ').replace(/<[^>]+>/g, '')) + ' · ' + esc(c.reason || '') + ' · waiting for you to accept or decline', { act: 'corrreview', id: c.id, btn: AL_REVIEW })); });
   return out;
 }
 function alInfo() {   /* handover mistakes that are only for information, or waiting for someone else */
   var out = [];
   mvInfoList().forEach(function (m) { ALMV[m.id] = 1; out.push(mvInfoCard(m)); });
+  afxMine().forEach(function (r) { if (r.status !== 'open') ALMV['fr' + r.id] = 1; out.push(afxInfoCard(r)); });
   (S.corrs || []).forEach(function (c) {
     if (corrOptional(c)) out.push(alCard('✎', 'b', 'Handover mistake between ' + esc(c.fromName) + ' and ' + esc(c.toName), esc(corrLines(c).join(' · ').replace(/<[^>]+>/g, '')) + ' · ' + esc(c.reason || '') + '<br>For your information. They settle it between them, you do not need to do anything.', { act: 'corrreview', id: c.id }));
     else if (!corrCanDecide(c) && c.byEmail === EMAIL) out.push(alCard('⏳', 'a', 'Your correction is waiting for ' + esc(corrOther(c)), esc(corrLines(c).join(' · ').replace(/<[^>]+>/g, '')), { act: 'corrreview', id: c.id }));
@@ -1287,6 +1417,7 @@ function alInfo() {   /* handover mistakes that are only for information, or wai
 }
 function alNotice(n, old) {
   var nw = !old, when = alTime(n.at);
+  if (n.kind === 'shiftfix') return alCard('✎', 'b', 'Your shift was corrected to ' + esc(n.wk), 'The ' + esc(n.byName || 'president') + ' changed ' + esc(n.from || '') + ' → ' + esc(n.wk) + ' · ' + when + '. Your entries, handovers and day totals now say ' + esc(n.wk) + '. Cash, stock and counts are unchanged.');
   if (n.kind === 'hcdone' || n.kind === 'hcno') return alCard('✎', n.kind === 'hcdone' ? 'b' : 'a', n.kind === 'hcdone' ? 'Handover corrected' : 'Correction declined', esc(n.wk || '') + ' · ' + esc(n.shiftDate || '') + ' · ' + esc(n.text || '') + ' · ' + (n.kind === 'hcdone' ? 'accepted by ' : 'declined by ') + esc(n.byName || '') + ' · ' + when, { act: 'ntview', id: n.id, old: old, dot: nw });
   var recv = n.kind === 'received', dl = recv ? (ntDiffLoad(n.sid), NTDIFF[n.sid]) : null, matched = recv && (Array.isArray(dl) ? !dl.length : n.diffs === ''), diffs = recv ? (Array.isArray(dl) ? dl : (n.diffs ? ['Counted differently: ' + n.diffs] : [])) : [];
   var gp = n.kind === 'gap', canPay = (n.kind === 'shortage' || gp) && inControl() && !OWNERVIEW && openShortList().some(function (x) { return x.wk === n.wk; });
@@ -1312,7 +1443,7 @@ function alertsPage(refresh) {
   var key = ALTAB + '|' + html; if (refresh && key === ALLAST && alTop()) { if (un.length && DB) alRead(un); return; } ALLAST = key;
   wpPage(alertsPage, [true], html, true);
   var bl = $('#spage .spbell'); if (bl) bl.remove();   /* this page is the bell */
-  corrMarkSeen(); mvMarkSeen(); if (un.length && DB) alRead(un);
+  corrMarkSeen(); mvMarkSeen(); afxMarkSeen(); if (un.length && DB) alRead(un);
 }
 function alRead(un) { var b = writeBatch(DB); un.forEach(function (n) { b.update(ref('notices/' + n.id), { read: true }); }); b.commit().catch(function (e) { console.error(e); }); }   /* opening Alerts clears the number on the bell; they stay under Updates until you leave */
 function noticesModal(refresh) { alertsPage(!!refresh); }
@@ -2121,7 +2252,7 @@ function render() {
   if (ready) {
     var cs = currentShift();   /* the header always shows the shift working NOW, from the phone's own clock */
     var mp = myPerson();
-    $('#hdr').innerHTML = '<span style="white-space:nowrap"><span class="dot" style="background:' + shiftColor(cs.name) + '"></span>' + esc(cs.name) + ' shift</span><span class="hp w' + swc(cs.name) + '">On duty</span><small>' + esc(myName()) + (mp && mp.watch ? '<span class="hp w' + swc(mp.watch) + '">' + esc(mp.watch) + '</span>' : '') + (navigator.onLine ? '' : ' · OFFLINE') + '</small>' + (shKey(sh) !== shKey(cs) ? '<small class="rec" style="color:#FFD27A;opacity:1;font-weight:600">recording for ' + esc(sh.name) + ' shift</small>' : '');
+    $('#hdr').innerHTML = '<span style="white-space:nowrap"><span class="dot" style="background:' + shiftColor(cs.name) + '"></span>' + esc(cs.name) + ' shift</span><span class="hp w' + swc(cs.name) + '">On duty</span><small>' + esc(myName()) + (mp && mp.watch ? '<span class="hp w' + swc(mp.watch) + '">' + esc(mp.watch) + '</span>' : '') + (navigator.onLine ? '' : ' · OFFLINE') + '</small>' + (shKey(sh) !== shKey(cs) ? '<small class="rec" data-act="recfix" style="color:#FFD27A;opacity:1;font-weight:600;cursor:pointer">recording for ' + esc(sh.name) + ' shift ›</small>' : '');
     document.querySelectorAll('#nav button').forEach(function (b) { var on = b.dataset.tab === tab; b.classList.toggle('on', on); var q = b.querySelector('.qb'); if (on && !q && !helpOff()) { b.style.position = 'relative'; b.insertAdjacentHTML('beforeend', '<i class="qb">?</i>'); } else if ((!on || helpOff()) && q) q.remove(); });
   } else $('#hdr').innerHTML = 'Shift Welfare';
   var focus = document.activeElement && document.activeElement.id;
@@ -2193,6 +2324,7 @@ function evRow(e, cancelable) {
   else if (e.type === 'spoil') { ic = '🗑'; tx = 'Spoiled ' + e.qty + ' × ' + e.name; }
   else if (e.type === 'move') { var mvi = item(e.item) || {}; ic = mvi.shelf ? '🧁' : '🧊'; tx = 'Moved ' + uLab(mvi, e.cases) + ' of ' + e.name + ' to ' + (mvi.shelf ? 'shelf' : 'fridge'); sub = e.qty + ' items'; }
   else if (e.type === 'usecash') { ic = '💵'; tx = 'Cash used: ' + e.note; sub = e.receipt ? 'Receipt attached' : 'No receipt: ' + e.noReceipt; amt = '− ' + money(e.amt); col = 'var(--soon)'; }
+  else if (e.type === 'shiftfix') { ic = '🛠️'; tx = 'Shift corrected: ' + e.from + ' → ' + e.wk; sub = 'by ' + (e.byName || 'the president') + (e.fdate ? ' · the shift of ' + e.fdate : ''); amt = ''; col = 'var(--soon)'; }
   else if (e.type === 'cashshort' && e.gap) { ic = '⚠️'; tx = 'Cash short at handover: recorded against ' + e.wk; sub = 'nobody took the handover on the ' + e.wk + ' shift · counted by ' + (e.byName || 'the receiver'); amt = money(e.amt); col = 'var(--exp)'; }
   else if (e.type === 'cashshort') { ic = '⚠️'; tx = 'Cash counted short at handover'; sub = e.wk + ' watch handed over'; amt = money(e.amt); col = 'var(--exp)'; }
   else if (e.type === 'stockedit') { ic = '⚠️'; tx = 'Stock edited by hand: ' + e.name; sub = (e.reason || '') + (e.note ? ' · ' + e.note : ''); amt = (e.qty ? (e.qty > 0 ? '+' : '−') + Math.abs(e.qty) : '') + (e.qty && e.cases ? ' / ' : '') + (e.cases ? (e.cases > 0 ? '+' : '−') + Math.abs(e.cases) + (Math.abs(e.cases) === 1 ? ' case' : ' cases') : ''); col = 'var(--exp)'; }
@@ -2302,9 +2434,11 @@ function histDay() {   /* the shifts that started on the chosen day: the finishe
   gapList(key).forEach(function (z) { out.push({ sid: 'gap:' + z.gp.handoverId, wk: z.gp.wk, date: z.gp.shiftDate, half: z.gp.shiftHalf, doc: null, prev: null, running: false, gap: z }); });   /* a shift that never took a handover still has its day: what was sold while it waited */
   out.forEach(function (x) { if (x.gap) return; x.start = x.prev ? (x.prev.receivedAt || x.prev.at) : 0; x.end = x.doc && !x.still ? x.doc.at : 0; if (!x.start) { var ts = (HEVS || []).filter(function (e) { return e.sid === x.sid; }).map(function (e) { return e.t; }); if (ts.length) x.start = Math.min.apply(null, ts); } });
   out.forEach(function (x) { if (x.gap) { x.start = x.gap.t1; x.end = x.gap.t2; } });
+  out.forEach(function (x) { x.ro = x.gap ? null : fixRoster(x.start); x.bad = !!(x.ro && x.ro.wk !== x.wk); });   /* the roster says who works then: a shift filed under another shift is shown as the roster says, and the owner is warned */
   out.sort(function (a, b) { return (a.start || 0) - (b.start || 0); });
   return out;
 }
+function dw(x) { return x.bad ? x.ro.wk : x.wk; }
 var HEUN = null, HEKEY = null;
 function gapTotalHtml(d, gp, giver) {   /* the gap in totals: what was sold, what the cash should be, and who owes */
   var kv = function (l, v) { return '<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0"><span>' + l + '</span><b>' + v + '</b></div>'; }, n = gapUnits(d), handed = gp.cashHanded != null ? gp.cashHanded : (d.counted || 0);
@@ -2322,6 +2456,13 @@ function spentHtml(d, evs) {   /* "Money spent" for a handover: the total, and w
   var tr = function (txt, sub, amt) { return '<tr><td style="padding:4px 8px 4px 0;vertical-align:top">' + esc(txt) + (sub ? '<div class="muted" style="font-size:12px">' + esc(sub) + '</div>' : '') + '</td><td style="padding:4px 0;text-align:right;white-space:nowrap;vertical-align:top;font-weight:700;color:var(--soon)">− ' + money(amt) + '</td></tr>'; };
   var rows = sp.lines.length ? sp.lines.map(function (l) { return tr(l.txt, l.sub, l.amt); }).join('') : (sp.used ? tr('Cash used', '', sp.used) : '') + (sp.purch ? tr('Purchases paid in cash', '', sp.purch) : '');
   return '<div class="card spentbox" style="box-shadow:none;background:var(--soon-bg);border-left:2px solid var(--soon);margin:8px 0"><table style="width:100%;border-collapse:collapse"><tr><td style="padding:0 8px 4px 0"><b>💵 Money spent this shift</b></td><td style="padding:0 0 4px;text-align:right"><b>' + money(sp.total) + '</b></td></tr>' + rows + '</table><div class="muted" style="font-size:12px;margin-top:2px">Taken out of the cash before the handover, so it is not part of the cash counted.</div></div>';
+}
+function ownShift(email) {   /* a name always carries the person's OWN shift from the people list, never the shift their entries were filed under */
+  var w = email ? whoOf(email).wk : ''; return w ? ' <span class="muted">(' + esc(w) + ' shift)</span>' : '';
+}
+function coverLine(email, recorded, name) {   /* when the shift the entries were filed under is not the person's own shift: say so on its own line */
+  var w = email ? whoOf(email).wk : ''; if (!recorded || !w || w === recorded) return '';
+  return '<div class="hkv"><span>Recorded on the</span><b>' + esc(recorded) + ' shift, covered by ' + esc(name) + '</b></div>';
 }
 function spentLoad(d) {   /* the entries of an older shift are not loaded: fetch just this shift's, then say what the money was for */
   if (!(spentOf(d).total > 0) || spentOf(d).lines.length) return;
@@ -2345,11 +2486,11 @@ function hoSheet(id, kind, wk2) {   /* the short handover pop-up: who, the resul
     diffs.map(function (x) { var df = x[2] - x[1]; return tr(x[0], x[1], x[2], (df > 0 ? '+' : '−') + Math.abs(df) + (gp && df < 0 ? ' sold' : ''), gp ? 'var(--cnt)' : 'var(--exp)'); }).join('') + '</table>' + (acc && !diffs.length ? '<div style="font-size:13px;color:var(--ok);margin:2px 0 4px">✓ All items were counted correctly.</div>' : acc ? '<div style="font-size:13px;color:var(--ok);margin:2px 0 4px">✓ All other items were counted correctly.</div>' : '') + (gp ? gapTotalHtml(d, gp, giver) : '');   /* "all items" only when nothing differed, otherwise "all other items" */
   var owed = (d.owedBy || []), tot = r2(owed.reduce(function (a, x) { return a + x.bal; }, 0));
   modal('<h2 style="margin:0 0 4px">🔁 ' + (kind === 'recv' ? 'Handover received from ' + esc(giver) : 'Handed over to ' + esc(recvName)) + '</h2><div style="margin:4px 0 8px">' + wsw(d.wk) + ' <b>→</b> ' + (rwk ? wsw(rwk) : '<span class="muted">next shift</span>') + '</div>' +
-    '<div class="hkv"><span>Handed over by</span><b>' + esc(giver) + ' <span class="muted">(' + esc(d.wk) + ' shift)</span></b></div><div class="hkv"><span>' + (acc ? 'Received and counted by' : 'To be counted by') + '</span><b>' + esc(recvName) + (rwk ? ' <span class="muted">(' + esc(rwk) + ' shift)</span>' : '') + '</b></div><div class="hkv"><span>' + (acc ? 'When' : 'Handed over') + '</span><b>' + (kind === 'recv' && d.receivedAt ? hfmt(d.receivedAt) : hfmt(d.at) + (acc && d.receivedAt ? ' · accepted ' + hhmm(d.receivedAt) : '')) + '</b></div>' + box + tbl +
+    '<div class="hkv"><span>Handed over by</span><b>' + esc(giver) + ownShift(d.fromEmail) + '</b></div><div class="hkv"><span>' + (acc ? 'Received and counted by' : 'To be counted by') + '</span><b>' + esc(recvName) + ownShift(d.receivedBy) + '</b></div>' + coverLine(d.fromEmail, d.wk, giver) + (acc ? coverLine(d.receivedBy, rwk, recvName) : '') + '<div class="hkv"><span>' + (acc ? 'When' : 'Handed over') + '</span><b>' + (kind === 'recv' && d.receivedAt ? hfmt(d.receivedAt) : hfmt(d.at) + (acc && d.receivedAt ? ' · accepted ' + hhmm(d.receivedAt) : '')) + '</b></div>' + box + tbl +
     spentHtml(d) +
     (d.notes ? '<div style="margin:8px 0 2px;padding:9px 12px;border-radius:12px;background:var(--soft);font-size:13.5px"><span class="muted" style="font-size:12px">Remarks · ' + esc(giver) + '</span><div>' + esc(d.notes) + '</div></div>' : '') +
     '<div style="margin:10px 0 2px;font-weight:700;font-size:13.5px">Who owes on credit</div>' + (owed.length ? owed.map(function (x) { return '<div class="hkv"><span>' + esc(x.label) + '</span><b>' + money(x.bal) + '</b></div>'; }).join('') + '<div class="hkv"><span><b style="color:var(--ink)">Total</b></span><b>' + money(tot) + '</b></div>' : '<div class="muted">Nobody owed anything on credit.</div>') +
-    '<button class="btn block" data-act="close" style="margin-top:10px">Close</button><button class="btn sec block" data-act="shopen" data-id="' + esc(d.id) + '" style="margin-top:8px">Open the full handover record ›</button>' + (corrShow(d) ? '<button class="btn red block" data-act="corrstart2" data-id="' + esc(d.id) + '" style="margin-top:8px">✎ Handover mistake</button>' : ''));
+    '<button class="btn block" data-act="close" style="margin-top:10px">Close</button><button class="btn sec block" data-act="shopen" data-id="' + esc(d.id) + '" style="margin-top:8px">Open the full handover record ›</button><button class="btn sec block" data-act="hoask2" data-id="' + esc(d.id) + '" data-sid="' + esc(d.sid || d.id) + '" data-wk="' + esc(d.wk) + '" data-date="' + esc(d.date) + '" data-half="' + esc(d.half) + '" style="margin-top:8px">🙋 Ask for a fix</button>' + (corrShow(d) ? '<button class="btn red block" data-act="corrstart2" data-id="' + esc(d.id) + '" style="margin-top:8px">✎ Handover mistake</button>' : ''));
   spentLoad(d);
 }
 function evSheet(id) {   /* a payment, credit or loan: who, how much, when, and what is still owed */
@@ -2490,19 +2631,23 @@ function histAllHtml() {
   var one = HY.sid && day.filter(function (x) { return x.sid === HY.sid; })[0], sel = one ? [one] : day, sids = sel.map(function (x) { return x.sid; });
   var inDay = function (e) { var X = day.filter(function (x) { return x.sid === e.sid; })[0]; return !!X; };
   var evs = histShown().filter(function (e) { return sids.indexOf(e.sid) >= 0 && inDay(e); }), all = HEVS.filter(function (e) { return sids.indexOf(e.sid) >= 0 && inDay(e); });
-  var chips = '<div class="hcc"><button data-act="hsid" data-id="" class="' + (one ? '' : 'on') + '">All of the day</button>' + day.map(function (x) { return '<button data-act="hsid" data-id="' + esc(x.sid) + '" class="' + (one && one.sid === x.sid ? 'on' : '') + '">' + hdot(x.wk) + esc(x.wk) + (x.still ? ' <small style="font-weight:600;opacity:.85">· still running</small>' : '') + (x.gap ? ' <span aria-label="Nobody took the handover" style="display:inline-block;width:15px;height:15px;line-height:15px;border-radius:50%;background:var(--exp);color:#fff;font-size:11px;font-weight:800;text-align:center;vertical-align:1px;margin-left:2px">!</span>' : '') + '</button>'; }).join('') + '</div>';
+  var chips = '<div class="hcc"><button data-act="hsid" data-id="" class="' + (one ? '' : 'on') + '">All of the day</button>' + day.map(function (x) { return '<button data-act="hsid" data-id="' + esc(x.sid) + '" class="' + (one && one.sid === x.sid ? 'on' : '') + '">' + hdot(dw(x)) + esc(dw(x)) + (x.still ? ' <small style="font-weight:600;opacity:.85">· still running</small>' : '') + (x.bad && fixCan() ? ' <span aria-label="The records say ' + esc(x.wk) + '" style="display:inline-block;width:15px;height:15px;line-height:15px;border-radius:50%;background:var(--exp);color:#fff;font-size:11px;font-weight:800;text-align:center;vertical-align:1px;margin-left:2px">!</span>' : '') + (x.gap ? ' <span aria-label="Nobody took the handover" style="display:inline-block;width:15px;height:15px;line-height:15px;border-radius:50%;background:var(--exp);color:#fff;font-size:11px;font-weight:800;text-align:center;vertical-align:1px;margin-left:2px">!</span>' : '') + '</button>'; }).join('') + (function () {   /* the roster's shift for every part of the day, so the other part of the day is always there next to it */
+    return CFG.periods.map(function (pd, i) { var rw = slotShift(HY.dt, i); if (!rw || day.some(function (x) { return x.gap ? false : (x.ro ? x.ro.i === i && x.ro.day === dkey(HY.dt) : dw(x) === rw); }) || day.some(function (x) { return dw(x) === rw; })) return ''; return '<button disabled style="opacity:.6">' + hdot(rw) + esc(rw) + ' <small style="font-weight:600">· ' + esc(HL(pd.key)) + '</small></button>'; }).join('');
+  })() + '</div>';
   var first = sel[0], last = sel[sel.length - 1], t0 = first.start || Math.min.apply(null, all.map(function (e) { return e.t; }).concat([Infinity])), runs = sel.filter(function (x) { return x.running; })[0];
   var span = (isFinite(t0) ? hfmt(t0) : '') + ' → ' + (last.running ? '<b>now</b>' : last.end ? hfmt(last.end) : '');
   var lateNote = ''; sel.forEach(function (x) { if (!x.end || x.running || !x.start || x.gap) return; try { var s0 = slotNow(new Date(x.start + 60000)), nx = slotNext(s0.day, s0.i), sch = new Date(nx.day.getFullYear(), nx.day.getMonth(), nx.day.getDate(), CFG.periods[nx.i].start, 0).getTime(), lg = x.end - sch; if (lg > 15 * 60000) lateNote += '<div class="muted" style="margin:-4px 2px 8px">⏱ ' + esc(x.wk) + ' handed over ' + (lg >= 36e5 ? Math.floor(lg / 36e5) + ' h ' : '') + Math.round((lg % 36e5) / 6e4) + ' min after its ' + hhmm(sch) + ' shift end.</div>'; } catch (e2) {} });
-  var line = '<div class="hline"><span>' + sel.map(function (x) { return hdot(x.wk) + ' <b>' + esc(x.wk) + '</b>'; }).join(' / ') + ' · ' + span + '</span>' + (runs ? '<span class="run">● ' + esc(runs.wk) + ' running</span>' : one && one.doc ? '<span class="who">' + esc(one.doc.fromName || '') + (one.doc.receivedByName ? ' → ' + esc(one.doc.receivedByName) : '') + '</span>' : '') + '</div>';
+  var line = '<div class="hline"><span>' + sel.map(function (x) { return hdot(dw(x)) + ' <b>' + esc(dw(x)) + '</b>'; }).join(' / ') + ' · ' + span + '</span>' + (runs ? '<span class="run">● ' + esc(dw(runs)) + ' running</span>' : one && one.doc ? '<span class="who">' + esc(one.doc.fromName || '') + (one.doc.receivedByName ? ' → ' + esc(one.doc.receivedByName) : '') + '</span>' : '') + '</div>';
   var longs = sel.map(function (x) { var st0 = x.start || (isFinite(t0) ? t0 : 0), en = x.end || Date.now(); return { x: x, d: st0 ? Math.floor((en - st0) / 86400000) : 0 }; }).filter(function (z) { return z.d >= 1; }).sort(function (a, b) { return b.d - a.d; })[0];
   var warn = longs ? '<div style="padding:8px 10px;border-radius:10px;background:var(--soon-bg);color:var(--soon);font-size:12.5px;margin:-4px 0 10px">⚠ This shift ' + (longs.x.end ? 'lasted ' : 'has been running for ') + (longs.d + 1) + ' days' + (longs.x.end && !longs.x.running ? '' : '. It should be handed over.') + '</div>' : '';
-  var stills = sel.filter(function (x) { return x.still; }).map(function (x) { return '<div style="padding:8px 10px;border-radius:10px;background:var(--cnt-bg);color:var(--cnt);font-size:12.5px;margin:-4px 0 10px">' + hdot(x.wk) + ' <b>' + esc(x.wk) + '</b> is still working. It started on ' + (x.start ? hfmt(x.start) : esc(x.date)) + ' and has not handed over yet, so everything since then is shown here, by date.</div>'; }).join('');
-  warn = stills + warn + lateNote;
+  var stills = sel.filter(function (x) { return x.still; }).map(function (x) { return '<div style="padding:8px 10px;border-radius:10px;background:var(--cnt-bg);color:var(--cnt);font-size:12.5px;margin:-4px 0 10px">' + hdot(dw(x)) + ' <b>' + esc(dw(x)) + '</b> is still working. It started on ' + (x.start ? hfmt(x.start) : esc(x.date)) + ' and has not handed over yet, so everything since then is shown here, by date.</div>'; }).join('');
+  var badX = fixCan() ? sel.filter(function (x) { return x.bad; })[0] : null;
+  var fixWarn = badX ? '<div class="card" style="background:var(--soon-bg);border-left:2px solid var(--soon);box-shadow:none"><b>The records say ' + esc(badX.wk) + ', the roster says ' + esc(badX.ro.wk) + '</b><div style="margin-top:4px">Entries from ' + (badX.start ? hfmt(badX.start) : '') + ' are filed under <b>' + esc(badX.wk) + '</b>, but ' + esc(badX.ro.wk) + ' works then.</div><button class="btn sm" data-act="fixhub" style="margin-top:8px">Fix mistakes ›</button></div>' : '';
+  warn = stills + warn + lateNote + fixWarn;
   var dr = histRange(), dayEvs = one ? all : (HDAYOK ? HDAY : all.filter(function (e) { return e.t >= dr.a && e.t < dr.b; }));   /* the boxes count what was sold on this date, whichever shift sold it; one shift's own tile shows that whole shift */
   var gaps = one ? (one.gap ? [one.gap] : []) : gapList(dkey(HY.dt));
   var can = inControl() && all.some(function (e) { return e.sid === SH().sid; });
-  var blocks = sel.slice().reverse().map(function (X) { return histShiftBlock(X, evs, sel.length > 1 ? '<div class="sec-h" style="margin-top:14px">' + hdot(X.wk) + ' ' + esc(X.wk) + ' · ' + (X.start ? hfmt(X.start) : '') + ' → ' + (X.running ? 'now' : X.end ? hfmt(X.end) : '') + (function () { var n = histSold(all.filter(function (e) { return e.sid === X.sid; })); return n ? ' · ' + n + ' sold' : ''; })() + '</div>' : '') }).join('');
+  var blocks = sel.slice().reverse().map(function (X) { return histShiftBlock(X, evs, sel.length > 1 ? '<div class="sec-h" style="margin-top:14px">' + hdot(dw(X)) + ' ' + esc(dw(X)) + ' · ' + (X.start ? hfmt(X.start) : '') + ' → ' + (X.running ? 'now' : X.end ? hfmt(X.end) : '') + (function () { var n = histSold(all.filter(function (e) { return e.sid === X.sid; })); return n ? ' · ' + n + ' sold' : ''; })() + '</div>' : '') }).join('');
   if (!/class="list"|class="hcs"/.test(blocks)) blocks = histFilterCount() ? '<div class="empty">No entries match this filter on ' + esc(histPlain()) + '.<br><button class="btn sec" data-act="hclear" style="margin-top:12px">Clear filter</button></div>' : '<div class="empty">No entries yet for ' + esc(histPlain()) + '.</div>';
   return chips + line + warn + histTiles(dayEvs, day.some(function (x) { return x.running; }), gaps) + blocks + (can ? '<button class="btn ' + (CM ? 'sec' : 'red') + ' block" data-act="cmtog" style="margin-top:12px">' + (CM ? 'Done cancelling' : 'Cancel an item') + '</button>' + (CM ? '<div class="cancelbar">Tap Cancel next to the entry to remove. Only this shift can be cancelled.</div>' : '') : '') + '<p class="muted">Entries and handovers are kept for a year, under Handovers.</p>';
 }
@@ -2670,7 +2815,7 @@ function recordHtml(d, evs, h) {
 function gapCand(d) {   /* the shift that was due to take this handover, when a different shift took it */
   try {
     var hid = d.handoverId || d.id, x = (S.shAll || []).filter(function (y) { return y.handoverId === hid; })[0];
-    if (!isPres() || OWNERVIEW || d.status !== 'accepted' || !x || x.gap || !(x.cashShort > 0 || x.itemsValue > 0 || x.cashOver > 0)) return null;
+    if (!canApprove() || OWNERVIEW || d.status !== 'accepted' || !x || x.gap || !(x.cashShort > 0 || x.itemsValue > 0 || x.cashOver > 0)) return null;
     var H = slotOfShift({ date: d.date, half: d.half }); if (!H) return null;
     var rw = d.receivedBy ? whoOf(d.receivedBy).wk : '', s0 = slotNext(H.day, H.i), N = null, k;
     for (k = 0; k < 30 && !N; k++) { if (slotShift(s0.day, s0.i)) N = s0; else s0 = slotNext(s0.day, s0.i); }
@@ -4045,7 +4190,8 @@ function spRender() {
     (isPres() ? spRow('📝', 'Enter previous handover', 'Owner only. Opening cash, stock and credit by hand', 'opopen') : '') +
     (isPres() && viewOnlyText() ? spRow('🛡️', 'Take control now', 'Someone else is in control or a handover is stuck', 'ptake') : '') + '</div>' +
     '<div class="sp-h">App</div><div class="sp-card">' +
-    (isPres() && !OWNERVIEW ? spRow('🧾', 'Check past handovers', 'Shortages that may belong to a shift that skipped a handover. Owner only', 'gaplist') : '') +
+    (fixCan() ? spRow('🛠️', 'Fix mistakes', 'A shift filed under the wrong shift, or a shortage on the wrong one. The president, the owner and admins', 'fixhub') : '') +
+    spRow('🙋', 'Ask for a fix', 'Tell the president or the owner about a mistake', 'afxask') +
     spRow('⬆️', 'App version ' + APP_VERSION, 'Needs rules ' + RULES_VERSION + '. Tap to check for updates', 'updcheck') +
     (canAdmin() ? spRow('🧹', 'Tidy old shift summaries', 'One-time: remove handover summaries older than a year', 'oldtidy') : '') +
     (canAdmin() ? spRow('🛡️', 'Check the rules', 'Tests that the Firebase rules ' + RULES_VERSION + ' are published', 'rulescheck') : '') +
@@ -5426,6 +5572,21 @@ document.addEventListener('click', function (e) {
   else if (a === 'rxmore') { RXMORE = true; showRx(true); }
   else if (a === 'gapmove') gapMove(id);
   else if (a === 'gaplist') gapListPage();
+  else if (a === 'fixhub') fixHub();
+  else if (a === 'fixpick') fixPick();
+  else if (a === 'fixopen') fixOpen(id);
+  else if (a === 'fixwk') { FIXF.to = b.dataset.v; fixSheet(); }
+  else if (a === 'fixgo') fixGo();
+  else if (a === 'afxask') afxOpen({ type: 'other' });
+  else if (a === 'afxtype') { FIXQ.type = b.dataset.v; afxDraw(); }
+  else if (a === 'afxsend') afxSend();
+  else if (a === 'afxopen') afxOpenFix(id);
+  else if (a === 'afxno') afxNo(id);
+  else if (a === 'afxnogo') afxNoGo(id);
+  else if (a === 'afxwd') afxWithdraw(id);
+  else if (a === 'recfix') recFix();
+  else if (a === 'afxhere') { closeModal(); afxOpen({ type: 'shift' }); }
+  else if (a === 'hoask2') { closeModal(); afxOpen({ type: 'shift', sid: b.dataset.sid, wk: b.dataset.wk, date: b.dataset.date, half: b.dataset.half, hid: id }); }
   else if (a === 'keepyear') { if (isPres()) keepYearPage(false); }
   else if (a === 'keepyeargo') { if (isPres()) keepYearPage(true); }
   else if (a === 'storage') { if (canAdmin()) storagePage(); }
@@ -5876,6 +6037,8 @@ function startListeners() {
     pnSync(); pnOpen();
     if (!$('#spage').hidden && HREC && HSHDRAW) HSHDRAW(); else if (!$('#spage').hidden && RX && S.hand) showRx(true); scheduleRender(); refreshModal();
   }, function (e) { console.error(e); }));
+  if (fixCan()) subs.push(onSnapshot(query(col('fixreqs'), where('status', '==', 'open')), function (s) { S.fixreqs = docs(s).sort(function (a, b) { return (a.at || 0) - (b.at || 0); }); updateBell(); scheduleRender(); }, function (e) { console.error(e); }));
+  if (!OWNERVIEW) subs.push(onSnapshot(query(col('fixreqs'), where('email', '==', EMAIL)), function (s) { S.myfix = docs(s).sort(function (a, b) { return (b.at || 0) - (a.at || 0); }).slice(0, 30); updateBell(); scheduleRender(); }, function (e) { console.error(e); }));
   if (canAdmin() && !OWNERVIEW) subs.push(onSnapshot(query(col('shiftmoves'), orderBy('at', 'desc'), limit(60)), function (s) { S.moves = docs(s); updateBell(); scheduleRender(); }, function (e) { console.error(e); }));
   subs.push(onSnapshot(query(col('shiftreqs'), where('toEmail', '==', EMAIL)), function (s) {
     var before = S.shreqIn.filter(function (r) { return r.status === 'pending'; }).map(function (r) { return r.id; });
