@@ -288,7 +288,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.22', RULES_VERSION = '2.27';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.23', RULES_VERSION = '2.27';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2580,7 +2580,7 @@ function histRange() {   /* the start and end of what is on show, in ms: a worki
   var H = bizHour();
   if (HY.tab === 'shifts' || HY.tab === 'people') { var mo = histMo(), t = new Date(Date.now() - H * 36e5), a = mo ? new Date(+mo.slice(0, 4), +mo.slice(5, 7) - 1, 1, H) : new Date(t.getFullYear(), t.getMonth() - 11, 1, H); return { a: a.getTime(), b: mo ? new Date(a.getFullYear(), a.getMonth() + 1, 1, H).getTime() : new Date(t.getFullYear(), t.getMonth() + 1, 1, H).getTime() }; }
   var d = HY.dt, y = d.getFullYear(), m = d.getMonth(), p = histPer();
-  return p === 'day' ? { a: new Date(y, m, d.getDate(), H).getTime(), b: new Date(y, m, d.getDate() + 1, H).getTime() } : p === 'month' ? { a: new Date(y, m, 1, H).getTime(), b: new Date(y, m + 1, 1, H).getTime() } : { a: new Date(y, 0, 1, H).getTime(), b: new Date(y + 1, 0, 1, H).getTime() };
+  return p === 'day' ? { a: new Date(y, m, d.getDate(), H).getTime(), b: new Date(y, m, d.getDate() + 1, H).getTime() } : p === 'month' ? { a: new Date(y, m, 1).getTime(), b: new Date(y, m + 1, 1).getTime() } : { a: new Date(y, 0, 1).getTime(), b: new Date(y + 1, 0, 1).getTime() };   /* a month or a year is a calendar month or year (midnight to midnight): an entry shows in the month of its real date; only a single day runs 09:00 to 09:00 */
 }
 function histStep(n) { HY.sid = ''; var d = HY.dt, y = d.getFullYear(), m = d.getMonth(), p = histPer(); HY.dt = p === 'day' ? histNoon(new Date(y, m, d.getDate() + n)) : p === 'month' ? histNoon(new Date(y, m + n, 1)) : histNoon(new Date(y + n, m, 1)); }
 function histLabel() {
