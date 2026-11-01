@@ -256,7 +256,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   <button data-tab="handover"><span>📋</span>Handover</button>
 </nav>
 <div id="toast"></div>
-<div id="updbar" hidden><span></span><button class="btn sm" data-act="updgo">Update</button><button class="btn sec sm" data-act="updlater">Later</button></div>
+<div id="updbar" hidden><span></span><button class="btn sm" data-act="updgo">Update</button></div>
 <div id="spage" hidden></div>
 <div id="modal"></div>
 <div id="padhost"></div>
@@ -274,14 +274,21 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 /* the owner looking inside someone else's workplace can read everything and write nothing: every write goes through these */
 var OWNERVIEW = false;
 var VIEWERR = function () { var e = new Error('View only'); e.code = 'view-only'; return e; };
-function setDoc() { return OWNERVIEW ? Promise.reject(VIEWERR()) : _setDoc.apply(null, arguments); }
+var NTPATH = /\/notices\/[^/]+$/;
+function setDoc(r, d) { if (OWNERVIEW) return Promise.reject(VIEWERR()); var p = _setDoc.apply(null, arguments); if (r && r.path && NTPATH.test(r.path) && d && d.kind) p.then(function () { pushNotify('notice', r.id); }, function () {}); return p; }   /* a notice for someone else is also sent to their phone */
 function updateDoc() { return OWNERVIEW ? Promise.reject(VIEWERR()) : _updateDoc.apply(null, arguments); }
 function deleteDoc() { return OWNERVIEW ? Promise.reject(VIEWERR()) : _deleteDoc.apply(null, arguments); }
 function writeBatch(db) {
-  var b = _writeBatch(db); if (!OWNERVIEW) return b;
+  var b = _writeBatch(db);
+  if (!OWNERVIEW) {
+    var ids = [], bs = b.set.bind(b), bc = b.commit.bind(b);
+    b.set = function (r, d, o) { if (r && r.path && NTPATH.test(r.path) && d && d.kind) ids.push(r.id); return bs(r, d, o); };
+    b.commit = function () { return bc().then(function (x) { ids.forEach(function (i) { pushNotify('notice', i); }); return x; }); };
+    return b;
+  }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.20', RULES_VERSION = '2.26';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.22', RULES_VERSION = '2.27';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -527,6 +534,24 @@ function dayFlush(b) {
     b.set(ref('daily/' + k), data, { merge: true });
   });
 }
+function bossEmails() {   /* the owner and every president, not me */
+  var o = []; (S.members || []).forEach(function (m) { if (m.email && m.email !== EMAIL && m.role === 'president') o.push(m.email); });
+  if (PRESIDENT && PRESIDENT !== EMAIL && o.indexOf(PRESIDENT) < 0) o.push(PRESIDENT); return o;
+}
+function tellBosses(id, kind, f) {   /* a separate best-effort write after the entry is saved: a failed notice never blocks the entry */
+  if (OWNERVIEW || !DB) return; var t = Date.now(), n = 0;
+  bossEmails().forEach(function (em, k) { setDoc(ref('notices/' + id + '_' + k), Object.assign({ kind: kind, toEmail: em, by: EMAIL, read: false, at: t, byName: myName(), wk: SH().name || '' }, f)).catch(function () {}); });
+}
+function spendTell(e) {   /* money out of the till: cash lent, a purchase paid in cash, cash used */
+  if (!e || !(e.amt > 0)) return;
+  if (e.type === 'loan') tellBosses(e.id, 'spend', { amount: e.amt, what: 'Cash lent to ' + (e.crName || 'a customer') + (e.note ? ' · ' + e.note : ''), rcpt: '' });
+  else if (e.type === 'usecash') tellBosses(e.id, 'spend', { amount: e.amt, what: e.note || 'Cash used', rcpt: e.receipt ? 'receipt' : 'no receipt' });
+  else if (e.type === 'buy') tellBosses(e.id, 'spend', { amount: e.amt, what: 'Purchase' + (e.supplier ? ' · ' + e.supplier : ''), rcpt: e.receipt ? 'receipt' : 'no receipt' });
+}
+function spendCancelTell(e, many) {
+  if (many) return tellBosses('sc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), 'spendcancel', { amount: many.amt, what: many.n + ' entries (start over)' });
+  if (e && e.amt > 0 && ['loan', 'usecash', 'buy'].indexOf(e.type) >= 0) tellBosses('sc' + e.id, 'spendcancel', { amount: e.amt, what: e.type === 'loan' ? 'Cash lent to ' + (e.crName || 'a customer') : e.type === 'usecash' ? (e.note || 'Cash used') : 'Purchase' + (e.supplier ? ' · ' + e.supplier : '') });
+}
 function commit(b) { dayFlush(b); var q = PLQ; PLQ = []; return b.commit().then(function () { q.forEach(function (x) { if (x.del) deleteDoc(ref('plog/' + x.id)).catch(function () {}); else setDoc(ref('plog/' + x.id), x.d).catch(function () {}); }); }).catch(function (e) { console.error(e); toast(errText(e)); }); }   /* the credit lines are best effort: if they fail the entry itself is still saved */
 function guard(p) { return p.catch(function (e) { console.error(e); toast(errText(e)); }); }
 var LE = '';   /* id of the event the current save is for: every item / credit change in the save names it, and the database refuses changes that don't */
@@ -579,6 +604,7 @@ function cancelEvent(id, reason, quiet) {
   b.set(ref('cancelled/' + id), { at: Date.now(), by: EMAIL, byName: myName(), reason: reason || '', sid: e.sid, event: rec, expireAt: EXP() });
   b.delete(ref('events/' + id)); delete EVC[id]; if (PLT[e.type]) PLQ.push({ id: id, del: true });
   if (e.type === 'buy' || e.type === 'usecash') getDoc(ref('receipts/' + id)).then(function (sn) { if (sn.exists()) b.update(ref('receipts/' + id), { cancelled: true }); commit(b); }, function () { commit(b); }); else commit(b);
+  if (!quiet) spendCancelTell(e);
   toast(quiet ? 'Undone' : 'Cancelled and removed');
 }
 
@@ -759,17 +785,18 @@ function startOverGo(all) {
   askConfirm('Start over?', 'This cancels <b>' + list.length + '</b> ' + (all ? 'entries from this shift' : 'count' + (list.length === 1 ? '' : 's')) + ' and cannot be undone here. They stay in Cancelled entries for a year.', 'Yes, cancel them', function () { startOverRun(list); });
 }
 async function startOverRun(list) {
-  closeModal(); toast('Cancelling ' + list.length + ' entries…'); var done = 0, err = '';
+  closeModal(); toast('Cancelling ' + list.length + ' entries…'); var done = 0, err = '', sp = { n: 0, amt: 0 };
   for (var k = 0; k < list.length; k++) {
     var e = list[k]; DAYQ = []; var b = writeBatch(DB); err = reverseEvent(b, e); if (err) break;
     DAYQ.push({ e: cxEv(e), sign: -1 });
     var rec = {}; for (var f in e) if (f !== 'id') rec[f] = e[f];
     b.set(ref('cancelled/' + e.id), { at: Date.now(), by: EMAIL, byName: myName(), reason: 'Start over', sid: e.sid, event: rec, expireAt: EXP() });
     b.delete(ref('events/' + e.id)); delete EVC[e.id]; dayFlush(b);
-    try { await b.commit(); if (PLT[e.type]) deleteDoc(ref('plog/' + e.id)).catch(function () {}); } catch (x) { console.error(x); err = errText(x); break; }
+    try { await b.commit(); if (e.amt > 0 && ['loan', 'usecash', 'buy'].indexOf(e.type) >= 0) { sp.n++; sp.amt += e.amt; } if (PLT[e.type]) deleteDoc(ref('plog/' + e.id)).catch(function () {}); } catch (x) { console.error(x); err = errText(x); break; }
     done++; await new Promise(function (r) { setTimeout(r, 120); });
   }
   if (!err) { try { SH().counted = ''; await setShift({ counted: '' }); } catch (x) { console.error(x); } }   /* the cash that was counted goes too: the count starts again from nothing */
+  if (sp.n) spendCancelTell(null, { n: sp.n, amt: r2(sp.amt) });
   toast(err ? 'Stopped after ' + done + ': ' + err : 'Started over: ' + done + ' entr' + (done === 1 ? 'y' : 'ies') + ' cancelled'); render();
 }
 
@@ -998,7 +1025,7 @@ function loanNext(pid) {
   var amt = num($('#ln-amt').value), note = $('#ln-note').value.trim(); if (amt <= 0) return toast('Enter an amount');
   var cash = totals().cash;
   askConfirm('Lend cash?', '<b>' + money(amt) + '</b> to <b>' + esc(PK.ng ? PK.ng.name : plab(pid)) + '</b>' + (note ? '<br><span class="muted">' + esc(note) + '</span>' : '') + '<br><span class="muted">Cash on hand goes from ' + money(cash) + ' to ' + money(cash - amt) + '.</span>' + (amt > cash ? '<br><b style="color:var(--exp)">That is more than the cash on hand.</b>' : ''), 'Yes, lend ' + money(amt), function () {
-    var b = writeBatch(DB), id = newEv(); ngBatch(b); mkEvent(b, 'loan', null, 1, amt, { name: 'Cash loan', cr: pid, person: pid, cid: rootOf(pid), crName: PK.ng ? PK.ng.name : plab(pid), note: note }); balInc(b, rootOf(pid), amt); commit(b);
+    var b = writeBatch(DB), id = newEv(); ngBatch(b); mkEvent(b, 'loan', null, 1, amt, { name: 'Cash loan', cr: pid, person: pid, cid: rootOf(pid), crName: PK.ng ? PK.ng.name : plab(pid), note: note }); balInc(b, rootOf(pid), amt); commit(b).then(function () { spendTell(EVC[id]); });
     closeModal(); toast(money(amt) + ' lent to ' + (PK.ng ? PK.ng.name : plab(pid)), id);
   });
 }
@@ -1271,7 +1298,8 @@ function spBellSync(n) {
 }
 function updateBell() {
   var n = bellN(), c = $('#bellc');
-  try { if (navigator.setAppBadge) { if (n) navigator.setAppBadge(n); else navigator.clearAppBadge(); } } catch (x) {}   /* the number on the app icon (an installed app, while it runs) */
+  try { if (navigator.setAppBadge) { if (n) navigator.setAppBadge(n); else navigator.clearAppBadge(); } } catch (x) {}
+  try { caches.open('sw-badge').then(function (c) { return c.put('n', new Response(String(n || 0))); }).catch(function () {}); } catch (x) {}   /* the phone's push counter starts again from the exact number */   /* the number on the app icon (an installed app, while it runs) */
   spBellSync(n); pnSync(); if (alTop()) alertsPage(true); if (!c) return;
   c.hidden = !n; c.textContent = n > 9 ? '9+' : n;
 }
@@ -1313,6 +1341,10 @@ function mvDecide(id, st) {
   var b = writeBatch(DB); b.update(ref('shiftmoves/' + id), { status: st, decidedBy: EMAIL, decidedByName: myName(), decidedAt: Date.now() });
   if (st === 'moved' && m.personId) { var pe = person(m.personId); b.update(ref('people/' + m.personId), { watch: m.to }); b.set(ref('names/' + m.personId), { name: pe ? pe.name : m.name, watch: m.to }); }
   b.commit().then(function () { toast(st === 'moved' ? m.name + ' is now on ' + m.to : st === 'today' ? 'Just for today. Nothing changed.' : 'Not now. Nothing changed.'); }).catch(function (e) { console.error(e); toast(errText(e)); });
+}
+function hoAccTell(h, gwk, gap, diffs, cShort, cOver, sTot, ns) {   /* once per accepted handover: the owner and every president are told how it went */
+  var res = gap ? 'after a gap, recorded on ' + gwk : sTot > 0 ? 'short ' + money(sTot) : diffs.length ? 'differences noted' : 'matched';
+  tellBosses('ha_' + S.state.pending, 'hoacc', { fromName: h.fromName || '', sid: h.shift && h.shift.sid || '', handoverId: S.state.pending, fromWk: h.shift && h.shift.name || '', toWk: gwk || ns.name || '', result: res, amount: sTot || 0, shiftDate: h.shift && h.shift.date || '', shiftHalf: h.shift && h.shift.half || '' });
 }
 function mvCover(GP, h) {   /* after a handover is accepted as a shift that is not mine on the people list: ask the owner / presidents once a day for each person and shift (not for covering the shift on duty) */
   try {
@@ -1523,6 +1555,9 @@ function alNotice(n, old) {
   var nw = !old, when = alTime(n.at);
   if (n.kind === 'offset') return alCard('✓', 'b', n.role === 'to' ? 'Your ' + esc(n.to) + ' shift shortage was cleared' : 'Your ' + esc(n.from) + ' shift cash over was used', money(n.amount) + (n.role === 'to' ? ' cleared with ' + esc(n.from) + ' shift cash over' : ' of your cash over cleared ' + esc(n.to) + ' shift\'s shortage') + ' · by ' + esc(n.byName || 'an admin') + ' · ' + when + '.');
   if (n.kind === 'shiftfix') return alCard('✎', 'b', 'Your shift was corrected to ' + esc(n.wk), 'The ' + esc(n.byName || 'president') + ' changed ' + esc(n.from || '') + ' → ' + esc(n.wk) + ' · ' + when + '. Your entries, handovers and day totals now say ' + esc(n.wk) + '. Cash, stock and counts are unchanged.');
+  if (n.kind === 'spend') return alCard('💵', 'a', money(n.amount) + ' · ' + esc(n.what || ''), esc(n.byName || '') + ' · ' + (n.rcpt || '') + (n.wk ? ' · ' + esc(n.wk) + ' shift' : '') + ' · ' + when);
+  if (n.kind === 'spendcancel') return alCard('↩', 'b', 'Cancelled: ' + money(n.amount) + ' · ' + esc(n.what || ''), esc(n.byName || '') + (n.wk ? ' · ' + esc(n.wk) + ' shift' : '') + ' · ' + when);
+  if (n.kind === 'hoacc') return alCard('🔁', n.result === 'matched' ? 'g' : 'a', esc(n.byName || '') + ' accepted ' + esc(n.fromName || '') + '\'s handover', esc(n.fromWk || '') + ' → ' + esc(n.toWk || '') + ' · ' + esc(n.result || '') + ' · ' + when, { act: 'hoview', id: n.id, old: old, dot: nw });
   if (n.kind === 'hcdone' || n.kind === 'hcno') return alCard('✎', n.kind === 'hcdone' ? 'b' : 'a', n.kind === 'hcdone' ? 'Handover corrected' : 'Correction declined', esc(n.wk || '') + ' · ' + esc(n.shiftDate || '') + ' · ' + esc(n.text || '') + ' · ' + (n.kind === 'hcdone' ? 'accepted by ' : 'declined by ') + esc(n.byName || '') + ' · ' + when, { act: 'ntview', id: n.id, old: old, dot: nw });
   var recv = n.kind === 'received', dl = recv ? (ntDiffLoad(n.sid), NTDIFF[n.sid]) : null, matched = recv && (Array.isArray(dl) ? !dl.length : n.diffs === ''), diffs = recv ? (Array.isArray(dl) ? dl : (n.diffs ? ['Counted differently: ' + n.diffs] : [])) : [];
   var gp = n.kind === 'gap', canPay = (n.kind === 'shortage' || gp) && inControl() && !OWNERVIEW && openShortList().some(function (x) { return x.wk === n.wk; });
@@ -1594,7 +1629,7 @@ function ucReview() {
   askConfirm('Use this cash?', '<b>' + money(amt) + '</b> for <b>' + esc(purpose) + '</b><br><span class="muted">' + (UC.receipt ? 'Receipt photo attached. ' : 'No receipt: ' + esc(UC.reason.trim()) + '. ') + 'Cash on hand goes from ' + money(cash) + ' to ' + money(cash - amt) + '. It is deducted in the handover.</span>' + (amt > cash ? '<br><b style="color:var(--exp)">That is more than the cash on hand.</b>' : ''), 'Yes, use ' + money(amt), function () {
     var b = writeBatch(DB), id = newEv(), uc = UC; mkEvent(b, 'usecash', null, 1, amt, { name: 'Cash used', note: purpose, receipt: uc.receipt || '', noReceipt: uc.receipt ? '' : uc.reason.trim() });
     UC = null; closeModal(); toast(money(amt) + ' used: ' + purpose, id);
-    thumbOf(uc.receipt, function (th) { receiptWrite(b, id, { kind: 'cash', title: purpose, amount: amt, receipt: uc.receipt, noReceipt: uc.reason.trim() }, th); commit(b); });
+    thumbOf(uc.receipt, function (th) { receiptWrite(b, id, { kind: 'cash', title: purpose, amount: amt, receipt: uc.receipt, noReceipt: uc.reason.trim() }, th); commit(b).then(function () { spendTell(EVC[id]); }); });
   });
 }
 
@@ -1950,7 +1985,7 @@ function buySave() {
   mkEvent(b, BUY.other ? 'other' : 'buy', null, tc, BUY.other ? 0 : paid, { invoice: BUY.other ? 0 : total, writeoff: BUY.other ? 0 : wo, name: BUY.other ? 'Added stock' : 'Purchase', lines: lines, supplier: BUY.other ? '' : supName, tax: BUY.other ? 0 : num(BUY.tax), receipt: BUY.other ? '' : (BUY.receipt || ''), note: BUY.other ? BUY.note.trim() : '', t: when, items: lines.map(function (l) { return l.item; }) });
   var rcp = BUY.other ? '' : (BUY.receipt || ''), isBuy = !BUY.other, tot0 = total;
   BUY = null; toast('Stock added', eid); render();
-  var done = function (th) { if (isBuy) receiptWrite(b, eid, { kind: 'buy', title: supName, amount: tot0, receipt: rcp, noReceipt: 'no photo taken' }, th); commit(b).then(function () { return fillCosts(fills); }); };
+  var done = function (th) { if (isBuy) receiptWrite(b, eid, { kind: 'buy', title: supName, amount: tot0, receipt: rcp, noReceipt: 'no photo taken' }, th); commit(b).then(function () { if (isBuy) spendTell(EVC[eid]); return fillCosts(fills); }); };
   if (isBuy) thumbOf(rcp, done); else done('');
 }
 
@@ -3750,7 +3785,7 @@ function rxAccept2() {
   b.update(ref('handovers/' + S.state.pending), { status: 'accepted', acceptedBy: EMAIL, acceptedAt: Date.now(), check: gap ? 'Received after a gap (the ' + gwk + ' shift never took it). Assumed correct.' + (diffs.length ? '\n' + diffs.join('\n') : '') : diffs.length ? diffs.join('\n') : 'everything matched', receivedSig: M.signature, receivedName: myName(), receivedItems: Object.assign({ _v: vnum(APP_VERSION) }, RI), receivedCash: cashC });
   b.update(ref('shop/state'), { controlEmail: EMAIL, controlName: myName(), pending: '', shift: ns, openingDone: true });
   (S.corrs || []).forEach(function (cc) { if (cc.status === 'open') b.update(ref('corrections/' + cc.id), { status: 'closed' }); });   /* a handover correction nobody decided is closed, unchanged, when the next handover is taken */
-  commit(b); mvCover(GP, h); if (GP.rwk && GP.rwk !== GP.mw) shCover(ns.sid); RX = null; RXSTEP = 0; sel = null; qty = 1; tab = 'sell'; closeModal(); spClose(); toast(gap ? 'Accepted after a gap, recorded for ' + gwk : diffs.length ? 'Accepted, differences noted' : 'Accepted, all matched');
+  commit(b); mvCover(GP, h); hoAccTell(h, gwk, gap, diffs, cShort, cOver, sTot, ns); if (GP.rwk && GP.rwk !== GP.mw) shCover(ns.sid); RX = null; RXSTEP = 0; sel = null; qty = 1; tab = 'sell'; closeModal(); spClose(); toast(gap ? 'Accepted after a gap, recorded for ' + gwk : diffs.length ? 'Accepted, differences noted' : 'Accepted, all matched');
 }
 
 /* ---------- president: who are you? ---------- */
@@ -3983,8 +4018,9 @@ function pnOpen() {   /* tapped on the phone: open that correction */
   if (!PNOPEN || !S.corrs) return; var c = (S.corrs || []).filter(function (x) { return x.id === PNOPEN; })[0];
   if (c) { PNOPEN = ''; try { history.replaceState(null, '', location.pathname); } catch (x) {} corrReview(c.id); }
 }
-try { if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (e) { if (e.data && e.data.type === 'corr') { PNOPEN = e.data.id; pnOpen(); } else if (e.data && e.data.type === 'bell') pnBell(); }); } catch (x) {}
+try { if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (e) { if (e.data && e.data.type === 'corr') { PNOPEN = e.data.id; pnOpen(); } else if (e.data && e.data.type === 'ho') pnHo(e.data.sid); else if (e.data && e.data.type === 'bell') pnBell(); }); } catch (x) {}
 if (PNBELL) setTimeout(function () { pnBell(); }, 800);
+if (PNHO) setTimeout(function () { pnHo(PNHO); }, 800);
 document.addEventListener('visibilitychange', function () { pnSync(); });
 /* ---------- real phone push: works with the app closed. It needs the push Worker (push/README.md); until pushUrl and vapidKey are in firebase-config.js nothing below does anything ---------- */
 var PUSHCFG = null, PUSHTRIED = false, PNBELL = /[?&]bell=1/.test(location.search);
@@ -4012,6 +4048,14 @@ function pushNotify(kind, id) {   /* tell the push Worker something now waits fo
     return AUTH.currentUser.getIdToken().then(function (t) { return fetch(cfg.url + '/notify', { method: 'POST', headers: { authorization: 'Bearer ' + t, 'content-type': 'application/json' }, body: JSON.stringify({ kind: kind, pid: kind === 'place' ? '' : PID, id: id }) }); });
   }).catch(function () {});
 }
+function hoOpenSid(sid, wk) {   /* tapped an accepted-handover notice (in the app or on the phone): the short handover pop-up, which has the button for the full record */
+  if (!sid || !DB) return;
+  var go = function () { hoSheet(sid, 'recv', wk || ''); };
+  if (HSD[sid]) return go();
+  getDoc(ref('shifts/' + sid)).then(function (sn) { if (!sn.exists()) return toast('That handover is not available'); var x = sn.data(); x.id = sid; HSD[sid] = x; go(); }).catch(function (e) { toast(errText(e)); });
+}
+var PNHO = (/[?&]ho=([^&]+)/.exec(location.search) || [])[1] || '';
+function pnHo(sid, n) { if (STAGE === 'ready') { PNHO = ''; try { history.replaceState(null, '', location.pathname); } catch (x) {} var nv = (S.notices || []).filter(function (x) { return x.sid === sid && x.kind === 'hoacc'; })[0]; hoOpenSid(sid, nv ? nv.toWk : ''); } else if ((n || 0) < 40) setTimeout(function () { pnHo(sid, (n || 0) + 1); }, 500); }
 function pnBell(n) { if (STAGE === 'ready') { PNBELL = false; try { history.replaceState(null, '', location.pathname); } catch (x) {} noticesModal(); } else if ((n || 0) < 40) setTimeout(function () { pnBell((n || 0) + 1); }, 500); }
 var NTDIFF = {};   /* sid -> the lines that differ on a received handover (read from its record), for the Alerts list */
 function ntDiffLoad(sid) {
@@ -5620,6 +5664,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'corrdecline') corrDecline(b.dataset.id);
   else if (a === 'corrcancel') corrCancel(b.dataset.id);
   else if (a === 'corrnote') corrRecView(b.dataset.id);
+  else if (a === 'hoview') { var hv = (S.notices || []).filter(function (x) { return x.id === id; })[0]; if (hv) hoOpenSid(hv.sid, hv.toWk); }
   else if (a === 'ntview') { var nv = (S.notices || []).filter(function (x) { return x.id === id; })[0]; if (nv && (nv.kind === 'hcdone' || nv.kind === 'hcno')) corrNoticeView(nv); else if (nv && nv.kind !== 'received') { HSH[nv.handoverId] = nv.s; shDetail(nv.handoverId); } }
   else if (a === 'cpeople') creditPeople();
   else if (a === 'clf') { CLF = b.dataset.v; if (LASTV) { var bx = $('#modal .modal > div'); if (bx) bx.innerHTML = LASTV(); } }
@@ -5881,7 +5926,6 @@ document.addEventListener('click', function (e) {
   else if (a === 'instlater') { var ip2 = $('#instp'); if (ip2) ip2.remove(); try { localStorage.setItem('sw.instLater', String(Date.now())); } catch (x) {} render(); }
   else if (a === 'tcask') tcAsk();
   else if (a === 'updgo') updNow();
-  else if (a === 'updlater') { UPD.later = Date.now() + 30 * 60 * 1000; $('#updbar').hidden = true; }
   else if (a === 'updcheck') checkUpdate(true);
   else if (a === 'rulescheck') rulesCheck();
   else if (a === 'oldtidy') oldTidy(false);
@@ -6408,7 +6452,7 @@ function showUpd() { $('#updbar span').textContent = '🔔 New version ' + UPD.v
 async function checkUpdate(manual) {
   try {
     var r = await fetch('index.html?_=' + Date.now(), { cache: 'no-store' }), t = await r.text(), m = t.match(/APP_VERSION = '([0-9.]+)'/);
-    if (m && vnum(m[1]) > vnum(APP_VERSION)) { UPD.ver = m[1]; if (manual || Date.now() > UPD.later) showUpd(); if (manual) { toast('New version ' + m[1] + ' is ready'); } return true; }
+    if (m && vnum(m[1]) > vnum(APP_VERSION)) { UPD.ver = m[1]; showUpd(); if (manual) { toast('New version ' + m[1] + ' is ready'); } return true; }
     $('#updbar').hidden = true; if (manual) toast('You have the latest version (' + APP_VERSION + ')'); return false;
   } catch (e) { if (manual) toast('Could not check. Are you online?'); return false; }
 }
