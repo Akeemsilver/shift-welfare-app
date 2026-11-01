@@ -288,7 +288,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.23', RULES_VERSION = '2.27';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.24', RULES_VERSION = '2.27';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2547,7 +2547,7 @@ function evRow(e, cancelable) {
   return '<div' + (e.type === 'buy' || e.type === 'other' ? ' data-act="buyview" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'pay' || e.type === 'cnote' || e.type === 'loan' || (e.type === 'sale' && e.cr) ? ' data-act="evsheet" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'stockedit' ? ' data-act="editview" data-id="' + e.id + '" style="cursor:pointer;background:var(--exp-bg);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px;box-shadow:inset 2px 0 0 var(--exp)"' : e.type === 'cashshort' ? ' style="cursor:pointer;background:var(--exp-bg);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px;box-shadow:inset 2px 0 0 var(--exp)"' : '') + '><span style="font-size:18px;width:26px;flex:none;text-align:center">' + ic + '</span><div class="grow"><b>' + esc(tx) + '</b><div class="muted">' + (hdt(e) ? hdt(e) + ' ' : '') + hhmm(e.t) + (sub ? ' · ' + esc(sub) : '') + (e.byName ? ' · recorded by ' + esc(e.byName) : '') + '</div></div>' + (e.receipt ? '<img data-act="rcv" src="' + e.receipt + '" alt="receipt" style="width:44px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">' : '') + '<b style="color:' + col + '">' + amt + '</b>' + (CM && cancelable && ['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'shiftrec', 'watchchg'].indexOf(e.type) < 0 ? '<button class="btn red sm" data-act="cancelask" data-id="' + e.id + '">Cancel</button>' : '') + '</div>';
 }
 /* ---------- History: one full page. All = the entries of a day or a month, Shifts = the permanent shift summaries (a day, a month or a year), Charts. The Filter is in the top bar ---------- */
-var HY = { tab: 'all', per: 'day', dt: new Date(), types: {}, short: false, wk: '', sid: '', cnt: {}, sper: 'month', pper: 'month', pf: 'all', pq: '', pid: '', pl: null, hm: '', pm: '', cv: 'score', sy: 0, back: false }, HUN = null, HEVS = null, HSDOCS = null, HSD = {}, HYSIG = '';
+var HY = { tab: 'all', per: 'day', dt: new Date(), types: {}, short: false, wk: '', sid: '', cnt: {}, sper: 'month', pper: 'month', pf: 'all', pq: '', pid: '', pl: null, hm: '', pm: '', cv: 'score', sy: 0, back: false, yr: false }, HUN = null, HEVS = null, HSDOCS = null, HSD = {}, HYSIG = '';
 var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash']], ['Shortages and repayments', '⚠️', ['cashshort', 'repay', 'offset', 'gapfix']], ['Corrections', '🛠️', ['hocorr', 'shortfix', 'shiftfix', 'dayfix']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
 function hgroup(e) { if ((e.type === 'adjust' || e.type === 'cageadj') && e.ho) return 'Shortages and repayments'; for (var i = 0; i < HGROUPS.length; i++) if (HGROUPS[i][2].indexOf(e.type) >= 0) return HGROUPS[i][0]; return 'Stock edits by hand'; }
 function histNoon(d) { var x = new Date(d); x.setHours(12, 0, 0, 0); return x; }
@@ -2569,7 +2569,7 @@ function livePage(fn, title, qs, build) {   /* a full-screen page that stays in 
   HUN = function () { uns.forEach(function (u) { u(); }); };
 }
 function histStop() { if (HUN) { HUN(); HUN = null; } if (HEUN2) { HEUN2(); HEUN2 = null; } HDAY = []; HDAYOK = false; HSHDRAW = null; }
-function histPer() { return HY.tab === 'all' ? (Object.keys(HY.types).some(function (k) { return HY.types[k] && k !== 'Handovers'; }) ? 'month' : 'day') : HY.tab === 'shifts' || HY.tab === 'people' ? 'year' : 'month'; }
+function histPer() { return HY.tab === 'all' ? (HY.yr ? 'yr' : Object.keys(HY.types).some(function (k) { return HY.types[k] && k !== 'Handovers'; }) ? 'month' : 'day') : HY.tab === 'shifts' || HY.tab === 'people' ? 'year' : 'month'; }
 function histMonthKey(n) { var t = new Date(); t = new Date(t.getFullYear(), t.getMonth() - n, 1); return t.getFullYear() + '-' + ('0' + (t.getMonth() + 1)).slice(-2); }
 function histMonthName(m) { return new Date(+m.slice(0, 4), +m.slice(5, 7) - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }); }
 function histYearFrom() { return histMonthKey(11); }   /* the oldest month on show: records are kept for a year */
@@ -2580,6 +2580,7 @@ function histRange() {   /* the start and end of what is on show, in ms: a worki
   var H = bizHour();
   if (HY.tab === 'shifts' || HY.tab === 'people') { var mo = histMo(), t = new Date(Date.now() - H * 36e5), a = mo ? new Date(+mo.slice(0, 4), +mo.slice(5, 7) - 1, 1, H) : new Date(t.getFullYear(), t.getMonth() - 11, 1, H); return { a: a.getTime(), b: mo ? new Date(a.getFullYear(), a.getMonth() + 1, 1, H).getTime() : new Date(t.getFullYear(), t.getMonth() + 1, 1, H).getTime() }; }
   var d = HY.dt, y = d.getFullYear(), m = d.getMonth(), p = histPer();
+  if (p === 'yr') { var n0 = new Date(); return { a: new Date(n0.getFullYear(), n0.getMonth(), n0.getDate() - 365).getTime(), b: new Date(n0.getFullYear(), n0.getMonth(), n0.getDate() + 1).getTime() }; }   /* the last 365 days, today included */
   return p === 'day' ? { a: new Date(y, m, d.getDate(), H).getTime(), b: new Date(y, m, d.getDate() + 1, H).getTime() } : p === 'month' ? { a: new Date(y, m, 1).getTime(), b: new Date(y, m + 1, 1).getTime() } : { a: new Date(y, 0, 1).getTime(), b: new Date(y + 1, 0, 1).getTime() };   /* a month or a year is a calendar month or year (midnight to midnight): an entry shows in the month of its real date; only a single day runs 09:00 to 09:00 */
 }
 function histStep(n) { HY.sid = ''; var d = HY.dt, y = d.getFullYear(), m = d.getMonth(), p = histPer(); HY.dt = p === 'day' ? histNoon(new Date(y, m, d.getDate() + n)) : p === 'month' ? histNoon(new Date(y, m + n, 1)) : histNoon(new Date(y + n, m, 1)); }
@@ -2588,11 +2589,12 @@ function histLabel() {
   return p === 'day' ? d.toLocaleDateString('en-GB', { weekday: 'short' }) + ' · ' + d.getDate() + ' ' + mn + ' ' + d.getFullYear() : p === 'month' ? mn + ' ' + d.getFullYear() : String(d.getFullYear());
 }
 function histPlain() { var d = HY.dt, p = histPer(), mn = d.toLocaleDateString('en-GB', { month: 'long' }); return p === 'day' ? d.getDate() + ' ' + mn + ' ' + d.getFullYear() : p === 'month' ? mn + ' ' + d.getFullYear() : String(d.getFullYear()); }
-function histFilterCount() { return HY.tab === 'shifts' ? (HY.short ? 1 : 0) + (HY.wk ? 1 : 0) + (HY.hm ? 1 : 0) : HY.tab === 'people' ? (HY.pm ? 1 : 0) : Object.keys(HY.types).filter(function (k) { return HY.types[k]; }).length; }
+function histFilterCount() { return HY.tab === 'all' && HY.yr ? 1 + Object.keys(HY.types).filter(function (k) { return HY.types[k]; }).length : HY.tab === 'shifts' ? (HY.short ? 1 : 0) + (HY.wk ? 1 : 0) + (HY.hm ? 1 : 0) : HY.tab === 'people' ? (HY.pm ? 1 : 0) : Object.keys(HY.types).filter(function (k) { return HY.types[k]; }).length; }
 function histHead() {
   var r = histRange(), now = Date.now(), p = histPer(), here = p === 'day' ? dkey(HY.dt) === dkey(histToday()) : now >= r.a && now < r.b, fut = r.a > now && !here, y = HY.dt.getFullYear(), pick, st = ' style="width:' + (here ? '100%' : 'calc(100% - 66px)') + '"';
   var tabs = '<div class="htabs">' + [['all', 'Day'], ['shifts', 'Handovers'], ['people', 'People'], ['charts', 'Charts']].map(function (x) { return '<button data-act="hytab" data-v="' + x[0] + '" class="' + (HY.tab === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>';
   if (HY.tab === 'people' || HY.tab === 'shifts') return tabs;
+  if (p === 'yr') return tabs + '<div class="hline" style="margin-bottom:10px"><span>📅 <b>Last 365 days</b>, newest first</span><a data-act="fyr" style="color:var(--link);font-weight:700;cursor:pointer">Back to day</a></div>';
   var seg = '';
   if (p === 'day') pick = '<input class="hpick"' + st + ' type="date" value="' + dkey(HY.dt) + '" aria-label="Pick a date">';
   else if (p === 'month') pick = '<input class="hpick"' + st + ' type="month" value="' + dkey(HY.dt).slice(0, 7) + '" aria-label="Pick a month">';
@@ -2608,7 +2610,7 @@ function histShown() {   /* the entries on show after the type filter */
   var ev = (HEVS || []).slice().sort(function (a, b) { return b.t - a.t; }), on = Object.keys(HY.types).filter(function (k) { return HY.types[k]; });
   return on.length ? ev.filter(function (e) { return HY.types[hgroup(e)]; }) : ev;
 }
-function histEmptyWord() { var p = histPer(); return p === 'day' ? 'this day' : p === 'month' ? 'this month' : 'this year'; }
+function histEmptyWord() { var p = histPer(); return p === 'day' ? 'this day' : p === 'month' ? 'this month' : p === 'yr' ? 'the last year' : 'this year'; }
 function histSold(evs) { return Math.max(0, evs.reduce(function (a, e) { return a + ((e.type === 'sale' || e.type === 'count') ? (e.qty || 0) : e.type === 'snote' ? -(e.qty || 0) : 0); }, 0)); }   /* items sold: the same count as "Total items sold" on a handover */
 function histTiles(evs, now, gaps) {   /* Cash sales, Credit given, Cash lent out / Purchases, Still owed, Paid back */
   var sm = function (f) { return evs.filter(f).reduce(function (a, e) { return a + (e.amt || 0); }, 0); };
@@ -2854,16 +2856,19 @@ function histAllHtml() {
 }
 function histAllMonth() {
   if (!HEVS) return '<div class="empty">Loading…</div>';
+  if (HY.yr && !Object.keys(HY.types).some(function (k) { return HY.types[k]; })) return '<div class="empty">Tick what you want to see for the whole year.<br><button class="btn" data-act="hfilter" style="margin-top:12px">Choose entry types</button></div>';
   var sh = histShown(), p = histPer(), can = p === 'day' && inControl() && HEVS.some(function (e) { return e.sid === SH().sid; });
   if (!HEVS.length) return '<div class="empty">No records for ' + histEmptyWord() + '.</div>';
   if (!sh.length) return '<div class="empty">No entries match this filter on ' + esc(histPlain()) + '.<br><button class="btn sec" data-act="hclear" style="margin-top:12px">Clear filter</button></div>';
   var tiles = histTiles(HEVS, false);
   var out = '', last = '';
+  var lastM = '';
   sh.forEach(function (e) {
+    if (p === 'yr') { var mk = new Date(e.t).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }).toUpperCase(); if (mk !== lastM) { lastM = mk; last = ''; out += '<div class="mh">' + esc(mk) + '</div>'; } }
     if (p !== 'day') { var k = new Date(e.t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); if (k !== last) { last = k; out += '<div class="sec-h">' + esc(k) + '</div>'; } }
     out += evRow(e, e.sid === SH().sid);
   });
-  return tiles + '<div class="list">' + out + '</div>' + (can ? '<button class="btn ' + (CM ? 'sec' : 'red') + ' block" data-act="cmtog" style="margin-top:12px">' + (CM ? 'Done cancelling' : 'Cancel an item') + '</button>' + (CM ? '<div class="cancelbar">Tap Cancel next to the entry to remove. Only this shift can be cancelled.</div>' : '') : '') + '<p class="muted">Entries and handovers are kept for a year, under Handovers.</p>';
+  return tiles + (p === 'yr' && HEVS.length >= 5000 ? '<div class="muted" style="margin:-6px 2px 10px">Only the first 5000 entries are shown. Tick fewer types to see them all.</div>' : '') + '<div class="list">' + out + '</div>' + (can ? '<button class="btn ' + (CM ? 'sec' : 'red') + ' block" data-act="cmtog" style="margin-top:12px">' + (CM ? 'Done cancelling' : 'Cancel an item') + '</button>' + (CM ? '<div class="cancelbar">Tap Cancel next to the entry to remove. Only this shift can be cancelled.</div>' : '') : '') + '<p class="muted">Entries and handovers are kept for a year, under Handovers.</p>';
 }
 function shDay(d) { var x = String(d.day || ''); if (x) return x; var q = String(d.date || '').split('/'); return q.length === 3 ? q[2] + '-' + q[1] + '-' + q[0] : ''; }
 function histShiftRow(d) {
@@ -2921,6 +2926,11 @@ function histPage() {   /* (re)start the live data for what is on show, then dra
     HEVS = null; HEKEY = null; histDraw();
     var u0 = onSnapshot(query(col('shifts'), orderBy('at', 'desc'), limit(400)), function (snap) { HSDOCS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; HSD[x.id] = x; return x; }); histEvSub(); histDraw(); }, function (e) { toast(errText(e)); });
     HUN = function () { u0(); if (HEUN) { HEUN(); HEUN = null; } HEKEY = null; };
+  } else if (HY.tab === 'all' && HY.yr) {   /* the whole last year, only for the ticked types (a query on the type alone needs no extra index) */
+    var ts = []; HGROUPS.forEach(function (g) { if (HY.types[g[0]]) g[2].forEach(function (t) { ts.push(t); }); }); HEVS = null; histDraw();
+    if (!ts.length) { HEVS = []; histDraw(); return; }
+    var parts = [], uns = [], r2y = histRange(); for (var q = 0; q < ts.length; q += 30) (function (ix, chunk) { parts[ix] = null; uns.push(onSnapshot(query(col('events'), where('type', 'in', chunk), limit(5000)), function (snap) { parts[ix] = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); if (parts.some(function (z) { return z === null; })) return; HEVS = [].concat.apply([], parts).filter(function (x) { return !x.su && x.t >= r2y.a && x.t < r2y.b; }); histDraw(); }, function (e) { toast(errText(e)); })); })(q / 30, ts.slice(q, q + 30));
+    HUN = function () { uns.forEach(function (u) { u(); }); };
   } else if (HY.tab === 'all') {
     var r = histRange(); HEVS = null; histDraw();
     HUN = onSnapshot(query(col('events'), where('t', '>=', r.a), where('t', '<', r.b), limit(3000)), function (snap) { HEVS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }).filter(function (x) { return !x.su; }); histDraw(); }, function (e) { toast(errText(e)); });
@@ -3133,7 +3143,7 @@ function histSheetHtml() {
   var mrow = function (m) { var t = new Date(); return '<div class="fld" style="position:relative"><span>Month</span><b>' + (m ? esc(histMonthName(m)) : 'Whole year') + ' ▾</b><input class="hpick" style="width:100%" type="month" data-hmp="1" value="' + (m || dkey(t).slice(0, 7)) + '" min="' + histYearFrom() + '" max="' + dkey(t).slice(0, 7) + '" aria-label="Pick a month"></div>'; };
   if (all) {
     var cnt = {}; (HEVS || []).forEach(function (e) { var g = hgroup(e); cnt[g] = (cnt[g] || 0) + 1; });
-    body = '<div class="flab">Entry types</div>' + HGROUPS.map(function (g) { var on = !!HY.types[g[0]]; return '<div class="frow" data-act="ftog" data-v="' + esc(g[0]) + '"><div class="fbox' + (on ? ' on' : '') + '">' + (on ? '✓' : '') + '</div><span class="grow">' + g[1] + ' ' + esc(g[0]) + '</span><span class="muted">' + (cnt[g[0]] || 0) + '</span></div>'; }).join('');
+    body = '<div class="flab">How far back</div><div class="frow" data-act="fyr"><div class="fbox' + (HY.yr ? ' on' : '') + '">' + (HY.yr ? '✓' : '') + '</div><span class="grow">📅 The whole last year</span><span class="muted">365 days</span></div><div class="muted" style="font-size:12.5px;margin:2px 4px 8px">Every month of the past year, newest first, for the types you tick below.</div><div class="flab">Entry types</div>' + HGROUPS.map(function (g) { var on = !!HY.types[g[0]]; return '<div class="frow" data-act="ftog" data-v="' + esc(g[0]) + '"><div class="fbox' + (on ? ' on' : '') + '">' + (on ? '✓' : '') + '</div><span class="grow">' + g[1] + ' ' + esc(g[0]) + '</span><span class="muted">' + (cnt[g[0]] || 0) + '</span></div>'; }).join('');
     n = histShown().length; n = 'Show ' + n + (n === 1 ? ' entry' : ' entries');
   } else if (HY.tab === 'people') {
     body = mrow(HY.pm); n = 'Done';
@@ -5856,9 +5866,10 @@ document.addEventListener('click', function (e) {
   else if (a === 'hfilter') { modal('<div id="hfs">' + histSheetHtml() + '</div>'); }
   else if (a === 'gotit') { try { localStorage.setItem('sw_note_' + b.dataset.v, String(Date.now())); } catch (x) {} histDraw(); }
   else if (a === 'hgoshift') { HY.dt = histNoon(new Date(+b.dataset.v.slice(0, 4), +b.dataset.v.slice(5, 7) - 1, +b.dataset.v.slice(8, 10))); HY.sid = b.dataset.id; histPage(); }
-  else if (a === 'ftog') { var per0 = histPer(); HY.types[b.dataset.v] = !HY.types[b.dataset.v]; if (histPer() !== per0) { HY.sid = ''; histPage(); } else histDraw(); }   /* the first type ticked shows the whole month; none ticked is the day again */
+  else if (a === 'ftog') { var per0 = histPer(); HY.types[b.dataset.v] = !HY.types[b.dataset.v]; if (histPer() !== per0 || HY.yr) { HY.sid = ''; histPage(); } else histDraw(); }   /* the first type ticked shows the whole month; none ticked is the day again */
   else if (a === 'fshort') { HY.short = b.dataset.v ? b.dataset.v === '1' : !HY.short; histDraw(); }
-  else if (a === 'hclear' || a === 'hshowall') { HY.types = {}; HY.short = false; HY.wk = ''; HY.hm = ''; HY.pm = ''; histGo(); if (a === 'hshowall') closeModal(); }
+  else if (a === 'fyr') { HY.yr = !HY.yr; HY.sid = ''; histPage(); }
+  else if (a === 'hclear' || a === 'hshowall') { HY.yr = false; HY.types = {}; HY.short = false; HY.wk = ''; HY.hm = ''; HY.pm = ''; histGo(); if (a === 'hshowall') closeModal(); }
   else if (a === 'hdone') closeModal();
   else if (a === 'hlist') hlist();
   else if (a === 'hcopy') { var tx = hoTextOf(S._hl[+b.dataset.i]); if (navigator.clipboard) navigator.clipboard.writeText(tx).then(function () { toast('Copied'); }); }
