@@ -290,7 +290,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.30', RULES_VERSION = '2.28';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.31', RULES_VERSION = '2.29';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -415,7 +415,7 @@ var newId = function (c) { return doc(col(c)).id; };
 
 /* ---------- state (kept in sync from Firestore) ---------- */
 var STAGE = CONFIGURED ? 'loading' : 'config', EMAIL = '', M = null, SENT = '', LGM = 'in';
-var S = { all: [], items: [], people: [], guests: [], suppliers: [], members: [], state: null, log: [], bal: {}, hand: null, funds: {}, fevs: [] };
+var S = { all: [], items: [], people: [], guests: [], suppliers: [], members: [], state: null, log: [], bal: {}, hand: null, funds: {}, fevs: [], seals: {} };
 var tab = 'sell', sel = null, qty = 1, PK = {}, PE = {}, HD = 0, RX = null, UNSUB = null, ST = null, CONF = null, BUY = null, CM = false, WHO_DONE = false, MIGR = false;
 var subs = [], logSid = null, handId = null, unsubLog = null, unsubHand = null, EVC = {};
 
@@ -476,7 +476,7 @@ function creditCover() {   /* credit given and paid for during this same shift i
   CVC = { ref: S.log, set: set, off: off }; return CVC;
 }
 function totals() {
-  var sh = SH(), sales = sumAmt('sale') + sumAmt('count') - sumAmt('snote'), purch = sumAmt('buy'), loans = sumAmt('loan'), paid = sumAmt('pay'), used = sumAmt('usecash'), repaid = sumAmt('repay'), put = sumAmt('addcash') + sumAmt('fundover') - sumAmt('fundshort');
+  var sh = SH(), sales = sumAmt('sale') + sumAmt('count') - sumAmt('snote'), purch = sumAmt('buy'), loans = sumAmt('loan'), paid = sumAmt('pay'), used = sumAmt('usecash'), repaid = sumAmt('repay'), put = S.log.reduce(function (a, e) { return (e.type === 'addcash' && (!e.sealed || !e.sealId)) || e.type === 'sealopen' ? a + e.amt : a; }, 0);   /* sealed cash is not counted until it is opened */
   var cr = S.log.reduce(function (a, e) { return (e.type === 'sale' && e.cr) || e.type === 'cnote' ? a + e.amt : a; }, 0);
   var off = creditCover().off;
   return { sales: sales, purch: purch, cr: cr, crN: r2(cr - off), paidN: r2(paid - off), loans: loans, paid: paid, used: used, repaid: repaid, wo: S.log.reduce(function (a, e) { return e.type === 'buy' ? a + (e.writeoff || 0) : a; }, 0), sold: sumLog('sale') + sumLog('count') - sumLog('snote'), put: r2(put), cash: sh.received + sales - cr - loans + paid - purch - used + repaid + put, usedStored: S.log.reduce(function (a, e) { return e.type === 'usecash' && e.fundTake ? a + e.fundTake : a; }, 0) };
@@ -547,7 +547,7 @@ function tellBosses(id, kind, f) {   /* a separate best-effort write after the e
 function spendTell(e) {   /* money out of the till: cash lent, a purchase paid in cash, cash used */
   if (!e || !(e.amt > 0)) return;
   if (e.type === 'loan') tellBosses(e.id, 'spend', { amount: e.amt, what: 'Cash lent to ' + (e.crName || 'a customer') + (e.note ? ' · ' + e.note : ''), rcpt: '' });
-  else if (e.type === 'usecash') tellBosses(e.id, 'spend', { amount: e.amt, what: (e.note || 'Cash used') + (e.fundTake ? ' · ' + money(e.fundTake) + ' from stored ' + e.fundName : ''), rcpt: e.receipt ? 'receipt' : 'no receipt' });
+  else if (e.type === 'usecash') tellBosses(e.id, 'spend', { amount: e.amt, what: (e.note || 'Cash used') + (e.fundTake ? ' · ' + money(e.fundTake) + ' from stored ' + e.fundName : '') + (e.fundElse ? ' (stored cash used for something else)' : '') + (e.intStored ? ' · Internet payment cash of ' + money(e.intStored) + ' is still stored' : ''), rcpt: e.receipt ? 'receipt' : 'no receipt' });
   else if (e.type === 'buy') tellBosses(e.id, 'spend', { amount: e.amt, what: 'Purchase' + (e.supplier ? ' · ' + e.supplier : ''), rcpt: e.receipt ? 'receipt' : 'no receipt' });
 }
 function spendCancelTell(e, many) {
@@ -576,7 +576,7 @@ function setShift(obj) { var u = {}; for (var k in obj) u['shift.' + k] = obj[k]
 /* put back everything an entry did; returns a message if it can't be undone */
 function reverseEvent(b, e) {
   var it = item(e.item), cid = e.cid || rootOf(e.cr || e.person || ''); LE = e.id;   /* the cancelled record carries the same id as the event */
-  if (['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'hocorr', 'shiftrec', 'watchchg', 'fundshort', 'fundover'].indexOf(e.type) >= 0) return 'This entry cannot be cancelled';
+  if (['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'hocorr', 'shiftrec', 'watchchg', 'fundshort', 'fundover', 'sealopen', 'sealout'].indexOf(e.type) >= 0) return 'This entry cannot be cancelled';
   if (e.type === 'sale') { if (!it) return 'That item no longer exists'; itemInc(b, it.id, { stock: e.qty }); if (e.cr) balInc(b, cid, -e.amt); }
   else if (e.type === 'count') { if (e.qty > 0) { if (!it) return 'That item no longer exists'; itemInc(b, it.id, { stock: e.qty }); } }
   else if (e.type === 'cnote') balInc(b, cid, -e.amt);
@@ -584,15 +584,19 @@ function reverseEvent(b, e) {
   else if (e.type === 'opencredit') balInc(b, cid, -e.amt);
   else if (e.type === 'usecash') {   /* the cash simply counts again; money taken from a stored fund goes back into it */
     if (e.fund) {
-      if (e.adj) return 'This use opened a sealed envelope that was found short or extra, so it cannot be cancelled here. Ask the owner or a president to correct it.';
+      if (e.opened && e.opened.length) return 'This use opened sealed cash, so it cannot be cancelled here. Ask the owner or a president to correct it.';
       if (e.fundTake) b.set(ref('funds/' + e.fund), { bal: increment(e.fundTake), lastEvent: e.id }, { merge: true });
     }
   }
   else if (e.type === 'addcash') {
     var fd = S.funds[e.fund];
-    if (!fd || (fd.bal || 0) - e.amt < -0.004) return 'Cannot cancel: ' + money(Math.max(0, e.amt - Math.max(0, (fd && fd.bal) || 0))) + ' of this was already used. Cancel that use first.';
-    if (e.sealed && (fd.sealedAmt || 0) - e.amt < -0.004) return 'Cannot cancel: the sealed envelope was already opened.';
-    b.set(ref('funds/' + e.fund), { bal: increment(-e.amt), sealedAmt: increment(e.sealed ? -e.amt : 0), lastEvent: e.id }, { merge: true });
+    if (e.sealed && e.sealId) {
+      if (!S.seals[e.sealId]) return 'Cannot cancel: the sealed cash was already opened or taken out.';
+      b.delete(ref('seals/' + e.sealId)); b.set(ref('funds/' + e.fund), { sealedAmt: increment(-e.amt), lastEvent: e.id }, { merge: true });
+    } else {
+      if (!fd || (fd.bal || 0) - e.amt < -0.004) return 'Cannot cancel: ' + money(Math.max(0, e.amt - Math.max(0, (fd && fd.bal) || 0))) + ' of this was already used. Cancel that use first.';
+      b.set(ref('funds/' + e.fund), e.sealed ? { bal: increment(-e.amt), sealedAmt: increment(-e.amt), lastEvent: e.id } : { bal: increment(-e.amt), lastEvent: e.id }, { merge: true });   /* an older sealed entry (before the seal records) was counted as money */
+    }
   }
   else if (e.type === 'loan') balInc(b, cid, -e.amt);
   else if (e.type === 'pay') balInc(b, cid, e.amt);
@@ -892,12 +896,20 @@ function cnum(id) {   /* what has been counted / noted for one item this shift *
 /* an item with nothing left (fridge and cage both 0) leaves the Count page, unless it was sold, counted or noted this shift; it stays at the bottom of Stock */
 function gone0(i) { return !(i.stock > 0 || i.cage > 0); }
 function liveItem(i) { if (!gone0(i)) return true; var c = cnum(i.id); return c.counted || c.sold || c.cr || c.sp; }
-function storedNote() { return '<div class="stnote">Stored cash is counted with the final count. It is not a separate count. It is already part of the cash on hand.</div>'; }
+function storedNote() { return '<div class="stnote">Stored cash that was counted is part of the cash on hand and is counted with the final count. It is not a separate count. Sealed cash is not counted until it is opened.</div>'; }
 function byText(by) { return Object.keys(by || {}).map(function (w) { return esc(w) + ' ' + money(by[w]); }).join(' · '); }
 function storedRowHtml() {
-  var fl = fundList(); if (!fl.length) return ''; var h = '<div class="slim"><div class="stbar" data-act="stfold"><b>Stored cash</b><span><b>' + money(storedTotal()) + '</b> ' + (STOPEN ? '⌃' : '⌄') + '</span></div>';
-  if (STOPEN) h += fl.map(function (f) { return '<div class="stfund" data-act="stfund" data-id="' + esc(f.id) + '"><span><b>' + esc(f.name) + '</b>' + ((f.sealedAmt || 0) > 0.004 ? ' 🔒' : '') + '<br><span class="muted" style="font-size:12.5px">' + (byText(fundBy(f.id)) || '') + '</span></span><b>' + money(f.bal) + ' ›</b></div>'; }).join('') + storedNote() + '<button class="btn sec sm block" data-act="stpage" style="margin-top:8px">Open the Stored cash page ›</button>';
+  var fl = fundAll(), sl = sealList(); if (!fl.length && !sl.length) return ''; var h = '<div class="slim"><div class="stbar" data-act="stfold"><b>Stored cash</b><span><b>' + money(storedTotal()) + '</b>' + (sl.length ? ' + 🔒 ' + sl.length + ' sealed' : '') + ' ' + (STOPEN ? '⌃' : '⌄') + '</span></div>';
+  if (STOPEN) h += fl.map(function (f) { var fs = sealList(f.id); return '<div class="stfund" data-act="stfund" data-id="' + esc(f.id) + '"><span><b>' + esc(f.name) + '</b><br><span class="muted" style="font-size:12.5px">' + (byText(fundBy(f.id)) || '') + (fs.length ? ' · 🔒 ' + fs.length + ' sealed' : '') + '</span></span><b>' + money(f.bal || 0) + ' ›</b></div>'; }).join('') + sl.map(function (x) { return '<div class="stfund" data-act="sealsheet" data-id="' + esc(x.id) + '"><span>🔒 <b>' + esc(x.fundName) + '</b><br><span class="muted" style="font-size:12.5px">sealed, written on it ' + money(x.amt) + ' · not counted</span></span><b>›</b></div>'; }).join('') + storedNote() + '<button class="btn sec sm block" data-act="stpage" style="margin-top:8px">Open the Stored cash page ›</button>';
   return h + '</div>';
+}
+function sealCheckHtml(list, st, act, locked) {   /* the sealed cash at a handover: nobody opens it, each item is checked to be there */
+  if (!list || !list.length) return '';
+  return '<div class="card" style="border-left:2px solid #e0a800;background:var(--soon-bg)"><b>🔒 Sealed cash: check each one</b><div class="muted" style="margin:2px 0 6px">Do not open ' + (list.length === 1 ? 'it' : 'them') + '. Sealed cash is not in the cash count. Make sure ' + (list.length === 1 ? 'it is' : 'each one is') + ' there.</div>' + list.map(function (x) {
+    var o = st[x.id], ok = o === true || (o && o.ok === true), bad = o && o.ok === false;
+    return '<div style="border-top:1px solid var(--line);padding:9px 0"><div class="row" data-act="' + act + '" data-id="' + esc(x.id) + '" style="cursor:pointer;align-items:flex-start"><div class="fbox' + (ok ? ' on' : '') + '">' + (ok ? '✓' : '') + '</div><span class="grow"><b>' + esc(x.name) + '</b> · written on it ' + money(x.amt) + '<br><span class="muted" style="font-size:12.5px">put in by ' + esc(x.giver || '') + (x.wk ? ' (' + esc(x.wk) + ')' : '') + '</span><br><b style="font-size:13px">' + (act === 'rxseal' ? 'Seal is intact, the amount matches' : 'It is in the cash box, still sealed') + '</b></span></div>' +
+      (act === 'rxseal' ? '<div style="margin:6px 0 0 34px"><a data-act="rxsealbad" data-id="' + esc(x.id) + '" style="color:var(--link);font-weight:700;cursor:pointer">' + (bad ? 'Reported: ' + esc(o.issue || '') : 'Something is wrong with it ›') + '</a></div>' + (st['_open'] === x.id ? '<div class="card" style="background:var(--exp-bg);box-shadow:none;margin:6px 0 0"><b>What is wrong?</b><div class="chips" style="margin-top:6px;flex-wrap:wrap">' + ['Seal looks opened', 'Amount written is different', 'It is missing'].map(function (w) { return '<button data-act="rxsealwhy" data-id="' + esc(x.id) + '" data-v="' + esc(w) + '" class="' + (bad && o.issue === w ? 'on' : '') + '">' + esc(w) + '</button>'; }).join('') + '</div></div>' : '') : '') + '</div>';
+  }).join('') + '</div>';
 }
 function storedBreakHtml(list, total, key) {   /* the handover: a breakdown of the stored cash that is inside the one cash count (folded until tapped) */
   if (!list || !list.length) return '';
@@ -908,19 +920,22 @@ function storedBreakHtml(list, total, key) {   /* the handover: a breakdown of t
   }).join('') + storedNote() + '</div>';
 }
 function storedPage() {
-  var fl = fundList(), h = '<h2>Stored cash</h2><div class="card" style="border-left:2px solid var(--ok)"><div class="muted">TOTAL STORED</div><div style="font-size:28px;font-weight:700">' + money(storedTotal()) + '</div>' + storedNote() + '</div>';
-  h += fl.length ? '<div class="card"><div class="list">' + fl.map(function (f) { return '<div data-act="stfund" data-id="' + esc(f.id) + '"><div class="grow"><b>' + esc(f.name) + '</b><div class="muted">' + ((f.sealedAmt || 0) > 0.004 ? '🔒 Sealed' : 'Open · counted') + ' · ' + Object.keys(fundBy(f.id)).length + ' shift' + (Object.keys(fundBy(f.id)).length === 1 ? '' : 's') + ' put in</div></div><b>' + money(f.bal) + ' ›</b></div>'; }).join('') + '</div></div><div class="muted">Tap a fund to see how it adds up.</div>' : '<div class="card empty">Nothing is stored right now.</div>';
+  var fl = fundAll(), sl = sealList(), h = '<h2>Stored cash</h2><div class="card" style="border-left:2px solid var(--ok)"><div class="muted">STORED AND COUNTED</div><div style="font-size:28px;font-weight:700">' + money(storedTotal()) + '</div>' + (sl.length ? '<div class="muted">+ 🔒 ' + sl.length + ' sealed, not counted: ' + money(sl.reduce(function (a, x) { return a + x.amt; }, 0)) + ' written on ' + (sl.length === 1 ? 'it' : 'them') + '</div>' : '') + storedNote() + '</div>';
+  h += fl.length ? '<div class="card"><div class="list">' + fl.map(function (f) { var fs = sealList(f.id); return '<div data-act="stfund" data-id="' + esc(f.id) + '"><div class="grow"><b>' + esc(f.name) + '</b><div class="muted">' + Object.keys(fundBy(f.id)).length + ' shift' + (Object.keys(fundBy(f.id)).length === 1 ? '' : 's') + ' put in' + (fs.length ? ' · 🔒 ' + fs.length + ' sealed' : '') + '</div></div><b>' + money(f.bal || 0) + ' ›</b></div>'; }).join('') + '</div></div><div class="muted">Tap a fund to see how it adds up. Tap a sealed item to open it, use it or take it out.</div>' : '<div class="card empty">Nothing is stored right now.</div>';
+  if (sl.length) h += '<div class="card"><h2>🔒 Sealed, not counted</h2><div class="list">' + sl.map(function (x) { return '<div data-act="sealsheet" data-id="' + esc(x.id) + '"><div class="grow"><b>' + esc(x.fundName) + '</b><div class="muted">written on it ' + money(x.amt) + ' · put in by ' + esc(x.giver || '') + (x.forWk ? ' (' + esc(x.forWk) + ')' : '') + '</div></div><b>›</b></div>'; }).join('') + '</div></div>';
   wpPage(storedPage, [], h, true);
 }
 function fundPage(id) {
-  var f = S.funds[id]; if (!f) return storedPage(); var by = fundBy(id), evs = fundEvs(id), put = r2(Object.keys(by).reduce(function (a, w) { return a + by[w]; }, 0));
-  var used = r2(evs.filter(function (e) { return e.type === 'usecash'; }).reduce(function (a, e) { return a + (e.fundTake || 0); }, 0)), short = r2(evs.reduce(function (a, e) { return a + (e.type === 'fundshort' ? e.amt : e.type === 'fundover' ? -e.amt : 0); }, 0));
+  var f = S.funds[id]; if (!f) return storedPage(); var by = fundBy(id), evs = fundEvs(id), put = r2(Object.keys(by).reduce(function (a, w) { return a + by[w]; }, 0)), sl = sealList(id), slAmt = r2(sl.reduce(function (a, x) { return a + x.amt; }, 0));
+  var sum = function (t, k) { return r2(evs.filter(function (e) { return e.type === t; }).reduce(function (a, e) { return a + (e[k] || 0); }, 0)); };
+  var used = sum('usecash', 'fundTake'), out = sum('sealout', 'amt'), short = r2(sum('fundshort', 'amt') - sum('fundover', 'amt'));
   var line = function (l, v, c) { return '<div><span>' + l + '</span><b' + (c ? ' style="color:' + c + '"' : '') + '>' + v + '</b></div>'; };
-  var h = '<h2>' + esc(f.name) + '</h2><div class="card" style="border-left:2px solid var(--ok)"><div class="muted">STORED NOW</div><div style="font-size:28px;font-weight:700">' + money(f.bal || 0) + '</div>' + ((f.sealedAmt || 0) > 0.004 ? '<div class="muted">🔒 Sealed · ' + money(f.sealedAmt) + ' written on it' + (f.lastSealBy ? ' · last sealed by ' + esc(f.lastSealBy) + (f.lastSealWk ? ' (' + esc(f.lastSealWk) + ')' : '') : '') + '</div>' : '<div class="muted">Open · counted</div>') + storedNote() + '</div>';
-  h += '<div class="card sum"><h2>How it adds up</h2>' + Object.keys(by).map(function (w) { return line(hdot(w) + esc(w), money(by[w])); }).join('') + line('<b>Put in</b>', '<b>' + money(put) + '</b>') + (short ? line(short > 0 ? 'Missing when opened' : 'Extra found when opened', (short > 0 ? '− ' : '+ ') + money(Math.abs(short)), short > 0 ? 'var(--exp)' : 'var(--soon)') : '') + (used ? line('Used', '− ' + money(used), 'var(--exp)') : '') + '<div class="t"><span>Left</span><span>' + money(f.bal || 0) + '</span></div></div>';
-  var dep = evs.filter(function (e) { return e.type === 'addcash'; }), use = evs.filter(function (e) { return e.type === 'usecash' || e.type === 'fundshort' || e.type === 'fundover'; });
+  var h = '<h2>' + esc(f.name) + '</h2><div class="card" style="border-left:2px solid var(--ok)"><div class="muted">STORED AND COUNTED</div><div style="font-size:28px;font-weight:700">' + money(f.bal || 0) + '</div>' + (sl.length ? '<div class="muted">+ 🔒 ' + sl.length + ' sealed, not counted (' + money(slAmt) + ' written)' + (f.lastSealBy ? ' · last sealed by ' + esc(f.lastSealBy) + (f.lastSealWk ? ' (' + esc(f.lastSealWk) + ')' : '') : '') + '</div>' : '') + storedNote() + '</div>';
+  h += '<div class="card sum"><h2>How it adds up</h2>' + Object.keys(by).map(function (w) { return line(hdot(w) + esc(w), money(by[w])); }).join('') + line('<b>Put in</b>', '<b>' + money(put) + '</b>') + (slAmt ? line('Still sealed (not counted)', '− ' + money(slAmt)) : '') + (out ? line('Sealed, taken out', '− ' + money(out)) : '') + (short ? line(short > 0 ? 'Missing when opened' : 'Extra found when opened', (short > 0 ? '− ' : '+ ') + money(Math.abs(short)), short > 0 ? 'var(--exp)' : 'var(--soon)') : '') + (used ? line('Used', '− ' + money(used), 'var(--exp)') : '') + '<div class="t"><span>Left, counted</span><span>' + money(f.bal || 0) + '</span></div></div>';
+  if (sl.length) h += '<div class="card"><h2>🔒 Sealed, not counted</h2><div class="list">' + sl.map(function (x) { return '<div data-act="sealsheet" data-id="' + esc(x.id) + '"><div class="grow"><b>' + money(x.amt) + ' written on it</b><div class="muted">put in by ' + esc(x.giver || '') + (x.forWk ? ' (' + esc(x.forWk) + ')' : '') + '</div></div><b>›</b></div>'; }).join('') + '</div></div>';
+  var dep = evs.filter(function (e) { return e.type === 'addcash'; }), use = evs.filter(function (e) { return ['usecash', 'fundshort', 'fundover', 'sealopen', 'sealout'].indexOf(e.type) >= 0; });
   h += '<div class="card"><h2>Every deposit</h2>' + (dep.length ? '<div class="list">' + dep.map(function (e) { return evRow(e, false); }).join('') + '</div>' : '<div class="muted">None yet.</div>') + '</div>';
-  h += '<div class="card"><h2>Used</h2>' + (use.length ? '<div class="list">' + use.map(function (e) { return evRow(e, false); }).join('') + '</div>' : '<div class="muted">Nothing has been used from it yet.</div>') + '</div>';
+  h += '<div class="card"><h2>Used, opened and taken out</h2>' + (use.length ? '<div class="list">' + use.map(function (e) { return evRow(e, false); }).join('') + '</div>' : '<div class="muted">Nothing yet.</div>') + '</div>';
   wpPage(fundPage, [id], h, true);
 }
 function vCount() {
@@ -1386,6 +1401,9 @@ function mvDecide(id, st) {
   if (st === 'moved' && m.personId) { var pe = person(m.personId); b.update(ref('people/' + m.personId), { watch: m.to }); b.set(ref('names/' + m.personId), { name: pe ? pe.name : m.name, watch: m.to }); }
   b.commit().then(function () { toast(st === 'moved' ? m.name + ' is now on ' + m.to : st === 'today' ? 'Just for today. Nothing changed.' : 'Not now. Nothing changed.'); }).catch(function (e) { console.error(e); toast(errText(e)); });
 }
+function sealIssueTell(h, hid) {   /* a sealed item the next shift reported: the owner and presidents are told */
+  (h.sealed || []).forEach(function (x) { var o = RXSEAL[x.id]; if (o && o.ok === false) tellBosses('si_' + hid + '_' + x.id, 'sealissue', { what: x.name, amt: x.amt, giver: x.giver || '', forWk: x.wk || '', issue: o.issue || '', fromName: h.fromName || '', fromWk: h.shift && h.shift.name || '' }); });
+}
 function hoAccTell(h, gwk, gap, diffs, cShort, cOver, sTot, ns) {   /* once per accepted handover: the owner and every president are told how it went */
   var res = gap ? 'after a gap, recorded on ' + gwk : sTot > 0 ? 'short ' + money(sTot) : diffs.length ? 'differences noted' : 'matched';
   tellBosses('ha_' + S.state.pending, 'hoacc', { fromName: h.fromName || '', sid: h.shift && h.shift.sid || '', handoverId: S.state.pending, fromWk: h.shift && h.shift.name || '', toWk: gwk || ns.name || '', result: res, amount: sTot || 0, shiftDate: h.shift && h.shift.date || '', shiftHalf: h.shift && h.shift.half || '' });
@@ -1602,6 +1620,7 @@ function alNotice(n, old) {
   if (n.kind === 'spend') return alCard('💵', 'a', money(n.amount) + ' · ' + esc(n.what || ''), (n.rcpt ? esc(n.rcpt) + ' · ' : '') + 'recorded by ' + esc(n.byName || '') + (n.wk ? ' · ' + esc(n.wk) + ' shift' : '') + ' · ' + when);
   if (n.kind === 'addcash') return alCard('➕', 'g', money(n.amount) + ' stored · ' + esc(n.what || ''), (n.sealed ? 'sealed, ' + money(n.amount) + ' written on it' : 'open, counted') + ' · given by ' + esc(n.giver || '') + ' · for the ' + esc(n.forWk || '') + ' shift · recorded by ' + esc(n.byName || '') + ' · ' + when);
   if (n.kind === 'fundshort') return alCard(n.over ? '↑' : '⚠', n.over ? 'a' : 'r', (n.over ? 'Stored cash extra found: ' : 'Stored cash short: ') + money(n.amount) + ' · ' + esc(n.what || ''), 'sealed envelope opened · written ' + money(n.was) + ', found ' + money(n.found) + (n.sealBy ? ' · last sealed by ' + esc(n.sealBy) + (n.sealWk ? ' (' + esc(n.sealWk) + ')' : '') : '') + ' · recorded by ' + esc(n.byName || '') + ' · ' + when);
+  if (n.kind === 'sealissue') return alCard('⚠', 'r', 'Sealed cash problem: ' + esc(n.what || ''), esc(n.byName || '') + ' took over from ' + esc(n.fromName || '') + (n.fromWk ? ' (' + esc(n.fromWk) + ' → ' + esc(n.wk || '') + ')' : '') + ' and reports: ' + esc(n.issue || '') + '. Written on it ' + money(n.amt) + ' · put in by ' + esc(n.giver || '') + (n.forWk ? ' (' + esc(n.forWk) + ')' : '') + ' · recorded by ' + esc(n.byName || '') + ' · ' + when);
   if (n.kind === 'spendcancel') return alCard('↩', 'b', 'Cancelled: ' + money(n.amount) + ' · ' + esc(n.what || ''), 'recorded by ' + esc(n.byName || '') + (n.wk ? ' · ' + esc(n.wk) + ' shift' : '') + ' · ' + when);
   if (n.kind === 'hoacc') return alCard('🔁', n.result === 'matched' ? 'g' : 'a', esc(n.byName || '') + ' accepted ' + esc(n.fromName || '') + '\'s handover', esc(n.fromWk || '') + ' → ' + esc(n.toWk || '') + ' · ' + esc(n.result || '') + ' · ' + when, { act: 'hoview', id: n.id, old: old, dot: nw });
   if (n.kind === 'hcdone' || n.kind === 'hcno') return alCard('✎', n.kind === 'hcdone' ? 'b' : 'a', n.kind === 'hcdone' ? 'Handover corrected' : 'Correction declined', esc(n.wk || '') + ' · ' + esc(n.shiftDate || '') + ' · ' + esc(n.text || '') + ' · ' + (n.kind === 'hcdone' ? 'accepted by ' : 'declined by ') + esc(n.byName || '') + ' · ' + when, { act: 'ntview', id: n.id, old: old, dot: nw });
@@ -1640,15 +1659,17 @@ function controlPopup(title, html) {
   try { if (navigator.vibrate) navigator.vibrate(120); } catch (e) {}
 }
 function rawEv(b, o) { var id = newId('events'); b.set(ref('events/' + id), o); o.id = id; DAYQ.push({ e: o, sign: 1 }); return id; }
-/* ---------- stored cash (v3.29): money put in the cash pan for a bill. It is part of the one cash count; each fund keeps its own total ---------- */
-var INTERNET = 'Internet payment', AC = null, STOPEN = false, HOFOLD = {};
+/* ---------- stored cash (v3.31): money put in the cash box for a bill. Money that was counted when it was put in is part of the one cash count; a SEALED item is only a note (it is not counted until someone opens it) ---------- */
+var INTERNET = 'Internet payment', AC = null, STOPEN = false, HOFOLD = {}, SEALSHEET = '', HOSEAL = {}, RXSEAL = {}, UCD = null;
 function fkey(n) { return String(n || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40); }
 function fundList() { return Object.keys(S.funds || {}).map(function (k) { return Object.assign({ id: k }, S.funds[k]); }).filter(function (f) { return (f.bal || 0) > 0.004; }).sort(function (a, b) { return String(a.name) < String(b.name) ? -1 : 1; }); }
-function storedTotal() { return r2(fundList().reduce(function (a, f) { return a + (f.bal || 0); }, 0)); }
-function fundOpenPart(f) { return r2(Math.max(0, (f.bal || 0) - (f.sealedAmt || 0))); }
+function fundAll() { return Object.keys(S.funds || {}).map(function (k) { return Object.assign({ id: k }, S.funds[k]); }).filter(function (f) { return (f.bal || 0) > 0.004 || sealList(f.id).length; }).sort(function (a, b) { return String(a.name) < String(b.name) ? -1 : 1; }); }
+function storedTotal() { return r2(fundList().reduce(function (a, f) { return a + (f.bal || 0); }, 0)); }   /* only the money that was counted: it is inside the one cash count */
+function sealList(fk) { return Object.keys(S.seals || {}).map(function (k) { return Object.assign({ id: k }, S.seals[k]); }).filter(function (s) { return s.status === 'sealed' && (!fk || s.fund === fk); }).sort(function (a, b) { return (a.at || 0) - (b.at || 0); }); }
+function sealSnap() { return sealList().map(function (s) { return { id: s.id, fund: s.fund, name: s.fundName, amt: s.amt, giver: s.giver || '', wk: s.forWk || '' }; }); }
 function fundEvs(id) { return (S.fevs || []).filter(function (e) { return e.fund === id; }).sort(function (a, b) { return b.t - a.t; }); }
 function fundBy(id) { var by = {}; fundEvs(id).forEach(function (e) { if (e.type === 'addcash') by[e.forWk || '?'] = r2((by[e.forWk || '?'] || 0) + e.amt); }); return by; }
-function fundSnap() { return fundList().map(function (f) { return { id: f.id, name: f.name, bal: r2(f.bal), sealed: r2(f.sealedAmt || 0), by: fundBy(f.id) }; }); }
+function fundSnap() { return fundList().map(function (f) { return { id: f.id, name: f.name, bal: r2(f.bal), by: fundBy(f.id) }; }); }
 function acName() { return AC.kind === 'internet' ? INTERNET : AC.desc.trim(); }
 function acOpen() { AC = { kind: 'internet', desc: '', amount: '', who: '', whoId: '', wk: '', how: '' }; acForm(); }
 function acDone() { return AC && acName() && num(AC.amount) > 0 && AC.who && AC.wk && AC.how; }
@@ -1656,16 +1677,16 @@ function acForm() {
   var nm = acName(), fk = fkey(nm), mon = dkey(new Date()).slice(0, 7), put = {};
   fundEvs(fk).forEach(function (e) { if (e.type === 'addcash' && dkey(new Date(e.t)).slice(0, 7) === mon) put[e.forWk] = 1; });
   var seen = Object.keys(S.funds || {}).filter(function (k) { return k !== 'internet-payment'; }).map(function (k) { return S.funds[k].name; });
-  var wkSel = '<select data-ac="wk" style="width:100%"><option value="">Choose…</option>' + WATCHES.map(function (w) { return '<option' + (AC.wk === w ? ' selected' : '') + '>' + esc(w) + '</option>'; }).join('') + '</select>';
-  modal('<h2>➕ Add cash</h2><p class="muted" style="margin:0 0 8px">Money put in the cash pan for a bill. It is kept under that name until it is used, and it is counted in the final cash count.</p><div class="card"><label>What is it for? <b style="color:var(--exp)">*</b></label><div class="chips" style="margin-bottom:8px"><button data-act="acchip" data-v="internet" class="' + (AC.kind === 'internet' ? 'on' : '') + '">' + INTERNET + '</button><button data-act="acchip" data-v="other" class="' + (AC.kind === 'other' ? 'on' : '') + '">Other</button></div>' +
+  var sealed = AC.how === 'sealed', wkSel = '<select data-ac="wk" style="width:100%"><option value="">Choose…</option>' + WATCHES.map(function (w) { return '<option' + (AC.wk === w ? ' selected' : '') + '>' + esc(w) + '</option>'; }).join('') + '</select>';
+  modal('<h2>➕ Add cash</h2><p class="muted" style="margin:0 0 8px">Money put in the cash box for a bill. It is kept under that name until it is used.</p><div class="card"><label>What is it for? <b style="color:var(--exp)">*</b></label><div class="chips" style="margin-bottom:8px"><button data-act="acchip" data-v="internet" class="' + (AC.kind === 'internet' ? 'on' : '') + '">' + INTERNET + '</button><button data-act="acchip" data-v="other" class="' + (AC.kind === 'other' ? 'on' : '') + '">Other</button></div>' +
     (AC.kind === 'other' ? '<div class="f"><label>Describe it <b style="color:var(--exp)">*</b></label><input data-ac="desc" value="' + esc(AC.desc) + '" placeholder="e.g. Generator oil change" autocomplete="off"></div>' + (seen.length ? '<div class="muted" style="margin:-4px 0 8px;font-size:12.5px">Seen before: ' + seen.map(function (n) { return '<button class="fch" data-act="acseen" data-v="' + esc(n) + '">' + esc(n) + '</button>'; }).join(' ') + '</div>' : '') : '') +
-    '<div class="f"><label>How much <b style="color:var(--exp)">*</b></label><input data-ac="amount" type="number" inputmode="decimal" min="0" value="' + esc(AC.amount) + '" placeholder="0"></div>' +
+    '<label>How did it come? <b style="color:var(--exp)">*</b></label>' +
+    '<div class="frow" data-act="achow" data-v="sealed" style="border-left:2px solid var(--ok);padding-left:8px"><div class="fbox' + (sealed ? ' on' : '') + '">' + (sealed ? '✓' : '') + '</div><span class="grow"><b>Sealed</b>, the amount is written on it<br><span class="muted" style="font-size:12.5px">You do not open it. It stays in the cash box, outside the count, until someone opens it.</span></span></div>' +
+    '<div class="frow" data-act="achow" data-v="open"><div class="fbox' + (AC.how === 'open' ? ' on' : '') + '">' + (AC.how === 'open' ? '✓' : '') + '</div><span class="grow"><b>Open</b>, I counted it<br><span class="muted" style="font-size:12.5px">It goes into the cash on hand and the cash count now.</span></span></div>' +
+    '<div class="f" style="margin-top:8px"><label>' + (sealed ? 'Written on it (for the record only)' : 'How much you counted') + ' <b style="color:var(--exp)">*</b></label><input data-ac="amount" type="number" inputmode="decimal" min="0" value="' + esc(AC.amount) + '" placeholder="0">' + (sealed ? '<div class="muted" style="font-size:12.5px;margin-top:2px">Not counted and not added to the cash on hand.</div>' : '') + '</div>' +
     '<div class="row"><div class="grow"><label>Who gave it <b style="color:var(--exp)">*</b></label><button class="btn sec block" data-act="acwho" style="justify-content:space-between">' + (AC.who ? esc(AC.who) : 'Tap to choose') + ' 🔍</button></div><div class="grow"><label>For which shift <b style="color:var(--exp)">*</b></label>' + wkSel + '</div></div>' +
     '<div class="muted" style="margin:6px 0 8px;font-size:12.5px">The shift fills in from the person. Change it if the money is for another shift.</div>' +
-    '<label>How did it come? <b style="color:var(--exp)">*</b></label>' +
-    '<div class="frow" data-act="achow" data-v="sealed" style="border-left:2px solid var(--ok);padding-left:8px"><div class="fbox' + (AC.how === 'sealed' ? ' on' : '') + '">' + (AC.how === 'sealed' ? '✓' : '') + '</div><span class="grow"><b>Sealed</b>, the amount is written on it<br><span class="muted" style="font-size:12.5px">You do not open it. It is kept as written.</span></span></div>' +
-    '<div class="frow" data-act="achow" data-v="open"><div class="fbox' + (AC.how === 'open' ? ' on' : '') + '">' + (AC.how === 'open' ? '✓' : '') + '</div><span class="grow"><b>Open</b>, I counted it<br><span class="muted" style="font-size:12.5px">You counted it now and typed what is there.</span></span></div>' +
-    (nm ? '<div class="muted" style="margin-top:8px;font-size:12.5px">' + esc(nm) + ' this month: ' + WATCHES.map(function (w) { return esc(w) + (put[w] ? ' ✓' : ' ✗'); }).join(' · ') + '</div>' : '') + '</div>' +
+    (nm ? '<div class="muted" style="font-size:12.5px">' + esc(nm) + ' this month: ' + WATCHES.map(function (w) { return esc(w) + (put[w] ? ' ✓' : ' ✗'); }).join(' · ') + '</div>' : '') + '</div>' +
     '<button class="btn green block' + (acDone() ? '' : ' dis') + '" data-act="acreview">Review</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>');
 }
 function acWho(q) {
@@ -1676,55 +1697,104 @@ function acWho(q) {
 function acWhoModal() { modal('<h2>Who gave it?</h2><div class="sq"><input id="acw-q" placeholder="Search a name" autocomplete="off"></div><div class="list" id="acw-list">' + acWho('') + '</div><button class="btn sec block" data-act="acback" style="margin-top:10px">Back</button>', true); }
 function acReview() {
   if (!acDone()) return toast('Fill in everything marked *'); var amt = r2(num(AC.amount)), nm = acName(), f = S.funds[fkey(nm)], sealed = AC.how === 'sealed';
-  askConfirm('Add this cash?', '<b>' + money(amt) + '</b> for <b>' + esc(nm) + '</b><br><span class="muted">Given by ' + esc(AC.who) + ' · for the ' + esc(AC.wk) + ' shift<br>' + (sealed ? '<b>Sealed</b>, ' + money(amt) + ' written on it. Kept as written, not opened.' : '<b>Open</b>, counted ' + money(amt) + '.') + '<br>Stored for ' + esc(nm) + ': ' + money((f && f.bal) || 0) + ' → <b>' + money(r2(((f && f.bal) || 0) + amt)) + '</b><br>It is part of the cash on hand and the final cash count.</span>', 'Yes, add ' + money(amt), acSave);
+  askConfirm('Add this cash?', '<b>' + money(amt) + '</b> for <b>' + esc(nm) + '</b><br><span class="muted">Given by ' + esc(AC.who) + ' · for the ' + esc(AC.wk) + ' shift<br>' + (sealed ? '<b>Sealed</b>, ' + money(amt) + ' written on it. It stays in the cash box, outside the count, until someone opens it.<br>Cash on hand does not change.' : '<b>Open</b>, counted ' + money(amt) + '.<br>Stored for ' + esc(nm) + ': ' + money((f && f.bal) || 0) + ' → <b>' + money(r2(((f && f.bal) || 0) + amt)) + '</b><br>It is part of the cash on hand and the final cash count.') + '</span>', 'Yes, add ' + money(amt), acSave);
 }
 function acSave() {
   var a = AC, amt = r2(num(a.amount)), nm = acName(), fk = fkey(nm), sealed = a.how === 'sealed'; if (!a || !(amt > 0) || !fk) return;
-  var b = writeBatch(DB), id = newEv();
-  mkEvent(b, 'addcash', null, 1, amt, { name: 'Cash stored', fund: fk, fundName: nm, sealed: sealed, giver: a.who, giverId: a.whoId || '', forWk: a.wk });
-  var u = { name: nm, bal: increment(amt), sealedAmt: increment(sealed ? amt : 0), lastEvent: id }; if (sealed) { u.lastSealBy = a.who; u.lastSealWk = a.wk; u.lastSealAt = Date.now(); }
-  b.set(ref('funds/' + fk), u, { merge: true });
-  var w = { amount: amt, what: nm, sealed: sealed, giver: a.who, forWk: a.wk }; AC = null; closeModal(); toast(money(amt) + ' stored for ' + nm, id);
+  var b = writeBatch(DB), id = newEv(), ex = { name: 'Cash stored', fund: fk, fundName: nm, sealed: sealed, giver: a.who, giverId: a.whoId || '', forWk: a.wk };
+  if (sealed) ex.sealId = id;
+  mkEvent(b, 'addcash', null, 1, amt, ex);
+  if (sealed) {
+    b.set(ref('seals/' + id), { fund: fk, fundName: nm, amt: amt, giver: a.who, forWk: a.wk, byName: myName(), at: Date.now(), status: 'sealed', lastEvent: id, expireAt: EXP() });
+    b.set(ref('funds/' + fk), { name: nm, sealedAmt: increment(amt), lastEvent: id, lastSealBy: a.who, lastSealWk: a.wk, lastSealAt: Date.now() }, { merge: true });
+  } else b.set(ref('funds/' + fk), { name: nm, bal: increment(amt), lastEvent: id }, { merge: true });
+  var w = { amount: amt, what: nm, sealed: sealed, giver: a.who, forWk: a.wk }; AC = null; closeModal(); toast(money(amt) + (sealed ? ' sealed' : ' stored') + ' for ' + nm, id);
   commit(b).then(function () { tellBosses(id, 'addcash', w); });
 }
-function ucPlan() {
-  var f = UC && UC.fund && S.funds[UC.fund]; if (!f) return null; var amt = r2(num(UC.amount)), sw0 = f.sealedAmt || 0, sealed = sw0 > 0.004;
-  var found = sealed && String(UC.found || '') !== '' ? r2(num(UC.found)) : null, avail = sealed ? (found === null ? null : r2(fundOpenPart(f) + found)) : r2(f.bal || 0), diff = sealed && found !== null ? r2(found - sw0) : 0;
-  var take = avail === null ? null : r2(Math.min(amt, avail));
-  return { f: f, id: UC.fund, amt: amt, sealed: sealed, sw: sw0, found: found, diff: diff, avail: avail, take: take, cashPart: take === null ? null : r2(amt - take) };
+/* a sealed item: open it and count it, use it for a bill (Use cash), take it out of the cash box, or cancel the entry */
+function sealSheet(id) {
+  var s = S.seals[id]; if (!s) return closeModal(); SEALSHEET = id;
+  var btn = function (act, t, d) { return '<button class="btn sec block" data-act="' + act + '" data-id="' + esc(id) + '" style="text-align:left;margin-top:8px;height:auto;padding:12px 14px"><b>' + t + '</b><div class="muted" style="font-weight:400;font-size:12.5px">' + d + '</div></button>'; };
+  modal('<h2>🔒 ' + esc(s.fundName) + '</h2><div class="muted" style="margin-bottom:6px">Sealed · written on it ' + money(s.amt) + ' · put in by ' + esc(s.giver || '') + (s.forWk ? ' (' + esc(s.forWk) + ')' : '') + ' · not in the cash count</div>' +
+    btn('sealopen', 'Open it and count it', 'It goes into the cash count. Any difference from what is written is recorded.') + btn('sealuse', 'Use it for a bill', 'Use cash: it is opened and paid from.') + btn('sealout', 'Take it out of the cash box', 'For example, handed to the owner. Not used for a bill.') + btn('sealcancel', 'Added by mistake? Cancel the entry', 'Only while it is still sealed.') + '<button class="btn sec block" data-act="close" style="margin-top:10px">Close</button>');
 }
-function ucFundHtml() {
-  var fl = fundList(); if (!fl.length) return '';
-  var net = fl.filter(function (f) { return f.id === 'internet-payment'; })[0], oth = fl.filter(function (f) { return f.id !== 'internet-payment'; }), othSum = r2(oth.reduce(function (a, f) { return a + f.bal; }, 0));
-  var chips = '<div class="row" style="gap:8px;margin-bottom:6px">' + (net ? '<button class="btn sec grow' + (UC.fund === net.id ? ' on' : '') + '" data-act="ucfund" data-id="' + net.id + '" style="' + (UC.fund === net.id ? 'background:var(--brand);color:#fff' : '') + '">' + INTERNET + ' · ' + money(net.bal) + '</button>' : '') + (oth.length ? '<button class="btn sec grow' + (UC.fund && UC.fund !== 'internet-payment' ? ' on' : '') + '" data-act="ucother" style="' + (UC.fund && UC.fund !== 'internet-payment' ? 'background:var(--brand);color:#fff' : '') + '">Other stored · ' + money(othSum) + ' ›</button>' : '') + '</div>';
-  return '<label>Take the money from</label>' + chips + '<div id="uc-box">' + ucBoxHtml() + '</div>';
+var SO = null;
+function sealOpenForm() {
+  var s = S.seals[SEALSHEET]; if (!s) return closeModal(); var F = SO && SO.found !== '' ? r2(num(SO.found)) : null, d = F === null ? 0 : r2(F - s.amt), cash = totals().cash;
+  modal('<h2>Open: ' + esc(s.fundName) + '</h2><div class="muted" style="margin-bottom:6px">Written on it ' + money(s.amt) + '</div><div class="f"><label>Amount found inside <b style="color:var(--exp)">*</b></label><input data-so="found" type="number" inputmode="decimal" min="0" value="' + esc((SO || {}).found || '') + '" placeholder="count it and type it"></div><div id="so-box">' + sealOpenBox(s, F, d, cash) + '</div>' +
+    '<button class="btn green block" data-act="sealopenreview">Review</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>');
+}
+function sealOpenBox(s, F, d, cash) {
+  if (F === null) return ''; return (d < 0 ? '<div class="card" style="background:var(--exp-bg);box-shadow:none;color:var(--exp)">⚠ Found ' + money(F) + ', written ' + money(s.amt) + ': <b>' + money(-d) + ' is missing.</b> It is recorded on the fund (last sealed by ' + esc(s.giver || '') + (s.forWk ? ', ' + esc(s.forWk) : '') + ').</div>' : d > 0 ? '<div class="card" style="background:var(--soon-bg);box-shadow:none;color:var(--soon)">Found ' + money(F) + ', more than the ' + money(s.amt) + ' written. <b>' + money(d) + ' extra</b> is recorded.</div>' : '') +
+    '<div class="card" style="background:var(--soft);box-shadow:none"><b>' + money(F) + '</b> goes into the cash count now.<div class="muted">Cash on hand: ' + money(cash) + ' → ' + money(r2(cash + F)) + '</div></div>';
+}
+function sealOpenReview() {
+  var s = S.seals[SEALSHEET]; if (!s || !SO || SO.found === '') return toast('Open it and type the amount found inside'); var F = r2(num(SO.found)), id0 = SEALSHEET;
+  askConfirm('Open this sealed cash?', '<b>' + esc(s.fundName) + '</b> · written ' + money(s.amt) + ' · found <b>' + money(F) + '</b><br><span class="muted">' + money(F) + ' goes into the cash count.' + (F !== s.amt ? ' The difference is recorded on the fund.' : '') + '</span>', 'Yes, open it', function () { sealOpenSave(id0, F); });
+}
+function sealOpenSave(sid, F) {
+  var s = S.seals[sid]; if (!s) return; var b = writeBatch(DB), id = newEv(), d = r2(F - s.amt), aid = '';
+  mkEvent(b, 'sealopen', null, 1, F, { name: 'Sealed cash opened', fund: s.fund, fundName: s.fundName, sealId: sid, was: s.amt, found: F, via: 'open' });
+  if (d) { aid = newId('events'); mkEvent(b, d < 0 ? 'fundshort' : 'fundover', null, 1, Math.abs(d), { name: d < 0 ? 'Stored cash short' : 'Stored cash extra', fund: s.fund, fundName: s.fundName, was: s.amt, found: F, sealBy: s.giver || '', sealWk: s.forWk || '' }, aid); }
+  var last = aid || id; b.update(ref('seals/' + sid), { status: 'opened', found: F, lastEvent: last }); b.set(ref('funds/' + s.fund), { bal: increment(F), sealedAmt: increment(-s.amt), lastEvent: last }, { merge: true });
+  SO = null; closeModal(); toast(esc(s.fundName) + ' opened: ' + money(F), id);
+  commit(b).then(function () { if (aid) tellBosses(aid, 'fundshort', { amount: Math.abs(d), what: s.fundName, over: d > 0, was: s.amt, found: F, sealBy: s.giver || '', sealWk: s.forWk || '' }); });
+}
+function sealOutForm() {
+  var s = S.seals[SEALSHEET]; if (!s) return closeModal(); SO = SO || {}; var W = ['Handed to the owner', 'Deposited at the bank', 'Other'];
+  modal('<h2>Take out: ' + esc(s.fundName) + '</h2><div class="muted" style="margin-bottom:6px">Sealed · written on it ' + money(s.amt) + '</div><label>Where does it go? <b style="color:var(--exp)">*</b></label><div class="chips" style="margin-bottom:8px">' + W.map(function (w) { return '<button data-act="soto" data-v="' + esc(w) + '" class="' + (SO.to === w ? 'on' : '') + '">' + esc(w) + '</button>'; }).join('') + '</div>' +
+    '<div class="f"><label>Who received it <b style="color:var(--exp)">*</b></label><input data-so="who" value="' + esc(SO.who || '') + '" autocomplete="off"></div><div class="card" style="background:var(--soft);box-shadow:none">The ' + money(s.amt) + ' leaves the stored cash. The cash count does not change, because it was never in it. It is handed over still sealed.</div>' +
+    '<button class="btn green block" data-act="sealoutreview">Review</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>');
+}
+function sealOutReview() {
+  var s = S.seals[SEALSHEET]; if (!s || !SO || !SO.to || !String(SO.who || '').trim()) return toast('Say where it goes and who received it'); var id0 = SEALSHEET, to = SO.to, who = String(SO.who).trim();
+  askConfirm('Take it out of the cash box?', '<b>' + esc(s.fundName) + '</b> · ' + money(s.amt) + ' sealed<br><span class="muted">' + esc(to) + ' · received by ' + esc(who) + '</span>', 'Yes, take it out', function () {
+    var b = writeBatch(DB), id = newEv(); mkEvent(b, 'sealout', null, 1, s.amt, { name: 'Sealed cash taken out', fund: s.fund, fundName: s.fundName, sealId: id0, to: to, toWho: who });
+    b.update(ref('seals/' + id0), { status: 'out', to: to, toWho: who, lastEvent: id }); b.set(ref('funds/' + s.fund), { sealedAmt: increment(-s.amt), lastEvent: id }, { merge: true });
+    SO = null; closeModal(); toast(esc(s.fundName) + ' taken out', id); commit(b);
+  });
+}
+/* ---------- Use cash: Internet payment (the stored internet cash is used for you) or Other ---------- */
+function ucFundId() { return UC.mode === 'internet' ? 'internet-payment' : (UC.fund || ''); }
+function ucPlan() {
+  var id = ucFundId(), f = id && S.funds[id]; if (!f) return null; var amt = r2(num(UC.amount)), open = r2(f.bal || 0), items = sealList(id), need = r2(amt - open), opened = [], ready = true, add = 0, wsum = 0;
+  if (need > 0.004) for (var i = 0; i < items.length && need > 0.004; i++) { var s = items[i], fv = (UC.found || {})[s.id], F = fv === undefined || String(fv) === '' ? null : r2(num(fv)); opened.push({ s: s, found: F, diff: F === null ? 0 : r2(F - s.amt) }); if (F === null) { ready = false; break; } need = r2(need - F); add = r2(add + F); wsum = r2(wsum + s.amt); }
+  var take = r2(Math.min(amt, r2(open + add)));
+  return { f: f, id: id, amt: amt, open: open, opened: opened, ready: ready, add: add, wsum: wsum, take: take, cashPart: r2(amt - take), sealedLeft: items.length - opened.length };
 }
 function ucBoxHtml() {
-  var p = ucPlan(), box = '';
-  if (p) {
-    box = '<div class="card" style="border-left:2px solid var(--ok);box-shadow:none;background:var(--soft);margin:6px 0"><b>Taken from ' + esc(p.f.name) + '</b> · ' + money(p.f.bal) + ' stored' + (p.sealed ? ' · 🔒 sealed, ' + money(p.sw) + ' written on it' : '') + ' <a data-act="ucfundx" style="float:right;font-weight:700;cursor:pointer">✕</a>' +
-      (p.sealed ? '<div class="f" style="margin-top:8px"><label>Open the sealed envelope. Amount found inside <b style="color:var(--exp)">*</b></label><input data-uc="found" type="number" inputmode="decimal" min="0" value="' + esc(UC.found || '') + '" placeholder="count it and type it"></div>' : '') +
-      (p.found !== null && p.diff < 0 ? '<div style="margin-top:6px;padding:8px 10px;border-radius:10px;background:var(--exp-bg);color:var(--exp)">⚠ Found ' + money(p.found) + ', but ' + money(p.sw) + ' was written on it. <b>' + money(-p.diff) + ' is missing.</b> It is recorded as a stored cash shortage' + (p.f.lastSealBy ? ' (last sealed by ' + esc(p.f.lastSealBy) + (p.f.lastSealWk ? ', ' + esc(p.f.lastSealWk) : '') + ')' : '') + '.</div>' : '') +
-      (p.found !== null && p.diff > 0 ? '<div style="margin-top:6px;padding:8px 10px;border-radius:10px;background:var(--soon-bg);color:var(--soon)">Found ' + money(p.found) + ', more than the ' + money(p.sw) + ' written on it. <b>' + money(p.diff) + ' extra</b> is recorded.</div>' : '') +
-      (p.take !== null && p.amt > 0 ? '<div style="margin-top:6px"><b>' + money(p.take) + '</b> from the stored ' + esc(p.f.name) + ' cash' + (p.cashPart > 0.004 ? '<br><b>' + money(p.cashPart) + '</b> from the rest of the cash on hand' : '') + '</div>' : '') + '</div>';
+  var id = ucFundId(), f = id && S.funds[id], p = ucPlan(), h = '';
+  if (UC.mode === 'internet') {
+    var any = f && ((f.bal || 0) > 0.004 || sealList(id).length);
+    h += any ? '<div class="card" style="border-left:2px solid var(--ok);box-shadow:none;background:var(--soft);margin:6px 0"><b>🔒 The stored internet cash is used first</b><div class="muted" style="font-size:12.5px">' + money(f.bal || 0) + ' counted' + (sealList(id).length ? ' · ' + sealList(id).length + ' sealed (' + money(sealList(id).reduce(function (a, s) { return a + s.amt; }, 0)) + ' written)' : '') + '</div></div>' : '<div class="card" style="background:var(--soft);box-shadow:none;margin:6px 0"><b>No cash is stored for Internet payment.</b><div class="muted">All of it comes from the cash on hand and is recorded as Internet payment.</div></div>';
   }
-  return box;
+  if (p) {
+    p.opened.forEach(function (o) {
+      h += '<div class="card" style="border-left:2px solid #e0a800;background:var(--soon-bg);box-shadow:none;margin:6px 0"><b>Sealed: open it and count what is inside</b><div class="muted">' + esc(o.s.fundName) + ' · written ' + money(o.s.amt) + ' · put in by ' + esc(o.s.giver || '') + (o.s.forWk ? ' (' + esc(o.s.forWk) + ')' : '') + '</div><div class="f" style="margin-top:6px"><label>Amount found inside <b style="color:var(--exp)">*</b></label><input data-ucf="' + esc(o.s.id) + '" type="number" inputmode="decimal" min="0" value="' + esc((UC.found || {})[o.s.id] || '') + '" placeholder="count it and type it"></div>' +
+        (o.found !== null && o.diff < 0 ? '<div style="color:var(--exp);margin-top:4px">⚠ Found ' + money(o.found) + ', written ' + money(o.s.amt) + ': <b>' + money(-o.diff) + ' is missing.</b> Recorded on the fund.</div>' : '') + (o.found !== null && o.diff > 0 ? '<div style="color:var(--soon);margin-top:4px">Found ' + money(o.found) + ', more than the ' + money(o.s.amt) + ' written: <b>' + money(o.diff) + ' extra.</b></div>' : '') + '</div>';
+    });
+    if (p.amt > 0 && p.ready) h += '<div class="card" style="background:var(--soon-bg);box-shadow:none;margin:6px 0"><b>' + money(p.take) + '</b> from the stored ' + esc(p.f.name) + ' cash' + (p.cashPart > 0.004 ? '<br><b>' + money(p.cashPart) + '</b> from the cash on hand' : '') + '<div class="muted">Stored ' + esc(p.f.name) + ': ' + money(p.open) + (p.add ? ' + ' + money(p.add) + ' opened' : '') + ' → ' + money(r2(p.open + p.add - p.take)) + '</div></div>';
+  }
+  return h;
+}
+function ucFundHtml() {
+  var fl = fundAll(), net = S.funds['internet-payment'], netOn = net && ((net.bal || 0) > 0.004 || sealList('internet-payment').length), netTot = net ? r2((net.bal || 0) + sealList('internet-payment').reduce(function (a, s) { return a + s.amt; }, 0)) : 0;
+  var q = '<div class="row" style="gap:8px;margin-bottom:6px"><button class="btn sec grow" data-act="ucmode" data-v="internet" style="height:auto;padding:10px 6px;' + (UC.mode === 'internet' ? 'background:var(--brand);color:#fff' : '') + '">Internet payment<div style="font-weight:400;font-size:12px">' + (netOn ? money(netTot) + ' stored' : 'nothing stored') + '</div></button><button class="btn sec grow" data-act="ucmode" data-v="other" style="height:auto;padding:10px 6px;' + (UC.mode === 'other' ? 'background:var(--brand);color:#fff' : '') + '">Other<div style="font-weight:400;font-size:12px">anything else</div></button></div>';
+  if (UC.mode !== 'other') return q + '<div id="uc-box">' + ucBoxHtml() + '</div>';
+  var oth = fl, opts = '<label>Take it from stored cash? (optional)</label><div class="frow" data-act="ucfund" data-id=""><div class="fbox' + (!UC.fund ? ' on' : '') + '">' + (!UC.fund ? '✓' : '') + '</div><span class="grow"><b>No, from the cash on hand</b><br><span class="muted" style="font-size:12.5px">Nothing stored is touched.</span></span></div>' +
+    oth.map(function (f) { var sl = sealList(f.id), tot = r2((f.bal || 0) + sl.reduce(function (a, s) { return a + s.amt; }, 0)); return '<div class="frow" data-act="ucfund" data-id="' + esc(f.id) + '"><div class="fbox' + (UC.fund === f.id ? ' on' : '') + '">' + (UC.fund === f.id ? '✓' : '') + '</div><span class="grow">' + esc(f.name) + ' · ' + money(tot) + ' stored' + (sl.length ? ' 🔒' : '') + '</span></div>'; }).join('');
+  return q + '<div class="f"><label>What is it for? <b style="color:var(--exp)">*</b></label><input data-uc="purpose" value="' + esc(UC.purpose) + '" placeholder="e.g. To purchase station supplies" autocomplete="off"></div>' + (oth.length ? opts : '') + '<div id="uc-box">' + ucBoxHtml() + '</div>';
 }
 function ucSumHtml() {
   var cash = totals().cash, amt = num(UC.amount), p = ucPlan();
-  return '<div><span>Cash on hand now</span><b>' + money(cash) + '</b></div><div><span>This use</span><b style="color:var(--exp)">− ' + money(amt) + '</b></div>' + (p && p.diff ? '<div><span>' + (p.diff < 0 ? 'Missing in the envelope' : 'Extra in the envelope') + '</span><b style="color:var(--' + (p.diff < 0 ? 'exp' : 'soon') + ')">' + (p.diff < 0 ? '− ' : '+ ') + money(Math.abs(p.diff)) + '</b></div>' : '') + '<div class="t"><span>Cash on hand after</span><span>' + money(cash - amt + ((p || {}).diff || 0)) + '</span></div>';
+  return '<div><span>Cash on hand now</span><b>' + money(cash) + '</b></div>' + (p && p.add ? '<div><span>Sealed cash opened (goes in)</span><b>+ ' + money(p.add) + '</b></div>' : '') + '<div><span>This use</span><b style="color:var(--exp)">− ' + money(amt) + '</b></div><div class="t"><span>Cash on hand after</span><span>' + money(cash + (p ? p.add : 0) - amt) + '</span></div>';
 }
 function ucLive() { if ($('#uc-box')) $('#uc-box').innerHTML = ucBoxHtml(); if ($('#uc-sum')) $('#uc-sum').innerHTML = ucSumHtml(); }
 function acLive() { var bt = $('#modal [data-act=acreview]'); if (bt) bt.classList.toggle('dis', !acDone()); }
-function ucOtherModal() {
-  var oth = fundList().filter(function (f) { return f.id !== 'internet-payment'; });
-  modal('<h2>Other stored cash</h2><p class="muted" style="margin-top:0">Tap the one you are paying for</p><div class="list">' + oth.map(function (f) { return '<div data-act="ucfund" data-id="' + esc(f.id) + '" style="display:flex;justify-content:space-between;padding:12px 4px;border-bottom:1px solid var(--line);cursor:pointer"><span>' + esc(f.name) + ((f.sealedAmt || 0) > 0.004 ? ' 🔒' : '') + '</span><b>' + money(f.bal) + '</b></div>'; }).join('') + '</div><button class="btn sec block" data-act="ucback" style="margin-top:10px">Back</button>');
-}
-function ucOpen() { UC = { purpose: '', amount: '', receipt: '', none: false, reason: '', fund: '', found: '' }; ucForm(); }
+function ucOpen() { UC = { mode: '', purpose: '', amount: '', receipt: '', none: false, reason: '', fund: '', found: {} }; ucForm(); }
 function ucForm() {
-  var cash = totals().cash, amt = num(UC.amount);
-  modal('<h2>💵 Use cash</h2><div class="card"><div class="f"><label>Use cash for</label><input data-uc="purpose" value="' + esc(UC.purpose) + '" placeholder="e.g. To purchase station supplies" autocomplete="off"></div>' + ucFundHtml() +
-    '<div class="f"><label>How much</label><input data-uc="amount" type="number" inputmode="decimal" min="0" value="' + esc(UC.amount) + '" placeholder="0"></div>' +
+  var cash = totals().cash;
+  modal('<h2>💵 Use cash</h2><div class="card"><label>What is it for? <b style="color:var(--exp)">*</b></label>' + ucFundHtml() + '<div class="f" style="margin-top:8px"><label>How much</label><input data-uc="amount" type="number" inputmode="decimal" min="0" value="' + esc(UC.amount) + '" placeholder="0"></div>' +
     '<label>Receipt photo</label>' + (UC.receipt ? '<img src="' + UC.receipt + '" alt="receipt" style="width:100%;max-height:260px;object-fit:contain;border-radius:12px;border:1px solid var(--line);background:#fff">' : '<div class="muted" style="margin-bottom:6px">' + (UC.none ? 'No receipt. Give a reason below.' : 'Take a photo of the receipt. It is shrunk to a small size and kept for a year.') + '</div>') +
     '<input type="file" accept="image/*" capture="environment" id="uc-cam" hidden><input type="file" accept="image/*" id="uc-pick" hidden>' +
     '<div class="row" style="margin-top:8px"><button class="btn sec sm grow" data-act="uccam">📷 ' + (UC.receipt ? 'Retake' : 'Take photo') + '</button><button class="btn sec sm grow" data-act="ucpick">🖼 Choose from phone</button></div>' +
@@ -1748,23 +1818,48 @@ function shrink(file, done) {   /* a very small JPEG: about 50 KB, enough to rea
   img.onerror = function () { URL.revokeObjectURL(url); toast('Could not read that photo'); };
   img.src = url;
 }
+function ucDialog(html, y, n, yf, nf) {
+  UCD = { y: yf, n: nf };
+  $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="ucd"><div>' + html + '<button class="btn block" data-act="ucd1" style="margin-top:10px">' + esc(y) + '</button><button class="btn sec block" data-act="ucd2" style="margin-top:10px">' + esc(n) + '</button></div></div>');
+}
+function ucStoredWord(id) { var f = S.funds[id] || {}, sl = sealList(id), tot = r2((f.bal || 0) + sl.reduce(function (a, s) { return a + s.amt; }, 0)); return { name: f.name || '', tot: tot, by: Object.keys(fundBy(id)).join(', ') }; }
 function ucReview() {
-  var amt = num(UC.amount), purpose = UC.purpose.trim(), cash = totals().cash, p = ucPlan();
+  var amt = num(UC.amount);
+  if (!UC.mode) return toast('Tap Internet payment or Other first');
+  var purpose = UC.mode === 'internet' ? INTERNET : UC.purpose.trim();
   if (!purpose) return toast('What is the cash for?'); if (amt <= 0) return toast('Enter how much');
-  if (p && p.sealed && p.found === null) return toast('Open the sealed envelope and type the amount found inside');
+  var p = ucPlan(); if (p && !p.ready) return toast('Open the sealed cash and type the amount found inside');
   if (!UC.receipt && !(UC.none && UC.reason.trim())) return toast('Take a photo of the receipt, or say why there is none');
-  var after = cash - amt + (p ? p.diff : 0);
-  askConfirm('Use this cash?', '<b>' + money(amt) + '</b> for <b>' + esc(purpose) + '</b><br><span class="muted">' + (p ? (p.sealed ? 'Opened the sealed ' + esc(p.f.name) + ' envelope. Written ' + money(p.sw) + ' · found <b>' + money(p.found) + '</b>' + (p.diff ? ' · <b style="color:var(--' + (p.diff < 0 ? 'exp' : 'soon') + ')">' + money(Math.abs(p.diff)) + (p.diff < 0 ? ' missing' : ' extra') + '</b>' : '') + '<br>' : '') + money(p.take) + ' from the stored ' + esc(p.f.name) + ' cash' + (p.cashPart > 0.004 ? ' · ' + money(p.cashPart) + ' from cash on hand' : '') + '<br>' : '') + (UC.receipt ? 'Receipt photo attached. ' : 'No receipt: ' + esc(UC.reason.trim()) + '. ') + 'Cash on hand goes from ' + money(cash) + ' to ' + money(after) + '. It is deducted in the handover.</span>' + (amt > cash ? '<br><b style="color:var(--exp)">That is more than the cash on hand.</b>' : ''), 'Yes, use ' + money(amt), function () {
-    var b = writeBatch(DB), id = newEv(), uc = UC, aid = '', pl = ucPlan(), ex = { name: 'Cash used', note: purpose, receipt: uc.receipt || '', noReceipt: uc.receipt ? '' : uc.reason.trim() };
-    if (pl) {
-      if (pl.diff) { aid = newId('events'); mkEvent(b, pl.diff < 0 ? 'fundshort' : 'fundover', null, 1, Math.abs(pl.diff), { name: pl.diff < 0 ? 'Stored cash short' : 'Stored cash extra', fund: pl.id, fundName: pl.f.name, was: pl.sw, found: pl.found, sealBy: pl.f.lastSealBy || '', sealWk: pl.f.lastSealWk || '', note: purpose }, aid); }
-      ex.fund = pl.id; ex.fundName = pl.f.name; ex.fundTake = pl.take; ex.adj = aid;
-    }
-    mkEvent(b, 'usecash', null, 1, amt, ex, id);
-    if (pl) { var fu = { bal: increment(r2(pl.diff - pl.take)), lastEvent: id }; if (pl.sealed) fu.sealedAmt = 0; b.set(ref('funds/' + pl.id), fu, { merge: true }); }
-    UC = null; closeModal(); toast(money(amt) + ' used: ' + purpose, id);
-    thumbOf(uc.receipt, function (th) { receiptWrite(b, id, { kind: 'cash', title: purpose, amount: amt, receipt: uc.receipt, noReceipt: uc.reason.trim() }, th); commit(b).then(function () { spendTell(EVC[id]); if (aid) tellBosses(aid, 'fundshort', { amount: Math.abs(pl.diff), what: pl.f.name, over: pl.diff > 0, was: pl.sw, found: pl.found, sealBy: pl.f.lastSealBy || '', sealWk: pl.f.lastSealWk || '' }); }); });
-  });
+  var go = function () { ucConfirm(purpose); };
+  if (UC.mode === 'other' && UC.fund && p) {
+    var w = ucStoredWord(p.id);
+    return ucDialog('<h2>⚠ Use the ' + esc(w.name) + ' cash for something else?</h2><p style="margin-top:0">The ' + money(w.tot) + ' stored for <b>' + esc(w.name) + '</b> was put in by ' + esc(w.by || 'the shifts') + '. If you use it for <b>' + esc(purpose) + '</b>, the app can no longer show that this money was for ' + esc(w.name) + ', or which shifts put it in.<br><br>The owner and presidents will be told.</p>', 'Yes, use it for something else', 'Go back', go, null);
+  }
+  if (UC.mode === 'other' && !UC.fund) {
+    var nw = ucStoredWord('internet-payment');
+    if (nw.tot > 0.004) return ucDialog('<h2>Is this for the internet?</h2><p style="margin-top:0">' + money(nw.tot) + ' is stored for Internet payment.</p>', 'Yes, it is for the internet', 'No, it is for something else', function () { UC.mode = 'internet'; UC.fund = ''; UC.found = {}; ucForm(); }, go);
+  }
+  go();
+}
+function ucConfirm(purpose) {
+  var amt = num(UC.amount), cash = totals().cash, p = ucPlan(), add = p ? p.add : 0;
+  askConfirm('Use this cash?', '<b>' + money(amt) + '</b> for <b>' + esc(purpose) + '</b><br><span class="muted">' + (p ? p.opened.map(function (o) { return 'Opened the sealed ' + esc(o.s.fundName) + ': written ' + money(o.s.amt) + ' · found <b>' + money(o.found) + '</b>' + (o.diff ? ' · <b style="color:var(--' + (o.diff < 0 ? 'exp' : 'soon') + ')">' + money(Math.abs(o.diff)) + (o.diff < 0 ? ' missing' : ' extra') + '</b>' : '') + '<br>'; }).join('') + money(p.take) + ' from the stored ' + esc(p.f.name) + ' cash' + (p.cashPart > 0.004 ? ' · ' + money(p.cashPart) + ' from the cash on hand' : '') + '<br>' : '') + (UC.receipt ? 'Receipt photo attached. ' : 'No receipt: ' + esc(UC.reason.trim()) + '. ') + 'Cash on hand goes from ' + money(cash) + ' to ' + money(r2(cash + add - amt)) + '. It is deducted in the handover.</span>' + (amt > cash + add ? '<br><b style="color:var(--exp)">That is more than the cash on hand.</b>' : ''), 'Yes, use ' + money(amt), function () { ucSave(purpose); });
+}
+function ucSave(purpose) {
+  var uc = UC, p = ucPlan(), amt = r2(num(uc.amount)), b = writeBatch(DB), id = newEv(), tell = [], ex = { name: 'Cash used', note: purpose, receipt: uc.receipt || '', noReceipt: uc.receipt ? '' : uc.reason.trim() };
+  var net = ucStoredWord('internet-payment'); if (uc.mode === 'other' && !uc.fund && net.tot > 0.004) ex.intStored = net.tot;
+  if (p) {
+    p.opened.forEach(function (o) {
+      var oid = newId('events'); mkEvent(b, 'sealopen', null, 1, o.found, { name: 'Sealed cash opened', fund: p.id, fundName: p.f.name, sealId: o.s.id, was: o.s.amt, found: o.found, via: 'use' }, oid);
+      b.update(ref('seals/' + o.s.id), { status: 'opened', found: o.found, lastEvent: id });
+      if (o.diff) { var aid = newId('events'); mkEvent(b, o.diff < 0 ? 'fundshort' : 'fundover', null, 1, Math.abs(o.diff), { name: o.diff < 0 ? 'Stored cash short' : 'Stored cash extra', fund: p.id, fundName: p.f.name, was: o.s.amt, found: o.found, sealBy: o.s.giver || '', sealWk: o.s.forWk || '', note: purpose }, aid); tell.push({ id: aid, d: o.diff, s: o.s }); }
+    });
+    ex.fund = p.id; ex.fundName = p.f.name; ex.fundTake = p.take; ex.opened = p.opened.map(function (o) { return o.s.id; }); if (uc.mode === 'other') ex.fundElse = true;
+    b.set(ref('funds/' + p.id), { bal: increment(r2(p.add - p.take)), sealedAmt: increment(-p.wsum), lastEvent: id }, { merge: true });
+  }
+  mkEvent(b, 'usecash', null, 1, amt, ex, id);
+  UC = null; closeModal(); toast(money(amt) + ' used: ' + purpose, id);
+  thumbOf(uc.receipt, function (th) { receiptWrite(b, id, { kind: 'cash', title: purpose, amount: amt, receipt: uc.receipt, noReceipt: uc.reason.trim() }, th); commit(b).then(function () { spendTell(EVC[id]); tell.forEach(function (x) { tellBosses(x.id, 'fundshort', { amount: Math.abs(x.d), what: p.f.name, over: x.d > 0, was: x.s.amt, found: x.s.amt + x.d, sealBy: x.s.giver || '', sealWk: x.s.forWk || '' }); }); }); });
 }
 
 /* ---------- Stock ---------- */
@@ -2386,7 +2481,7 @@ function vHandover() {
     '<div><span>Cash counted <b style="color:var(--exp)">*</b></span><span style="display:flex;align-items:center;gap:4px">$<input style="width:130px;height:46px;font-size:19px;font-weight:700;text-align:right' + (counted === null ? ';border-color:var(--exp)' : '') + '" data-sh="counted" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="count it" value="' + esc(sh.counted) + '"></span></div>' +
     (counted === null ? '<div class="muted" style="color:var(--exp)">Count the cash and enter it. Required to hand over.' + (storedTotal() > 0.004 ? ' Count the stored cash with it, as one total.' : '') + '</div>' : '') +
     (counted !== null && counted !== t.cash ? '<div><span>' + (counted < t.cash ? 'Cash short' : 'Cash over') + '</span><b style="color:' + (counted < t.cash ? 'var(--exp)' : 'var(--soon)') + '">' + money(Math.abs(counted - t.cash)) + '</b></div>' : '') + '</div>';
-  h += storedBreakHtml(fundSnap(), storedTotal(), 'ho');
+  h += storedBreakHtml(fundSnap(), storedTotal(), 'ho') + sealCheckHtml(sealSnap(), HOSEAL, 'hoseal');
   if (ctlTrail().length) h += trailHtml(ctlTrail(), sh.name);
   h += hoStock(rows);
   h += soldCards(rows, { shift: { name: sh.name, date: sh.date, half: sh.half } }, 'Sold this shift');
@@ -2397,7 +2492,7 @@ function vHandover() {
     (locked ? '<p class="muted" style="margin-bottom:0">Fridge and cage locked with the stock inside. Not handed to anyone; the next person opens the handover and checks the stock.</p>'
             : '<div class="row" id="ho-who" style="margin-top:12px' + (tosList().length ? '' : ';border:2px solid var(--exp);border-radius:12px;padding:8px 10px') + '"><div class="grow">' + (tosList().length ? tosList().map(function (p) { return '<div><b>' + esc(plabel(p)) + '</b> ' + wsw(p.watch) + '</div>'; }).join('') : '<b>Not chosen</b>') + '<div class="muted">Pick one or more. Whoever takes it first is in control. If nobody takes it, the next watch can.</div></div><button class="btn sec sm" data-act="chooseto">' + (tosList().length ? 'Change' : 'Choose') + '</button></div>') + '</div>';
   h += '<div id="ho-sig">' + sigCard('Your signature <b style="color:var(--exp)">*</b>') + '</div>';
-  var miss = (counted === null ? 1 : 0) + (!locked && !tosList().length ? 1 : 0) + (M && M.signature ? 0 : 1);
+  var miss = (counted === null ? 1 : 0) + (!locked && !tosList().length ? 1 : 0) + (M && M.signature ? 0 : 1) + sealSnap().filter(function (x) { return !HOSEAL[x.id]; }).length;
   return h + '<div class="hosticky"><button class="btn block' + (miss ? ' dis' : '') + '" data-act="prepare">Prepare handover' + (miss ? ' · ' + miss + (miss === 1 ? ' thing' : ' things') + ' left' : '') + '</button></div>';
 }
 function editInfo(e) {   /* one hand-made stock change, as plain text */
@@ -2575,7 +2670,7 @@ function banner() {
   return box('Nobody is in control', 'The president can take control.', isPres() ? tc : '');
 }
 
-var MUT = {}; ['startover', 'sovgo', 'pick', 'cnsave', 'cnmove', 'cnote', 'snote', 'lend', 'loannext', 'pkpick', 'pkadd', 'paynext', 'cancelask', 'newitem', 'saveitem', 'stockitem', 'savecount', 'domove', 'dospoil', 'savedetails', 'rmitem', 'buysave', 'prepare', 'dohandover', 'chooseto', 'mode', 'ucopen', 'ucreview', 'acopen', 'acreview', 'editfromsell', 'editstock', 'esack', 'esreview', 'opopen', 'opreview', 'opcredit', 'opcnext', 'swopen', 'swpick'].forEach(function (k) { MUT[k] = 1; });
+var MUT = {}; ['startover', 'sovgo', 'pick', 'cnsave', 'cnmove', 'cnote', 'snote', 'lend', 'loannext', 'pkpick', 'pkadd', 'paynext', 'cancelask', 'newitem', 'saveitem', 'stockitem', 'savecount', 'domove', 'dospoil', 'savedetails', 'rmitem', 'buysave', 'prepare', 'dohandover', 'chooseto', 'mode', 'ucopen', 'ucreview', 'acopen', 'acreview', 'sealopenreview', 'sealoutreview', 'sealuse', 'sealcancel', 'editfromsell', 'editstock', 'esack', 'esreview', 'opopen', 'opreview', 'opcredit', 'opcnext', 'swopen', 'swpick'].forEach(function (k) { MUT[k] = 1; });
 var VIEWS = { sell: vCount, stock: vStock, buy: vBuy, credit: vCredit, handover: vHandover };
 function render() {
   if (DRAGO.on) { DRAGO.pend = true; return; }   /* a tile is being moved: redraw when it is dropped */
@@ -2656,7 +2751,9 @@ function evRow(e, cancelable) {
   else if (e.type === 'spoil') { ic = '🗑'; tx = 'Spoiled ' + e.qty + ' × ' + e.name; }
   else if (e.type === 'move') { var mvi = item(e.item) || {}; ic = mvi.shelf ? '🧁' : '🧊'; tx = 'Moved ' + uLab(mvi, e.cases) + ' of ' + e.name + ' to ' + (mvi.shelf ? 'shelf' : 'fridge'); sub = e.qty + ' items'; }
   else if (e.type === 'usecash') { ic = '💵'; tx = 'Cash used: ' + e.note; sub = (e.fundTake ? money(e.fundTake) + ' from stored ' + (e.fundName || '') + (e.amt - e.fundTake > 0.004 ? ' · ' + money(r2(e.amt - e.fundTake)) + ' from cash on hand' : '') + ' · ' : '') + (e.receipt ? 'Receipt attached' : 'No receipt: ' + e.noReceipt); amt = '− ' + money(e.amt); col = 'var(--soon)'; }
-  else if (e.type === 'addcash') { ic = '➕'; tx = 'Cash stored: ' + (e.fundName || ''); sub = (e.sealed ? 'sealed, ' + money(e.amt) + ' written on it' : 'open, counted ' + money(e.amt)) + ' · given by ' + (e.giver || '') + ' · for the ' + (e.forWk || '') + ' shift'; amt = '+ ' + money(e.amt); col = 'var(--ok)'; }
+  else if (e.type === 'addcash') { ic = '➕'; tx = 'Cash stored: ' + (e.fundName || ''); sub = (e.sealed ? (e.sealId ? 'sealed, ' + money(e.amt) + ' written on it, not counted' : 'sealed, ' + money(e.amt) + ' written on it') : 'open, counted ' + money(e.amt)) + ' · given by ' + (e.giver || '') + ' · for the ' + (e.forWk || '') + ' shift'; amt = e.sealed && e.sealId ? money(e.amt) : '+ ' + money(e.amt); col = e.sealed && e.sealId ? 'var(--muted)' : 'var(--ok)'; }
+  else if (e.type === 'sealopen') { ic = '🔓'; tx = 'Sealed cash opened: ' + (e.fundName || ''); sub = 'written ' + money(e.was) + ', found ' + money(e.found) + (e.via === 'use' ? ' · opened to pay a bill' : ' · counted in'); amt = '+ ' + money(e.amt); col = 'var(--ok)'; }
+  else if (e.type === 'sealout') { ic = '📤'; tx = 'Sealed cash taken out: ' + (e.fundName || ''); sub = (e.to || '') + (e.toWho ? ' · received by ' + e.toWho : '') + ' · still sealed, not counted'; amt = money(e.amt); col = 'var(--muted)'; }
   else if (e.type === 'fundshort') { ic = '⚠'; tx = 'Stored cash short: ' + (e.fundName || ''); sub = 'sealed envelope opened · written ' + money(e.was) + ', found ' + money(e.found) + (e.sealBy ? ' · last sealed by ' + e.sealBy + (e.sealWk ? ' (' + e.sealWk + ')' : '') : ''); amt = '− ' + money(e.amt); col = 'var(--exp)'; }
   else if (e.type === 'fundover') { ic = '↑'; tx = 'Stored cash extra found: ' + (e.fundName || ''); sub = 'sealed envelope opened · written ' + money(e.was) + ', found ' + money(e.found) + (e.sealBy ? ' · last sealed by ' + e.sealBy : ''); amt = '+ ' + money(e.amt); col = 'var(--soon)'; }
   else if (e.type === 'offset') { ic = '↔'; tx = e.wk + ' cash short of ' + money(e.amt) + ' paid by a cash surplus found on the ' + e.from + ' shift'; sub = 'no cash moved · recorded by ' + (e.byName || ''); amt = money(e.amt); col = 'var(--ok)'; }
@@ -2684,11 +2781,11 @@ function evRow(e, cancelable) {
   var lt = e.gap ? '' : lateOf(e); if (lt) sub = (sub ? sub + ' · ' : '') + '⏱ ' + e.wk + ' held control, ' + lt + ' on duty';
   if (e.corr) sub = (sub ? sub + ' · ' : '') + 'Correction by ' + e.corr;
   HEV[e.id] = e;
-  return '<div' + (e.type === 'buy' || e.type === 'other' ? ' data-act="buyview" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'pay' || e.type === 'cnote' || e.type === 'loan' || (e.type === 'sale' && e.cr) ? ' data-act="evsheet" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'stockedit' ? ' data-act="editview" data-id="' + e.id + '" style="cursor:pointer;background:var(--exp-bg);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px;box-shadow:inset 2px 0 0 var(--exp)"' : e.type === 'cashshort' ? ' style="cursor:pointer;background:var(--exp-bg);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px;box-shadow:inset 2px 0 0 var(--exp)"' : '') + '><span style="font-size:18px;width:26px;flex:none;text-align:center">' + ic + '</span><div class="grow"><b>' + esc(tx) + '</b><div class="muted">' + (hdt(e) ? hdt(e) + ' ' : '') + hhmm(e.t) + (sub ? ' · ' + esc(sub) : '') + (e.byName ? ' · recorded by ' + esc(e.byName) : '') + '</div></div>' + (e.receipt ? '<img data-act="rcv" src="' + e.receipt + '" alt="receipt" style="width:44px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">' : '') + '<b style="color:' + col + '">' + amt + '</b>' + (CM && cancelable && ['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'shiftrec', 'watchchg', 'fundshort', 'fundover'].indexOf(e.type) < 0 ? '<button class="btn red sm" data-act="cancelask" data-id="' + e.id + '">Cancel</button>' : '') + '</div>';
+  return '<div' + (e.type === 'buy' || e.type === 'other' ? ' data-act="buyview" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'pay' || e.type === 'cnote' || e.type === 'loan' || (e.type === 'sale' && e.cr) ? ' data-act="evsheet" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'stockedit' ? ' data-act="editview" data-id="' + e.id + '" style="cursor:pointer;background:var(--exp-bg);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px;box-shadow:inset 2px 0 0 var(--exp)"' : e.type === 'cashshort' ? ' style="cursor:pointer;background:var(--exp-bg);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px;box-shadow:inset 2px 0 0 var(--exp)"' : '') + '><span style="font-size:18px;width:26px;flex:none;text-align:center">' + ic + '</span><div class="grow"><b>' + esc(tx) + '</b><div class="muted">' + (hdt(e) ? hdt(e) + ' ' : '') + hhmm(e.t) + (sub ? ' · ' + esc(sub) : '') + (e.byName ? ' · recorded by ' + esc(e.byName) : '') + '</div></div>' + (e.receipt ? '<img data-act="rcv" src="' + e.receipt + '" alt="receipt" style="width:44px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">' : '') + '<b style="color:' + col + '">' + amt + '</b>' + (CM && cancelable && ['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'shiftrec', 'watchchg', 'fundshort', 'fundover', 'sealopen', 'sealout'].indexOf(e.type) < 0 ? '<button class="btn red sm" data-act="cancelask" data-id="' + e.id + '">Cancel</button>' : '') + '</div>';
 }
 /* ---------- History: one full page. All = the entries of a day or a month, Shifts = the permanent shift summaries (a day, a month or a year), Charts. The Filter is in the top bar ---------- */
 var HY = { tab: 'all', per: 'day', dt: new Date(), types: {}, short: false, wk: '', sid: '', cnt: {}, sper: 'month', pper: 'month', pf: 'all', pq: '', pid: '', pl: null, hm: '', pm: '', cv: 'score', sy: 0, back: false, yr: false, cf: {} }, HUN = null, HEVS = null, HSDOCS = null, HSD = {}, HYSIG = '';
-var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash']], ['Stored cash', '💰', ['addcash', 'fundshort', 'fundover']], ['Shortages and repayments', '⚠️', ['cashshort', 'repay', 'offset', 'gapfix']], ['Corrections', '🛠️', ['hocorr', 'shortfix', 'shiftfix', 'dayfix']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
+var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash']], ['Stored cash', '💰', ['addcash', 'fundshort', 'fundover', 'sealopen', 'sealout']], ['Shortages and repayments', '⚠️', ['cashshort', 'repay', 'offset', 'gapfix']], ['Corrections', '🛠️', ['hocorr', 'shortfix', 'shiftfix', 'dayfix']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
 function hgroup(e) { if ((e.type === 'adjust' || e.type === 'cageadj') && e.ho) return 'Shortages and repayments'; for (var i = 0; i < HGROUPS.length; i++) if (HGROUPS[i][2].indexOf(e.type) >= 0) return HGROUPS[i][0]; return 'Stock edits by hand'; }
 function histNoon(d) { var x = new Date(d); x.setHours(12, 0, 0, 0); return x; }
 function histToday() { return histNoon(new Date(Date.now() - bizHour() * 36e5)); }   /* History always opens on today, by the phone's own clock */
@@ -3156,6 +3253,13 @@ function gapCardHtml(z, linked, inDay) {   /* the skipped shift's own card: nobo
 function gapBanner(gp, from) {   /* the giver's record after a gap: it matched; the difference belongs to the skipped shift */
   return '<div class="card" style="background:var(--ok-bg);border-left:2px solid var(--ok);box-shadow:none"><b style="color:var(--ok)">✓ Everything matched for ' + esc(from || gp.gapFor || 'the giver') + '</b><div style="margin-top:4px">' + esc(gp.gapFor || from || 'The giver') + '\'s handover was correct. Nobody took it on the <b>' + esc(gp.wk) + '</b> shift, so what was sold while it waited is recorded on ' + esc(gp.wk) + ':</div><div style="margin-top:6px">Items sold: <b>' + money(gp.gapSales || 0) + '</b>, with the cash that came in for them, as ' + esc(gp.wk) + '\'s sales.<br>' + (gp.cashShort > 0 ? 'Cash short <b style="color:var(--exp)">' + money(gp.cashShort) + '</b>, recorded against <b>' + esc(gp.wk) + '</b>.' : gp.cashOver > 0 ? 'Cash over <b>' + money(gp.cashOver) + '</b>, recorded as ' + esc(gp.wk) + '\'s surplus.' : 'The cash balanced.') + (gp.itemsValue > 0 ? '<br>Cases short ' + money(gp.itemsValue) + ', recorded against <b>' + esc(gp.wk) + '</b>.' : '') + '</div></div>';
 }
+function sealRecordHtml(h) {   /* the sealed cash that came with the handover: who checked each one */
+  if (!h || !h.sealed || !h.sealed.length) return '';
+  return '<div class="card" style="border-left:2px solid #e0a800"><h2>🔒 Sealed cash check</h2>' + h.sealed.map(function (x) {
+    var g = (h.sealGiver || []).indexOf(x.id) >= 0, r = (h.sealRecv || {})[x.id];
+    return '<div class="hkv" style="display:block;border-top:1px solid var(--line);padding:6px 0"><b>' + esc(x.name) + '</b> · written on it ' + money(x.amt) + '<div class="muted">put in by ' + esc(x.giver || '') + (x.wk ? ' (' + esc(x.wk) + ')' : '') + '<br>giver: ' + (g ? 'still sealed' : 'not checked') + ' · receiver: ' + (!r ? 'not checked' : r.ok ? 'seal intact, amount matches' : '<b style="color:var(--exp)">' + esc(r.issue || 'problem reported') + '</b>') + '</div></div>';
+  }).join('') + '</div>';
+}
 function recordHtml(d, evs, h) {
   var rows = recRows(d, h); if (!rows) return shiftDetailHtml(d, evs);   /* an older shift: the summary page */
   var acc = d.status === 'accepted', fold = function (k, t, html) { return rxFold(k, t, html, RCF, 'rcfold'); }, at2 = d.receivedAt || (h && h.acceptedAt) || 0, wk = d.wk, gp = acc ? gapDocOf(d.handoverId || d.id) : null;
@@ -3176,7 +3280,10 @@ function recordHtml(d, evs, h) {
   var sold = rows.filter(function (r) { return r.sold > 0; }), tcash = sold.reduce(function (a, r) { return a + Math.max(0, r.soldAmt - r.crAmt - r.spAmt); }, 0);
   var soldF = fold('sold', 'Sold on the shift <span class="muted" style="font-size:11px">' + sold.length + (sold.length === 1 ? ' item' : ' items') + ' · ' + money(tcash) + '</span>', soldCards(rows, { shift: { name: wk, date: d.date, half: d.half } }, 'Sold on the shift'));
   var line = function (l, v, c) { return '<div><span>' + l + '</span><b' + (c ? ' style="color:' + c + '"' : '') + '>' + v + '</b></div>'; };
-  var sum = '<div class="card sum"><h2>How the cash adds up</h2>' + line('Received from previous handover', money(d.received)) + line('Sales', '+ ' + money(d.sales)) + (d.stp ? line('Cash put in for stored funds (net of any found missing)', (d.stp < 0 ? '− ' : '+ ') + money(Math.abs(d.stp))) : '') + (d.cr ? line('Sold on credit (not paid)', '− ' + money(d.cr)) : '') + (d.paid ? line('Credit payments received', '+ ' + money(d.paid)) : '') + (d.loans ? line('Cash lent out', '− ' + money(d.loans)) : '') + (d.purch ? line('Purchases', '− ' + money(d.purch)) : '') + (d.used ? line('Cash used', '− ' + money(d.used)) : '') + '<div class="t"><span>Expected</span><span>' + money(d.expected) + '</span></div></div>' + spentHtml(d) + offNotes(d);
+  var sumCard = '<div class="card sum"><h2>How the cash adds up</h2>' + line('Received from previous handover', money(r2(d.received - (d.sin || 0)))) + line('Sales', '+ ' + money(d.sales)) + (d.cr ? line('Sold on credit (not paid)', '− ' + money(d.cr)) : '') + (d.paid ? line('Credit payments received', '+ ' + money(d.paid)) : '') + (d.loans ? line('Cash lent out', '− ' + money(d.loans)) : '') + (d.purch ? line('Purchases', '− ' + money(d.purch)) : '') + (d.used - (d.stu || 0) > 0.004 ? line('Cash used', '− ' + money(r2(d.used - (d.stu || 0)))) : '') +
+    (d.sto > 0.004 ? '<div style="border-left:2px solid var(--ok);padding-left:12px;margin-left:-14px"><span>Stored cash</span><b>+ ' + money(d.sto) + '</b>' + ((h && h.stored && h.stored.length) ? '<div class="muted" style="font-size:12.5px;font-weight:400">' + h.stored.map(function (f) { return esc(f.name) + ' ' + money(f.bal); }).join(' · ') + ' · details further down</div>' : '') + '</div>' : (d.stp ? line('Cash put in for stored funds', (d.stp < 0 ? '− ' : '+ ') + money(Math.abs(d.stp))) : '')) +
+    '<div class="t"><span>Expected</span><span>' + money(d.expected) + '</span></div></div>';
+  var sum = spentHtml(d) + offNotes(d);
   var tr = (d.trail || []).length || (d.fromWatch && d.fromWatch !== wk) ? fold('ctl', 'Who held control', trailHtml(d.trail || [], wk)) : '';
   var eds = d.edits || (h && h.edits) || [], edC = eds.length ? editsCard(eds) : '';
   var ent = (evs || []).slice().sort(function (a, b) { return b.t - a.t; }), entF = ent.length ? fold('ent', 'Entries <span class="muted" style="font-size:11px">' + ent.length + ' · kept a year</span>', '<div class="card"><div class="list">' + ent.map(function (e) { return evRow(e, false); }).join('') + '</div></div>') : '';
@@ -3186,7 +3293,7 @@ function recordHtml(d, evs, h) {
   var result = acc && gp ? '<div class="card sum"><h2>Result</h2>' + line(esc(wk) + ' shift: everything matched', '$0', 'var(--ok)') + line('Items sold in the gap (' + esc(gp.wk) + ')', money(gp.gapSales || 0)) + line('Cash short against ' + esc(gp.wk), money(gp.cashShort || 0), gp.cashShort > 0 ? 'var(--exp)' : 'var(--ok)') + '</div>' : acc ? '<div class="card sum"><h2>Result</h2>' + line('Shortage from this handover', money(d.short || 0), d.short > 0 ? 'var(--exp)' : 'var(--ok)') + line('Repaid so far (all shortages)', money(so.repaid), 'var(--ok)') + '<div><span>' + wsw(wk) + ' still owes (all shortages)</span><b style="color:' + (so.owed > 0 ? 'var(--exp)' : 'var(--ok)') + '">' + money(so.owed) + '</b></div></div>' : '';
   HREC = { d: d, h: h, rows: rows };
   setTimeout(function () { spentLoad(d); }, 400);
-  return '<h2>Handover record</h2>' + head + (gp ? gapBanner(gp, d.wk) : gapMoveCard(d)) + corrNote(d) + corrBanner(d) + (corrEligible(d, h) ? '<button class="btn red block noprint" data-act="corrstart" style="margin-bottom:10px">✎ Handover mistake</button>' : '') + cash + shopC + storC + soldF + (h && h.stored && h.stored.length ? storedBreakHtml(h.stored, h.storedTotal, 'rec') : '') + fold('sum', 'How the cash adds up', sum) + handoverLists(d.owedBy, d.openShort) + tr + edC + (d.notes ? '<div class="card"><label>Remarks</label>' + esc(d.notes) + '</div>' : '') + entF + sigs + result + '<div class="row noprint" style="gap:8px"><button class="btn grow" data-act="rccopy">Copy</button><button class="btn grow" data-act="rcshare">Share</button><button class="btn grow" data-act="rcprint">Print</button></div>';
+  return '<h2>Handover record</h2>' + head + (gp ? gapBanner(gp, d.wk) : gapMoveCard(d)) + corrNote(d) + corrBanner(d) + (corrEligible(d, h) ? '<button class="btn red block noprint" data-act="corrstart" style="margin-bottom:10px">✎ Handover mistake</button>' : '') + sumCard + cash + shopC + storC + soldF + sum + (h && h.stored && h.stored.length ? storedBreakHtml(h.stored, h.storedTotal, 'rec') : '') + sealRecordHtml(h) + handoverLists(d.owedBy, d.openShort) + tr + edC + (d.notes ? '<div class="card"><label>Remarks</label>' + esc(d.notes) + '</div>' : '') + entF + sigs + result + '<div class="row noprint" style="gap:8px"><button class="btn grow" data-act="rccopy">Copy</button><button class="btn grow" data-act="rcshare">Share</button><button class="btn grow" data-act="rcprint">Print</button></div>';
 }
 
 /* ---------- the president moves a shortage to the shift that skipped the handover (when it was recorded against the shift that handed over) ---------- */
@@ -3643,6 +3750,7 @@ function prepare() {
   if (!tosList().length && !locked) return toast('Choose who you are handing over to, or pick Locked');
   if (!M || !M.signature) return toast('Please sign first');
   if (sh.counted === '' || isNaN(num(sh.counted))) return toast('Count the cash and enter it first');
+  if (sealSnap().some(function (x) { return !HOSEAL[x.id]; })) return toast('Tick each sealed item: is it in the cash box, still sealed?');
   var over = rows.filter(function (r) { return r.crQ > r.sold || r.spQ > r.gone; });
   if (over.length) return infoBox('The notes do not match the count', over.map(function (r) { return '<b>' + esc(r.name) + '</b>: sold ' + r.sold + ', but credit ' + r.crQ + ', spoiled ' + r.spQ + ', gone ' + r.gone + '.'; }).join('<br>') + '<br><span class="muted">Credit and spoiled notes can only explain items that are sold. Count the item again or cancel a note in History.</span>');
   var unc = rows.filter(function (r) { return !r.counted && (r.stock > 0 || r.cage > 0); });   /* nothing left = nothing to count */
@@ -3661,7 +3769,7 @@ function sheetLists(rows) {   /* the "Handover ready" sheet: In the shop, then o
 }
 function prepareShow() {
   var t = totals(), sh = SH(), rows = hoRows(), locked = sh.mode === 'locked';
-  wpPage(prepareShow, [], '<h2>' + (locked ? '🔒 Locked handover ready' : sameShiftHo(sh) ? 'Handover within the shift ready' : 'Handover ready') + '</h2>' + (sameShiftHo(sh) ? '<div class="card" style="background:var(--soon-bg);box-shadow:none"><b>Same shift</b><div style="margin-top:4px">The ' + esc(sh.name) + ' shift keeps going. The next person counts what is here and carries on.</div></div>' : '') + '<div class="card sum"><div><span>Shift</span><b>' + sh.name + ' · ' + sh.date + ' ' + HL(sh.half) + '</b></div><div><span>From</span><b>' + esc(myName()) + '</b></div><div><span>To</span><b>' + (locked ? 'Locked: no one in particular' : esc(tosText())) + '</b></div><div><span>Received</span><b>' + money(r2(sh.received - (sh.storedIn || 0))) + '</b></div><div><span>Sales</span><b>' + money(t.sales) + '</b></div><div><span>Total items sold</span><b>' + t.sold + '</b></div>' + (t.crN ? '<div><span>Unpaid credit given</span><b>' + money(t.crN) + '</b></div>' : '') + (t.loans ? '<div><span>Cash lent out</span><b>' + money(t.loans) + '</b></div>' : '') + (t.purch ? '<div><span>Purchases</span><b>' + money(t.purch) + '</b></div>' : '') + (t.used - t.usedStored > 0.004 ? '<div><span>Cash used</span><b>' + money(r2(t.used - t.usedStored)) + '</b></div>' : '') + (storedTotal() > 0.004 ? '<div class="stl"><span>Stored cash</span><b>+ ' + money(storedTotal()) + '</b></div>' : '') + '<div class="t"><span>Cash expected</span><span>' + money(t.cash) + '</span></div><div><span>Cash counted</span><b>' + money(sh.counted === '' ? t.cash : num(sh.counted)) + '</b></div>' + (sh.counted !== '' && num(sh.counted) !== t.cash ? '<div><span>' + (num(sh.counted) < t.cash ? 'Cash short' : 'Cash over') + '</span><b style="color:var(--' + (num(sh.counted) < t.cash ? 'exp' : 'soon') + ')">' + money(Math.abs(num(sh.counted) - t.cash)) + '</b></div><div class="muted" style="color:var(--exp)">The next person checks this. A shortage is recorded against the ' + esc(sh.name) + ' shift.</div>' : '') + '</div>' + storedBreakHtml(fundSnap(), storedTotal(), 'pr') +
+  wpPage(prepareShow, [], '<h2>' + (locked ? '🔒 Locked handover ready' : sameShiftHo(sh) ? 'Handover within the shift ready' : 'Handover ready') + '</h2>' + (sameShiftHo(sh) ? '<div class="card" style="background:var(--soon-bg);box-shadow:none"><b>Same shift</b><div style="margin-top:4px">The ' + esc(sh.name) + ' shift keeps going. The next person counts what is here and carries on.</div></div>' : '') + '<div class="card sum"><div><span>Shift</span><b>' + sh.name + ' · ' + sh.date + ' ' + HL(sh.half) + '</b></div><div><span>From</span><b>' + esc(myName()) + '</b></div><div><span>To</span><b>' + (locked ? 'Locked: no one in particular' : esc(tosText())) + '</b></div><div><span>Received</span><b>' + money(r2(sh.received - (sh.storedIn || 0))) + '</b></div><div><span>Sales</span><b>' + money(t.sales) + '</b></div><div><span>Total items sold</span><b>' + t.sold + '</b></div>' + (t.crN ? '<div><span>Unpaid credit given</span><b>' + money(t.crN) + '</b></div>' : '') + (t.loans ? '<div><span>Cash lent out</span><b>' + money(t.loans) + '</b></div>' : '') + (t.purch ? '<div><span>Purchases</span><b>' + money(t.purch) + '</b></div>' : '') + (t.used - t.usedStored > 0.004 ? '<div><span>Cash used</span><b>' + money(r2(t.used - t.usedStored)) + '</b></div>' : '') + (storedTotal() > 0.004 ? '<div class="stl"><span>Stored cash</span><b>+ ' + money(storedTotal()) + '</b></div>' : '') + '<div class="t"><span>Cash expected</span><span>' + money(t.cash) + '</span></div><div><span>Cash counted</span><b>' + money(sh.counted === '' ? t.cash : num(sh.counted)) + '</b></div>' + (sh.counted !== '' && num(sh.counted) !== t.cash ? '<div><span>' + (num(sh.counted) < t.cash ? 'Cash short' : 'Cash over') + '</span><b style="color:var(--' + (num(sh.counted) < t.cash ? 'exp' : 'soon') + ')">' + money(Math.abs(num(sh.counted) - t.cash)) + '</b></div><div class="muted" style="color:var(--exp)">The next person checks this. A shortage is recorded against the ' + esc(sh.name) + ' shift.</div>' : '') + '</div>' + storedBreakHtml(fundSnap(), storedTotal(), 'pr') + (sealSnap().length ? '<div class="card" style="border-left:2px solid #e0a800;background:var(--soon-bg)"><b>🔒 Sealed, not counted</b>' + sealSnap().map(function (x) { return '<div class="row" style="padding:4px 0"><span class="grow">' + esc(x.name) + ' · put in by ' + esc(x.giver) + '</span><b>' + money(x.amt) + ' written</b></div>'; }).join('') + '<div class="muted">Handed over still sealed. The next shift checks that each one is there.</div></div>' : '') +
     handoverLists(owingList(), shortAllList()) + sheetLists(rows) + (sh.notes ? '<div class="card"><label>Remarks</label>' + esc(sh.notes) + '</div>' : '') +
     '<div class="card"><label>Signed</label><img class="sigimg" src="' + M.signature + '" alt="signature"><div class="muted">' + esc(myName()) + ' · ' + hhmm(Date.now()) + '</div></div>' +
     '<div class="noprint"><button class="btn green block" data-act="hoask">Hand over now</button>' +
@@ -3677,12 +3785,12 @@ function doHandover2() {
     shift: { name: sh.name, half: sh.half, date: sh.date, sid: sh.sid }, cash: sh.counted === '' ? t.cash : num(sh.counted), computed: t.cash, sales: t.sales, sold: t.sold, cr: t.crN, loans: t.loans, used: t.used, paid: t.paidN, purch: t.purch, received: sh.received, notes: sh.notes, sig: M.signature, expireAt: EXP(),
     items: rows.map(function (r) { return { id: r.id, shelf: r.shelf, store: r.store, unit: r.unit, name: r.name, price: r.price, per: r.per, open: r.open, stock: r.stock, sold: r.sold, credit: r.crQ, spoiled: r.spQ, cageOpen: r.cageOpen, cage: r.cage, gone: r.gone, moved: r.moved, movedCases: r.movedCases || 0, bought: r.bought, ub: r.ub || 0, edit: r.edit, cedit: r.cedit, adj: r.adj, cadj: r.cadj, spoil: r.spoil, soldAmt: r.soldAmt, crAmt: r.crAmt, spAmt: r.spAmt }; }),
     edits: S.log.filter(function (e) { return e.type === 'stockedit'; }).map(editInfo),
-    crShift: t.crN, owedTotal: owing().reduce(function (a, x) { return a + x.bal; }, 0), owedBy: owingList(), openShort: shortAllList(), stored: fundSnap(), storedTotal: storedTotal() };
+    crShift: t.crN, owedTotal: owing().reduce(function (a, x) { return a + x.bal; }, 0), owedBy: owingList(), openShort: shortAllList(), stored: fundSnap(), storedTotal: storedTotal(), sealed: sealSnap(), sealGiver: Object.keys(HOSEAL).filter(function (k) { return HOSEAL[k]; }) };
   var hd = String(sh.date || '').split('/'), cashRows = soldRows(rows).map(function (x) { return { n: x.r.name, o: x.r.open, a: x.plus, s: x.r.sold, c: x.cash, w: x.r.stock, cr: x.r.crQ, sp: x.r.spQ }; });
   h.sum = !same;
   var b = writeBatch(DB); b.set(ref('handovers/' + id), h);
-  if (!same) b.set(ref('shifts/' + sh.sid), { expireAt: EXPY(), sid: sh.sid, wk: sh.name, date: sh.date, half: sh.half, day: hd.length === 3 ? hd[2] + '-' + hd[1] + '-' + hd[0] : '', status: 'open', handoverId: id, fromEmail: EMAIL, fromName: myName(), fromWatch: whoOf(EMAIL).wk, trail: ctlTrail(), toLabels: h.toLabels, locked: locked, received: sh.received, sales: t.sales, cr: t.crN, paid: t.paidN, loans: t.loans, purch: t.purch, used: t.used, stp: t.put, expected: t.cash, counted: h.cash, sold: t.sold, rows: cashRows, owedBy: h.owedBy, openShort: h.openShort, its: packItems(h.items), edits: h.edits, notes: sh.notes || '', at: Date.now() }); b.update(ref('shop/state'), { controlEmail: '', controlName: '', pending: id });
-  var hoDone = commit(b); sel = null; qty = 1; tab = 'sell'; closeModal(); if (!$('#spage').hidden) spClose(); toast('Handed over. You are now view only.');
+  if (!same) b.set(ref('shifts/' + sh.sid), { expireAt: EXPY(), sid: sh.sid, wk: sh.name, date: sh.date, half: sh.half, day: hd.length === 3 ? hd[2] + '-' + hd[1] + '-' + hd[0] : '', status: 'open', handoverId: id, fromEmail: EMAIL, fromName: myName(), fromWatch: whoOf(EMAIL).wk, trail: ctlTrail(), toLabels: h.toLabels, locked: locked, received: sh.received, sales: t.sales, cr: t.crN, paid: t.paidN, loans: t.loans, purch: t.purch, used: t.used, stp: t.put, sin: sh.storedIn || 0, stu: t.usedStored || 0, sto: storedTotal(), expected: t.cash, counted: h.cash, sold: t.sold, rows: cashRows, owedBy: h.owedBy, openShort: h.openShort, its: packItems(h.items), edits: h.edits, notes: sh.notes || '', at: Date.now() }); b.update(ref('shop/state'), { controlEmail: '', controlName: '', pending: id });
+  HOSEAL = {}; var hoDone = commit(b); sel = null; qty = 1; tab = 'sell'; closeModal(); if (!$('#spage').hidden) spClose(); toast('Handed over. You are now view only.');
   if (hoDone && hoDone.then) hoDone.then(function () { pushNotify('handover', id); }, function () {});
 }
 function cancelHandover() {
@@ -3773,6 +3881,7 @@ function rxUndone() {   /* every count that is not yet checked: not ticked and n
   });
   return out;
 }
+function rxSealDraw() { var el = $('#rx-seals'); if (el && RX) el.innerHTML = sealCheckHtml(RX.sealed, RXSEAL, 'rxseal'); }
 function rxMissing() {   /* the first count still to check; every count is required */
   var bad = rxUndone(), pg = $('#spage'); if (pg) pg.querySelectorAll('tr.rxnone').forEach(function (r) { r.classList.remove('rxnone'); });
   bad.forEach(function (e) { e.closest('tr').classList.add('rxnone'); });
@@ -3835,7 +3944,7 @@ function rxCard(h, v, kind) {   /* the count boxes: In the shop (fridge and shel
   }).join('');
   return rows ? rxTbl(g ? '📦 Cases / Packs in storage' : kind === 'shelf' ? '🧁 On the shelf' : '🧊 In the fridge', rows, true) : '';
 }
-function rxCashCard(h, v) { return storedBreakHtml(h.stored, h.storedTotal, 'rx') + rxTbl('Cash', '<tr><td>Cash</td><td class="rxh">' + money(h.cash) + '</td><td><input class="rxn" id="rx-cash" data-exp="' + h.cash + '" enterkeyhint="next" type="number" inputmode="decimal" placeholder="$" value="' + esc(v.cash) + '"></td><td><span class="rxd" id="d-rx-cash" style="font-size:12px"></span></td></tr>'); }
+function rxCashCard(h, v) { if (RXSEAL.hid !== h.id) RXSEAL = { hid: h.id }; return storedBreakHtml(h.stored, h.storedTotal, 'rx') + rxTbl('Cash', '<tr><td>Cash</td><td class="rxh">' + money(h.cash) + '</td><td><input class="rxn" id="rx-cash" data-exp="' + h.cash + '" enterkeyhint="next" type="number" inputmode="decimal" placeholder="$" value="' + esc(v.cash) + '"></td><td><span class="rxd" id="d-rx-cash" style="font-size:12px"></span></td></tr>') + '<div id="rx-seals">' + sealCheckHtml(h.sealed, RXSEAL, 'rxseal') + '</div>'; }
 function rxNote() { return '<div class="card" style="background:var(--soon-bg);box-shadow:none"><b>✎ Your count is filled in with what was handed over</b><div style="margin-top:4px">Same? Tick the box. Different? Type what you found: the box is replaced by the difference. Cash is not filled in: count it and type it.</div></div>'; }
 function rxProg() {   /* the pinned bar: how many are checked, how many changed, and the next one; the rows turn green (ticked) or red (changed) */
   var pg = $('#spage'); if (!pg || !RX || !$('#rx-bar')) return;
@@ -3907,7 +4016,8 @@ function rxAccept() {   /* an out-of-date app must not accept a handover: the ne
   checkUpdate(false).then(function (newer) { if (newer) { RXOK = false; return askConfirm('Update the app first', 'A newer version of the app is ready (' + esc(UPD.ver) + '). It records handovers correctly, including when a shift was skipped. Update now, then take the handover again.', 'Update now', doUpdate); } rxAccept1(); });
 }
 var RXDIFF = false;
-function rxAccept1() { try { if (!RXOK && rxReview()) return; RXOK = false;
+function rxAccept1() { try { var uns = (RX && RX.sealed || []).filter(function (x) { return !RXSEAL[x.id]; }); if (uns.length) { var sb3 = $('#rx-seals'); if (sb3) sb3.scrollIntoView({ block: 'center' }); return toast('Check each sealed item first: tick it, or say what is wrong'); }
+    if (!RXOK && rxReview()) return; RXOK = false;
     var g = rxGap(RX);
     if (!RXDIFF && !g.on && g.rwk && g.rwk !== g.mw && g.rwk !== g.gw) {   /* a shift that is neither yours nor the one that should take this handover */
       return askConfirm('Different from your shift', (g.mw ? 'You are on the <b>' + esc(g.mw) + '</b> shift but picked <b>' + esc(g.rwk) + '</b>.' : 'Your shift is not set, and you picked <b>' + esc(g.rwk) + '</b>.') + ' Your entries will be filed as <b>' + esc(g.rwk) + '</b> until you hand over. Continue?', 'Yes, file them as ' + g.rwk, function () { RXDIFF = true; RXOK = true; rxAccept1(); });
@@ -3916,6 +4026,7 @@ function rxAccept1() { try { if (!RXOK && rxReview()) return; RXOK = false;
 function rxAccept2() {
   SELF = Date.now();
   var h = RX; if (!h || !S.state || !S.state.pending) return;
+  var unsealed = (h.sealed || []).filter(function (x) { return !RXSEAL[x.id]; }); if (unsealed.length) { var sb2 = $('#rx-seals'); if (sb2) sb2.scrollIntoView({ block: 'center' }); return toast('Check each sealed item first: tick it, or say what is wrong'); }
   var empty = rxMissing(); if (empty) { empty.scrollIntoView({ block: 'center' }); if (empty.id === 'rx-cash' || String(empty.value).trim() === '') empty.focus(); return toast('Count the cash and tick or change every item first'); }
   if (!M || !M.signature) return toast('Please sign first');
   var hd = String(h.shift.date || '').split('/'), sday = hd.length === 3 ? hd[2] + '-' + hd[1] + '-' + hd[0] : '';   /* the shortage belongs to the shift that handed over, on that shift's date */
@@ -3959,10 +4070,10 @@ function rxAccept2() {
   if (diffs.length) ns.notes = (same && cur.notes ? cur.notes + ' · ' : '') + (gap ? 'Received after a gap (the ' + gwk + ' shift never took it, assumed correct): ' : 'Received with differences: ') + diffs.join('; ');
   h.items.forEach(function (i, k) { if (rcf[2 * k] == null) { rcf[2 * k] = i.stock; rcf[2 * k + 1] = i.cage || 0; } });   /* an item that was removed: counted as handed over */
   if (h.sum) b.update(ref('shifts/' + h.shift.sid), { status: 'accepted', receivedBy: EMAIL, receivedByName: myName(), receivedCash: cashC, shortCash: gap ? 0 : cShort, shortItems: gap ? 0 : r2(sVal), over: gap ? 0 : cOver, short: gap ? 0 : sTot, receivedAt: Date.now(), rc: rcf });   /* after a gap nothing is charged to the shift that handed over */
-  b.update(ref('handovers/' + S.state.pending), { status: 'accepted', acceptedBy: EMAIL, acceptedAt: Date.now(), check: gap ? 'Received after a gap (the ' + gwk + ' shift never took it). Assumed correct.' + (diffs.length ? '\n' + diffs.join('\n') : '') : diffs.length ? diffs.join('\n') : 'everything matched', receivedSig: M.signature, receivedName: myName(), receivedItems: Object.assign({ _v: vnum(APP_VERSION) }, RI), receivedCash: cashC });
+  b.update(ref('handovers/' + S.state.pending), Object.assign({ status: 'accepted', acceptedBy: EMAIL, acceptedAt: Date.now(), check: gap ? 'Received after a gap (the ' + gwk + ' shift never took it). Assumed correct.' + (diffs.length ? '\n' + diffs.join('\n') : '') : diffs.length ? diffs.join('\n') : 'everything matched', receivedSig: M.signature, receivedName: myName(), receivedItems: Object.assign({ _v: vnum(APP_VERSION) }, RI), receivedCash: cashC }, (h.sealed || []).length ? { sealRecv: Object.keys(RXSEAL).filter(function (k) { return k !== 'hid' && k !== '_open'; }).reduce(function (m, k) { m[k] = RXSEAL[k] === true ? { ok: true } : { ok: false, issue: RXSEAL[k].issue || '' }; return m; }, {}) } : {}));
   b.update(ref('shop/state'), { controlEmail: EMAIL, controlName: myName(), pending: '', shift: ns, openingDone: true });
   (S.corrs || []).forEach(function (cc) { if (cc.status === 'open') b.update(ref('corrections/' + cc.id), { status: 'closed' }); });   /* a handover correction nobody decided is closed, unchanged, when the next handover is taken */
-  commit(b); mvCover(GP, h); hoAccTell(h, gwk, gap, diffs, cShort, cOver, sTot, ns); if (GP.rwk && GP.rwk !== GP.mw) shCover(ns.sid); RX = null; RXSTEP = 0; sel = null; qty = 1; tab = 'sell'; closeModal(); spClose(); toast(gap ? 'Accepted after a gap, recorded for ' + gwk : diffs.length ? 'Accepted, differences noted' : 'Accepted, all matched');
+  commit(b); mvCover(GP, h); hoAccTell(h, gwk, gap, diffs, cShort, cOver, sTot, ns); sealIssueTell(h, S.state.pending); RXSEAL = {}; if (GP.rwk && GP.rwk !== GP.mw) shCover(ns.sid); RX = null; RXSTEP = 0; sel = null; qty = 1; tab = 'sell'; closeModal(); spClose(); toast(gap ? 'Accepted after a gap, recorded for ' + gwk : diffs.length ? 'Accepted, differences noted' : 'Accepted, all matched');
 }
 
 /* ---------- president: who are you? ---------- */
@@ -5759,10 +5870,21 @@ document.addEventListener('click', function (e) {
   else if (a === 'acback') acForm();
   else if (a === 'achow') { AC.how = b.dataset.v; acForm(); }
   else if (a === 'acreview') acReview();
-  else if (a === 'ucfund') { var pf0 = UC.fund && S.funds[UC.fund]; if (!UC.purpose || (pf0 && UC.purpose === pf0.name)) UC.purpose = (S.funds[id] || {}).name || UC.purpose; UC.fund = id; UC.found = ''; ucForm(); }
-  else if (a === 'ucfundx') { UC.fund = ''; UC.found = ''; ucForm(); }
-  else if (a === 'ucother') ucOtherModal();
-  else if (a === 'ucback') ucForm();
+  else if (a === 'ucmode') { UC.mode = b.dataset.v; UC.fund = ''; UC.found = {}; if (UC.mode === 'internet') UC.purpose = ''; ucForm(); }
+  else if (a === 'ucfund') { UC.fund = id || ''; UC.found = {}; ucForm(); }
+  else if (a === 'ucd1' || a === 'ucd2') { var dg = $('#ucd'); if (dg) dg.remove(); var df = UCD && (a === 'ucd1' ? UCD.y : UCD.n); UCD = null; if (df) df(); }
+  else if (a === 'hoseal') { HOSEAL[id] = !HOSEAL[id]; render(); }
+  else if (a === 'rxseal') { var o0 = RXSEAL[id]; if (o0 === true) delete RXSEAL[id]; else { RXSEAL[id] = true; RXSEAL._open = ''; } rxSealDraw(); }
+  else if (a === 'rxsealbad') { RXSEAL._open = RXSEAL._open === id ? '' : id; rxSealDraw(); }
+  else if (a === 'rxsealwhy') { RXSEAL[id] = { ok: false, issue: b.dataset.v }; RXSEAL._open = ''; rxSealDraw(); }
+  else if (a === 'sealsheet') sealSheet(id);
+  else if (a === 'sealopen') { SEALSHEET = id; SO = { found: '' }; sealOpenForm(); }
+  else if (a === 'sealopenreview') sealOpenReview();
+  else if (a === 'sealuse') { var ss = S.seals[id]; if (ss) { ucOpen(); UC.mode = ss.fund === 'internet-payment' ? 'internet' : 'other'; if (UC.mode === 'other') { UC.fund = ss.fund; UC.purpose = ss.fundName; } ucForm(); } }
+  else if (a === 'sealout') { SEALSHEET = id; SO = {}; sealOutForm(); }
+  else if (a === 'soto') { SO.to = b.dataset.v; sealOutForm(); }
+  else if (a === 'sealoutreview') sealOutReview();
+  else if (a === 'sealcancel') { var sc = S.seals[id]; closeModal(); if (sc) askConfirm('Cancel this entry?', 'The sealed <b>' + esc(sc.fundName) + '</b> (' + money(sc.amt) + ' written on it) was added by mistake. It is removed.', 'Yes, cancel it', function () { cancelEvent(id, 'Sealed cash added by mistake'); }); }
   else if (a === 'stfold') { STOPEN = !STOPEN; render(); }
   else if (a === 'stpage') storedPage();
   else if (a === 'stfund') fundPage(id);
@@ -6274,7 +6396,9 @@ document.addEventListener('input', function (e) {
   else if (t.dataset.rp) RP[t.dataset.rp] = t.value;
   else if (t.dataset.of && OFF) OFF[t.dataset.of] = t.value;
   else if (t.dataset.es) ES[t.dataset.es] = t.value;
-  else if (t.dataset.uc) { UC[t.dataset.uc] = t.value; if (t.dataset.uc === 'amount' || t.dataset.uc === 'found') ucLive(); }
+  else if (t.dataset.uc) { UC[t.dataset.uc] = t.value; if (t.dataset.uc === 'amount') ucLive(); }
+  else if (t.dataset.ucf) { UC.found = UC.found || {}; UC.found[t.dataset.ucf] = t.value; ucLive(); }
+  else if (t.dataset.so) { SO = SO || {}; SO[t.dataset.so] = t.value; if (t.dataset.so === 'found') { var ss2 = S.seals[SEALSHEET]; if ($('#so-box') && ss2) { var F2 = t.value === '' ? null : r2(num(t.value)); $('#so-box').innerHTML = sealOpenBox(ss2, F2, F2 === null ? 0 : r2(F2 - ss2.amt), totals().cash); } } }
   else if (t.dataset.ac) { AC[t.dataset.ac] = t.value; if (t.dataset.ac === 'wk') { acForm(); } else acLive(); }
   else if (t.id === 'acw-q') { $('#acw-list').innerHTML = acWho(t.value); }
   else if (t.dataset.b) { BUY[t.dataset.b] = t.value; buyLive(); }
@@ -6437,7 +6561,7 @@ function pwSave() {
   if (a !== b) { msg.textContent = 'The two passwords are not the same.'; return; }
   updatePassword(AUTH.currentUser, a).then(function () { closeModal(); toast('Password saved. You can sign in with it now.'); }, function (e) { msg.textContent = authMsg(e); });
 }
-function stopListeners() { subs.forEach(function (u) { u(); }); subs = []; if (unsubLog) unsubLog(); if (unsubHand) unsubHand(); unsubLog = unsubHand = null; logSid = handId = null; S.all = []; S.items = []; S.layout = null; S.people = []; S.guests = []; S.requests = []; S.shreqIn = []; S.shreqOut = [];  S.suppliers = []; S.members = []; S.state = null; S.log = []; S.bal = {}; S.hand = null; S.pc = null; S.funds = {}; S.fevs = []; }
+function stopListeners() { subs.forEach(function (u) { u(); }); subs = []; if (unsubLog) unsubLog(); if (unsubHand) unsubHand(); unsubLog = unsubHand = null; logSid = handId = null; S.all = []; S.items = []; S.layout = null; S.people = []; S.guests = []; S.requests = []; S.shreqIn = []; S.shreqOut = [];  S.suppliers = []; S.members = []; S.state = null; S.log = []; S.bal = {}; S.hand = null; S.pc = null; S.funds = {}; S.fevs = []; S.seals = {}; }
 function watch(q, fn) { subs.push(onSnapshot(q, fn, function (e) { console.error(e); toast(errText(e)); })); }
 function docs(s) { return s.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); }
 function migrate() {   /* items made by the earlier version counted the cage in single items; cases are the unit now */
@@ -6481,8 +6605,9 @@ function startListeners() {
   watch(col('shortages'), function (s) { S.shAll = docs(s); scheduleRender(); hLive(); });
   watch(col('repayments'), function (s) { S.repAll = docs(s); scheduleRender(); hLive(); });
   watch(col('offsets'), function (s) { S.offs = docs(s); scheduleRender(); hLive(); });
+  watch(query(col('seals'), where('status', '==', 'sealed')), function (s) { S.seals = {}; s.docs.forEach(function (d) { S.seals[d.id] = d.data(); }); scheduleRender(); refreshModal(); });
   watch(col('funds'), function (s) { S.funds = {}; s.docs.forEach(function (d) { S.funds[d.id] = d.data(); }); scheduleRender(); refreshModal(); });
-  watch(query(col('events'), where('type', 'in', ['addcash', 'fundshort', 'fundover', 'usecash']), limit(3000)), function (s) { S.fevs = s.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }).filter(function (x) { return x.type !== 'usecash' || x.fund; }); scheduleRender(); });
+  watch(query(col('events'), where('type', 'in', ['addcash', 'fundshort', 'fundover', 'usecash', 'sealopen', 'sealout']), limit(3000)), function (s) { S.fevs = s.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }).filter(function (x) { return x.type !== 'usecash' || x.fund; }); scheduleRender(); });
   watch(col('credit'), function (s) { S.bal = {}; s.docs.forEach(function (d) { S.bal[d.id] = d.data().bal || 0; }); scheduleRender(); });
   watch(ref('shop/state'), function (s) {
     if (!s.exists()) {
