@@ -270,7 +270,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 import { firebaseConfig, president } from './firebase-config.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, connectAuthEmulator, isSignInWithEmailLink, sendSignInLinkToEmail, signInWithEmailLink, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, applyActionCode, sendPasswordResetEmail, updatePassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, connectFirestoreEmulator, doc, collection, onSnapshot, getDoc, getDocs, setDoc as _setDoc, updateDoc as _updateDoc, deleteDoc as _deleteDoc, writeBatch as _writeBatch, increment, Timestamp, query, where, orderBy, limit, startAfter, deleteField, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache, connectFirestoreEmulator, doc, collection, onSnapshot, getDoc, getDocs, setDoc as _setDoc, updateDoc as _updateDoc, deleteDoc as _deleteDoc, writeBatch as _writeBatch, increment, Timestamp, query, where, orderBy, getCountFromServer, limit, startAfter, deleteField, enableNetwork, disableNetwork } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 /* the owner looking inside someone else's workplace can read everything and write nothing: every write goes through these */
 var OWNERVIEW = false;
@@ -289,7 +289,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.26', RULES_VERSION = '2.27';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.28', RULES_VERSION = '2.27';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2548,12 +2548,12 @@ function evRow(e, cancelable) {
   return '<div' + (e.type === 'buy' || e.type === 'other' ? ' data-act="buyview" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'pay' || e.type === 'cnote' || e.type === 'loan' || (e.type === 'sale' && e.cr) ? ' data-act="evsheet" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'stockedit' ? ' data-act="editview" data-id="' + e.id + '" style="cursor:pointer;background:var(--exp-bg);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px;box-shadow:inset 2px 0 0 var(--exp)"' : e.type === 'cashshort' ? ' style="cursor:pointer;background:var(--exp-bg);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px;box-shadow:inset 2px 0 0 var(--exp)"' : '') + '><span style="font-size:18px;width:26px;flex:none;text-align:center">' + ic + '</span><div class="grow"><b>' + esc(tx) + '</b><div class="muted">' + (hdt(e) ? hdt(e) + ' ' : '') + hhmm(e.t) + (sub ? ' · ' + esc(sub) : '') + (e.byName ? ' · recorded by ' + esc(e.byName) : '') + '</div></div>' + (e.receipt ? '<img data-act="rcv" src="' + e.receipt + '" alt="receipt" style="width:44px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">' : '') + '<b style="color:' + col + '">' + amt + '</b>' + (CM && cancelable && ['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'shiftrec', 'watchchg'].indexOf(e.type) < 0 ? '<button class="btn red sm" data-act="cancelask" data-id="' + e.id + '">Cancel</button>' : '') + '</div>';
 }
 /* ---------- History: one full page. All = the entries of a day or a month, Shifts = the permanent shift summaries (a day, a month or a year), Charts. The Filter is in the top bar ---------- */
-var HY = { tab: 'all', per: 'day', dt: new Date(), types: {}, short: false, wk: '', sid: '', cnt: {}, sper: 'month', pper: 'month', pf: 'all', pq: '', pid: '', pl: null, hm: '', pm: '', cv: 'score', sy: 0, back: false, yr: false }, HUN = null, HEVS = null, HSDOCS = null, HSD = {}, HYSIG = '';
+var HY = { tab: 'all', per: 'day', dt: new Date(), types: {}, short: false, wk: '', sid: '', cnt: {}, sper: 'month', pper: 'month', pf: 'all', pq: '', pid: '', pl: null, hm: '', pm: '', cv: 'score', sy: 0, back: false, yr: false, cf: {} }, HUN = null, HEVS = null, HSDOCS = null, HSD = {}, HYSIG = '';
 var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash']], ['Shortages and repayments', '⚠️', ['cashshort', 'repay', 'offset', 'gapfix']], ['Corrections', '🛠️', ['hocorr', 'shortfix', 'shiftfix', 'dayfix']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
 function hgroup(e) { if ((e.type === 'adjust' || e.type === 'cageadj') && e.ho) return 'Shortages and repayments'; for (var i = 0; i < HGROUPS.length; i++) if (HGROUPS[i][2].indexOf(e.type) >= 0) return HGROUPS[i][0]; return 'Stock edits by hand'; }
 function histNoon(d) { var x = new Date(d); x.setHours(12, 0, 0, 0); return x; }
 function histToday() { return histNoon(new Date(Date.now() - bizHour() * 36e5)); }   /* History always opens on today, by the phone's own clock */
-function histReset() { CM = false; HY.tab = 'all'; HY.per = 'day'; HY.dt = histToday(); HY.types = {}; HY.short = false; HY.wk = ''; HY.sid = ''; HY.cnt = {}; HY.sper = 'month'; HY.pper = 'month'; HY.pf = 'all'; HY.pq = ''; HY.pid = ''; HY.pl = null; HY.hm = ''; HY.pm = ''; HY.cv = 'score'; HY.sy = 0; HY.back = false; HEVS = null; }
+function histReset() { CM = false; HY.cf = {}; HY.yr = false; HY.tab = 'all'; HY.per = 'day'; HY.dt = histToday(); HY.types = {}; HY.short = false; HY.wk = ''; HY.sid = ''; HY.cnt = {}; HY.sper = 'month'; HY.pper = 'month'; HY.pf = 'all'; HY.pq = ''; HY.pid = ''; HY.pl = null; HY.hm = ''; HY.pm = ''; HY.cv = 'score'; HY.sy = 0; HY.back = false; HEVS = null; }
 function livePage(fn, title, qs, build) {   /* a full-screen page that stays in step with the database */
   if (!Array.isArray(qs)) qs = [qs];
   histStop(); LIVEKEEP = fn; wpPage(fn, [], '<h2>' + title + '</h2><div class="empty">Loading…</div>');
@@ -2606,6 +2606,15 @@ function histFilterBtn() {
   if (HY.tab === 'charts' || (HY.tab === 'people' && !HY.pid)) return '';
   var n = histFilterCount();
   return '<button class="spr' + (n ? ' act' : '') + '" data-act="hfilter"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z" fill="currentColor"/></svg> Filter' + (n ? ' · ' + n : '') + '</button>';
+}
+var HYCNT = {};   /* the number of entries of each type for the whole last year, counted by Firestore without loading them (so the Filter can show the number before a type is ticked) */
+function histCounts() {
+  if (!DB || !HY.yr || HY.tab !== 'all') return; var r = histRange(); HYCNT = {};
+  var done = function () { if ($('#hfs')) $('#hfs').innerHTML = histSheetHtml(); };
+  HGROUPS.forEach(function (g) {
+    var q = g[0] === 'Handovers' ? query(col('shifts'), where('at', '>=', r.a)) : query(col('events'), where('type', 'in', g[2]));
+    getCountFromServer(q).then(function (sn) { HYCNT[g[0]] = sn.data().count; done(); }, function () { HYCNT[g[0]] = null; done(); });
+  });
 }
 function histShown() {   /* the entries on show after the type filter */
   var ev = (HEVS || []).slice().sort(function (a, b) { return b.t - a.t; }), on = Object.keys(HY.types).filter(function (k) { return HY.types[k]; });
@@ -2863,10 +2872,19 @@ function histAllMonth() {
   if (!sh.length) return '<div class="empty">No entries match this filter on ' + esc(histPlain()) + '.<br><button class="btn sec" data-act="hclear" style="margin-top:12px">Clear filter</button></div>';
   var tiles = histTiles(HEVS, false);
   var out = '', last = '';
-  var lastM = '';
+  var lastM = '', cg = {}, cdone = {}; if (p !== 'day') sh.forEach(function (e) { if (e.type === 'count') { var ck = dkey(new Date(e.t)), g = cg[ck] || (cg[ck] = { k: ck, items: [], sold: 0, amt: 0 }); g.items.push(e); g.sold += e.qty || 0; g.amt += e.amt || 0; } });   /* the counts of a day are folded into one row: tap the day to see them all */
   sh.forEach(function (e) {
     if (p === 'yr') { var mk = new Date(e.t).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }).toUpperCase(); if (mk !== lastM) { lastM = mk; last = ''; out += '<div class="ymh">' + esc(mk) + '</div>'; } }
     if (p !== 'day') { var k = new Date(e.t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); if (k !== last) { last = k; out += '<div class="sec-h">' + esc(k) + '</div>'; } }
+    if (p !== 'day' && e.type === 'count') {
+      var cgp = cg[dkey(new Date(e.t))];
+      if (cgp.items.length > 1) {
+        if (cdone[cgp.k]) return; cdone[cgp.k] = 1; var open = !!HY.cf[cgp.k], who = {}; cgp.items.forEach(function (x) { who[x.byName || ''] = 1; }); who = Object.keys(who).filter(Boolean);
+        out += '<div data-act="cfold" data-id="' + esc(cgp.k) + '" style="cursor:pointer"><span style="font-size:18px;width:26px;flex:none;text-align:center">🧮</span><div class="grow"><b>' + cgp.items.length + ' counts</b><div class="muted">' + hhmm(cgp.items[cgp.items.length - 1].t) + ' → ' + hhmm(cgp.items[0].t) + ' · ' + cgp.sold + ' sold' + (who.length ? ' · recorded by ' + esc(who.join(', ')) : '') + '</div></div>' + (cgp.amt ? '<b>' + money(r2(cgp.amt)) + '</b>' : '') + '<span class="muted" style="width:16px;text-align:center">' + (open ? '⌄' : '›') + '</span></div>';
+        if (open) cgp.items.forEach(function (x) { out += evRow(x, false); });
+        return;
+      }
+    }
     out += e.hodoc ? hoRowHtml({ doc: e.hodoc, kind: e.hodoc.status === 'accepted' ? 'recv' : 'give', t: e.t, shiftWk: e.hodoc.receivedBy ? whoOf(e.hodoc.receivedBy).wk : '' }) : evRow(e, e.sid === SH().sid);
   });
   return tiles + (p === 'yr' && HEVS.length >= 5000 ? '<div class="muted" style="margin:-6px 2px 10px">Only the first 5000 entries are shown. Tick fewer types to see them all.</div>' : '') + '<div class="list">' + out + '</div>' + (can ? '<button class="btn ' + (CM ? 'sec' : 'red') + ' block" data-act="cmtog" style="margin-top:12px">' + (CM ? 'Done cancelling' : 'Cancel an item') + '</button>' + (CM ? '<div class="cancelbar">Tap Cancel next to the entry to remove. Only this shift can be cancelled.</div>' : '') : '') + '<p class="muted">Entries and handovers are kept for a year, under Handovers.</p>';
@@ -2940,8 +2958,10 @@ function histPage() {   /* (re)start the live data for what is on show, then dra
     }, function (e) { toast(errText(e)); }));
     HUN = function () { uns.forEach(function (u) { u(); }); };
   } else if (HY.tab === 'all') {
-    var r = histRange(); HEVS = null; histDraw();
-    HUN = onSnapshot(query(col('events'), where('t', '>=', r.a), where('t', '<', r.b), limit(3000)), function (snap) { HEVS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }).filter(function (x) { return !x.su; }); histDraw(); }, function (e) { toast(errText(e)); });
+    var r = histRange(), evPart = null, hoP = HY.types['Handovers'] ? null : [], mg = function () { if (evPart === null || hoP === null) return; HEVS = evPart.concat(hoP.filter(function (x) { return x.t >= r.a && x.t < r.b; })); histDraw(); }; HEVS = null; histDraw();
+    var u2 = onSnapshot(query(col('events'), where('t', '>=', r.a), where('t', '<', r.b), limit(3000)), function (snap) { evPart = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }).filter(function (x) { return !x.su; }); mg(); }, function (e) { toast(errText(e)); }), u3 = null;
+    if (HY.types['Handovers']) u3 = onSnapshot(query(col('shifts'), orderBy('at', 'desc'), limit(800)), function (snap) { HSDOCS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; HSD[x.id] = x; return x; }); hoP = []; HSDOCS.forEach(function (d) { if (d.status === 'accepted' || d.status === 'open' || d.fromName) hoP.push({ id: 'hoy_' + d.id, type: 'handover', t: (d.status === 'accepted' && d.receivedAt) || d.at || 0, hodoc: d }); }); mg(); }, function (e) { toast(errText(e)); });   /* a handover is the shift's summary, not an entry: shown as one row */
+    HUN = function () { u2(); if (u3) u3(); };
   } else {
     histDraw();
     var u1 = onSnapshot(query(col('shifts'), orderBy('at', 'desc'), limit(400)), function (snap) { HSDOCS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; HSD[x.id] = x; return x; }); histDraw(); }, function (e) { toast(errText(e)); });
@@ -3151,7 +3171,7 @@ function histSheetHtml() {
   var mrow = function (m) { var t = new Date(); return '<div class="fld" style="position:relative"><span>Month</span><b>' + (m ? esc(histMonthName(m)) : 'Whole year') + ' ▾</b><input class="hpick" style="width:100%" type="month" data-hmp="1" value="' + (m || dkey(t).slice(0, 7)) + '" min="' + histYearFrom() + '" max="' + dkey(t).slice(0, 7) + '" aria-label="Pick a month"></div>'; };
   if (all) {
     var cnt = {}; (HEVS || []).forEach(function (e) { var g = hgroup(e); cnt[g] = (cnt[g] || 0) + 1; });
-    body = '<div class="flab">How far back</div><div class="frow" data-act="fyr"><div class="fbox' + (HY.yr ? ' on' : '') + '">' + (HY.yr ? '✓' : '') + '</div><span class="grow">📅 The whole last year</span><span class="muted">365 days</span></div><div class="muted" style="font-size:12.5px;margin:2px 4px 8px">Every month of the past year, newest first, for the types you tick below.</div><div class="flab">Entry types</div>' + HGROUPS.map(function (g) { var on = !!HY.types[g[0]]; return '<div class="frow" data-act="ftog" data-v="' + esc(g[0]) + '"><div class="fbox' + (on ? ' on' : '') + '">' + (on ? '✓' : '') + '</div><span class="grow">' + g[1] + ' ' + esc(g[0]) + '</span><span class="muted">' + (cnt[g[0]] || 0) + '</span></div>'; }).join('');
+    body = '<div class="flab">How far back</div><div class="frow" data-act="fyr"><div class="fbox' + (HY.yr ? ' on' : '') + '">' + (HY.yr ? '✓' : '') + '</div><span class="grow">📅 The whole last year</span><span class="muted">365 days</span></div><div class="muted" style="font-size:12.5px;margin:2px 4px 8px">Every month of the past year, newest first, for the types you tick below.</div><div class="flab">Entry types</div>' + HGROUPS.map(function (g) { var on = !!HY.types[g[0]]; return '<div class="frow" data-act="ftog" data-v="' + esc(g[0]) + '"><div class="fbox' + (on ? ' on' : '') + '">' + (on ? '✓' : '') + '</div><span class="grow">' + g[1] + ' ' + esc(g[0]) + '</span><span class="muted">' + (HY.yr && !(on && HEVS) ? (HYCNT[g[0]] === undefined ? '…' : HYCNT[g[0]] === null ? '' : HYCNT[g[0]]) : (cnt[g[0]] || 0)) + '</span></div>'; }).join('');
     n = histShown().length; n = 'Show ' + n + (n === 1 ? ' entry' : ' entries');
   } else if (HY.tab === 'people') {
     body = mrow(HY.pm); n = 'Done';
@@ -5871,12 +5891,13 @@ document.addEventListener('click', function (e) {
   else if (a === 'chv') { HY.cv = b.dataset.v; histDraw(); }
   else if (a === 'caday') calDay(id);
   else if (a === 'shopen' || a === 'shopen2') histShift(id);
-  else if (a === 'hfilter') { modal('<div id="hfs">' + histSheetHtml() + '</div>'); }
+  else if (a === 'hfilter') { modal('<div id="hfs">' + histSheetHtml() + '</div>'); histCounts(); }
   else if (a === 'gotit') { try { localStorage.setItem('sw_note_' + b.dataset.v, String(Date.now())); } catch (x) {} histDraw(); }
   else if (a === 'hgoshift') { HY.dt = histNoon(new Date(+b.dataset.v.slice(0, 4), +b.dataset.v.slice(5, 7) - 1, +b.dataset.v.slice(8, 10))); HY.sid = b.dataset.id; histPage(); }
-  else if (a === 'ftog') { var per0 = histPer(); HY.types[b.dataset.v] = !HY.types[b.dataset.v]; if (histPer() !== per0 || HY.yr) { HY.sid = ''; histPage(); } else histDraw(); }   /* the first type ticked shows the whole month; none ticked is the day again */
+  else if (a === 'ftog') { var per0 = histPer(); HY.types[b.dataset.v] = !HY.types[b.dataset.v]; if (histPer() !== per0 || HY.yr || (histPer() === 'month' && b.dataset.v === 'Handovers')) { HY.sid = ''; histPage(); } else histDraw(); }   /* the first type ticked shows the whole month; none ticked is the day again */
   else if (a === 'fshort') { HY.short = b.dataset.v ? b.dataset.v === '1' : !HY.short; histDraw(); }
-  else if (a === 'fyr') { HY.yr = !HY.yr; HY.sid = ''; histPage(); }
+  else if (a === 'cfold') { HY.cf[id] = !HY.cf[id]; histDraw(); }
+  else if (a === 'fyr') { HY.yr = !HY.yr; HY.sid = ''; HYCNT = {}; histPage(); histCounts(); }
   else if (a === 'hclear' || a === 'hshowall') { HY.yr = false; HY.types = {}; HY.short = false; HY.wk = ''; HY.hm = ''; HY.pm = ''; histGo(); if (a === 'hshowall') closeModal(); }
   else if (a === 'hdone') closeModal();
   else if (a === 'hlist') hlist();
