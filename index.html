@@ -185,6 +185,7 @@ input:disabled{background:var(--dis);color:var(--muted)}
 .hsum{background:var(--surface);border-radius:12px;box-shadow:var(--sh);padding:6px 10px;margin-bottom:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px 6px}.hsum div{min-width:0}.hsum .l{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);white-space:nowrap}.hsum .v{font-size:14px;font-weight:700}
 .htabs{display:flex;gap:3px;padding:3px;border-radius:13px;background:var(--line);box-shadow:inset 0 1px 2px rgba(0,0,0,.12);margin-bottom:8px}.htabs button{flex:1;height:32px;border:0;border-radius:10px;background:transparent;color:var(--muted);font:inherit;font-size:13.5px;font-weight:600}.htabs button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18)}
 .hsel{background:var(--surface);border-radius:14px;box-shadow:var(--sh);gap:0;overflow:hidden;margin-bottom:6px}.hsel .btn.sec{width:48px;height:38px;border:0;background:transparent;box-shadow:none;color:var(--link);font-size:24px;line-height:1;padding:0;border-radius:0}.hsel .hdate{border:0;border-radius:0;background:none;min-height:38px;font-weight:600;font-size:13.5px}
+.list>div.ymh{display:block;border-top:0;border-bottom:2px solid var(--brand,#134e6f);padding:16px 0 5px;font-size:13px;font-weight:800;letter-spacing:.05em;color:var(--ink)}.list>div.ymh:first-child{padding-top:4px}
 .mh{position:sticky;top:0;z-index:2;margin:12px -14px 6px;padding:6px 16px;background:var(--soft);font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.03em}.dh{margin:8px 4px 3px;font-size:12px;font-weight:700;color:var(--muted)}
 .hnote{display:flex;align-items:center;gap:10px;margin:14px 0 6px;padding:10px 12px;border-radius:12px;background:var(--soon-bg);font-size:12.5px;color:var(--soon)}.hnote span{flex:1}.hnote button{flex:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:5px 12px;font:inherit;font-size:12.5px;font-weight:700}
 .fld{display:flex;justify-content:space-between;align-items:center;background:var(--soft);border-radius:12px;padding:12px 14px;margin:8px 0;font-size:15px;cursor:pointer}.fchs{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}.fch{display:flex;align-items:center;gap:6px;height:32px;padding:0 13px;border-radius:16px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:13px;font-weight:600}.fch.on{background:var(--brand);color:#fff;border-color:var(--brand)}
@@ -288,7 +289,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.24', RULES_VERSION = '2.27';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.26', RULES_VERSION = '2.27';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2592,7 +2593,7 @@ function histPlain() { var d = HY.dt, p = histPer(), mn = d.toLocaleDateString('
 function histFilterCount() { return HY.tab === 'all' && HY.yr ? 1 + Object.keys(HY.types).filter(function (k) { return HY.types[k]; }).length : HY.tab === 'shifts' ? (HY.short ? 1 : 0) + (HY.wk ? 1 : 0) + (HY.hm ? 1 : 0) : HY.tab === 'people' ? (HY.pm ? 1 : 0) : Object.keys(HY.types).filter(function (k) { return HY.types[k]; }).length; }
 function histHead() {
   var r = histRange(), now = Date.now(), p = histPer(), here = p === 'day' ? dkey(HY.dt) === dkey(histToday()) : now >= r.a && now < r.b, fut = r.a > now && !here, y = HY.dt.getFullYear(), pick, st = ' style="width:' + (here ? '100%' : 'calc(100% - 66px)') + '"';
-  var tabs = '<div class="htabs">' + [['all', 'Day'], ['shifts', 'Handovers'], ['people', 'People'], ['charts', 'Charts']].map(function (x) { return '<button data-act="hytab" data-v="' + x[0] + '" class="' + (HY.tab === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>';
+  var tabs = '<div class="htabs">' + [['all', histFilterCount() && HY.tab === 'all' ? 'Filtered' : 'Day'], ['shifts', 'Handovers'], ['people', 'People'], ['charts', 'Charts']].map(function (x) { return '<button data-act="hytab" data-v="' + x[0] + '" class="' + (HY.tab === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>';
   if (HY.tab === 'people' || HY.tab === 'shifts') return tabs;
   if (p === 'yr') return tabs + '<div class="hline" style="margin-bottom:10px"><span>📅 <b>Last 365 days</b>, newest first</span><a data-act="fyr" style="color:var(--link);font-weight:700;cursor:pointer">Back to day</a></div>';
   var seg = '';
@@ -2864,9 +2865,9 @@ function histAllMonth() {
   var out = '', last = '';
   var lastM = '';
   sh.forEach(function (e) {
-    if (p === 'yr') { var mk = new Date(e.t).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }).toUpperCase(); if (mk !== lastM) { lastM = mk; last = ''; out += '<div class="mh">' + esc(mk) + '</div>'; } }
+    if (p === 'yr') { var mk = new Date(e.t).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }).toUpperCase(); if (mk !== lastM) { lastM = mk; last = ''; out += '<div class="ymh">' + esc(mk) + '</div>'; } }
     if (p !== 'day') { var k = new Date(e.t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); if (k !== last) { last = k; out += '<div class="sec-h">' + esc(k) + '</div>'; } }
-    out += evRow(e, e.sid === SH().sid);
+    out += e.hodoc ? hoRowHtml({ doc: e.hodoc, kind: e.hodoc.status === 'accepted' ? 'recv' : 'give', t: e.t, shiftWk: e.hodoc.receivedBy ? whoOf(e.hodoc.receivedBy).wk : '' }) : evRow(e, e.sid === SH().sid);
   });
   return tiles + (p === 'yr' && HEVS.length >= 5000 ? '<div class="muted" style="margin:-6px 2px 10px">Only the first 5000 entries are shown. Tick fewer types to see them all.</div>' : '') + '<div class="list">' + out + '</div>' + (can ? '<button class="btn ' + (CM ? 'sec' : 'red') + ' block" data-act="cmtog" style="margin-top:12px">' + (CM ? 'Done cancelling' : 'Cancel an item') + '</button>' + (CM ? '<div class="cancelbar">Tap Cancel next to the entry to remove. Only this shift can be cancelled.</div>' : '') : '') + '<p class="muted">Entries and handovers are kept for a year, under Handovers.</p>';
 }
@@ -2927,9 +2928,16 @@ function histPage() {   /* (re)start the live data for what is on show, then dra
     var u0 = onSnapshot(query(col('shifts'), orderBy('at', 'desc'), limit(400)), function (snap) { HSDOCS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; HSD[x.id] = x; return x; }); histEvSub(); histDraw(); }, function (e) { toast(errText(e)); });
     HUN = function () { u0(); if (HEUN) { HEUN(); HEUN = null; } HEKEY = null; };
   } else if (HY.tab === 'all' && HY.yr) {   /* the whole last year, only for the ticked types (a query on the type alone needs no extra index) */
-    var ts = []; HGROUPS.forEach(function (g) { if (HY.types[g[0]]) g[2].forEach(function (t) { ts.push(t); }); }); HEVS = null; histDraw();
-    if (!ts.length) { HEVS = []; histDraw(); return; }
-    var parts = [], uns = [], r2y = histRange(); for (var q = 0; q < ts.length; q += 30) (function (ix, chunk) { parts[ix] = null; uns.push(onSnapshot(query(col('events'), where('type', 'in', chunk), limit(5000)), function (snap) { parts[ix] = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); if (parts.some(function (z) { return z === null; })) return; HEVS = [].concat.apply([], parts).filter(function (x) { return !x.su && x.t >= r2y.a && x.t < r2y.b; }); histDraw(); }, function (e) { toast(errText(e)); })); })(q / 30, ts.slice(q, q + 30));
+    var ts = [], wantHo = !!HY.types['Handovers']; HGROUPS.forEach(function (g) { if (HY.types[g[0]]) g[2].forEach(function (t) { if (t !== 'handover') ts.push(t); }); }); HEVS = null; histDraw();
+    if (!ts.length && !wantHo) { HEVS = []; histDraw(); return; }
+    var parts = [], uns = [], hoPart = wantHo ? null : [], r2y = histRange();
+    var merge = function () { if (parts.some(function (z) { return z === null; }) || hoPart === null) return; HEVS = [].concat.apply([], parts).concat(hoPart).filter(function (x) { return !x.su && x.t >= r2y.a && x.t < r2y.b; }); histDraw(); };
+    for (var q = 0; q < ts.length; q += 30) (function (ix, chunk) { parts[ix] = null; uns.push(onSnapshot(query(col('events'), where('type', 'in', chunk), limit(5000)), function (snap) { parts[ix] = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); merge(); }, function (e) { toast(errText(e)); })); })(q / 30, ts.slice(q, q + 30));
+    if (wantHo) uns.push(onSnapshot(query(col('shifts'), orderBy('at', 'desc'), limit(800)), function (snap) {   /* a handover is not an entry of its own: it is the shift's summary, shown as one row */
+      hoPart = []; HSDOCS = snap.docs.map(function (d) { var x = d.data(); x.id = d.id; HSD[x.id] = x; return x; });
+      HSDOCS.forEach(function (d) { if (d.status === 'accepted' || d.status === 'open' || d.fromName) hoPart.push({ id: 'hoy_' + d.id, type: 'handover', t: (d.status === 'accepted' && d.receivedAt) || d.at || 0, hodoc: d }); });
+      merge();
+    }, function (e) { toast(errText(e)); }));
     HUN = function () { uns.forEach(function (u) { u(); }); };
   } else if (HY.tab === 'all') {
     var r = histRange(); HEVS = null; histDraw();
