@@ -296,7 +296,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.43', RULES_VERSION = '2.29';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.44', RULES_VERSION = '2.29';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -3171,7 +3171,7 @@ function hoRowHtml(h) {   /* "Handover received from X" and "Handed over to Y" *
   var hl = st.k === 'short' || st.k === 'wait' ? ' class="attn" style="cursor:pointer"' : ' style="cursor:pointer"';   /* a handover that is short, or still waiting to be taken, needs someone to look */
   var lk = !!d.locked, opened = !!d.receivedByName, hoTitle = lk ? (recv ? 'Opened a locked handover from ' + esc(who) : opened ? (st.gap ? 'Left locked, no one took it until ' + esc(d.receivedByName) + ' opened it' : 'Left locked, opened by ' + esc(d.receivedByName)) : 'Left locked, waiting for the next shift to open it') : (recv ? 'Handover received from ' : 'Handed over to ') + esc(who);
   var hoExtra = lk ? (recv ? ' · left locked at ' + hhmm(d.at) : opened ? ' · opened ' + (d.receivedAt ? hhmm(d.receivedAt) : '') : ' · not opened yet') : '';
-  return '<div data-act="hosheet" data-id="' + esc(d.id) + '" data-k="' + h.kind + '" data-wk="' + esc(rwk || '') + '"' + hl + '><span style="font-size:18px;width:26px;flex:none;text-align:center">🔁</span><div class="grow"><b>' + hoTitle + '</b><div class="muted">' + (TLDOT ? hdot(d.wk) + ' ' : '') + hfmt(h.t) + ' · ' + esc(d.wk) + ' → ' + esc(rwk || '') + hoExtra + ' · ' + res + (!recv && spentOf(d).total > 0 ? ' · spent ' + money(spentOf(d).total) : '') + (function () { var id = d.handoverId || d.id, pm = payMap()[id]; return pm && pm.parts.length ? ' · ✓ ' + (pm.paid >= pm.total - 0.004 ? 'shortage paid' : money(pm.paid) + ' of ' + money(pm.total) + ' paid') : offLinks().list.some(function (x) { return x.overId === id; }) ? ' · ✓ cash over used' : ''; })() + '</div></div><b style="color:' + col + ';white-space:nowrap">' + amt + '</b></div>';
+  return '<div data-act="hosheet" data-id="' + esc(d.id) + '" data-k="' + h.kind + '" data-wk="' + esc(rwk || '') + '"' + hl + '><span style="font-size:18px;width:26px;flex:none;text-align:center">🔁</span><div class="grow"><b>' + hoTitle + '</b><div class="muted">' + hfmt(h.t) + ' · ' + esc(d.wk) + ' → ' + esc(rwk || '') + hoExtra + ' · ' + res + (!recv && spentOf(d).total > 0 ? ' · spent ' + money(spentOf(d).total) : '') + (function () { var id = d.handoverId || d.id, pm = payMap()[id]; return pm && pm.parts.length ? ' · ✓ ' + (pm.paid >= pm.total - 0.004 ? 'shortage paid' : money(pm.paid) + ' of ' + money(pm.total) + ' paid') : offLinks().list.some(function (x) { return x.overId === id; }) ? ' · ✓ cash over used' : ''; })() + '</div></div><b style="color:' + col + ';white-space:nowrap">' + amt + '</b></div>';
 }
 var HSETUP = ['opening', 'newitem', 'edit', 'remove', 'costfill', 'opencredit'];
 
@@ -3234,7 +3234,7 @@ function histTimeline(list, evs) {   /* the whole day in one list, newest first:
       }
       if (cnt.length) {
         var sold = cnt.reduce(function (a, e) { return a + (e.qty || 0); }, 0), amt = cnt.reduce(function (a, e) { return a + (e.amt || 0); }, 0), op = !!HY.cnt[X.sid];
-        rows.push({ blk: 1, t: Math.max.apply(null, cnt.map(function (e) { return e.t; })), html: '<div class="hcs" data-act="hcnt" data-id="' + esc(X.sid) + '"><span class="ci">🧮</span><div class="grow"><b>' + cnt.length + (cnt.length === 1 ? ' item counted' : ' items counted') + '</b><div class="muted">' + hdot(X.wk) + ' ' + esc(X.wk) + ' · ' + sold + ' sold · ' + money(amt) + (op ? '' : ' · tap to see them') + '</div></div><span style="color:var(--link);font-size:20px">' + (op ? '⌄' : '›') + '</span></div>' + (op ? '<div class="list" style="margin-top:4px">' + cnt.map(function (e) { return evRow(e, e.sid === SH().sid); }).join('') + '</div>' : '') });
+        rows.push({ blk: 1, t: Math.max.apply(null, cnt.map(function (e) { return e.t; })), html: '<div class="hcs" data-act="hcnt" data-id="' + esc(X.sid) + '"><span class="ci">🧮</span><div class="grow"><b>' + cnt.length + (cnt.length === 1 ? ' item counted' : ' items counted') + '</b><div class="muted">' + esc(X.wk) + ' · ' + sold + ' sold · ' + money(amt) + (op ? '' : ' · tap to see them') + '</div></div><span style="color:var(--link);font-size:20px">' + (op ? '⌄' : '›') + '</span></div>' + (op ? '<div class="list" style="margin-top:4px">' + cnt.map(function (e) { return evRow(e, e.sid === SH().sid); }).join('') + '</div>' : '') });
       }
     });
   } finally { TLDOT = false; }
