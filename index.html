@@ -74,7 +74,8 @@ b,strong{font-weight:600}
 .cc .cpr{position:absolute;right:10px;top:9px;font-size:12px;font-weight:700;line-height:1.2;color:var(--link)}   /* the price sits where the check goes once the item is counted */
 .attn{position:relative}.list>div.attn{padding-left:10px}.attn:before{content:'';position:absolute;left:0;top:20%;height:60%;width:2px;border-radius:2px;background:#d9a400}   /* the one highlight: something that needs someone to look */
 .list>div.shiftmk{padding:4px 0;border-top:0}.shiftmk{display:flex;align-items:center;gap:8px;margin:8px 0;font-size:12px;color:var(--muted)}.shiftmk:before,.shiftmk:after{content:'';flex:1;border-top:1px dashed var(--line)}
-.sec-h.dh{position:sticky;top:0;z-index:2;background:var(--bg);padding:8px 2px 4px}
+.sec-h.dh{position:sticky;top:0;z-index:2;background:var(--bg);margin-top:18px;padding:9px 2px 5px;border-top:1px solid var(--daysep,#9fb0bd)!important;font-size:12.5px;letter-spacing:.04em;font-weight:600;color:var(--dayink,#3a4b59)}.sec-h.dh+.shiftmk{margin-top:8px}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--daysep:#4C5E6C;--dayink:#B9C6D0}}:root[data-theme=dark]{--daysep:#4C5E6C;--dayink:#B9C6D0}
 .slim{background:var(--surface);border-radius:var(--r);box-shadow:var(--sh);padding:11px 14px;margin-bottom:10px;border-left:2px solid var(--ok)}.slim .stbar{display:flex;justify-content:space-between;align-items:center;cursor:pointer}.slim .stfund{min-height:52px;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);cursor:pointer}.stnote{background:var(--soft);border-radius:10px;padding:8px 10px;font-size:12.5px;margin-top:8px}.stl{border-left:2px solid var(--ok);padding-left:12px!important;margin-left:-14px}
 .cprog{height:8px;border-radius:6px;background:var(--soft);overflow:hidden;margin-top:8px}.cprog>div{height:100%;background:var(--cnt);border-radius:6px}
 .pill{display:inline-block;font-size:12px;font-weight:600;color:var(--ok)}
@@ -295,7 +296,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.42', RULES_VERSION = '2.29';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.43', RULES_VERSION = '2.29';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -3241,7 +3242,7 @@ function histTimeline(list, evs) {   /* the whole day in one list, newest first:
   var out = '', cur = '', inList = false;
   rows.forEach(function (r) {
     var k = dkey(new Date(r.t));
-    if (k !== cur) { if (inList) { out += '</div>'; inList = false; } cur = k; out += '<div class="sec-h dh">' + esc(new Date(r.t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) + '</div>'; }
+    if (k !== cur) { if (inList) { out += '</div>'; inList = false; } cur = k; out += '<div class="sec-h dh">' + esc(new Date(r.t).toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase() + ' ' + new Date(r.t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) + '</div>'; }
     if (r.blk) { if (inList) { out += '</div>'; inList = false; } out += r.html; } else { if (!inList) { out += '<div class="list">'; inList = true; } out += r.html; }
   });
   if (inList) out += '</div>';
