@@ -295,7 +295,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.40', RULES_VERSION = '2.29';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.41', RULES_VERSION = '2.29';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1728,7 +1728,7 @@ var CH = null;
 function chEntries() {   /* the list: cash used in the last 14 days with no change recorded yet; anything else (older, or already has some change) is found by search */
   var chg = {}; (S.fevs || []).forEach(function (e) { if (e.type === 'usechange') chg[e.forId] = r2((chg[e.forId] || 0) + e.amt); });
   var q = String(CH.q || '').toLowerCase().trim(), cut = Date.now() - 14 * 864e5;
-  return (S.fevs || []).filter(function (e) { return e.type === 'usecash' && !e.adv && !e.fund && r2(e.amt - (chg[e.id] || 0)) > 0.004 && (q ? String(e.note || '').toLowerCase().indexOf(q) >= 0 : !chg[e.id] && e.t >= cut); }).map(function (e) { return Object.assign({}, e, { left: r2(e.amt - (chg[e.id] || 0)), got: chg[e.id] || 0 }); }).sort(function (a, b) { return b.t - a.t; });
+  return (S.fevs || []).filter(function (e) { return e.type === 'usecash' && !e.adv && !e.fund && r2(e.amt - (chg[e.id] || 0)) > 0.004 && (q ? String(e.note || '').toLowerCase().indexOf(q) >= 0 : !chg[e.id] && !e.nochg && e.t >= cut); }).map(function (e) { return Object.assign({}, e, { left: r2(e.amt - (chg[e.id] || 0)), got: chg[e.id] || 0 }); }).sort(function (a, b) { return b.t - a.t; });
 }
 function chListHtml() {
   var l = chEntries(); if (!l.length) return '<div class="muted" style="padding:8px 2px">' + (CH.q ? 'Nothing matches. If it is older than a year or was paid another way, ask an admin.' : 'No cash used in the last 2 weeks is waiting for change. Search by name for older ones.') + '</div>';
@@ -1862,7 +1862,7 @@ function ucFundHtml() {
   if (UC.mode !== 'other') return q + '<div id="uc-box">' + ucBoxHtml() + '</div>';
   var oth = fl, opts = '<label>Take it from stored cash? (optional)</label><div class="frow" data-act="ucfund" data-id=""><div class="fbox' + (!UC.fund ? ' on' : '') + '">' + (!UC.fund ? '✓' : '') + '</div><span class="grow"><b>No, from the cash on hand</b><br><span class="muted" style="font-size:12.5px">Nothing stored is touched.</span></span></div>' +
     oth.map(function (f) { var sl = sealList(f.id), tot = r2((f.bal || 0) + sl.reduce(function (a, s) { return a + s.amt; }, 0)); return '<div class="frow" data-act="ucfund" data-id="' + esc(f.id) + '"><div class="fbox' + (UC.fund === f.id ? ' on' : '') + '">' + (UC.fund === f.id ? '✓' : '') + '</div><span class="grow">' + esc(f.name) + ' · ' + money(tot) + ' stored' + (sl.length ? ' 🔒' : '') + '</span></div>'; }).join('');
-  return q + '<div class="f"><label>What is it for? <b style="color:var(--exp)">*</b></label><input data-uc="purpose" value="' + esc(UC.purpose) + '" placeholder="e.g. To purchase station supplies" autocomplete="off"></div>' + (oth.length ? opts : '') + '<div id="uc-box">' + ucBoxHtml() + '</div>';
+  return q + '<div class="f"><label>What is it for? <b style="color:var(--exp)">*</b></label><input data-uc="purpose" value="' + esc(UC.purpose) + '" placeholder="e.g. To purchase station supplies" autocomplete="off"></div>' + (oth.length ? opts : '') + (UC.fund ? '' : '<label style="margin-top:12px">Could any change come back? <b style="color:var(--exp)">*</b></label><div class="row eqrow" style="gap:8px"><button class="btn sec grow" data-act="ucchg" data-v="no" style="height:auto;padding:10px 6px;' + (UC.chg === 'no' ? 'background:var(--brand);color:#fff' : '') + '">No<div style="font-weight:400;font-size:12px">final cost</div></button><button class="btn sec grow" data-act="ucchg" data-v="yes" style="height:auto;padding:10px 6px;' + (UC.chg === 'yes' ? 'background:var(--brand);color:#fff' : '') + '">Yes<div style="font-weight:400;font-size:12px">change may come back</div></button></div><div class="muted" style="font-size:12.5px;margin:6px 0">A final cost never shows in the change list. Search can still find it.</div>') + '<div id="uc-box">' + ucBoxHtml() + '</div>';
 }
 function ucSumHtml() {
   var cash = totals().cash, amt = num(UC.amount), p = ucPlan();
@@ -1874,7 +1874,7 @@ function ucLive() {   /* typing must never rebuild the box that holds the field 
   if ($('#uc-sum')) $('#uc-sum').innerHTML = ucSumHtml();
 }
 function acLive() { if ($('#don-box')) $('#don-box').innerHTML = donBox(); var bt = $('#modal [data-act=acreview]'); if (bt) bt.classList.toggle('dis', !acDone()); }
-function ucOpen() { UC = { mode: '', purpose: '', amount: '', receipt: '', none: false, reason: '', fund: '', found: {}, to: '' }; ucForm(); }
+function ucOpen() { UC = { mode: '', purpose: '', amount: '', receipt: '', none: false, reason: '', fund: '', found: {}, to: '', chg: '' }; ucForm(); }
 function ucForm() {
   var cash = totals().cash;
   modal('<h2>💵 Use cash</h2><div class="card"><label>What is it for? <b style="color:var(--exp)">*</b></label>' + ucFundHtml() + '<div class="f" style="margin-top:8px"><label>How much</label><input data-uc="amount" type="number" inputmode="decimal" min="0" value="' + esc(UC.amount) + '" placeholder="0"></div>' +
@@ -1912,6 +1912,7 @@ function ucReview() {
   var purpose = UC.mode === 'internet' ? INTERNET : UC.mode === 'stock' ? 'Cash given to buy stock' : UC.purpose.trim();
   if (!purpose) return toast('What is the cash for?'); if (amt <= 0) return toast('Enter how much');
   if (UC.mode === 'stock' && !String(UC.to || '').trim()) return toast('Who is the cash given to?');
+  if (UC.mode === 'other' && !UC.fund && !UC.chg) return toast('Say whether any change could come back');
   var p = ucPlan(); if (p && !p.ready) return toast('Open the sealed cash and type the amount found inside');
   if (UC.mode !== 'stock' && !UC.receipt && !(UC.none && UC.reason.trim())) return toast('Take a photo of the receipt, or say why there is none');
   var go = function () { ucConfirm(purpose); };
@@ -1931,6 +1932,7 @@ function ucConfirm(purpose) {
 }
 function ucSave(purpose) {
   var uc = UC, p = ucPlan(), amt = r2(num(uc.amount)), b = writeBatch(DB), id = newEv(), tell = [], ex = { name: 'Cash used', note: purpose, receipt: uc.receipt || '', noReceipt: uc.receipt ? '' : uc.reason.trim() };
+  if (uc.mode === 'other' && !uc.fund && uc.chg === 'no') ex.nochg = true;
   if (uc.mode === 'stock') { ex.adv = true; ex.advTo = String(uc.to || '').trim(); ex.noReceipt = 'the receipt comes with the purchase'; ex.name = 'Cash given for stock'; }
   var net = ucStoredWord('internet-payment'); if (uc.mode === 'other' && !uc.fund && net.tot > 0.004) ex.intStored = net.tot;
   if (p) {
@@ -6044,6 +6046,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'acseen') { AC.kind = 'other'; AC.desc = b.dataset.v; acForm(); }
   else if (a === 'acwho') acWhoModal();
   else if (a === 'ucwho') acWhoModal(true);
+  else if (a === 'ucchg') { UC.chg = b.dataset.v; ucForm(); }
   else if (a === 'acpickwho') { var pw = (S.people || []).filter(function (x) { return x.id === id; })[0]; if (pw && WHOFOR === 'uc') { UC.to = plabel(pw); UC.toId = pw.id; ucForm(); } else { if (pw) { AC.who = plabel(pw); AC.whoId = pw.id; if (pw.watch) AC.wk = pw.watch; } acForm(); } }
   else if (a === 'acnewwho') { var nq = String(($('#acw-q') || {}).value || '').trim(); if (WHOFOR === 'uc') { if (nq) { UC.to = nq; UC.toId = ''; } ucForm(); } else { if (nq) { AC.who = nq; AC.whoId = ''; } acForm(); } }
   else if (a === 'acback') { if (WHOFOR === 'uc') ucForm(); else acForm(); }
