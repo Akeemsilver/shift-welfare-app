@@ -290,7 +290,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.32', RULES_VERSION = '2.29';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.34', RULES_VERSION = '2.29';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1762,18 +1762,22 @@ function ucPlan() {
   var take = r2(Math.min(amt, r2(open + add)));
   return { f: f, id: id, amt: amt, open: open, opened: opened, ready: ready, add: add, wsum: wsum, take: take, cashPart: r2(amt - take), sealedLeft: items.length - opened.length };
 }
+var UCSIG = '';
+function ucSig() { var p = ucPlan(); return (UC.mode || '') + '|' + ucFundId() + '|' + (p ? p.opened.map(function (o) { return o.s.id; }).join(',') : ''); }
+function ucItemMsg(o) { return (o.found !== null && o.diff < 0 ? '<div style="color:var(--exp);margin-top:4px">⚠ Found ' + money(o.found) + ', written ' + money(o.s.amt) + ': <b>' + money(-o.diff) + ' is missing.</b> Recorded on the fund.</div>' : '') + (o.found !== null && o.diff > 0 ? '<div style="color:var(--soon);margin-top:4px">Found ' + money(o.found) + ', more than the ' + money(o.s.amt) + ' written: <b>' + money(o.diff) + ' extra.</b></div>' : ''); }
+function ucSplitHtml(p) { return p && p.amt > 0 && p.ready ? '<div class="card" style="background:var(--soon-bg);box-shadow:none;margin:6px 0"><b>' + money(p.take) + '</b> from the stored ' + esc(p.f.name) + ' cash' + (p.cashPart > 0.004 ? '<br><b>' + money(p.cashPart) + '</b> from the cash on hand' : '') + '<div class="muted">Stored ' + esc(p.f.name) + ': ' + money(p.open) + (p.add ? ' + ' + money(p.add) + ' opened' : '') + ' → ' + money(r2(p.open + p.add - p.take)) + '</div></div>' : ''; }
 function ucBoxHtml() {
   var id = ucFundId(), f = id && S.funds[id], p = ucPlan(), h = '';
   if (UC.mode === 'internet') {
     var any = f && ((f.bal || 0) > 0.004 || sealList(id).length);
     h += any ? '<div class="card" style="border-left:2px solid var(--ok);box-shadow:none;background:var(--soft);margin:6px 0"><b>🔒 The stored internet cash is used first</b><div class="muted" style="font-size:12.5px">' + money(f.bal || 0) + ' counted' + (sealList(id).length ? ' · ' + sealList(id).length + ' sealed (' + money(sealList(id).reduce(function (a, s) { return a + s.amt; }, 0)) + ' written)' : '') + '</div></div>' : '<div class="card" style="background:var(--soft);box-shadow:none;margin:6px 0"><b>No cash is stored for Internet payment.</b><div class="muted">All of it comes from the cash on hand and is recorded as Internet payment.</div></div>';
   }
+  UCSIG = ucSig();
   if (p) {
     p.opened.forEach(function (o) {
-      h += '<div class="card" style="border-left:2px solid #e0a800;background:var(--soon-bg);box-shadow:none;margin:6px 0"><b>Sealed: open it and count what is inside</b><div class="muted">' + esc(o.s.fundName) + ' · written ' + money(o.s.amt) + ' · put in by ' + esc(o.s.giver || '') + (o.s.forWk ? ' (' + esc(o.s.forWk) + ')' : '') + '</div><div class="f" style="margin-top:6px"><label>Amount found inside <b style="color:var(--exp)">*</b></label><input data-ucf="' + esc(o.s.id) + '" type="number" inputmode="decimal" min="0" value="' + esc((UC.found || {})[o.s.id] || '') + '" placeholder="count it and type it"></div>' +
-        (o.found !== null && o.diff < 0 ? '<div style="color:var(--exp);margin-top:4px">⚠ Found ' + money(o.found) + ', written ' + money(o.s.amt) + ': <b>' + money(-o.diff) + ' is missing.</b> Recorded on the fund.</div>' : '') + (o.found !== null && o.diff > 0 ? '<div style="color:var(--soon);margin-top:4px">Found ' + money(o.found) + ', more than the ' + money(o.s.amt) + ' written: <b>' + money(o.diff) + ' extra.</b></div>' : '') + '</div>';
+      h += '<div class="card" style="border-left:2px solid #e0a800;background:var(--soon-bg);box-shadow:none;margin:6px 0"><b>Sealed: open it and count what is inside</b><div class="muted">' + esc(o.s.fundName) + ' · written ' + money(o.s.amt) + ' · put in by ' + esc(o.s.giver || '') + (o.s.forWk ? ' (' + esc(o.s.forWk) + ')' : '') + '</div><div class="f" style="margin-top:6px"><label>Amount found inside <b style="color:var(--exp)">*</b></label><input data-ucf="' + esc(o.s.id) + '" type="number" inputmode="decimal" min="0" value="' + esc((UC.found || {})[o.s.id] || '') + '" placeholder="count it and type it"></div><div id="ucm-' + esc(o.s.id) + '">' + ucItemMsg(o) + '</div></div>';
     });
-    if (p.amt > 0 && p.ready) h += '<div class="card" style="background:var(--soon-bg);box-shadow:none;margin:6px 0"><b>' + money(p.take) + '</b> from the stored ' + esc(p.f.name) + ' cash' + (p.cashPart > 0.004 ? '<br><b>' + money(p.cashPart) + '</b> from the cash on hand' : '') + '<div class="muted">Stored ' + esc(p.f.name) + ': ' + money(p.open) + (p.add ? ' + ' + money(p.add) + ' opened' : '') + ' → ' + money(r2(p.open + p.add - p.take)) + '</div></div>';
+    h += '<div id="uc-split">' + ucSplitHtml(p) + '</div>';
   }
   return h;
 }
@@ -1789,7 +1793,11 @@ function ucSumHtml() {
   var cash = totals().cash, amt = num(UC.amount), p = ucPlan();
   return '<div><span>Cash on hand now</span><b>' + money(cash) + '</b></div>' + (p && p.add ? '<div><span>Sealed cash opened (goes in)</span><b>+ ' + money(p.add) + '</b></div>' : '') + '<div><span>This use</span><b style="color:var(--exp)">− ' + money(amt) + '</b></div><div class="t"><span>Cash on hand after</span><span>' + money(cash + (p ? p.add : 0) - amt) + '</span></div>';
 }
-function ucLive() { if ($('#uc-box')) $('#uc-box').innerHTML = ucBoxHtml(); if ($('#uc-sum')) $('#uc-sum').innerHTML = ucSumHtml(); }
+function ucLive() {   /* typing must never rebuild the box that holds the field being typed in (the keyboard would close): only the text around it is updated */
+  var p = ucPlan();
+  if ($('#uc-box')) { if (ucSig() === UCSIG && (!p || $('#uc-split'))) { if (p) { p.opened.forEach(function (o) { var m = $('#ucm-' + o.s.id); if (m) m.innerHTML = ucItemMsg(o); }); $('#uc-split').innerHTML = ucSplitHtml(p); } } else { var ae = document.activeElement, fid = ae && ae.dataset && ae.dataset.ucf, pos = fid && ae.selectionStart; $('#uc-box').innerHTML = ucBoxHtml(); if (fid) { var ne = document.querySelector('[data-ucf="' + fid + '"]'); if (ne) { ne.focus(); try { ne.setSelectionRange(pos, pos); } catch (x) {} } } } }
+  if ($('#uc-sum')) $('#uc-sum').innerHTML = ucSumHtml();
+}
 function acLive() { var bt = $('#modal [data-act=acreview]'); if (bt) bt.classList.toggle('dis', !acDone()); }
 function ucOpen() { UC = { mode: '', purpose: '', amount: '', receipt: '', none: false, reason: '', fund: '', found: {} }; ucForm(); }
 function ucForm() {
@@ -2737,6 +2745,34 @@ var HDAY = [], HDAYOK = false, HEUN2 = null, LATESKIP = ['shiftrec', 'watchchg',
 function lateOf(e) {   /* the shift the roster says was on duty when an entry was made, if the entry went on a different shift (the handover was not made yet) */
   try { if (!e || !e.wk || LATESKIP.indexOf(e.type) >= 0) return ''; var s0 = slotNow(new Date(e.t)), sch = slotShift(s0.day, s0.i); return sch && sch !== e.wk ? sch : ''; } catch (x) { return ''; }
 }
+function evById(id) {
+  var r = (S.log || []).filter(function (x) { return x.id === id; })[0] || EVC[id] || (S.fevs || []).filter(function (x) { return x.id === id; })[0] || (HEVS || []).filter(function (x) { return x.id === id; })[0] || (HDAY || []).filter(function (x) { return x.id === id; })[0];
+  return r || null;
+}
+function stDet(id) {   /* a stored cash entry, a sealed cash entry, or cash used: everything about it, in one pop-up */
+  var e = evById(id); if (!e) return toast('That entry is not loaded. Open it from its fund page.');
+  var kv = function (l, v) { return v === '' || v == null ? '' : '<div class="hkv"><span>' + l + '</span><b>' + v + '</b></div>'; }, sh = e.wk ? e.wk + ' shift' : '';
+  var title = e.type === 'usecash' ? '💵 Cash used: ' + esc(e.note || '') : e.type === 'addcash' ? '➕ Cash stored: ' + esc(e.fundName || '') : e.type === 'sealopen' ? '🔓 Sealed cash opened: ' + esc(e.fundName || '') : e.type === 'sealout' ? '📤 Sealed cash taken out: ' + esc(e.fundName || '') : e.type === 'fundshort' ? '⚠ Stored cash short: ' + esc(e.fundName || '') : '↑ Stored cash extra found: ' + esc(e.fundName || '');
+  var b = '';
+  if (e.type === 'usecash') {
+    b += kv('Amount', '<span style="color:var(--exp)">− ' + money(e.amt) + '</span>') + kv('Used for', esc(e.note || ''));
+    if (e.fund) b += kv('From stored ' + esc(e.fundName || ''), money(e.fundTake || 0)) + kv('From cash on hand', money(r2(e.amt - (e.fundTake || 0)))) + (e.opened && e.opened.length ? kv('Sealed cash opened for it', e.opened.length + (e.opened.length === 1 ? ' item' : ' items')) : '') + (e.fundElse ? '<div class="muted" style="margin:4px 0">The stored cash was used for something else. The owner and presidents were told.</div>' : '') + (e.intStored ? '<div class="muted" style="margin:4px 0">Internet payment cash of ' + money(e.intStored) + ' was still stored when this was used.</div>' : '');
+    b += kv('Receipt', e.receipt ? 'attached' : 'none: ' + esc(e.noReceipt || '')) + (e.receipt ? '<img src="' + e.receipt + '" alt="receipt" style="width:100%;max-height:300px;object-fit:contain;border-radius:12px;border:1px solid var(--line);background:#fff;margin:6px 0">' : '');
+  } else if (e.type === 'addcash') {
+    var res = (S.fevs || []).filter(function (x) { return x.sealId === e.sealId && (x.type === 'sealopen' || x.type === 'sealout'); })[0], still = e.sealed && e.sealId && S.seals[e.sealId];
+    b += kv('Amount', (e.sealed && e.sealId ? '' : '<span style="color:var(--ok)">+ ') + money(e.amt) + (e.sealed && e.sealId ? '' : '</span>')) + kv('How it came', e.sealed ? '<b>Sealed</b>, ' + money(e.amt) + ' written on it' + (e.sealId ? ' (not counted until opened)' : '') : '<b>Open</b>, counted ' + money(e.amt)) + kv('Given by', esc(e.giver || '')) + kv('For which shift', esc(e.forWk || ''));
+    if (e.sealed && e.sealId) b += kv('Now', still ? '🔒 still sealed' : res ? (res.type === 'sealopen' ? 'opened: found ' + money(res.found) + ' (' + new Date(res.t).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ')' : 'taken out: ' + esc(res.to || '') + (res.toWho ? ' · ' + esc(res.toWho) : '')) : 'opened or taken out');
+  } else if (e.type === 'sealopen') {
+    b += kv('Written on it', money(e.was)) + kv('Found inside', money(e.found)) + kv('Went into the cash count', '<span style="color:var(--ok)">+ ' + money(e.amt) + '</span>') + kv('Why', e.via === 'use' ? 'opened to pay a bill' : 'opened and counted');
+  } else if (e.type === 'sealout') {
+    b += kv('Written on it', money(e.amt)) + kv('Where it went', esc(e.to || '')) + kv('Received by', esc(e.toWho || '')) + '<div class="muted" style="margin:4px 0">Handed over still sealed. It was never in the cash count.</div>';
+  } else {
+    b += kv('Written on it', money(e.was)) + kv('Found inside', money(e.found)) + kv(e.type === 'fundshort' ? 'Missing' : 'Extra', '<span style="color:var(--' + (e.type === 'fundshort' ? 'exp' : 'soon') + ')">' + money(e.amt) + '</span>') + kv('Last sealed by', esc(e.sealBy || '') + (e.sealWk ? ' (' + esc(e.sealWk) + ')' : '')) + '<div class="muted" style="margin:4px 0">Recorded on the fund. It is not charged to a shift.</div>';
+  }
+  b += kv('When', hfmt(e.t)) + kv('Shift', esc(sh)) + kv('Recorded by', esc(e.byName || 'A member')) + (e.corr ? kv('Entered as a correction', esc(e.corr)) : '');
+  var still2 = e.sealId && S.seals[e.sealId];
+  modal('<h2 style="margin:0 0 8px">' + title + '</h2>' + b + (still2 && inControl() ? '<button class="btn sec block" data-act="sealsheet" data-id="' + esc(e.sealId) + '" style="margin-top:8px">Open, use or take out this sealed cash ›</button>' : '') + (e.fund ? '<button class="btn sec block" data-act="stfund" data-id="' + esc(e.fund) + '" style="margin-top:8px">Open the ' + esc(e.fundName || 'fund') + ' page ›</button>' : '') + '<button class="btn block" data-act="close" style="margin-top:8px">Close</button>');
+}
 function evRow(e, cancelable) {
   var ic, tx, sub = '', amt = '', col = 'var(--ink)', gpe = gapForEvent(e);
   if (gpe) { ic = '🛒'; tx = 'Sold in the gap (' + gpe.wk + '): ' + e.name + ' × ' + Math.abs(e.qty); sub = 'nobody had taken the handover · counted by ' + (e.byName || 'the receiver'); }
@@ -2781,7 +2817,7 @@ function evRow(e, cancelable) {
   var lt = e.gap ? '' : lateOf(e); if (lt) sub = (sub ? sub + ' · ' : '') + '⏱ ' + e.wk + ' held control, ' + lt + ' on duty';
   if (e.corr) sub = (sub ? sub + ' · ' : '') + 'Correction by ' + e.corr;
   HEV[e.id] = e;
-  return '<div' + (e.type === 'buy' || e.type === 'other' ? ' data-act="buyview" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'pay' || e.type === 'cnote' || e.type === 'loan' || (e.type === 'sale' && e.cr) ? ' data-act="evsheet" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'stockedit' ? ' data-act="editview" data-id="' + e.id + '" style="cursor:pointer;background:var(--exp-bg);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px;box-shadow:inset 2px 0 0 var(--exp)"' : e.type === 'cashshort' ? ' style="cursor:pointer;background:var(--exp-bg);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px;box-shadow:inset 2px 0 0 var(--exp)"' : '') + '><span style="font-size:18px;width:26px;flex:none;text-align:center">' + ic + '</span><div class="grow"><b>' + esc(tx) + '</b><div class="muted">' + (hdt(e) ? hdt(e) + ' ' : '') + hhmm(e.t) + (sub ? ' · ' + esc(sub) : '') + (e.byName ? ' · recorded by ' + esc(e.byName) : '') + '</div></div>' + (e.receipt ? '<img data-act="rcv" src="' + e.receipt + '" alt="receipt" style="width:44px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">' : '') + '<b style="color:' + col + '">' + amt + '</b>' + (CM && cancelable && ['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'shiftrec', 'watchchg', 'fundshort', 'fundover', 'sealopen', 'sealout'].indexOf(e.type) < 0 ? '<button class="btn red sm" data-act="cancelask" data-id="' + e.id + '">Cancel</button>' : '') + '</div>';
+  return '<div' + (['addcash', 'sealopen', 'sealout', 'fundshort', 'fundover', 'usecash'].indexOf(e.type) >= 0 ? ' data-act="stdet" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'buy' || e.type === 'other' ? ' data-act="buyview" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'pay' || e.type === 'cnote' || e.type === 'loan' || (e.type === 'sale' && e.cr) ? ' data-act="evsheet" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'stockedit' ? ' data-act="editview" data-id="' + e.id + '" style="cursor:pointer;background:var(--exp-bg);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px;box-shadow:inset 2px 0 0 var(--exp)"' : e.type === 'cashshort' ? ' style="cursor:pointer;background:var(--exp-bg);border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px;box-shadow:inset 2px 0 0 var(--exp)"' : '') + '><span style="font-size:18px;width:26px;flex:none;text-align:center">' + ic + '</span><div class="grow"><b>' + esc(tx) + '</b><div class="muted">' + (hdt(e) ? hdt(e) + ' ' : '') + hhmm(e.t) + (sub ? ' · ' + esc(sub) : '') + (e.byName ? ' · recorded by ' + esc(e.byName) : '') + '</div></div>' + (e.receipt ? '<img data-act="rcv" src="' + e.receipt + '" alt="receipt" style="width:44px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">' : '') + '<b style="color:' + col + '">' + amt + '</b>' + (CM && cancelable && ['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'shiftrec', 'watchchg', 'fundshort', 'fundover', 'sealopen', 'sealout'].indexOf(e.type) < 0 ? '<button class="btn red sm" data-act="cancelask" data-id="' + e.id + '">Cancel</button>' : '') + '</div>';
 }
 /* ---------- History: one full page. All = the entries of a day or a month, Shifts = the permanent shift summaries (a day, a month or a year), Charts. The Filter is in the top bar ---------- */
 var HY = { tab: 'all', per: 'day', dt: new Date(), types: {}, short: false, wk: '', sid: '', cnt: {}, sper: 'month', pper: 'month', pf: 'all', pq: '', pid: '', pl: null, hm: '', pm: '', cv: 'score', sy: 0, back: false, yr: false, cf: {} }, HUN = null, HEVS = null, HSDOCS = null, HSD = {}, HYSIG = '';
@@ -5887,7 +5923,8 @@ document.addEventListener('click', function (e) {
   else if (a === 'sealcancel') { var sc = S.seals[id]; closeModal(); if (sc) askConfirm('Cancel this entry?', 'The sealed <b>' + esc(sc.fundName) + '</b> (' + money(sc.amt) + ' written on it) was added by mistake. It is removed.', 'Yes, cancel it', function () { cancelEvent(id, 'Sealed cash added by mistake'); }); }
   else if (a === 'stfold') { STOPEN = !STOPEN; render(); }
   else if (a === 'stpage') storedPage();
-  else if (a === 'stfund') fundPage(id);
+  else if (a === 'stfund') { closeModal(); fundPage(id); }
+  else if (a === 'stdet') stDet(id);
   else if (a === 'stho') { HOFOLD[id] = !HOFOLD[id]; if (id.indexOf('rec') === 0 && HSHDRAW) HSHDRAW(); else if (id.indexOf('rx') === 0) showRx(true); else if (id.indexOf('pr') === 0) prepareShow(); else render(); }   /* each page redraws itself: the record page and the take-over page are not part of the main screen */
   else if (a === 'rcv') { $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div><img src="' + b.src + '" alt="receipt" style="width:100%;border-radius:10px"><button class="btn sec block" data-act="cno" style="margin-top:10px">Close</button></div></div>'); }
   else if (a === 'pfmode') { PF.mode = b.dataset.v; PF.off = 0; profitModal(); }
