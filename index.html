@@ -147,7 +147,7 @@ textarea{font:inherit;width:100%;min-height:90px;border:1px solid var(--ib);bord
 #pad .pline{position:absolute;left:36px;right:36px;bottom:50px;border-top:2px solid var(--line);pointer-events:none}
 .pl>div{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--line)}.pl>div:first-child,.pl>h2+div{border-top:0}.pl .big{font-size:14px;font-weight:600}.pl .sub{padding-left:14px;color:var(--muted);font-size:13px}
 .bar{height:10px;border-radius:5px;background:var(--ok)}.bar.neg{background:var(--exp)}.good{color:var(--ok)}.bad{color:var(--exp)}
-.modal.top{align-items:flex-start}.modal.top>div{margin-bottom:0;border-radius:0 0 18px 18px;max-height:calc(var(--vvh,100vh) - var(--navoff,68px));padding-top:calc(10px + env(safe-area-inset-top))}
+.modal.full>div,.modal.top.full>div{height:100%;max-height:none!important;border-radius:0!important;margin-bottom:0!important;border-radius:0;border-top:0;box-sizing:border-box;padding-bottom:calc(24px + env(safe-area-inset-bottom))}.modal.full{z-index:35}.modal.top{align-items:flex-start}.modal.top>div{margin-bottom:0;border-radius:0 0 18px 18px;max-height:calc(var(--vvh,100vh) - var(--navoff,68px));padding-top:calc(10px + env(safe-area-inset-top))}
 html:has(#mbg.top),body:has(#mbg.top){overflow:hidden;overscroll-behavior:none}html:has(#mbg),body:has(#mbg),html:has(#cf),body:has(#cf){overscroll-behavior:none}   /* no pull-to-refresh while a pop-up is open */.modal.top>div,.modal.top .list{overscroll-behavior:contain}   /* a search pop-up never lets the page behind it scroll */
 .modal.top>div:has(>.sq+.list){display:flex;flex-direction:column;overflow:hidden}.modal.top>div:has(>.sq+.list)>.list{flex:1;min-height:0;overflow:auto}   /* search pop-ups: title and search stay put, only the list scrolls, Cancel stays at the bottom */
 .sq{position:sticky;top:-10px;z-index:3;background:var(--pop);padding:6px 0 8px;margin:-6px 0 0}
@@ -199,7 +199,7 @@ input:disabled{background:var(--dis);color:var(--muted)}
 .hkv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}.hkv:last-child{border:0}.hkv>span:first-child{color:var(--muted)}.hkv b{text-align:right}
 .hbox{margin:10px 0 6px;padding:10px 12px;border-radius:12px;font-size:13.5px;line-height:1.4}.hbox.bad{background:var(--exp-bg);color:var(--exp)}.hbox.good{background:var(--ok-bg);color:var(--ok)}.hbox.wait{background:var(--soft);color:var(--muted)}
 .htbl{width:100%;border-collapse:collapse;font-size:13.5px;margin:6px 0 4px}.htbl th{text-align:right;color:var(--muted);font-weight:600;font-size:10.5px;line-height:1.25;padding:4px 0 4px 6px;vertical-align:bottom}.htbl th:first-child,.htbl td:first-child{text-align:left}.htbl td{text-align:right;padding:6px 0;border-top:1px solid var(--line)}
-.flab{margin:12px 0 4px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}.frow{display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid var(--line);cursor:pointer}.fbox{width:22px;height:22px;border-radius:6px;border:2px solid var(--secb);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex:none}.fbox.on{background:var(--brand);border-color:var(--brand)}
+.cbub{border:1px solid var(--line);border-radius:14px;padding:11px 12px;margin:8px 0;background:var(--card,#fff);box-shadow:0 1px 3px rgba(0,0,0,.08)}.cbub.sel{border:2px solid var(--ok);padding:10px 11px}.flab{margin:12px 0 4px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}.frow{display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid var(--line);cursor:pointer}.fbox{width:22px;height:22px;border-radius:6px;border:2px solid var(--secb);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex:none}.fbox.on{background:var(--brand);border-color:var(--brand)}
 .hochk{position:sticky;top:var(--hh,56px);z-index:4;background:var(--bg);display:flex;gap:6px;padding:8px 0 8px;margin-bottom:2px}.hochip{flex:none;border-radius:14px;padding:4px 9px;font-weight:700;font-size:12px;background:var(--surface);border:2px solid var(--secb);cursor:pointer}.hochip.ok{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}.hochip.no{background:var(--exp-bg);border-color:var(--exp);color:var(--exp)}.hochip.wn{background:var(--soon-bg);border-color:var(--soon);color:var(--soon)}
 .hoslim{display:flex;gap:6px;margin-bottom:10px}.hoslim button{flex:1;border:0;background:var(--surface);color:var(--link);border-radius:10px;padding:7px 8px;font-size:12px;font-weight:700;box-shadow:var(--sh)}
 .hot{width:100%;border-collapse:collapse}.hot th{font-size:10px;text-align:right;color:var(--muted);text-transform:uppercase;padding:3px 2px}.hot th:first-child,.hot td:first-child{text-align:left}.hot td{padding:7px 2px;border-bottom:1px solid var(--line);text-align:right}.hot tr.tot td{font-weight:700;border-bottom:0}.horow{cursor:pointer}.hoch{color:var(--cnt);font-size:11px}.hoch.red{color:var(--exp)}
@@ -293,7 +293,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.37', RULES_VERSION = '2.29';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.39', RULES_VERSION = '2.29';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1695,7 +1695,7 @@ function fundSnap() { return fundList().map(function (f) { return { id: f.id, na
 function acName() { return AC.kind === 'internet' ? INTERNET : AC.desc.trim(); }
 function acOpen() { AC = { step: 'what', kind: 'internet', desc: '', amount: '', who: '', whoId: '', wk: '', how: '' }; acForm(); }
 function acWhat() {
-  modal('<h2>➕ Add cash</h2><p class="muted" style="margin:0 0 8px">What is this money?</p><button class="btn sec block" data-act="acmode" data-v="stored" style="text-align:left;height:auto;padding:14px;margin-bottom:10px"><b>Stored for a bill</b><div class="muted" style="font-weight:400;font-size:12.5px">Internet or another bill. It stays stored until it is used.</div></button><button class="btn sec block" data-act="acmode" data-v="change" style="text-align:left;height:auto;padding:14px"><b>Change from something bought</b><div class="muted" style="font-weight:400;font-size:12.5px">Money that came back after paying cash for something.</div></button><button class="btn sec block" data-act="close" style="margin-top:12px">Cancel</button>');
+  modal('<h2>➕ Add cash</h2><p class="muted" style="margin:0 0 8px">What is this money?</p><button class="btn sec block" data-act="acmode" data-v="stored" style="text-align:left;height:auto;padding:14px;margin-bottom:10px"><b>Stored for a bill</b><div class="muted" style="font-weight:400;font-size:12.5px">Internet or another bill. It stays stored until it is used.</div></button><button class="btn sec block" data-act="acmode" data-v="change" style="text-align:left;height:auto;padding:14px"><b>Change from something bought</b><div class="muted" style="font-weight:400;font-size:12.5px">Money that came back after paying cash for something.</div></button><button class="btn sec block" data-act="close" style="margin-top:12px">Cancel</button>', true, true);
 }
 function acDone() { return AC && acName() && num(AC.amount) > 0 && AC.who && AC.wk && AC.how; }
 function acForm() {
@@ -1713,17 +1713,17 @@ function acForm() {
     '<div class="row"><div class="grow"><label>Who gave it <b style="color:var(--exp)">*</b></label><button class="btn sec block" data-act="acwho" style="justify-content:space-between">' + (AC.who ? esc(AC.who) : 'Tap to choose') + ' 🔍</button></div><div class="grow"><label>For which shift <b style="color:var(--exp)">*</b></label>' + wkSel + '</div></div>' +
     '<div class="muted" style="margin:6px 0 8px;font-size:12.5px">The shift fills in from the person. Change it if the money is for another shift.</div>' +
     (nm ? '<div class="muted" style="font-size:12.5px">' + esc(nm) + ' this month: ' + WATCHES.map(function (w) { return esc(w) + (put[w] ? ' ✓' : ' ✗'); }).join(' · ') + '</div>' : '') + '</div>' +
-    '<button class="btn green block' + (acDone() ? '' : ' dis') + '" data-act="acreview">Review</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>');
+    '<button class="btn green block' + (acDone() ? '' : ' dis') + '" data-act="acreview">Review</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>', true, true);
 }
 var CH = null;
-function chEntries() {   /* cash used that can still take change back: the last 14 days, or everything that matches the search */
+function chEntries() {   /* the list: cash used in the last 14 days with no change recorded yet; anything else (older, or already has some change) is found by search */
   var chg = {}; (S.fevs || []).forEach(function (e) { if (e.type === 'usechange') chg[e.forId] = r2((chg[e.forId] || 0) + e.amt); });
   var q = String(CH.q || '').toLowerCase().trim(), cut = Date.now() - 14 * 864e5;
-  return (S.fevs || []).filter(function (e) { return e.type === 'usecash' && !e.adv && !e.fund && r2(e.amt - (chg[e.id] || 0)) > 0.004 && (q ? String(e.note || '').toLowerCase().indexOf(q) >= 0 : CH.older || e.t >= cut); }).map(function (e) { return Object.assign({}, e, { left: r2(e.amt - (chg[e.id] || 0)), got: chg[e.id] || 0 }); }).sort(function (a, b) { return b.t - a.t; });
+  return (S.fevs || []).filter(function (e) { return e.type === 'usecash' && !e.adv && !e.fund && r2(e.amt - (chg[e.id] || 0)) > 0.004 && (q ? String(e.note || '').toLowerCase().indexOf(q) >= 0 : !chg[e.id] && e.t >= cut); }).map(function (e) { return Object.assign({}, e, { left: r2(e.amt - (chg[e.id] || 0)), got: chg[e.id] || 0 }); }).sort(function (a, b) { return b.t - a.t; });
 }
 function chListHtml() {
-  var l = chEntries(); if (!l.length) return '<div class="muted" style="padding:8px 2px">' + (CH.q ? 'Nothing matches. If it is older than a year or was paid another way, ask an admin.' : 'No cash used in the last 14 days can take change back.') + '</div>';
-  return l.map(function (e) { return '<div class="frow" data-act="chpick" data-id="' + esc(e.id) + '"><div class="fbox' + (CH.forId === e.id ? ' on' : '') + '">' + (CH.forId === e.id ? '✓' : '') + '</div><span class="grow"><b>Cash used: ' + esc(e.note || '') + '</b> · ' + money(e.amt) + '<br><span class="muted" style="font-size:12.5px">' + hfmt(e.t) + ' · recorded by ' + esc(e.byName || '') + (e.got ? ' · ' + money(e.got) + ' back already' : '') + '</span></span></div>'; }).join('');
+  var l = chEntries(); if (!l.length) return '<div class="muted" style="padding:8px 2px">' + (CH.q ? 'Nothing matches. If it is older than a year or was paid another way, ask an admin.' : 'No cash used in the last 2 weeks is waiting for change. Search by name for older ones.') + '</div>';
+  return l.map(function (e) { return '<div class="frow cbub' + (CH.forId === e.id ? ' sel' : '') + '" data-act="chpick" data-id="' + esc(e.id) + '"><div class="fbox' + (CH.forId === e.id ? ' on' : '') + '">' + (CH.forId === e.id ? '✓' : '') + '</div><span class="grow"><b>Cash used: ' + esc(e.note || '') + '</b> · ' + money(e.amt) + '<br><span class="muted" style="font-size:12.5px">' + hfmt(e.t) + ' · recorded by ' + esc(e.byName || '') + (e.got ? ' · ' + money(e.got) + ' back already' : '') + '</span></span></div>'; }).join('');
 }
 function chBoxHtml() {
   var e = (S.fevs || []).filter(function (x) { return x.id === CH.forId; })[0]; if (!e) return ''; var amt = r2(num(CH.amount)), got = chgOf(e.id), left = r2(e.amt - got), cash = totals().cash;
@@ -1732,12 +1732,12 @@ function chBoxHtml() {
   return '<div class="card" style="background:var(--soon-bg);box-shadow:none">Cash on hand: ' + money(cash) + ' → <b>' + money(r2(cash + amt)) + '</b><br>' + esc(e.note || '') + ': ' + money(e.amt) + ' → <b>' + money(r2(e.amt - got - amt)) + '</b> cost</div>';
 }
 function chForm() {
-  modal('<h2>Change from something bought</h2><div class="card"><label>Which one? <b style="color:var(--exp)">*</b></label><div class="sq"><input data-ch="q" value="' + esc(CH.q || '') + '" placeholder="Search by name (the whole year)" autocomplete="off"></div><div id="ch-list">' + chListHtml() + '</div>' + (CH.older || CH.q ? '' : '<a data-act="chold" style="color:var(--link);font-weight:700;cursor:pointer;display:block;margin:6px 2px">Show older ones</a>') +
+  modal('<h2>Change from something bought</h2><div class="card"><label>Which one? <b style="color:var(--exp)">*</b></label><div class="sq"><input data-ch="q" value="' + esc(CH.q || '') + '" placeholder="Search by name (the whole year)" autocomplete="off"></div><div id="ch-list">' + chListHtml() + '</div>' +
     '<div class="f" style="margin-top:8px"><label>How much came back <b style="color:var(--exp)">*</b></label><input data-ch="amount" type="number" inputmode="decimal" min="0" value="' + esc(CH.amount) + '" placeholder="0"></div><div id="ch-box">' + chBoxHtml() + '</div>' +
     '<label>Receipt for the change</label>' + (CH.receipt ? '<img src="' + CH.receipt + '" alt="receipt" style="width:100%;max-height:240px;object-fit:contain;border-radius:12px;border:1px solid var(--line);background:#fff">' : '<div class="muted" style="margin-bottom:6px">' + (CH.none ? 'No receipt given. Say why below.' : 'Take a photo of the receipt. It is shrunk to a small size and kept for a year.') + '</div>') +
     '<input type="file" accept="image/*" capture="environment" id="ch-cam" hidden><input type="file" accept="image/*" id="ch-pick" hidden><div class="row" style="margin-top:8px"><button class="btn sec sm grow" data-act="chcam">📷 ' + (CH.receipt ? 'Retake' : 'Take photo') + '</button><button class="btn sec sm grow" data-act="chpickfile">🖼 Choose from phone</button></div>' +
     '<button class="btn sec sm block" data-act="chnone" style="margin-top:8px">' + (CH.none ? '✓ No receipt given (tap to undo)' : 'No receipt given') + '</button>' + (CH.none && !CH.receipt ? '<div class="f" style="margin-top:8px"><label>Why is there no receipt?</label><input data-ch="reason" value="' + esc(CH.reason || '') + '" autocomplete="off"></div>' : '') + '</div>' +
-    '<button class="btn green block" data-act="chreview">Review</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>', true);
+    '<button class="btn green block" data-act="chreview">Review</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>', true, true);
 }
 function chReview() {
   var e = (S.fevs || []).filter(function (x) { return x.id === CH.forId; })[0], amt = r2(num(CH.amount)); if (!e) return toast('Pick which one the change came from');
@@ -1872,7 +1872,7 @@ function ucForm() {
     '<button class="btn sec sm block" data-act="ucnone" style="margin-top:8px">' + (UC.none ? '✓ No receipt (tap to undo)' : 'No receipt available') + '</button>' +
     (UC.none && !UC.receipt ? '<div class="f" style="margin-top:8px"><label>Why is there no receipt?</label><input data-uc="reason" value="' + esc(UC.reason) + '" autocomplete="off"></div>' : '')) + '</div>' +
     '<div class="card sum" id="uc-sum">' + ucSumHtml() + '</div>' +
-    '<button class="btn block" data-act="ucreview">Review</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>');
+    '<button class="btn block" data-act="ucreview">Review</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>', true, true);
 }
 function shrink(file, done) {   /* a very small JPEG: about 50 KB, enough to read a receipt */
   var url = URL.createObjectURL(file), img = new Image();
@@ -2806,7 +2806,7 @@ var REFRESH = null;
 function refreshModal() { if (alTop()) alertsPage(true); var a = document.activeElement; if (REFRESH && !(a && /INPUT|SELECT|TEXTAREA/.test(a.tagName) && $('#modal').contains(a))) REFRESH(); }
 var LASTV = null;
 function closeModal() { REFRESH = null; CONF = null; RX = null; HOVI = -1; LASTV = null; if (UNSUB) { UNSUB(); UNSUB = null; } $('#modal').innerHTML = ''; }
-function modal(html, top) { REFRESH = null; CONF = null; if (UNSUB) { UNSUB(); UNSUB = null; } $('#modal').innerHTML = '<div class="modal' + (top ? ' top' : '') + '" id="mbg"><div>' + html + '</div></div>'; }   /* top: pop-ups with a search box stay at the top so the keyboard never covers the results */
+function modal(html, top, full) { REFRESH = null; CONF = null; if (UNSUB) { UNSUB(); UNSUB = null; } $('#modal').innerHTML = '<div class="modal' + (top ? ' top' : '') + (full ? ' full' : '') + '" id="mbg"><div>' + html + '</div></div>'; }   /* top: pop-ups with a search box stay at the top so the keyboard never covers the results */
 function liveModal(qs, build) {   /* a pop-up that stays in step with the database */
   if (!Array.isArray(qs)) qs = [qs];
   modal('<div class="empty">Loading…</div>');
@@ -6020,7 +6020,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'ucreview') ucReview();
   else if (a === 'acopen') acOpen();
   else if (a === 'acmode') { if (b.dataset.v === 'stored') { AC.step = ''; acForm(); } else { AC = null; CH = { forId: '', amount: '', receipt: '', none: false, reason: '', q: '', older: false }; chForm(); } }
-  else if (a === 'chpick') { CH.forId = id; chForm(); }
+  else if (a === 'chpick') { CH.forId = CH.forId === id ? '' : id; chForm(); }
   else if (a === 'chold') { CH.older = true; chForm(); }
   else if (a === 'chcam') $('#ch-cam').click();
   else if (a === 'chpickfile') $('#ch-pick').click();
