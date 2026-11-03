@@ -111,6 +111,7 @@ nav button.on{color:var(--link);background:var(--soft)}
 .sum .t{font-weight:600;font-size:14px}
 #toast{position:fixed;left:50%;bottom:calc(var(--navoff,var(--bar)) + 12px);transform:translateX(-50%);background:var(--toast);color:#fff;padding:7px 8px 9px 14px;border-radius:999px;z-index:60;opacity:0;pointer-events:none;transition:opacity .2s;max-width:94%;display:flex;gap:10px;align-items:center;font-size:12px;overflow:hidden}
 #toast .tline{position:absolute;left:0;bottom:0;height:3px;background:#6FC3E8;width:100%;transform-origin:left;animation:tl 3s linear forwards}
+@keyframes spin{to{transform:rotate(360deg)}}.spin{display:inline-block;width:18px;height:18px;border:3px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:spin .8s linear infinite;vertical-align:-4px;margin-right:8px}
 @keyframes tl{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 #toast.show{opacity:1;pointer-events:auto}
 #toast button{border:0;background:#fff;color:#0E1B24;font:inherit;font-weight:800;font-size:12px;border-radius:999px;height:28px;padding:0 12px}
@@ -296,7 +297,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.50', RULES_VERSION = '2.32';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.51', RULES_VERSION = '2.32';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2285,14 +2286,23 @@ function itemPicker(k) {
 }
 /* ---------- a receipt photo added later to an old entry (v3.48): owner, president, admins and the person who made the entry; once only ---------- */
 var RCL = null;
-function rclHtml(e) { return '<div id="rcl"></div>'; }
+function rclHtml(e) { return '<div id="rcl"><p class="muted" style="margin:12px 0"><span class="spin"></span>Loading the receipt…</p></div>'; }
 function rclLoad(e) {
-  if (!e || e.receipt || !DB || OWNERVIEW) return; RCL = e; if (!$('#rcl')) return;
+  if (!e || e.receipt || !DB || OWNERVIEW) { var e0 = $('#rcl'); if (e0 && !e.receipt) e0.innerHTML = '<p class="muted">No receipt photo was attached.</p>'; return; } RCL = e; if (!$('#rcl')) return;
+  var none = function (el, d) {
+    el.innerHTML = '<p class="muted" style="margin:12px 0 0">No receipt photo was attached.</p>' + ((canApprove() || (e.by && e.by === EMAIL)) ? '<div class="row" style="margin-top:10px"><button class="btn sec sm grow" data-act="rclcam">📷 Add receipt photo</button><button class="btn sec sm grow" data-act="rclpick">🖼 Choose from phone</button></div><input type="file" accept="image/*" capture="environment" id="rcl-cam" hidden><input type="file" accept="image/*" id="rcl-pick" hidden>' : '');
+  };
+  var fail = function () { var el = $('#rcl'); if (el && RCL === e) el.innerHTML = '<p class="muted" style="margin:12px 0">Could not load the receipt. Check the connection and open this again.</p>'; };
   getDoc(ref('receipts/' + e.id)).then(function (sn) {
     var d = sn.exists() ? sn.data() : null, el = $('#rcl'); if (!el || RCL !== e) return;
-    if (d && d.hasImg) return getDoc(ref('receiptimgs/' + e.id)).then(function (im) { var el2 = $('#rcl'); if (!el2 || RCL !== e) return; el2.innerHTML = im.exists() ? '<label style="margin-top:12px">Receipt</label><img src="' + im.data().img + '" alt="receipt" style="width:100%;border-radius:10px;border:1px solid var(--line)"><div class="muted" style="margin-top:6px;font-size:12.5px">Added later' + (d.lateBy ? ' by ' + esc(d.lateBy) : '') + (d.lateAt ? ' · ' + hfmt(d.lateAt) : '') + '</div>' : ''; });
-    if (canApprove() || (e.by && e.by === EMAIL)) el.innerHTML = '<div class="row" style="margin-top:10px"><button class="btn sec sm grow" data-act="rclcam">📷 Add receipt photo</button><button class="btn sec sm grow" data-act="rclpick">🖼 Choose from phone</button></div><input type="file" accept="image/*" capture="environment" id="rcl-cam" hidden><input type="file" accept="image/*" id="rcl-pick" hidden>';
-  }).catch(function () {});
+    if (d && d.hasImg) return getDoc(ref('receiptimgs/' + e.id)).then(function (im) {
+      var el2 = $('#rcl'); if (!el2 || RCL !== e) return;
+      if (!im.exists()) return none(el2, d);
+      el2.innerHTML = '<label style="margin-top:12px">Receipt</label><img src="' + im.data().img + '" alt="receipt" style="width:100%;border-radius:10px;border:1px solid var(--line)"><div class="muted" style="margin-top:6px;font-size:12.5px">Added later' + (d.lateBy ? ' by ' + esc(d.lateBy) : '') + (d.lateAt ? ' · ' + hfmt(d.lateAt) : '') + '</div>';
+      var kv = $('#rclkv b'); if (kv) kv.textContent = 'attached later';
+    });
+    none(el, d);
+  }).catch(fail);
 }
 function rclSave(img) {
   var e = RCL; if (!e || !img) return; toast('Saving the receipt…');
@@ -2314,7 +2324,7 @@ function showPurchase(id) {
     '<div class="card sum" style="box-shadow:none;padding:8px 14px 10px"><div><span>When</span><b>' + new Date(e.t).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div>' + (e.supplier ? '<div><span>Bought from</span><b>' + esc(e.supplier) + '</b></div>' : '') + '<div><span>Entered by</span><b>' + esc(e.byName || '') + '</b></div>' + (e.note ? '<div><span>Note</span><b>' + esc(e.note) + '</b></div>' : '') +
     (e.tax ? '<div><span>Tax</span><b>' + money(e.tax) + '</b></div>' : '') + (e.invoice ? '<div><span>Bill total</span><b>' + money(e.invoice) + '</b></div>' : '') + (e.writeoff ? '<div><span>Change not kept</span><b>' + money(e.writeoff) + '</b></div>' : '') + (e.amt ? '<div class="t"><span>Cash taken</span><span>' + money(e.amt) + '</span></div>' : '') + '</div>' +
     (lines ? '<table><tr><th>Item</th><th>Qty</th><th>Cost</th><th>Each</th></tr>' + lines + '</table>' : '') +
-    (e.receipt ? '<label style="margin-top:12px">Receipt</label><img src="' + e.receipt + '" alt="receipt" style="width:100%;border-radius:10px;border:1px solid var(--line)">' : '<p class="muted">No receipt photo was attached.</p>' + rclHtml(e)) +
+    (e.receipt ? '<label style="margin-top:12px">Receipt</label><img src="' + e.receipt + '" alt="receipt" style="width:100%;border-radius:10px;border:1px solid var(--line)">' : rclHtml(e)) +
     '<button class="btn sec block" data-act="cno" style="margin-top:10px">Close</button></div></div>');
   if (!e.receipt) rclLoad(e);
 }
@@ -2900,7 +2910,7 @@ function stDet(id) {   /* a stored cash entry, a sealed cash entry, or cash used
   if (e.type === 'usecash') {
     b += kv('Amount', '<span style="color:var(--exp)">− ' + money(e.amt) + '</span>') + kv('Used for', esc(e.note || ''));
     if (e.fund) b += kv('From stored ' + esc(e.fundName || ''), money(e.fundTake || 0)) + kv('From cash on hand', money(r2(e.amt - (e.fundTake || 0)))) + (e.opened && e.opened.length ? kv('Sealed cash opened for it', e.opened.length + (e.opened.length === 1 ? ' item' : ' items')) : '') + (e.fundElse ? '<div class="muted" style="margin:4px 0">The stored cash was used for something else. The owner and presidents were told.</div>' : '') + (e.intStored ? '<div class="muted" style="margin:4px 0">Internet payment cash of ' + money(e.intStored) + ' was still stored when this was used.</div>' : '');
-    b += kv('Receipt', e.receipt ? 'attached' : 'none: ' + esc(e.noReceipt || '')) + (e.receipt ? '<img src="' + e.receipt + '" alt="receipt" style="width:100%;max-height:300px;object-fit:contain;border-radius:12px;border:1px solid var(--line);background:#fff;margin:6px 0">' : '');
+    b += (e.receipt ? kv('Receipt', 'attached') : '<div id="rclkv">' + kv('Receipt', 'none: ' + esc(e.noReceipt || '')) + '</div>') + (e.receipt ? '<img src="' + e.receipt + '" alt="receipt" style="width:100%;max-height:300px;object-fit:contain;border-radius:12px;border:1px solid var(--line);background:#fff;margin:6px 0">' : '');
   } else if (e.type === 'addcash') {
     var res = (S.fevs || []).filter(function (x) { return x.sealId === e.sealId && (x.type === 'sealopen' || x.type === 'sealout'); })[0], still = e.sealed && e.sealId && S.seals[e.sealId];
     b += kv('Amount', (e.sealed && e.sealId ? '' : '<span style="color:var(--ok)">+ ') + money(e.amt) + (e.sealed && e.sealId ? '' : '</span>')) + kv('How it came', e.sealed ? '<b>Sealed</b>, ' + money(e.amt) + ' written on it' + (e.sealId ? ' (not counted until opened)' : '') : '<b>Open</b>, counted ' + money(e.amt)) + kv('Given by', esc(e.giver || '')) + kv('For which shift', esc(e.forWk || ''));
