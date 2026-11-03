@@ -297,7 +297,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.52', RULES_VERSION = '2.32';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.53', RULES_VERSION = '2.32';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2432,14 +2432,14 @@ function creditPeople() {
 function cdetailHtml(pid, docs) {
   var p = party(pid), bal = balance(pid), sid = SH().sid;
   var ev = docs.filter(function (e) { return (e.type === 'sale' || e.type === 'cnote' || e.type === 'loan' || e.type === 'pay') && (bal > 0.001 || e.sid === sid); }).map(function (e) {
-    return { t: e.t, txt: e.type === 'pay' ? 'Payment' : e.type === 'loan' ? 'Cash loan' + (e.note ? ': ' + e.note : '') : e.qty + ' × ' + e.name, amt: e.type === 'pay' ? -e.amt : e.amt, id: e.id, cur: e.sid === sid };
+    return { t: e.t, txt: e.type === 'pay' ? 'Payment' : e.type === 'loan' ? 'Cash loan' + (e.note ? ': ' + e.note : '') : e.qty + ' × ' + e.name, amt: e.type === 'pay' ? -e.amt : e.amt, id: e.id, cur: e.sid === sid, by: e.byName || '', wk: e.wk || '', corr: e.corr || '' };
   }).sort(function (a, b) { return b.t - a.t; });
   return '<h2>' + esc(plabel(p)) + '</h2><div class="muted" style="margin-bottom:10px">' + wsw(p && p.watch) + '</div>' +
     '<div class="card sum"><div class="t"><span>Owes</span><span style="color:' + (bal > 0 ? 'var(--exp)' : 'var(--ok)') + '">' + money(bal) + '</span></div></div>' +
     (bal > 0 ? '<div class="card"><label>Payment amount</label><input id="pay-amt" type="number" inputmode="decimal" min="0" value="' + bal + '"><button class="btn green block" data-act="paynext" data-id="' + pid + '" style="margin-top:10px">Record payment</button><p class="muted" style="margin-bottom:0">Payments count as cash received this shift.</p></div>' : '') +
     '<div class="card"><div class="row" style="margin-bottom:8px"><h2 class="grow" style="margin:0">History</h2>' + (inControl() && ev.some(function (e) { return e.cur; }) ? '<button class="btn sec sm" data-act="cmtog" data-id="' + pid + '">' + (CM ? 'Done' : 'Cancel an item') + '</button>' : '') + '</div>' + (CM ? '<div class="cancelbar">Tap Cancel next to the entry to remove.</div>' : '') +
     (ev.length ? '<div class="list">' + ev.map(function (e) {
-      return '<div><div class="grow"><b>' + esc(e.txt) + '</b><div class="muted">' + new Date(e.t).toLocaleDateString() + ' ' + hhmm(e.t) + '</div></div><b style="color:' + (e.amt < 0 ? 'var(--ok)' : 'var(--ink)') + '">' + (e.amt < 0 ? '−' : '') + money(Math.abs(e.amt)) + '</b>' + (CM && e.cur ? '<button class="btn red sm" data-act="cancelask" data-id="' + e.id + '">Cancel</button>' : '') + '</div>';
+      return '<div><div class="grow"><b>' + esc(e.txt) + '</b><div class="muted">' + new Date(e.t).toLocaleDateString() + ' ' + hhmm(e.t) + (e.by ? ' · recorded by ' + esc(e.by) : '') + (e.wk ? ' · ' + esc(e.wk) + ' shift' : '') + (e.corr ? ' · correction by ' + esc(e.corr) : '') + '</div></div><b style="color:' + (e.amt < 0 ? 'var(--ok)' : 'var(--ink)') + '">' + (e.amt < 0 ? '−' : '') + money(Math.abs(e.amt)) + '</b>' + (CM && e.cur ? '<button class="btn red sm" data-act="cancelask" data-id="' + e.id + '">Cancel</button>' : '') + '</div>';
     }).join('') + '</div>' : '<div class="muted">No history.</div>') + '</div><button class="btn sec block" data-act="close">Close</button>';
 }
 function cdetail(pid) {
