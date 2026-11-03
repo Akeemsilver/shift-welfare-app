@@ -296,7 +296,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.46', RULES_VERSION = '2.30';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.47', RULES_VERSION = '2.31';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1446,7 +1446,8 @@ function myInfoPage(keep) {
   wpPage(myInfoPage, [true], '<h2>My info</h2><div class="card">' + lk('Name', mp.name) + (useNo() ? lk(SU.noLabel || 'Number', mp.no) : '') + '<div class="muted" style="margin:2px 2px 12px;font-size:12.5px">🔒 Only an admin or the president can change your name or number.</div>' +
     (useRank() ? '<label>Rank</label><input id="mi-rank" maxlength="20" value="' + esc(MI.rank) + '" placeholder="Type your rank" autocomplete="off">' : '') +
     '<label style="margin-top:14px">Shift</label>' + seg(WATCHES.map(function (w) { return [w, esc(w)]; }), 'miwatch', MI.watch, Math.min(WATCHES.length, 4)) +
-    '<div class="muted" style="margin:10px 2px 0;font-size:12.5px">Changing your shift applies from now on. Earlier handovers keep the shift they were recorded under. The president and admins are told.</div><button class="btn block" data-act="misave" style="margin-top:14px">Save</button></div>', true);
+    '<div class="muted" style="margin:10px 2px 0;font-size:12.5px">Changing your shift applies from now on. Earlier handovers keep the shift they were recorded under. The president and admins are told.</div><button class="btn block" data-act="misave" style="margin-top:14px">Save</button></div><div class="card" id="shhist"><div class="muted">Loading…</div></div>', true);
+  shHistLoad(mp.id);
 }
 function myInfoSave() {
   var mp = M && M.personId ? person(M.personId) : null; if (!mp || OWNERVIEW) return;
@@ -1454,6 +1455,7 @@ function myInfoSave() {
   if (!ch && !rc) return toast('Nothing changed');
   if (rc) upd.rank = rank; if (ch) upd.watch = watch;
   var b = writeBatch(DB); b.update(ref('people/' + mp.id), upd);
+  if (ch) shHistLine(b, mp.id, mp.name || myName(), mp.watch, watch);
   if (ch) b.set(ref('shiftmoves/ch_' + Date.now() + '_' + mvKey(EMAIL)), { kind: 'chg', status: 'done', read: false, email: EMAIL, name: mp.name || myName(), personId: mp.id, from: mp.watch || '', to: watch, at: Date.now(), day: dkey(new Date()), expireAt: EXPY() });
   b.commit().then(function () { toast(ch ? 'Saved. You are now on the ' + watch + ' shift. The president and admins have been told.' : 'Saved'); }).catch(function (e) { console.error(e); toast(errText(e)); });
 }
@@ -1638,6 +1640,7 @@ function alNotice(n, old) {
   var nw = !old, when = alTime(n.at);
   if (n.kind === 'offset') return alCard('✓', 'b', n.role === 'to' ? 'Your ' + esc(n.to) + ' shift shortage was cleared' : 'Your ' + esc(n.from) + ' shift cash over was used', money(n.amount) + (n.role === 'to' ? ' cleared with ' + esc(n.from) + ' shift cash over' : ' of your cash over cleared ' + esc(n.to) + ' shift\'s shortage') + ' · by ' + esc(n.byName || 'an admin') + ' · ' + when + '.');
   if (n.kind === 'shiftfix') return alCard('✎', 'b', 'Your shift was corrected to ' + esc(n.wk), 'The ' + esc(n.byName || 'president') + ' changed ' + esc(n.from || '') + ' → ' + esc(n.wk) + ' · ' + when + '. Your entries, handovers and day totals now say ' + esc(n.wk) + '. Cash, stock and counts are unchanged.');
+  if (n.kind === 'shiftchg') return n.self ? alCard('👤', 'a', 'Your shift was changed to ' + esc(n.to || 'no shift'), esc(n.from || 'no shift') + ' → ' + esc(n.to || 'no shift') + ' · by ' + esc(n.byName || 'an admin') + ' · ' + when + '. From now on you are counted as ' + esc(n.to || 'no shift') + '. Earlier entries and handovers stay ' + esc(n.from || 'as they were') + '.') : alCard('👤', 'b', esc(n.name || 'Someone') + ' moved to ' + esc(n.to || 'no shift'), esc(n.from || 'no shift') + ' → ' + esc(n.to || 'no shift') + ' · by ' + esc(n.byName || 'an admin') + ' · ' + when + '. Earlier handovers are not changed.');
   if (n.kind === 'spend') return alCard('💵', 'a', money(n.amount) + ' · ' + esc(n.what || ''), (n.rcpt ? esc(n.rcpt) + ' · ' : '') + 'recorded by ' + esc(n.byName || '') + (n.wk ? ' · ' + esc(n.wk) + ' shift' : '') + ' · ' + when);
   if (n.kind === 'addcash') return alCard('➕', 'g', money(n.amount) + ' stored · ' + esc(n.what || ''), (n.sealed ? 'sealed, ' + money(n.amount) + ' written on it' : 'open, counted') + ' · given by ' + esc(n.giver || '') + ' · for the ' + esc(n.forWk || '') + ' shift · recorded by ' + esc(n.byName || '') + ' · ' + when);
   if (n.kind === 'fundshort') return alCard(n.over ? '↑' : '⚠', n.over ? 'a' : 'r', (n.over ? 'Stored cash extra found: ' : 'Stored cash short: ') + money(n.amount) + ' · ' + esc(n.what || ''), 'sealed envelope opened · written ' + money(n.was) + ', found ' + money(n.found) + (n.sealBy ? ' · last sealed by ' + esc(n.sealBy) + (n.sealWk ? ' (' + esc(n.sealWk) + ')' : '') : '') + ' · recorded by ' + esc(n.byName || '') + ' · ' + when);
@@ -2824,7 +2827,7 @@ var REFRESH = null;
 function refreshModal() { if (alTop()) alertsPage(true); var a = document.activeElement; if (REFRESH && !(a && /INPUT|SELECT|TEXTAREA/.test(a.tagName) && $('#modal').contains(a))) REFRESH(); }
 var LASTV = null;
 function closeModal() { REFRESH = null; CONF = null; RX = null; HOVI = -1; LASTV = null; if (UNSUB) { UNSUB(); UNSUB = null; } $('#modal').innerHTML = ''; }
-function modal(html, top, full) { REFRESH = null; CONF = null; if (UNSUB) { UNSUB(); UNSUB = null; } $('#modal').innerHTML = '<div class="modal' + (top ? ' top' : '') + (full ? ' full' : '') + '" id="mbg"><div>' + html + '</div></div>'; if (full) { var fd = $('#modal #mbg > div'), fb = [], lc; while ((lc = fd.lastElementChild) && lc.tagName === 'BUTTON' && /^(close|\w*review)$/.test(lc.dataset.act || '')) { fb.unshift(lc); fd.removeChild(lc); } if (fb.length) { var bar = document.createElement('div'); bar.className = 'fbar'; fb.forEach(function (x) { bar.appendChild(x); }); fd.appendChild(bar); } } }   /* top: pop-ups with a search box stay at the top so the keyboard never covers the results */
+function modal(html, top, full) { REFRESH = null; CONF = null; if (UNSUB) { UNSUB(); UNSUB = null; } $('#modal').innerHTML = '<div class="modal' + (top ? ' top' : '') + (full ? ' full' : '') + '" id="mbg"><div>' + html + '</div></div>'; if (full) { var fd = $('#modal #mbg > div'), fb = [], lc; while ((lc = fd.lastElementChild) && lc.tagName === 'BUTTON' && /^(close|scgo|\w*review)$/.test(lc.dataset.act || '')) { fb.unshift(lc); fd.removeChild(lc); } if (fb.length) { var bar = document.createElement('div'); bar.className = 'fbar'; fb.forEach(function (x) { bar.appendChild(x); }); fd.appendChild(bar); } } }   /* top: pop-ups with a search box stay at the top so the keyboard never covers the results */
 function liveModal(qs, build) {   /* a pop-up that stays in step with the database */
   if (!Array.isArray(qs)) qs = [qs];
   modal('<div class="empty">Loading…</div>');
@@ -3712,6 +3715,32 @@ function peopleList(q) {
   });
   return h || '<div class="empty">No match.</div>';
 }
+/* ---------- a person's shift is changed in People (v3.47): confirmation, who is told, and the shift history ---------- */
+function personEmail(pid) { var m = (S.members || []).filter(function (x) { return x.personId === pid; })[0]; return m ? m.email : ''; }
+var SCCB = null;
+function scSheet(old, rec, go) {
+  SCCB = go; var em = personEmail(old.id), warns = '';
+  if (em && S.state && S.state.controlEmail === em) warns += '<div class="card" style="background:var(--soon-bg);box-shadow:none;margin:10px 0 0">⚠ <b>' + esc(rec.name) + '</b> is in control of the app right now. Hand control over first, or move them after the shift.</div>';
+  if (em && S.hand && S.hand.status === 'open' && (S.hand.toEmails || []).indexOf(em) >= 0) warns += '<div class="card" style="background:var(--soon-bg);box-shadow:none;margin:10px 0 0">⚠ A handover is waiting for <b>' + esc(rec.name) + '</b> by name.</div>';
+  modal('<h2>Change shift</h2><div class="card"><b style="font-size:17px">' + esc(rec.name) + '</b><label>Shift</label><div style="display:flex;align-items:center;gap:12px">' + (old.watch ? wsw(old.watch) : '<span class="muted">no shift</span>') + '<span style="font-size:26px">→</span>' + (rec.watch ? wsw(rec.watch) : '<span class="muted">no shift</span>') + '</div><div class="muted" style="margin-top:10px">From now on. Earlier entries and handovers stay ' + esc(old.watch || 'as they were') + '.</div>' + warns + '<div class="muted" style="margin-top:10px">Told: ' + (em ? esc(rec.name) + ', ' : '') + 'the president and the admins.</div></div>' +
+    '<button class="btn green block" data-act="scgo">' + (rec.watch ? 'Move to ' + esc(rec.watch) : 'Take off the shift') + '</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>', true, true);
+}
+function scTell(pid, name, from, to) {   /* the person, the president and the admins (not the one who made the change): best-effort, after the change is saved */
+  if (OWNERVIEW || !DB) return; var t = Date.now(), seen = {}, k = 0, pe = personEmail(pid), list = [];
+  if (pe) list.push([pe, true]); (S.members || []).forEach(function (m) { if (m.email && (m.role === 'president' || m.role === 'admin' || m.role === 'owner')) list.push([m.email, false]); }); if (PRESIDENT) list.push([PRESIDENT, false]);
+  list.forEach(function (x) { var em = x[0]; if (!em || em === EMAIL || seen[em]) return; seen[em] = 1; setDoc(ref('notices/sc_' + t + '_' + (k++)), { kind: 'shiftchg', toEmail: em, by: EMAIL, byName: myName(), read: false, at: t, name: name, from: from || '', to: to || '', self: !!x[1], what: name + ': ' + (from || 'no shift') + ' to ' + (to || 'no shift') }).catch(function () {}); });
+}
+function shHistLine(b, pid, name, from, to) { b.set(ref('shifthist/' + newId('shifthist')), { personId: pid, name: name, from: from || '', to: to || '', at: Date.now(), by: EMAIL, byName: myName(), expireAt: EXPY() }); }
+function shHistLoad(pid) {
+  var el = $('#shhist'); if (!el || !pid || !DB) return;
+  getDocs(query(col('shifthist'), where('personId', '==', pid))).then(function (sn) {
+    var l = sn.docs.map(function (d) { return d.data(); }).sort(function (a, b) { return b.at - a.at; }), el2 = $('#shhist'); if (!el2) return;
+    el2.innerHTML = '<label style="margin-top:0">Shift history</label>' + (l.length ? l.map(function (x, i) {
+      var d = new Date(x.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      return '<div class="row" style="justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--line)"><span>' + (x.to ? wsw(x.to) : '<span class="muted">no shift</span>') + ' <span class="muted">from ' + esc(d) + '</span></span><span class="muted" style="font-size:12.5px">was ' + esc(x.from || 'no shift') + ' · by ' + esc(x.byName || '') + '</span></div>';
+    }).join('') : '<div class="muted">No changes made since this was added.</div>');
+  }).catch(function () { var e3 = $('#shhist'); if (e3) e3.innerHTML = ''; });
+}
 function peopleEditor() {
   modal('<h2>People (' + S.people.length + ')</h2><div class="sq"><div class="row"><input id="pe-q" class="grow" placeholder="Search" autocomplete="off">' + (canAdmin() ? '<button class="btn sm" data-act="padd">+ Add</button>' : '') + '</div></div><div class="list" id="pe-list">' + peopleList('') + '</div>' + (canAdmin() ? '<p class="muted">Tap a name to change their watch, number, rank or name.</p>' : '<p class="muted">Only the president or an admin can change people.</p>') + '<button class="btn sec block" data-act="settings">Back</button>', true); REFRESH = peopleEditor;
 }
@@ -3721,16 +3750,18 @@ function pedit(id) {
   var b = id ? balance(id) : 0;
   modal('<h2>' + (id ? 'Edit person' : 'Add person') + '</h2><div class="card"><label>Watch</label><div class="seg" id="pe-w" style="grid-template-columns:repeat(' + (WATCHES.length + 1) + ',1fr)">' + WATCHES.concat(['']).map(function (w) { return '<button data-act="pewatch" data-w="' + w + '" class="' + (w === p.watch ? 'on' : '') + '" style="font-size:12px">' + (w || 'None') + '</button>'; }).join('') + '</div>' +
     '<div class="row f" style="margin-top:10px">' + (useNo() ? '<div style="width:110px"><label>' + esc(SU.noLabel) + '</label><input id="pe-no" inputmode="numeric" value="' + esc(p.no) + '"></div>' : '') + (useRank() ? '<div class="grow"><label>' + esc(SU.rankLabel) + '</label><input id="pe-rank" list="ranks" value="' + esc(p.rank) + '"><datalist id="ranks">' + (PID === 'coover' ? RANKS : []).map(function (r) { return '<option value="' + r + '">'; }).join('') + '</datalist></div>' : '') + '</div>' +
-    '<div class="f"><label>Name</label><input id="pe-name" value="' + esc(p.name) + '" autocomplete="off"></div></div>' +
+    '<div class="f"><label>Name</label><input id="pe-name" value="' + esc(p.name) + '" autocomplete="off"></div></div>' + (id ? '<div class="card" id="shhist"><div class="muted">Loading…</div></div>' : '') +
     '<button class="btn block" data-act="pesave">Save</button>' +
     (id ? '<button class="btn red block" data-act="pedel" style="margin-top:10px"' + (b > 0 ? ' disabled' : '') + '>Delete person</button>' + (b > 0 ? '<p class="muted">Cannot delete: owes ' + money(b) + '.</p>' : '') : '') +
     '<button class="btn sec block" data-act="people" style="margin-top:10px">Cancel</button>');
+  if (id) shHistLoad(id);
 }
 function pesave() {
   var name = $('#pe-name').value.trim(); if (!name) return toast('Enter a name');
   var rec = { watch: PE.watch, no: $('#pe-no') ? $('#pe-no').value.trim() : '', rank: $('#pe-rank') ? $('#pe-rank').value.trim() : '', name: name };
-  var go = function () { var pid = PE.id || newId('people'), nb = writeBatch(DB); nb.set(ref('people/' + pid), rec); nb.set(ref('names/' + pid), { name: rec.name, watch: rec.watch || '' }); guard(nb.commit()); peopleEditor(); toast('Saved'); };
-  var old = PE.id ? person(PE.id) : null;
+  var old = PE.id ? person(PE.id) : null, chg = !!old && (old.watch || '') !== (rec.watch || '');
+  var go = function () { var pid = PE.id || newId('people'), nb = writeBatch(DB); nb.set(ref('people/' + pid), rec); nb.set(ref('names/' + pid), { name: rec.name, watch: rec.watch || '' }); if (chg) shHistLine(nb, pid, rec.name, old.watch, rec.watch); var pr = nb.commit(); guard(pr); if (chg) pr.then(function () { scTell(pid, rec.name, old.watch, rec.watch); }).catch(function () {}); peopleEditor(); toast(chg ? 'Saved. Shift changed to ' + (rec.watch || 'no shift') + '. They have been told.' : 'Saved'); };
+  if (chg) { var go0 = go; go = function () { scSheet(old, rec, go0); }; }
   if (!old || nkey(old.name) !== nkey(name) || (old.no || '') !== rec.no || (old.rank || '') !== rec.rank) dupGate({ name: name, no: rec.no, rank: rec.rank, ignore: PE.id, onSame: function (p) { toast('Already on the list: ' + plabel(p)); }, onNew: go }); else go();
 }
 
@@ -6052,6 +6083,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'ucchg') { UC.chg = b.dataset.v; ucForm(); }
   else if (a === 'acpickwho') { var pw = (S.people || []).filter(function (x) { return x.id === id; })[0]; if (pw && WHOFOR === 'uc') { UC.to = plabel(pw); UC.toId = pw.id; ucForm(); } else { if (pw) { AC.who = plabel(pw); AC.whoId = pw.id; if (pw.watch) AC.wk = pw.watch; } acForm(); } }
   else if (a === 'acnewwho') { var nq = String(($('#acw-q') || {}).value || '').trim(); if (WHOFOR === 'uc') { if (nq) { UC.to = nq; UC.toId = ''; } ucForm(); } else { if (nq) { AC.who = nq; AC.whoId = ''; } acForm(); } }
+  else if (a === 'scgo') { var scf = SCCB; SCCB = null; closeModal(); if (scf) scf(); }
   else if (a === 'acback') { if (WHOFOR === 'uc') ucForm(); else acForm(); }
   else if (a === 'achow') { AC.how = b.dataset.v; acForm(); }
   else if (a === 'acreview') acReview();
