@@ -296,7 +296,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.47', RULES_VERSION = '2.31';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.48', RULES_VERSION = '2.32';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2269,6 +2269,29 @@ function itemPicker(k) {
   modal('<h2>Choose the item</h2><div class="sq"><input id="ip-q" placeholder="Search or scroll the list" autocomplete="off"><div id="ip-new">' + ipNewRow('') + '</div></div><div class="list" id="ip-list">' + ipList('') + '</div><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>', true);
   $('#ip-q').focus();
 }
+/* ---------- a receipt photo added later to an old entry (v3.48): owner, president, admins and the person who made the entry; once only ---------- */
+var RCL = null;
+function rclHtml(e) { return '<div id="rcl"></div>'; }
+function rclLoad(e) {
+  if (!e || e.receipt || !DB || OWNERVIEW) return; RCL = e; if (!$('#rcl')) return;
+  getDoc(ref('receipts/' + e.id)).then(function (sn) {
+    var d = sn.exists() ? sn.data() : null, el = $('#rcl'); if (!el || RCL !== e) return;
+    if (d && d.hasImg) return getDoc(ref('receiptimgs/' + e.id)).then(function (im) { var el2 = $('#rcl'); if (!el2 || RCL !== e) return; el2.innerHTML = im.exists() ? '<label style="margin-top:12px">Receipt</label><img src="' + im.data().img + '" alt="receipt" style="width:100%;border-radius:10px;border:1px solid var(--line)"><div class="muted" style="margin-top:6px;font-size:12.5px">Added later' + (d.lateBy ? ' by ' + esc(d.lateBy) : '') + (d.lateAt ? ' · ' + hfmt(d.lateAt) : '') + '</div>' : ''; });
+    if (canApprove() || (e.by && e.by === EMAIL)) el.innerHTML = '<div class="row" style="margin-top:10px"><button class="btn sec sm grow" data-act="rclcam">📷 Add receipt photo</button><button class="btn sec sm grow" data-act="rclpick">🖼 Choose from phone</button></div><input type="file" accept="image/*" capture="environment" id="rcl-cam" hidden><input type="file" accept="image/*" id="rcl-pick" hidden>';
+  }).catch(function () {});
+}
+function rclSave(img) {
+  var e = RCL; if (!e || !img) return; toast('Saving the receipt…');
+  thumbOf(img, function (thumb) {
+    getDoc(ref('receipts/' + e.id)).then(function (sn) {
+      var b = writeBatch(DB);
+      if (sn.exists()) b.update(ref('receipts/' + e.id), { hasImg: true, thumb: thumb || '', noReceipt: '', lateBy: myName(), lateAt: Date.now() });
+      else b.set(ref('receipts/' + e.id), { at: e.t, kind: (e.type === 'usecash' || e.type === 'usechange') ? 'cash' : 'buy', title: String(e.supplier || e.note || e.name || '').slice(0, 80), amount: e.amt || 0, by: myName(), thumb: thumb || '', hasImg: true, noReceipt: '', cancelled: false, expireAt: EXPR() });
+      b.set(ref('receiptimgs/' + e.id), { img: img, expireAt: EXPR() });
+      return b.commit();
+    }).then(function () { toast('Receipt added'); rclLoad(e); }).catch(function (er) { console.error(er); toast(errText(er)); });
+  });
+}
 var HEV = {};   /* events seen in lists, so a tapped row can show its details */
 function showPurchase(id) {
   var e = HEV[id] || S.log.filter(function (x) { return x.id === id; })[0] || EVC[id]; if (!e) return;
@@ -2277,8 +2300,9 @@ function showPurchase(id) {
     '<div class="card sum" style="box-shadow:none;padding:8px 14px 10px"><div><span>When</span><b>' + new Date(e.t).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div>' + (e.supplier ? '<div><span>Bought from</span><b>' + esc(e.supplier) + '</b></div>' : '') + '<div><span>Entered by</span><b>' + esc(e.byName || '') + '</b></div>' + (e.note ? '<div><span>Note</span><b>' + esc(e.note) + '</b></div>' : '') +
     (e.tax ? '<div><span>Tax</span><b>' + money(e.tax) + '</b></div>' : '') + (e.invoice ? '<div><span>Bill total</span><b>' + money(e.invoice) + '</b></div>' : '') + (e.writeoff ? '<div><span>Change not kept</span><b>' + money(e.writeoff) + '</b></div>' : '') + (e.amt ? '<div class="t"><span>Cash taken</span><span>' + money(e.amt) + '</span></div>' : '') + '</div>' +
     (lines ? '<table><tr><th>Item</th><th>Qty</th><th>Cost</th><th>Each</th></tr>' + lines + '</table>' : '') +
-    (e.receipt ? '<label style="margin-top:12px">Receipt</label><img src="' + e.receipt + '" alt="receipt" style="width:100%;border-radius:10px;border:1px solid var(--line)">' : '<p class="muted">No receipt photo was attached.</p>') +
+    (e.receipt ? '<label style="margin-top:12px">Receipt</label><img src="' + e.receipt + '" alt="receipt" style="width:100%;border-radius:10px;border:1px solid var(--line)">' : '<p class="muted">No receipt photo was attached.</p>' + rclHtml(e)) +
     '<button class="btn sec block" data-act="cno" style="margin-top:10px">Close</button></div></div>');
+  if (!e.receipt) rclLoad(e);
 }
 function buyWord(l, n) { return l.by === 'unit' ? (n === 1 ? 'unit' : 'units') : l.by === 'pack' ? unitPl('pack', n) : unitPl(l.unit || 'case', n); }   /* what was bought, in older entries: cases, units or packs */
 function lineBits(l) {   /* "3 packs + 5 singles" for a purchase line (newer entries keep cases or packs and singles apart) */
@@ -2876,7 +2900,9 @@ function stDet(id) {   /* a stored cash entry, a sealed cash entry, or cash used
   }
   b += kv('When', hfmt(e.t)) + kv('Shift', esc(sh)) + kv('Recorded by', esc(e.byName || 'A member')) + (e.corr ? kv('Entered as a correction', esc(e.corr)) : '');
   var still2 = e.sealId && S.seals[e.sealId];
+  if ((e.type === 'usecash' || e.type === 'usechange') && !e.receipt && !e.adv) b += rclHtml(e);
   modal('<h2 style="margin:0 0 8px">' + title + '</h2>' + b + (still2 && inControl() ? '<button class="btn sec block" data-act="sealsheet" data-id="' + esc(e.sealId) + '" style="margin-top:8px">Open, use or take out this sealed cash ›</button>' : '') + (e.fund ? '<button class="btn sec block" data-act="stfund" data-id="' + esc(e.fund) + '" style="margin-top:8px">Open the ' + esc(e.fundName || 'fund') + ' page ›</button>' : '') + '<button class="btn block" data-act="close" style="margin-top:8px">Close</button>');
+  if ((e.type === 'usecash' || e.type === 'usechange') && !e.receipt && !e.adv) rclLoad(e);
 }
 function evRow(e, cancelable) {
   var ic, tx, sub = '', amt = '', col = 'var(--ink)', gpe = gapForEvent(e);
@@ -3316,7 +3342,7 @@ function histHoCard(d, asc) {
   var st = hoShort(d), c = st.c, recvName = d.receivedByName || (d.toLabels || []).join(', ') || 'the next shift', rwk = d.receivedBy ? rcvWk(d) : '';
   var chip = function (t, col, bg) { return '<span style="background:' + bg + ';color:' + col + ';padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700;white-space:nowrap">' + t + '</span>'; };
   var ch = st.k === 'short' ? chip(c.cashDiff < 0 ? 'short ' + money(-c.cashDiff) : c.less + (c.less === 1 ? ' item' : ' items') + ' short', 'var(--exp)', 'var(--exp-bg)') : st.k === 'over' ? chip('over', 'var(--soon)', 'var(--soon-bg)') : st.k === 'ok' ? chip('✓ matched', 'var(--ok)', 'var(--ok-bg)') : chip('waiting', 'var(--muted)', 'var(--soft)');
-  return '<div class="card" data-act="hosheet" data-id="' + esc(d.id) + '" data-k="give" data-wk="' + esc(rwk) + '" style="cursor:pointer;margin:0 0 10px;padding:12px 14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="min-width:0">' + wsw(d.wk) + ' <span style="font-size:12.5px">' + histSpan(d, asc) + '</span></div>' + ch + '</div><div class="muted" style="margin-top:6px;font-size:13px">' + esc(d.fromName || '') + ' → ' + esc(recvName) + (st.k === 'wait' ? ' · waiting to be counted' : '') + '</div><div style="display:flex;gap:18px;margin-top:8px;font-size:13px"><span><span class="muted">Sales</span> <b>' + money(d.sales || 0) + '</b></span><span><span class="muted">Cash counted</span> <b>' + money(d.counted || 0) + '</b></span>' + (spentOf(d).total > 0 ? '<span><span class="muted">Spent</span> <b style="color:var(--soon)">' + money(spentOf(d).total) + '</b></span>' : '') + '</div>' + offLine(d) + (st.gap ? '<div style="margin-top:8px;padding:7px 10px;border-radius:10px;background:var(--soon-bg);font-size:12.5px"><b>Gap:</b> the ' + esc(st.gap.wk) + ' shift never took it. Sold ' + money(st.gap.gapSales || 0) + (st.gap.cashShort > 0 ? ', cash short ' + money(st.gap.cashShort) : st.gap.cashOver > 0 ? ', cash over ' + money(st.gap.cashOver) : ', cash balanced') + ', recorded on ' + esc(st.gap.wk) + '.</div>' : '') + '</div>';
+  return '<div class="card" data-act="hosheet" data-id="' + esc(d.id) + '" data-k="give" data-wk="' + esc(rwk) + '" style="cursor:pointer;margin:0 0 10px;padding:12px 14px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div style="min-width:0">' + wsw(d.wk) + ' <span style="font-size:12.5px">' + histSpan(d, asc) + '</span></div>' + (rwk ? wsw(rwk) : '') + '</div><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px"><div class="muted" style="font-size:13px;min-width:0">' + esc(d.fromName || '') + ' → ' + esc(recvName) + (st.k === 'wait' ? ' · waiting to be counted' : '') + '</div>' + ch + '</div><div style="display:flex;gap:18px;margin-top:8px;font-size:13px"><span><span class="muted">Sales</span> <b>' + money(d.sales || 0) + '</b></span><span><span class="muted">Cash counted</span> <b>' + money(d.counted || 0) + '</b></span>' + (spentOf(d).total > 0 ? '<span><span class="muted">Spent</span> <b style="color:var(--soon)">' + money(spentOf(d).total) + '</b></span>' : '') + '</div>' + offLine(d) + (st.gap ? '<div style="margin-top:8px;padding:7px 10px;border-radius:10px;background:var(--soon-bg);font-size:12.5px"><b>Gap:</b> the ' + esc(st.gap.wk) + ' shift never took it. Sold ' + money(st.gap.gapSales || 0) + (st.gap.cashShort > 0 ? ', cash short ' + money(st.gap.cashShort) : st.gap.cashOver > 0 ? ', cash over ' + money(st.gap.cashOver) : ', cash balanced') + ', recorded on ' + esc(st.gap.wk) + '.</div>' : '') + '</div>';
 }
 function histHandoversTotals(list) {
   var k = { ok: 0, short: 0, wait: 0, over: 0 }, sh = 0; list.forEach(function (d) { var st = hoShort(d); k[st.k]++; if (st.k === 'short') sh += st.c.cashDiff < 0 ? -st.c.cashDiff : 0; });
@@ -6072,6 +6098,8 @@ document.addEventListener('click', function (e) {
   else if (a === 'acmode') { if (b.dataset.v === 'stored') { AC.step = ''; acForm(); } else if (b.dataset.v === 'donation') { AC.step = ''; AC.kind = 'donation'; acForm(); } else { AC = null; CH = { forId: '', amount: '', receipt: '', none: false, reason: '', q: '', older: false }; chForm(); } }
   else if (a === 'chpick') { CH.forId = CH.forId === id ? '' : id; chForm(); }
   else if (a === 'chold') { CH.older = true; chForm(); }
+  else if (a === 'rclcam') { var rc1 = $('#rcl-cam'); if (rc1) rc1.click(); }
+  else if (a === 'rclpick') { var rc2 = $('#rcl-pick'); if (rc2) rc2.click(); }
   else if (a === 'chcam') $('#ch-cam').click();
   else if (a === 'chpickfile') $('#ch-pick').click();
   else if (a === 'chnone') { CH.none = !CH.none; if (CH.none) CH.receipt = ''; chForm(); }
@@ -6673,6 +6701,7 @@ document.addEventListener('change', function (e) {
   if (CF && t.dataset && t.dataset.crcash !== undefined) { CF.cash = t.value; var cs0 = $('#crf-sum'); if (cs0) cs0.innerHTML = corrSum(); return; }
   if (t.dataset && t.dataset.op === 'from' && OP) { var pp = S.people.filter(function (p) { return plabel(p).toLowerCase() === t.value.trim().toLowerCase(); })[0]; if (pp && pp.watch && OP.fwk !== pp.watch) { OP.from = t.value; OP.fwk = pp.watch; opForm(); } return; }   /* a name picked from the list brings its shift with it */
   if ((t.id === 'br-cam' || t.id === 'br-pick') && t.files && t.files[0]) { shrink(t.files[0], function (img) { BUY.receipt = img; render(); }); return; }
+  if ((t.id === 'rcl-cam' || t.id === 'rcl-pick') && t.files && t.files[0]) { shrink(t.files[0], function (img) { rclSave(img); }); return; }
   if ((t.id === 'ch-cam' || t.id === 'ch-pick') && t.files && t.files[0]) { shrink(t.files[0], function (img) { CH.receipt = img; CH.none = false; chForm(); }); return; }
   if ((t.id === 'uc-cam' || t.id === 'uc-pick') && t.files && t.files[0]) { shrink(t.files[0], function (img) { UC.receipt = img; UC.none = false; ucForm(); }); return; }
   if (t.classList && t.classList.contains('stepin')) {   /* a number typed straight into a +/- box */
