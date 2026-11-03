@@ -296,7 +296,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.49', RULES_VERSION = '2.32';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.50', RULES_VERSION = '2.32';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1892,20 +1892,34 @@ function ucForm() {
     '<div class="card sum" id="uc-sum">' + ucSumHtml() + '</div>' +
     '<button class="btn block" data-act="ucreview">Review</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>', true, true);
 }
-function shrink(file, done) {   /* a very small JPEG: about 50 KB, enough to read a receipt */
-  var url = URL.createObjectURL(file), img = new Image();
-  img.onload = function () {
-    var side = 700, k = Math.min(1, side / Math.max(img.width, img.height)), out = '';
-    for (var tries = 0; tries < 5; tries++) {
-      var c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.width * k)); c.height = Math.max(1, Math.round(img.height * k));
-      var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
-      for (var q = 0.6; q >= 0.3; q -= 0.1) { out = c.toDataURL('image/jpeg', q); if (out.length < 68000) break; }
-      if (out.length < 68000) break; k *= 0.8;
+function shrink(file, done, opts) {   /* a compressed JPEG (about 100 to 120 KB) that is still sharp enough to read a receipt on a phone: long side up to 1400 px, never narrower than 800 px when the photo allows it */
+  var budget = (opts && opts.budget) || 160000, tried = 0;
+  var fail = function () { toast('Could not read that photo. Try “Take photo”, or save it as a JPEG first'); };
+  var finish = function (src, w, h) {
+    var long = Math.max(w, h), short = Math.min(w, h), k = Math.min(1, Math.max(1400 / long, 800 / short)), out = '';
+    var kmin = Math.min(k, 640 / short), hard = 330000;   /* sharpness first: lower the quality, and only then the size, but never below 640 px wide unless the file would be too big to keep */
+    for (var tries = 0; tries < 12; tries++) {
+      var c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+      var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(src, 0, 0, c.width, c.height);
+      for (var q = 0.7; q >= 0.3; q -= 0.1) { out = c.toDataURL('image/jpeg', q); if (out.length < budget) break; }
+      if (out.length < budget || (k <= kmin + 0.001 && out.length < hard)) break; k = k > kmin + 0.001 ? Math.max(kmin, k * 0.85) : k * 0.85;
     }
-    URL.revokeObjectURL(url); done(out);
+    try { if (src.close) src.close(); } catch (e) {}
+    if (!out || out.length < 100) return fail();
+    done(out);
   };
-  img.onerror = function () { URL.revokeObjectURL(url); toast('Could not read that photo'); };
-  img.src = url;
+  var viaImg = function (url, revoke, next) {
+    var img = new Image(); img.onload = function () { if (revoke) URL.revokeObjectURL(url); finish(img, img.naturalWidth || img.width, img.naturalHeight || img.height); };
+    img.onerror = function () { if (revoke) URL.revokeObjectURL(url); next(); }; img.src = url;
+  };
+  var viaReader = function () {
+    try { var fr = new FileReader(); fr.onload = function () { viaImg(fr.result, false, fail); }; fr.onerror = fail; fr.readAsDataURL(file); } catch (e) { fail(); }
+  };
+  var viaUrl = function () { try { viaImg(URL.createObjectURL(file), true, viaReader); } catch (e) { viaReader(); } };
+  if (window.createImageBitmap) {
+    var tryBmp = function (o) { return o ? createImageBitmap(file, o) : createImageBitmap(file); };
+    tryBmp({ imageOrientation: 'from-image' }).catch(function () { return tryBmp(); }).then(function (bm) { finish(bm, bm.width, bm.height); }, viaUrl);
+  } else viaUrl();
 }
 function ucDialog(html, y, n, yf, nf) {
   UCD = { y: yf, n: nf };
