@@ -297,7 +297,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.53', RULES_VERSION = '2.32';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.54', RULES_VERSION = '2.32';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2000,6 +2000,14 @@ function vStock() {
   h += sec('Fridge', '🧊', S.items.filter(function (i) { return !i.shelf; })) + sec('Shelf', '🧁', S.items.filter(function (i) { return i.shelf; })) + stc + (su ? '<button class="btn block" data-act="stbegin" style="background:var(--okb);margin-top:4px">✓ Start workplace</button><p class="muted">Press when your items are ready. You can still edit items afterwards.</p>' : '') + '<p class="muted">Tap an item to count it, move a case to the fridge, or record spoilage.</p>';
   return h;
 }
+function stockView(id) {   /* a person who is not in control can look at an item: price, cost and stock, nothing to change */
+  var it = item(id); if (!it) return; var st = S.state || {}, cost = Number(it.cost) > 0, line = function (l, v) { return '<div class="hkv"><span>' + l + '</span><b>' + v + '</b></div>'; };
+  modal('<div class="ps"><div class="row"><h2 class="grow" style="margin:0;font-size:21px">' + esc(it.name) + '</h2><b style="color:var(--link);font-size:21px">' + money(it.price) + '</b></div>' +
+    '<div class="card" style="background:var(--soon-bg);box-shadow:none;margin:10px 0">🔒 View only' + (st.controlEmail ? ' · ' + esc(st.controlName || st.controlEmail) + ' is in control' : '') + '</div>' +
+    '<div class="card sum">' + line('Selling price (each)', money(it.price)) + line('Cost (each)', cost ? money(it.cost) : '<span style="color:var(--soon)">Not set</span>') + line('Profit (each)', cost ? money(r2(it.price - it.cost)) : '—') + '</div>' +
+    '<div class="card sum">' + line(it.shelf ? 'On the shelf' : 'In the fridge', it.stock) + (hasCage(it) ? line('In storage', it.cage + ' ' + unitPl(unitName(it), it.cage)) : '') + '</div>' +
+    '<button class="btn sec block" data-act="close">Close</button></div>');
+}
 function stockSheet() {
   var it = item(ST.id); if (!it) return closeModal();
   modal('<div class="ps"><div class="row"><h2 class="grow" style="margin:0;font-size:21px">' + esc(it.name) + '</h2><b style="color:var(--link);font-size:21px;margin-right:10px">' + money(it.price) + '</b></div>' +
@@ -2832,7 +2840,7 @@ function banner() {
   return box('Nobody is in control', 'The president can take control.', isPres() ? tc : '');
 }
 
-var MUT = {}; ['startover', 'sovgo', 'pick', 'cnsave', 'cnmove', 'cnote', 'snote', 'lend', 'loannext', 'pkpick', 'pkadd', 'paynext', 'cancelask', 'newitem', 'saveitem', 'stockitem', 'savecount', 'domove', 'dospoil', 'savedetails', 'rmitem', 'buysave', 'prepare', 'dohandover', 'chooseto', 'mode', 'ucopen', 'ucreview', 'acopen', 'acreview', 'chreview', 'acmode', 'sealopenreview', 'sealoutreview', 'sealuse', 'sealcancel', 'editfromsell', 'editstock', 'esack', 'esreview', 'opopen', 'opreview', 'opcredit', 'opcnext', 'swopen', 'swpick'].forEach(function (k) { MUT[k] = 1; });
+var MUT = {}; ['startover', 'sovgo', 'pick', 'cnsave', 'cnmove', 'cnote', 'snote', 'lend', 'loannext', 'pkpick', 'pkadd', 'paynext', 'cancelask', 'newitem', 'saveitem', 'savecount', 'domove', 'dospoil', 'savedetails', 'rmitem', 'buysave', 'prepare', 'dohandover', 'chooseto', 'mode', 'ucopen', 'ucreview', 'acopen', 'acreview', 'chreview', 'acmode', 'sealopenreview', 'sealoutreview', 'sealuse', 'sealcancel', 'editfromsell', 'editstock', 'esack', 'esreview', 'opopen', 'opreview', 'opcredit', 'opcnext', 'swopen', 'swpick'].forEach(function (k) { MUT[k] = 1; });
 var VIEWS = { sell: vCount, stock: vStock, buy: vBuy, credit: vCredit, handover: vHandover };
 function render() {
   if (DRAGO.on) { DRAGO.pend = true; return; }   /* a tile is being moved: redraw when it is dropped */
@@ -6288,7 +6296,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'esreason') { ES.reason = b.dataset.v; esForm(); }
   else if (a === 'esreview') esReview();
   else if (a === 'editview') showStockEdit(id);
-  else if (a === 'stockitem') { var si = item(id); ST = { id: id, fridge: si.stock, cage: si.cage, move: 0, spoil: 0 }; stockSheet(); }
+  else if (a === 'stockitem') { if (!inControl()) return stockView(id); var si = item(id); ST = { id: id, fridge: si.stock, cage: si.cage, move: 0, spoil: 0 }; stockSheet(); }
   else if (a === 'sf+' || a === 'sf-') { ST.fridge = stepTo(ST.fridge, a === 'sf+' ? 1 : -1, 0); stRender(); }
   else if (a === 'sg+' || a === 'sg-') { ST.cage = stepTo(ST.cage, a === 'sg+' ? 1 : -1, 0); stRender(); }
   else if (a === 'sm+' || a === 'sm-') { var mi = item(ST.id); ST.move = stepTo(ST.move, a === 'sm+' ? 1 : -1, 0, Math.max(0, mi.cage)); stockSheet(); }
