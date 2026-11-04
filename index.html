@@ -297,7 +297,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.65', RULES_VERSION = '2.35';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.66', RULES_VERSION = '2.35';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2996,6 +2996,8 @@ function banner() {
     var bx = function (title, line, btns) { return '<div class="card" style="background:var(--soon-bg)' + (late ? ';border:2px solid #d9a400' : '') + '"><b>' + title + '</b>' + steps + '<div style="margin:4px 0 ' + (btns ? '10' : '0') + 'px">' + line + '</div>' + (btns || '') + '</div>'; };
     var view = h.shift && h.shift.sid ? '<div style="margin-top:8px"><a data-act="shopen2" data-id="' + esc(h.shift.sid) + '" style="color:var(--link);font-weight:700;cursor:pointer">View handover ›</a></div>' : '';
     if (h.fromEmail === EMAIL) return bx('🔒 Handed over', h.locked ? '<b>You locked the fridge and cage.</b> It is not for one person: anyone on the next shift can open it. Waiting ' + wt + '.' : '<b>You handed over to ' + tos + '.</b> ' + tos + ' has not taken it yet. Waiting ' + wt + '.', '<div class="row"><button class="btn sm grow" data-act="shareapp">Notify (WhatsApp…)</button><button class="btn sec sm grow" data-act="cancelho">Cancel handover, I\'m staying on</button></div>' + (h.same ? '' : view.replace('View handover', 'View what I handed over')));
+    var mpe = myPerson(), forMe = h.locked === true || (h.toEmails || []).indexOf(EMAIL) >= 0 || !!(mpe && mpe.watch === h.nw), t1 = esc(String((h.toLabels || [])[0] || '').replace(/\s*\(.*$/, '') || 'the next shift');
+    if (eligible(h) && !forMe) return bx('📋 Handover waiting for ' + t1, '<b>' + who + ' handed over to ' + tos + '</b> at ' + at + ' · ' + esc(h.shift.name) + ' shift · cash ' + money(h.cash) + '. ' + t1 + ' has not taken it yet. Waiting ' + wt + '.', '<button class="btn green sm" data-act="openrx">Take it instead of ' + t1 + '</button>' + view.replace('View handover', 'View handover without taking it'));
     if (eligible(h)) return bx(h.locked ? '🔒 Locked handover waiting' : '📋 Handover waiting for you', h.locked ? '<b>' + who + ' locked the fridge and cage</b> at ' + at + '. It is not for one person: anyone on the next shift can open it and take over. Waiting ' + wt + '.' : '<b>' + who + ' handed over to you</b> at ' + at + ' · ' + esc(h.shift.name) + ' shift · cash ' + money(h.cash) + '. You have not taken it yet. Waiting ' + wt + '.', '<button class="btn green sm" data-act="openrx">Open handover &amp; take control</button>' + view.replace('View handover', 'View handover without taking it'));
     return bx(h.locked ? '🔒 Locked handover waiting' : '⏳ Handover not taken yet', h.locked ? '<b>' + who + ' locked the fridge and cage</b> at ' + at + '. It is not for one person: anyone on the next shift can open it. Waiting ' + wt + '.' : '<b>' + who + ' handed over to ' + tos + '</b> at ' + at + '. <b>' + tos + ' has not received it yet.</b> Waiting <b>' + wt + '</b>.', (isPres() ? tc : '') + view);
   }
