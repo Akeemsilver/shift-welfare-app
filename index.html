@@ -297,7 +297,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.54', RULES_VERSION = '2.32';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.56', RULES_VERSION = '2.33';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -389,7 +389,7 @@ setCfg(DEFAULT_CFG);
 function dayNum(d) { return Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5); }
 function slotShift(d, i) { var L = CFG.cycle.length; return CFG.cycle[(((dayNum(d) - ANCHOR) % L) + L) % L].s[i]; }
 function rosterShiftAt(t) { try { var s0 = slotNow(new Date(t)); return slotShift(s0.day, s0.i) || ''; } catch (x) { return ''; } }
-function rcvWk(d) { return !d || !d.receivedBy ? '' : d.receivedWk || (d.receivedAt ? rosterShiftAt(d.receivedAt) : ''); }   /* the shift that took the handover: saved when it was accepted (older ones: the shift the roster had on duty then), never the person's shift today */
+function rcvWk(d) { return !d || !d.receivedBy ? '' : d.receivedWk || whoOf(d.receivedBy).wk || (d.receivedAt ? rosterShiftAt(d.receivedAt) : ''); }   /* the shift that took the handover: the shift the receiver chose to record for when accepting (saved with it); older handovers: the receiver's shift, then the roster's at that time */
 function slotNow(now) {   /* which day and which part of the day it is: before the first start hour it is still the last part of yesterday */
   var h = now.getHours(), P = CFG.periods, day = new Date(now.getFullYear(), now.getMonth(), now.getDate()), i = P.length - 1;
   if (h < P[0].start) day.setDate(day.getDate() - 1); else for (var k = P.length - 1; k >= 0; k--) { if (h >= P[k].start) { i = k; break; } }
@@ -558,7 +558,7 @@ function tellBosses(id, kind, f) {   /* a separate best-effort write after the e
 function spendTell(e) {   /* money out of the till: cash lent, a purchase paid in cash, cash used */
   if (!e || !(e.amt > 0)) return;
   if (e.type === 'loan') tellBosses(e.id, 'spend', { amount: e.amt, what: 'Cash lent to ' + (e.crName || 'a customer') + (e.note ? ' · ' + e.note : ''), rcpt: '' });
-  else if (e.type === 'usecash' && e.adv) tellBosses(e.id, 'spend', { amount: e.amt, what: 'Cash given to buy stock · to ' + (e.advTo || '') + ' (not spending yet)', rcpt: '' });
+  else if (e.type === 'usecash' && e.adv) tellBosses(e.id, 'spend', { amount: e.amt, what: 'Cash given to buy stock · to ' + (e.advTo || '') + (e.advNote ? ' · ' + e.advNote : '') + ' (not spending yet)', rcpt: '' });
   else if (e.type === 'usechange') tellBosses(e.id, 'spend', { amount: e.amt, what: 'Change returned: ' + (e.forNote || '') + ' (from ' + money(e.forAmt) + ')', rcpt: e.receipt ? 'receipt' : 'no receipt' });
   else if (e.type === 'usecash') tellBosses(e.id, 'spend', { amount: e.amt, what: (e.note || 'Cash used') + (e.fundTake ? ' · ' + money(e.fundTake) + ' from stored ' + e.fundName : '') + (e.fundElse ? ' (stored cash used for something else)' : '') + (e.intStored ? ' · Internet payment cash of ' + money(e.intStored) + ' is still stored' : ''), rcpt: e.receipt ? 'receipt' : 'no receipt' });
   else if (e.type === 'buy') tellBosses(e.id, 'spend', { amount: e.amt, what: 'Purchase' + (e.supplier ? ' · ' + e.supplier : ''), rcpt: e.receipt ? 'receipt' : 'no receipt' });
@@ -948,16 +948,11 @@ function storedPage() {
   wpPage(storedPage, [], h, true);
 }
 function fundPage(id) {
-  var f = S.funds[id]; if (!f) return storedPage(); var by = fundBy(id), evs = fundEvs(id), put = r2(Object.keys(by).reduce(function (a, w) { return a + by[w]; }, 0)), sl = sealList(id), slAmt = r2(sl.reduce(function (a, x) { return a + x.amt; }, 0));
-  var sum = function (t, k) { return r2(evs.filter(function (e) { return e.type === t; }).reduce(function (a, e) { return a + (e[k] || 0); }, 0)); };
-  var used = sum('usecash', 'fundTake'), out = sum('sealout', 'amt'), short = r2(sum('fundshort', 'amt') - sum('fundover', 'amt'));
-  var line = function (l, v, c) { return '<div><span>' + l + '</span><b' + (c ? ' style="color:' + c + '"' : '') + '>' + v + '</b></div>'; };
-  var h = '<h2>' + esc(f.name) + '</h2><div class="card" style="border-left:2px solid var(--ok)"><div class="muted">STORED AND COUNTED</div><div style="font-size:28px;font-weight:700">' + money(f.bal || 0) + '</div>' + (sl.length ? '<div class="muted">+ 🔒 ' + sl.length + ' sealed, not counted (' + money(slAmt) + ' written)' + (f.lastSealBy ? ' · last sealed by ' + esc(f.lastSealBy) + (f.lastSealWk ? ' (' + esc(f.lastSealWk) + ')' : '') : '') + '</div>' : '') + storedNote() + '</div>';
-  h += '<div class="card sum"><h2>How it adds up</h2>' + Object.keys(by).map(function (w) { return line(hdot(w) + esc(w), money(by[w])); }).join('') + line('<b>Put in</b>', '<b>' + money(put) + '</b>') + (slAmt ? line('Still sealed (not counted)', '− ' + money(slAmt)) : '') + (out ? line('Sealed, taken out', '− ' + money(out)) : '') + (short ? line(short > 0 ? 'Missing when opened' : 'Extra found when opened', (short > 0 ? '− ' : '+ ') + money(Math.abs(short)), short > 0 ? 'var(--exp)' : 'var(--soon)') : '') + (used ? line('Used', '− ' + money(used), 'var(--exp)') : '') + '<div class="t"><span>Left, counted</span><span>' + money(f.bal || 0) + '</span></div></div>';
+  var f = S.funds[id]; if (!f) return storedPage(); var by = fundBy(id), sl = sealList(id), slAmt = r2(sl.reduce(function (a, x) { return a + x.amt; }, 0));
+  var h = '<h2>' + esc(f.name) + '</h2><div class="card" style="border-left:2px solid var(--ok)"><div class="muted">STILL STORED AND COUNTED</div><div style="font-size:28px;font-weight:700">' + money(f.bal || 0) + '</div>' + (sl.length ? '<div class="muted">+ 🔒 ' + sl.length + ' sealed, not counted (' + money(slAmt) + ' written)' + (f.lastSealBy ? ' · last sealed by ' + esc(f.lastSealBy) + (f.lastSealWk ? ' (' + esc(f.lastSealWk) + ')' : '') : '') + '</div>' : '') + storedNote() + '</div>';
+  var ks = Object.keys(by); if (ks.length) h += '<div class="card sum"><h2>By shift</h2>' + ks.map(function (w) { return '<div><span>' + esc(w) + '</span><b>' + money(by[w]) + '</b></div>'; }).join('') + '<div class="muted" style="margin-top:6px;font-size:12.5px">What is left of the cash put in, shared across the shifts that put it in.</div></div>';
   if (sl.length) h += '<div class="card"><h2>🔒 Sealed, not counted</h2><div class="list">' + sl.map(function (x) { return '<div data-act="sealsheet" data-id="' + esc(x.id) + '"><div class="grow"><b>' + money(x.amt) + ' written on it</b><div class="muted">put in by ' + esc(x.giver || '') + (x.forWk ? ' (' + esc(x.forWk) + ')' : '') + '</div></div><b>›</b></div>'; }).join('') + '</div></div>';
-  var dep = evs.filter(function (e) { return e.type === 'addcash'; }), use = evs.filter(function (e) { return ['usecash', 'fundshort', 'fundover', 'sealopen', 'sealout'].indexOf(e.type) >= 0; });
-  h += '<div class="card"><h2>Every deposit</h2>' + (dep.length ? '<div class="list">' + dep.map(function (e) { return evRow(e, false); }).join('') + '</div>' : '<div class="muted">None yet.</div>') + '</div>';
-  h += '<div class="card"><h2>Used, opened and taken out</h2>' + (use.length ? '<div class="list">' + use.map(function (e) { return evRow(e, false); }).join('') + '</div>' : '<div class="muted">Nothing yet.</div>') + '</div>';
+  h += '<div class="muted" style="margin:6px 2px 10px;font-size:12.5px">Every deposit and every use is listed in History.</div>';
   wpPage(fundPage, [id], h, true);
 }
 function vCount() {
@@ -1474,9 +1469,9 @@ function fixRoster(start) {   /* the shift the roster says works when something 
 function fixLoad() {   /* every shift that has a summary, and the running one, newest first, each with when it started and what the roster says */
   return getDocs(query(col('shifts'), orderBy('at', 'desc'), limit(400))).then(function (sn) {
     var docs = sn.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }).sort(function (a, b) { return a.at - b.at; }), out = [];
-    docs.forEach(function (d, i) { var pv = docs[i - 1]; out.push({ sid: d.sid || d.id, wk: d.wk, date: d.date, half: d.half, start: pv ? (pv.receivedAt || pv.at) : 0, end: d.at, doc: d, running: false }); });
+    docs.forEach(function (d, i) { var pv = docs[i - 1]; out.push({ sid: d.sid || d.id, wk: d.wk, date: d.date, half: d.half, start: pv ? (pv.receivedAt || pv.at) : 0, end: d.at, doc: d, prev: pv || null, running: false }); });
     var cur = S.state && S.state.shift, last = docs[docs.length - 1];
-    if (cur && cur.sid && !out.some(function (x) { return x.sid === cur.sid; })) out.push({ sid: cur.sid, wk: cur.name, date: cur.date, half: cur.half, start: last ? (last.receivedAt || last.at) : 0, end: 0, doc: null, running: true });
+    if (cur && cur.sid && !out.some(function (x) { return x.sid === cur.sid; })) out.push({ sid: cur.sid, wk: cur.name, date: cur.date, half: cur.half, start: last ? (last.receivedAt || last.at) : 0, end: 0, doc: null, prev: last || null, running: true });
     out.forEach(function (x) { x.ro = fixRoster(x.start); x.bad = !!(x.ro && x.ro.wk !== x.wk); var em = x.running ? (S.state.controlEmail || '') : (x.doc && x.doc.fromEmail) || ''; x.who = em ? whoOf(em) : { name: '', wk: '' }; x.level = !x.bad ? '' : x.who.wk === x.ro.wk ? 'likely' : x.who.wk && x.who.wk === x.wk ? '' : 'check'; x.flag = !!x.level; });   /* likely a mistake: the roster says the shift of the person in control but the entries say another. A swap (the person is on the shift the entries say) is not flagged. Anything else is only 'check' */
     return out.reverse();
   });
@@ -1542,7 +1537,7 @@ function fixSheet() {
   var F = FIXF, x = F.x, t = fixTarget(), same = F.to === x.wk && t.date === x.date && t.half === x.half, days = {};
   F.evs.forEach(function (e) { if (e.dly) days[e.day || (e.bd ? bizKey(e.t) : dkey(new Date(e.t)))] = 1; });
   var chg = function (a, b) { return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)"><span>' + a + '</span><b style="text-align:right">' + b + '</b></div>'; }, arrow = esc(x.wk) + ' → ' + esc(F.to);
-  var rows = (x.running ? chg('The shift being worked now', arrow) : '') + (F.evs.length ? chg('Entries on this shift (' + F.evs.length + ')', arrow) : '') + (x.doc ? chg('The shift summary (History and Handovers)', arrow + ' · ' + esc(t.date) + ' ' + esc(HL(t.half))) : '') + (F.hos.length ? chg('Handover' + (F.hos.length === 1 ? '' : 's') + ' made from it (' + F.hos.length + ')', arrow) : '') + (F.srt.length ? chg('Shortage record' + (F.srt.length === 1 ? '' : 's') + ' (' + F.srt.length + ')', arrow) : '') + (Object.keys(days).length ? chg('Day totals (' + Object.keys(days).length + (Object.keys(days).length === 1 ? ' day' : ' days') + ')', 'moved ' + arrow) : '');
+  var rows = (x.running ? chg('The shift being worked now', arrow) : '') + (F.evs.length ? chg('Entries on this shift (' + F.evs.length + ')', arrow) : '') + (x.doc ? chg('The shift summary (History and Handovers)', arrow + ' · ' + esc(t.date) + ' ' + esc(HL(t.half))) : '') + (F.hos.length ? chg('Handover' + (F.hos.length === 1 ? '' : 's') + ' made from it (' + F.hos.length + ')', arrow) : '') + (F.srt.length ? chg('Shortage record' + (F.srt.length === 1 ? '' : 's') + ' (' + F.srt.length + ')', arrow) : '') + (x.prev && x.prev.status === 'accepted' && x.prev.receivedBy ? chg('The handover this shift received (' + esc(x.prev.fromName || '') + ' → ' + esc(x.prev.receivedByName || '') + ')', 'now taken by ' + esc(F.to)) : '') + (Object.keys(days).length ? chg('Day totals (' + Object.keys(days).length + (Object.keys(days).length === 1 ? ' day' : ' days') + ')', 'moved ' + arrow) : '');
   wpPage(fixHub, [], '<h2>Fix the shift</h2><div class="card"><div class="muted" style="margin-bottom:8px">Filed as <b>' + esc(x.wk) + ' shift</b> · ' + fixWhen(x) + '</div><label>Correct shift</label>' + seg(WATCHES.map(function (w) { return [w, esc(w)]; }), 'fixwk', F.to, Math.min(WATCHES.length, 4)) + (x.ro ? '<div class="muted" style="margin:6px 2px 8px;font-size:12.5px">' + esc(x.ro.wk) + ' is what the roster says for ' + esc(x.ro.date) + ' (' + esc(HL(x.ro.half)) + ').</div>' : '') + '<div class="fld"><span>Date</span><b>' + esc(t.date) + '</b></div><div class="fld"><span>Half</span><b>' + esc(HL(t.half)) + '</b></div></div>' +
     (same ? '<div class="card" style="box-shadow:none"><b>Nothing to change.</b><div class="muted">This shift is already filed as ' + esc(F.to) + '.</div></div>' : '<div class="card" style="background:var(--soon-bg);border-left:2px solid var(--soon);box-shadow:none"><b>What will change</b><div style="margin-top:6px;font-size:13.5px">' + rows + '<div class="muted" style="margin-top:6px">Nothing else changes: cash, stock, counts, credit and who is in control stay as they are. The names of people keep their own shift.</div></div></div><button class="btn block" data-act="fixgo">Yes, change ' + esc(x.wk) + ' to ' + esc(F.to) + '</button>') +
     '<button class="btn sec block" data-act="fixhub" style="margin-top:8px">Back</button>');
@@ -1559,6 +1554,7 @@ async function fixGo() {
     if (x.running) b.update(ref('shop/state'), { 'shift.name': to, 'shift.date': t.date, 'shift.half': t.half });
     if (x.doc) b.update(ref('shifts/' + x.doc.id), { wk: to, date: t.date, half: t.half, day: t.day });
     F.hos.forEach(function (h) { b.update(ref('handovers/' + h.id), { shift: Object.assign({}, h.shift, { name: to, date: t.date, half: t.half }) }); });
+    if (x.prev && x.prev.status === 'accepted' && x.prev.receivedBy && (x.prev.receivedWk || '') !== to) b.update(ref('shifts/' + x.prev.id), { receivedWk: to });   /* the handover this shift received now says it was taken by the corrected shift */
     F.srt.forEach(function (id) { b.update(ref('shortages/' + id), { wk: to, shiftDate: t.date, shiftHalf: t.half }); });
     var told = x.running ? (S.state.controlEmail || '') : (x.doc && x.doc.fromEmail) || '';
     if (told && told !== EMAIL) b.set(ref('notices/fx_' + fixId), { kind: 'shiftfix', toEmail: told, read: false, at: Date.now(), wk: to, from: from, shiftDate: t.date, shiftHalf: t.half, byName: myName(), handoverId: '' });
@@ -1700,7 +1696,15 @@ function storedTotal() { return r2(fundList().reduce(function (a, f) { return a 
 function sealList(fk) { return Object.keys(S.seals || {}).map(function (k) { return Object.assign({ id: k }, S.seals[k]); }).filter(function (s) { return s.status === 'sealed' && (!fk || s.fund === fk); }).sort(function (a, b) { return (a.at || 0) - (b.at || 0); }); }
 function sealSnap() { return sealList().map(function (s) { return { id: s.id, fund: s.fund, name: s.fundName, amt: s.amt, giver: s.giver || '', wk: s.forWk || '' }; }); }
 function fundEvs(id) { return (S.fevs || []).filter(function (e) { return e.fund === id; }).sort(function (a, b) { return b.t - a.t; }); }
-function fundBy(id) { var by = {}; fundEvs(id).forEach(function (e) { if (e.type === 'addcash') by[e.forWk || '?'] = r2((by[e.forWk || '?'] || 0) + e.amt); }); return by; }
+function fundBy(id) {   /* what is still stored, by the shift that put it in: the cash put in, shared out in proportion so the parts add up to what is left (nothing about what was spent) */
+  var f = S.funds[id], bal = f ? r2(f.bal || 0) : 0, w = {}, tot = 0, gone = {};
+  (S.fevs || []).forEach(function (e) { if (e.fund === id && e.type === 'sealout' && e.sealId) gone[e.sealId] = 1; });
+  fundEvs(id).forEach(function (e) { if (e.type !== 'addcash') return; if (e.sealed && e.sealId && (S.seals[e.sealId] || gone[e.sealId])) return; var k = e.forWk || '?'; w[k] = (w[k] || 0) + e.amt; tot += e.amt; });
+  if (bal <= 0.004 || tot <= 0) return {};
+  var ks = Object.keys(w).sort(), cents = Math.round(bal * 100), raw = ks.map(function (k) { var x = w[k] * cents / tot; return { k: k, c: Math.floor(x), r: x - Math.floor(x) }; }), left = cents - raw.reduce(function (a, o) { return a + o.c; }, 0), out = {};
+  raw.slice().sort(function (a, b) { return b.r - a.r; }).forEach(function (o, i) { if (i < left) o.c++; });
+  raw.forEach(function (o) { if (o.c > 0) out[o.k] = o.c / 100; }); return out;
+}
 function fundSnap() { return fundList().map(function (f) { return { id: f.id, name: f.name, bal: r2(f.bal), by: fundBy(f.id) }; }); }
 function acName() { return AC.kind === 'internet' ? INTERNET : AC.desc.trim(); }
 function acOpen() { AC = { step: 'what', kind: 'internet', desc: '', amount: '', who: '', whoId: '', wk: '', how: '' }; acForm(); }
@@ -1865,7 +1869,7 @@ function ucBoxHtml() {
 function ucFundHtml() {
   var fl = fundAll(), net = S.funds['internet-payment'], netOn = net && ((net.bal || 0) > 0.004 || sealList('internet-payment').length), netTot = net ? r2((net.bal || 0) + sealList('internet-payment').reduce(function (a, s) { return a + s.amt; }, 0)) : 0;
   var q = '<div class="row eqrow" style="gap:8px;margin-bottom:6px"><button class="btn sec grow" data-act="ucmode" data-v="internet" style="height:auto;padding:10px 6px;' + (UC.mode === 'internet' ? 'background:var(--brand);color:#fff' : '') + '">Internet payment<div style="font-weight:400;font-size:12px">' + (netOn ? money(netTot) + ' stored' : 'nothing stored') + '</div></button><button class="btn sec grow" data-act="ucmode" data-v="stock" style="height:auto;padding:10px 6px;' + (UC.mode === 'stock' ? 'background:var(--brand);color:#fff' : '') + '">Buy stock<div style="font-weight:400;font-size:12px">give cash, stock later</div></button><button class="btn sec grow" data-act="ucmode" data-v="other" style="height:auto;padding:10px 6px;' + (UC.mode === 'other' ? 'background:var(--brand);color:#fff' : '') + '">Other<div style="font-weight:400;font-size:12px">anything else</div></button></div>';
-  if (UC.mode === 'stock') return q + '<div class="card" style="background:var(--soon-bg);box-shadow:none;margin:6px 0"><b>Cash given to buy stock</b><div class="muted">It is not spending. It becomes the purchase when the stock is added in Add stock. Anything left over comes back as change.</div></div><div class="f"><label>Given to <b style="color:var(--exp)">*</b></label><button class="btn sec block" data-act="ucwho" style="justify-content:space-between">' + (UC.to ? esc(UC.to) : 'Tap to search or type a name') + '</button></div>';
+  if (UC.mode === 'stock') return q + '<div class="card" style="background:var(--soon-bg);box-shadow:none;margin:6px 0"><b>Cash given to buy stock</b><div class="muted">It is not spending. It becomes the purchase when the stock is added in Add stock. Anything left over comes back as change.</div></div><div class="f"><label>Given to <b style="color:var(--exp)">*</b></label><button class="btn sec block" data-act="ucwho" style="justify-content:space-between">' + (UC.to ? esc(UC.to) : 'Tap to search or type a name') + '</button></div><div class="f"><label>Note (optional)</label><input data-uc="note" maxlength="120" value="' + esc(UC.note || '') + '" placeholder="e.g. to buy juice" autocomplete="off"></div>';
   if (UC.mode !== 'other') return q + '<div id="uc-box">' + ucBoxHtml() + '</div>';
   var oth = fl, opts = '<label>Take it from stored cash? (optional)</label><div class="frow" data-act="ucfund" data-id=""><div class="fbox' + (!UC.fund ? ' on' : '') + '">' + (!UC.fund ? '✓' : '') + '</div><span class="grow"><b>No, from the cash on hand</b><br><span class="muted" style="font-size:12.5px">Nothing stored is touched.</span></span></div>' +
     oth.map(function (f) { var sl = sealList(f.id), tot = r2((f.bal || 0) + sl.reduce(function (a, s) { return a + s.amt; }, 0)); return '<div class="frow" data-act="ucfund" data-id="' + esc(f.id) + '"><div class="fbox' + (UC.fund === f.id ? ' on' : '') + '">' + (UC.fund === f.id ? '✓' : '') + '</div><span class="grow">' + esc(f.name) + ' · ' + money(tot) + ' stored' + (sl.length ? ' 🔒' : '') + '</span></div>'; }).join('');
@@ -1881,7 +1885,7 @@ function ucLive() {   /* typing must never rebuild the box that holds the field 
   if ($('#uc-sum')) $('#uc-sum').innerHTML = ucSumHtml();
 }
 function acLive() { if ($('#don-box')) $('#don-box').innerHTML = donBox(); var bt = $('#modal [data-act=acreview]'); if (bt) bt.classList.toggle('dis', !acDone()); }
-function ucOpen() { UC = { mode: '', purpose: '', amount: '', receipt: '', none: false, reason: '', fund: '', found: {}, to: '', chg: '' }; ucForm(); }
+function ucOpen() { UC = { mode: '', purpose: '', amount: '', receipt: '', none: false, reason: '', fund: '', found: {}, to: '', toId: '', note: '', chg: '' }; ucForm(); }
 function ucForm() {
   var cash = totals().cash;
   modal('<h2>💵 Use cash</h2><div class="card"><label>What is it for? <b style="color:var(--exp)">*</b></label>' + ucFundHtml() + '<div class="f" style="margin-top:8px"><label>How much</label><input data-uc="amount" type="number" inputmode="decimal" min="0" value="' + esc(UC.amount) + '" placeholder="0"></div>' +
@@ -1954,7 +1958,7 @@ function ucConfirm(purpose) {
 function ucSave(purpose) {
   var uc = UC, p = ucPlan(), amt = r2(num(uc.amount)), b = writeBatch(DB), id = newEv(), tell = [], ex = { name: 'Cash used', note: purpose, receipt: uc.receipt || '', noReceipt: uc.receipt ? '' : uc.reason.trim() };
   if (uc.mode === 'other' && !uc.fund && uc.chg === 'no') ex.nochg = true;
-  if (uc.mode === 'stock') { ex.adv = true; ex.advTo = String(uc.to || '').trim(); ex.noReceipt = 'the receipt comes with the purchase'; ex.name = 'Cash given for stock'; }
+  if (uc.mode === 'stock') { ex.adv = true; ex.advTo = String(uc.to || '').trim(); ex.advNote = String(uc.note || '').trim().slice(0, 120); ex.noReceipt = 'the receipt comes with the purchase'; ex.name = 'Cash given for stock'; }
   var net = ucStoredWord('internet-payment'); if (uc.mode === 'other' && !uc.fund && net.tot > 0.004) ex.intStored = net.tot;
   if (p) {
     p.opened.forEach(function (o) {
@@ -2255,7 +2259,7 @@ function advBoxHtml() {
 }
 function advPayHtml() {
   var ao = advOpen(); if (!ao.length || BUY.other) return '';
-  return '<label style="margin-top:0">How was it paid?</label><div class="frow" data-act="badv" data-id=""><div class="fbox' + (!BUY.advId ? ' on' : '') + '">' + (!BUY.advId ? '✓' : '') + '</div><span class="grow"><b>From the cash on hand now</b></span></div>' + ao.map(function (a) { return '<div class="frow" data-act="badv" data-id="' + esc(a.id) + '"><div class="fbox' + (BUY.advId === a.id ? ' on' : '') + '">' + (BUY.advId === a.id ? '✓' : '') + '</div><span class="grow"><b>With cash given earlier</b><br><span class="muted" style="font-size:12.5px">' + money(a.amt) + ' given to ' + esc(a.advTo || '') + ' · ' + hfmt(a.t) + '</span></span></div>'; }).join('') + '<div id="badv">' + advBoxHtml() + '</div>';
+  return '<label style="margin-top:0">How was it paid?</label><div class="frow" data-act="badv" data-id=""><div class="fbox' + (!BUY.advId ? ' on' : '') + '">' + (!BUY.advId ? '✓' : '') + '</div><span class="grow"><b>From the cash on hand now</b></span></div>' + ao.map(function (a) { return '<div class="frow" data-act="badv" data-id="' + esc(a.id) + '"><div class="fbox' + (BUY.advId === a.id ? ' on' : '') + '">' + (BUY.advId === a.id ? '✓' : '') + '</div><span class="grow"><b>With cash given earlier</b><br><span class="muted" style="font-size:12.5px">' + money(a.amt) + ' given to ' + esc(a.advTo || '') + (a.advNote ? ' · ' + esc(a.advNote) : '') + ' · ' + hfmt(a.t) + '</span></span></div>'; }).join('') + '<div id="badv">' + advBoxHtml() + '</div>';
 }
 function roundChips() {
   var t = num(BUY.total); if (t <= 0) return '';
@@ -2949,7 +2953,7 @@ function evRow(e, cancelable) {
   else if (e.type === 'other') { ic = '➕'; tx = 'Added ' + buyText(e) + ' to stock'; sub = e.note; }
   else if (e.type === 'spoil') { ic = '🗑'; tx = 'Spoiled ' + e.qty + ' × ' + e.name; }
   else if (e.type === 'move') { var mvi = item(e.item) || {}; ic = mvi.shelf ? '🧁' : '🧊'; tx = 'Moved ' + uLab(mvi, e.cases) + ' of ' + e.name + ' to ' + (mvi.shelf ? 'shelf' : 'fridge'); sub = e.qty + ' items'; }
-  else if (e.type === 'usecash' && e.adv) { var sv = advSettleOf(e.id); ic = sv ? '✓' : '⏳'; tx = 'Cash given for stock: ' + (e.advTo || ''); sub = (sv ? 'settled by a purchase · bill ' + money(sv.bill) + (sv.amt ? ' · ' + money(sv.amt) + ' change came back' : '') : 'waiting for the purchase · not spending yet'); amt = '− ' + money(e.amt); col = sv ? 'var(--ink)' : 'var(--soon)'; }
+  else if (e.type === 'usecash' && e.adv) { var sv = advSettleOf(e.id); ic = sv ? '✓' : '⏳'; tx = 'Cash given for stock: ' + (e.advTo || '') + (e.advNote ? ' · ' + e.advNote : ''); sub = (sv ? 'settled by a purchase · bill ' + money(sv.bill) + (sv.amt ? ' · ' + money(sv.amt) + ' change came back' : '') : 'waiting for the purchase · not spending yet'); amt = '− ' + money(e.amt); col = sv ? 'var(--ink)' : 'var(--soon)'; }
   else if (e.type === 'advsettle') { ic = '↩'; tx = 'Stock purchase paid with cash given earlier'; sub = 'bill ' + money(e.bill) + ' · ' + money(e.advAmt) + ' given' + (e.amt > 0 ? ' · ' + money(e.amt) + ' change back into the cash on hand' : e.extra > 0 ? ' · ' + money(e.extra) + ' more from the cash on hand' : ''); amt = e.amt > 0 ? '+ ' + money(e.amt) : ''; col = 'var(--ok)'; }
   else if (e.type === 'usechange') { ic = '↩'; tx = 'Change returned: ' + (e.forNote || ''); sub = money(e.amt) + ' back from the ' + money(e.forAmt) + (e.receipt ? ' · receipt attached' : ' · no receipt: ' + (e.noReceipt || '')); amt = '+ ' + money(e.amt); col = 'var(--ok)'; }
   else if (e.type === 'usecash') { ic = '💵'; tx = 'Cash used: ' + e.note; sub = (e.fundTake ? money(e.fundTake) + ' from stored ' + (e.fundName || '') + (e.amt - e.fundTake > 0.004 ? ' · ' + money(r2(e.amt - e.fundTake)) + ' from cash on hand' : '') + ' · ' : '') + (chgOf(e.id) > 0 ? money(chgOf(e.id)) + ' change returned · cost ' + money(r2(e.amt - chgOf(e.id))) + ' · ' : '') + (e.receipt ? 'Receipt attached' : 'No receipt: ' + e.noReceipt); amt = '− ' + money(e.amt); col = 'var(--soon)'; }
@@ -4334,7 +4338,7 @@ function rxAccept2() {
   if (cShort > 0) rawEv(b, { t: Date.now(), type: 'cashshort', item: '', items: [], name: 'Cash short', qty: 0, amt: cShort, sid: ns.sid, by: EMAIL, byName: myName(), expireAt: EXP(), wk: gwk, dly: 1, day: gday, gap: !!gap });
   if (diffs.length) ns.notes = (same && cur.notes ? cur.notes + ' · ' : '') + (gap ? 'Received after a gap (the ' + gwk + ' shift never took it, assumed correct): ' : 'Received with differences: ') + diffs.join('; ');
   h.items.forEach(function (i, k) { if (rcf[2 * k] == null) { rcf[2 * k] = i.stock; rcf[2 * k + 1] = i.cage || 0; } });   /* an item that was removed: counted as handed over */
-  if (h.sum) b.update(ref('shifts/' + h.shift.sid), { status: 'accepted', receivedBy: EMAIL, receivedByName: myName(), receivedWk: rosterShiftAt(Date.now()) || whoOf(EMAIL).wk || '', receivedCash: cashC, shortCash: gap ? 0 : cShort, shortItems: gap ? 0 : r2(sVal), over: gap ? 0 : cOver, short: gap ? 0 : sTot, receivedAt: Date.now(), rc: rcf });   /* after a gap nothing is charged to the shift that handed over */
+  if (h.sum) b.update(ref('shifts/' + h.shift.sid), { status: 'accepted', receivedBy: EMAIL, receivedByName: myName(), receivedWk: ns.name || whoOf(EMAIL).wk || rosterShiftAt(Date.now()) || '', receivedCash: cashC, shortCash: gap ? 0 : cShort, shortItems: gap ? 0 : r2(sVal), over: gap ? 0 : cOver, short: gap ? 0 : sTot, receivedAt: Date.now(), rc: rcf });   /* after a gap nothing is charged to the shift that handed over */
   b.update(ref('handovers/' + S.state.pending), Object.assign({ status: 'accepted', acceptedBy: EMAIL, acceptedAt: Date.now(), check: gap ? 'Received after a gap (the ' + gwk + ' shift never took it). Assumed correct.' + (diffs.length ? '\n' + diffs.join('\n') : '') : diffs.length ? diffs.join('\n') : 'everything matched', receivedSig: M.signature, receivedName: myName(), receivedItems: Object.assign({ _v: vnum(APP_VERSION) }, RI), receivedCash: cashC }, (h.sealed || []).length ? { sealRecv: Object.keys(RXSEAL).filter(function (k) { return k !== 'hid' && k !== '_open'; }).reduce(function (m, k) { m[k] = RXSEAL[k] === true ? { ok: true } : { ok: false, issue: RXSEAL[k].issue || '' }; return m; }, {}) } : {}));
   b.update(ref('shop/state'), { controlEmail: EMAIL, controlName: myName(), pending: '', shift: ns, openingDone: true });
   (S.corrs || []).forEach(function (cc) { if (cc.status === 'open') b.update(ref('corrections/' + cc.id), { status: 'closed' }); });   /* a handover correction nobody decided is closed, unchanged, when the next handover is taken */
