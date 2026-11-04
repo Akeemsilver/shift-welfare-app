@@ -53,7 +53,7 @@ b,strong{font-weight:600}
 .tile.wide{grid-column:1/-1;background:var(--brand);color:#fff}
 .tile .l{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
 .tile.wide .l{color:#cfe3ec}
-.tile .v{font-size:16px;font-weight:600}.tile.dk{background:var(--brand);color:#fff}.tile.dk .l{color:#cfe3ec}.tile.redc{background:var(--exp-bg);border:1.5px solid var(--exp)}.tile.redc .v{color:var(--exp)}.tile.sv{border-left:3px solid var(--link);cursor:pointer}.rtap{font-size:12px;font-weight:700;color:var(--exp);text-decoration:underline;cursor:pointer;display:inline-block;margin-top:2px}
+.tile .v{font-size:16px;font-weight:600}.tile.dk{background:var(--brand);color:#fff}.tile.dk .l{color:#cfe3ec}.tile.redc{background:var(--exp-bg);border:1.5px solid var(--exp)}.tile.redc .v{color:var(--exp)}.tile.sv{cursor:pointer}.rtap{font-size:12px;font-weight:700;color:var(--exp);text-decoration:underline;cursor:pointer;display:inline-block;margin-top:2px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .bub{background:var(--surface);border:2px solid transparent;border-radius:16px;box-shadow:var(--sh);padding:10px 12px;text-align:left;font:inherit;color:inherit;min-height:84px;position:relative;display:block;width:100%}
 .bub .n{font-weight:600;display:block;line-height:1.2}
@@ -297,7 +297,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.61', RULES_VERSION = '2.35';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.62', RULES_VERSION = '2.35';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -965,7 +965,7 @@ function svBoxHtml() {
 }
 function savingsPage() {
   var sv = S.savings, bal = sv && typeof sv.bal === 'number' ? sv.bal : null, adm = isPres() && !OWNERVIEW;
-  var h = '<h2>Savings</h2><div class="card" style="border-left:2px solid var(--link)"><div class="muted">SAVINGS</div><div style="font-size:30px;font-weight:700">' + (bal === null ? 'Not set' : money(bal)) + '</div><div class="muted" style="margin-top:4px">Not part of the cash on hand or the cash count.</div></div>';
+  var h = '<h2>Savings</h2><div class="card"><div class="muted">SAVINGS</div><div style="font-size:30px;font-weight:700">' + (bal === null ? 'Not set' : money(bal)) + '</div><div class="muted" style="margin-top:4px">Not part of the cash on hand or the cash count.</div></div>';
   if (adm && bal !== null) h += '<div class="card"><label style="margin-top:0">Move money</label><div class="row" style="gap:8px"><button class="btn sec grow" data-act="svdir" data-v="toCash" style="height:auto;padding:10px 6px;' + (SV.dir === 'toCash' ? 'background:var(--brand);color:#fff' : '') + '">Savings → Cash on hand</button><button class="btn sec grow" data-act="svdir" data-v="toSave" style="height:auto;padding:10px 6px;' + (SV.dir === 'toSave' ? 'background:var(--brand);color:#fff' : '') + '">Cash on hand → Savings</button></div><div class="f" style="margin-top:8px"><label>How much</label><input data-sv="amt" type="number" inputmode="decimal" min="0" value="' + esc(SV.amt) + '" placeholder="0"></div><div class="card" id="sv-box" style="background:var(--soft);box-shadow:none;margin:8px 0 0">' + svBoxHtml() + '</div><button class="btn green block" data-act="svreview" style="margin-top:10px">Review</button></div>';
   if (adm) h += '<div class="card"><label style="margin-top:0">' + (bal === null ? 'Set the savings figure' : 'Set the savings figure (president)') + '</label><input data-sv="set" type="number" inputmode="decimal" min="0" value="' + esc(SV.set) + '" placeholder="New total, e.g. 5000"><div class="muted" style="margin:6px 0 0;font-size:12.5px">Changing the figure is not listed in History.</div><button class="btn sec block" data-act="svset" style="margin-top:10px">Set the figure</button></div>';
   else h += '<div class="muted" style="margin:8px 2px">Only the owner and the president can move money or change this figure. Every move is listed in History.</div>';
@@ -993,13 +993,13 @@ function svSet() {
   });
 }
 function cashRedSheet() {
-  var t = totals(), stT = storedTotal(), short = r2(stT - t.cash), fl = fundList(), names = fl.map(function (f) { return f.id === 'internet-payment' ? 'the Internet bill' : f.name; });
+  var t = totals(), stT = storedTotal(), short = r2(stT - t.cash), fl = fundList(), names = fl.map(function (f) { return f.id === 'internet-payment' ? 'the Internet payment' : f.name; });
   var rows = fl.map(function (f, i) { return '<div style="padding:9px 0;' + (i ? 'border-top:1px solid var(--line)' : '') + '"><div class="row"><b class="grow">' + esc(f.name) + '</b><b>' + money(f.bal || 0) + '</b></div><div class="muted" style="font-size:12.5px;margin-top:3px">' + (byText(fundSB(f.id), fundOwe(f.id)) || '') + '</div></div>'; }).join('');
   var line = function (l, v, c) { return '<div class="hkv"><span>' + l + '</span><b' + (c ? ' style="color:' + c + '"' : '') + '>' + v + '</b></div>'; };
   modal('<h2 style="margin:0 0 6px">Why the cash on hand is red</h2><div class="muted" style="margin:0 0 10px">The cash on hand is <b>less than the cash that should be stored</b> for a bill that has not been paid yet.</div>' +
     '<div class="card sum">' + line('Cash on hand now', money(t.cash)) + line('Stored and not yet used', money(stT)) + line('<b>Short by</b>', money(short), 'var(--exp)') + '</div>' +
     '<div class="card"><div class="muted" style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px">Stored for</div>' + rows + '</div>' +
-    '<div class="card" style="background:var(--soon-bg);box-shadow:none">Some of the cash that should be kept for ' + esc(names.join(' and ')) + ' is not in the box. Inform the president.</div>' +
+    '<div class="card" style="background:var(--soon-bg);box-shadow:none">Some of the cash that should be kept for ' + esc(names.join(' and ')) + ' is not in cash in hand. Inform the president.</div>' +
     '<button class="btn sec block" data-act="close">Close</button>');
 }
 function fundPage(id) {
@@ -1015,7 +1015,7 @@ function vCount() {
   var LI = ordItems(S.items).filter(liveItem), t = totals(), h = owedStrip(), n = LI.filter(function (i) { return cnum(i.id).counted; }).length;
   var stT = storedTotal(), redCash = stT > 0.004 && t.cash + 0.004 < stT, sv = S.savings;
   h += '<div class="tiles"><div class="tile dk"><div class="l">Sales this shift</div><div class="v">' + money(t.sales) + '</div></div>' +
-       '<div class="tile"><div class="l">Items sold</div><div class="v">' + t.sold + '</div></div>' +
+       '<div class="tile dk"><div class="l">Items sold</div><div class="v">' + t.sold + '</div></div>' +
        '<div class="tile' + (redCash ? ' redc' : '') + '"><div class="l">Cash on hand</div><div class="v">' + money(t.cash) + '</div>' + (stT > 0.004 ? '<div class="muted" style="font-size:12px">includes ' + money(stT) + ' stored</div>' : '') + (redCash ? '<span class="rtap" data-act="cashred">tap to view</span>' : '') + '</div>' +
        '<div class="tile sv" data-act="savopen"><div class="l">Savings</div><div class="v">' + (sv && typeof sv.bal === 'number' ? money(sv.bal) : '—') + '</div><div class="muted" style="font-size:12px">' + (isPres() && !OWNERVIEW ? (sv ? 'tap to move money ›' : 'tap to set it ›') : 'tap to view ›') + '</div></div></div>';
   h += storedRowHtml();
