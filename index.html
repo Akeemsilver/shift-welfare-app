@@ -297,7 +297,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.57', RULES_VERSION = '2.33';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.59', RULES_VERSION = '2.33';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1696,12 +1696,18 @@ function storedTotal() { return r2(fundList().reduce(function (a, f) { return a 
 function sealList(fk) { return Object.keys(S.seals || {}).map(function (k) { return Object.assign({ id: k }, S.seals[k]); }).filter(function (s) { return s.status === 'sealed' && (!fk || s.fund === fk); }).sort(function (a, b) { return (a.at || 0) - (b.at || 0); }); }
 function sealSnap() { return sealList().map(function (s) { return { id: s.id, fund: s.fund, name: s.fundName, amt: s.amt, giver: s.giver || '', wk: s.forWk || '' }; }); }
 function fundEvs(id) { return (S.fevs || []).filter(function (e) { return e.fund === id; }).sort(function (a, b) { return b.t - a.t; }); }
-function fundBy(id) {   /* what is still stored, by the shift that put it in: the cash put in, shared out in proportion so the parts add up to what is left (nothing about what was spent) */
-  var f = S.funds[id], bal = f ? r2(f.bal || 0) : 0, w = {}, tot = 0, gone = {};
-  (S.fevs || []).forEach(function (e) { if (e.fund === id && e.type === 'sealout' && e.sealId) gone[e.sealId] = 1; });
-  fundEvs(id).forEach(function (e) { if (e.type !== 'addcash') return; if (e.sealed && e.sealId && (S.seals[e.sealId] || gone[e.sealId])) return; var k = e.forWk || '?'; w[k] = (w[k] || 0) + e.amt; tot += e.amt; });
-  if (bal <= 0.004 || tot <= 0) return {};
-  var ks = Object.keys(w).sort(), cents = Math.round(bal * 100), raw = ks.map(function (k) { var x = w[k] * cents / tot; return { k: k, c: Math.floor(x), r: x - Math.floor(x) }; }), left = cents - raw.reduce(function (a, o) { return a + o.c; }, 0), out = {};
+function fundBy(id) {   /* what is still stored, by the shift that put it in. Worked out in order: cash put in goes to its shift, cash used comes off every shift in proportion, so cash that was used up long ago counts for nothing */
+  var f = S.funds[id], bal = f ? r2(f.bal || 0) : 0; if (bal <= 0.004) return {};
+  var evs = fundEvs(id).slice().sort(function (a, b) { return a.t - b.t; }), w = {}, wkOf = {};
+  evs.forEach(function (e) { if (e.type === 'addcash' && e.sealed && e.sealId) wkOf[e.sealId] = e.forWk || '?'; });
+  var tot = function () { return Object.keys(w).reduce(function (a, k) { return a + w[k]; }, 0); };
+  evs.forEach(function (e) {
+    if (e.type === 'addcash') { if (e.sealed && e.sealId) return; var k = e.forWk || '?'; w[k] = (w[k] || 0) + e.amt; }
+    else if (e.type === 'sealopen' && e.sealId) { var k2 = wkOf[e.sealId] || '?'; w[k2] = (w[k2] || 0) + (e.amt || 0); }
+    else if (e.type === 'usecash' && e.fundTake > 0) { var t = tot(); if (t > 0) { var take = Math.min(e.fundTake, t); Object.keys(w).forEach(function (k) { w[k] -= take * w[k] / t; }); } }
+  });
+  var ks = Object.keys(w).filter(function (k) { return w[k] > 0.004; }).sort(), sum = ks.reduce(function (a, k) { return a + w[k]; }, 0); if (!ks.length || sum <= 0) return {};
+  var cents = Math.round(bal * 100), raw = ks.map(function (k) { var x = w[k] * cents / sum; return { k: k, c: Math.floor(x), r: x - Math.floor(x) }; }), left = cents - raw.reduce(function (a, o) { return a + o.c; }, 0), out = {};
   raw.slice().sort(function (a, b) { return b.r - a.r; }).forEach(function (o, i) { if (i < left) o.c++; });
   raw.forEach(function (o) { if (o.c > 0) out[o.k] = o.c / 100; }); return out;
 }
@@ -3534,7 +3540,7 @@ function recordHtml(d, evs, h) {
   var result = acc && gp ? '<div class="card sum"><h2>Result</h2>' + line(esc(wk) + ' shift: everything matched', '$0', 'var(--ok)') + line('Items sold in the gap (' + esc(gp.wk) + ')', money(gp.gapSales || 0)) + line('Cash short against ' + esc(gp.wk), money(gp.cashShort || 0), gp.cashShort > 0 ? 'var(--exp)' : 'var(--ok)') + '</div>' : acc ? '<div class="card sum"><h2>Result</h2>' + line('Shortage from this handover', money(d.short || 0), d.short > 0 ? 'var(--exp)' : 'var(--ok)') + line('Repaid so far (all shortages)', money(so.repaid), 'var(--ok)') + '<div><span>' + wsw(wk) + ' still owes (all shortages)</span><b style="color:' + (so.owed > 0 ? 'var(--exp)' : 'var(--ok)') + '">' + money(so.owed) + '</b></div></div>' : '';
   HREC = { d: d, h: h, rows: rows };
   setTimeout(function () { spentLoad(d); }, 400);
-  return '<h2>Handover record</h2>' + head + (gp ? gapBanner(gp, d.wk) : gapMoveCard(d)) + corrNote(d) + corrBanner(d) + (corrEligible(d, h) ? '<button class="btn red block noprint" data-act="corrstart" style="margin-bottom:10px">✎ Handover mistake</button>' : '') + sumCard + cash + shopC + storC + soldF + sum + (h && h.stored && h.stored.length ? storedBreakHtml(h.stored, h.storedTotal, 'rec') : '') + sealRecordHtml(h) + handoverLists(d.owedBy, d.openShort) + tr + edC + (d.notes ? '<div class="card"><label>Remarks</label>' + esc(d.notes) + '</div>' : '') + entF + sigs + result + '<div class="row noprint" style="gap:8px"><button class="btn grow" data-act="rccopy">Copy</button><button class="btn grow" data-act="rcshare">Share</button><button class="btn grow" data-act="rcprint">Print</button></div>';
+  return '<h2>Handover record</h2>' + head + (acc && canApprove() && !OWNERVIEW ? '<div class="noprint" style="margin:-4px 0 10px;text-align:right"><button class="btn sec sm" data-act="rcvfix" data-id="' + esc(d.id || '') + '">Wrong incoming shift? Fix it</button></div>' : '') + (gp ? gapBanner(gp, d.wk) : gapMoveCard(d)) + corrNote(d) + corrBanner(d) + (corrEligible(d, h) ? '<button class="btn red block noprint" data-act="corrstart" style="margin-bottom:10px">✎ Handover mistake</button>' : '') + sumCard + cash + shopC + storC + soldF + sum + (h && h.stored && h.stored.length ? storedBreakHtml(h.stored, h.storedTotal, 'rec') : '') + sealRecordHtml(h) + handoverLists(d.owedBy, d.openShort) + tr + edC + (d.notes ? '<div class="card"><label>Remarks</label>' + esc(d.notes) + '</div>' : '') + entF + sigs + result + '<div class="row noprint" style="gap:8px"><button class="btn grow" data-act="rccopy">Copy</button><button class="btn grow" data-act="rcshare">Share</button><button class="btn grow" data-act="rcprint">Print</button></div>';
 }
 
 /* ---------- the president moves a shortage to the shift that skipped the handover (when it was recorded against the shift that handed over) ---------- */
@@ -3643,6 +3649,19 @@ function recShare(copyOnly) {
   var txt = recordText();
   if (!copyOnly && navigator.share) { navigator.share({ text: txt }).catch(function () {}); return; }
   if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { toast('Copied'); }, function () { toast('Copy failed'); }); else toast('Copy not supported here');
+}
+var RCVF = null;
+function rcvFixOpen(id) {   /* the owner, a president or an admin corrects the shift saved as the one that took an accepted handover */
+  var d = HSD[id]; if (!d || d.status !== 'accepted') return; RCVF = { id: id, from: rcvWk(d), to: rcvWk(d), d: d }; rcvFixDraw();
+}
+function rcvFixDraw() {
+  var F = RCVF; if (!F) return; var d = F.d, same = F.to === F.from;
+  modal('<h2>Fix the incoming shift</h2><div class="card"><div class="muted">' + esc(d.fromName || '') + ' (' + esc(d.wk) + ') handed over to <b>' + esc(d.receivedByName || '') + '</b>. It now says the shift that took it was <b>' + esc(F.from || 'not known') + '</b>.</div><label>The shift that took it</label><div class="row" style="flex-wrap:wrap;gap:8px">' + WATCHES.map(function (w) { return '<button class="btn sec" data-act="rcvpick" data-v="' + esc(w) + '" style="flex:1;min-width:70px;' + (F.to === w ? 'background:var(--brand);color:#fff' : '') + '">' + esc(w) + '</button>'; }).join('') + '</div>' + (same ? '' : '<div class="card" style="background:var(--soon-bg);box-shadow:none;margin:10px 0 0"><b>What will change</b><div style="margin-top:4px">The handover record: ' + esc(F.from || 'not known') + ' → <b>' + esc(F.to) + '</b>. Nothing else is moved.</div></div>') + '</div>' +
+    '<button class="btn green block' + (same ? ' dis' : '') + '" data-act="rcvsave">' + (same ? 'Pick the right shift' : 'Change to ' + esc(F.to)) + '</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>');
+}
+function rcvFixSave() {
+  var F = RCVF; if (!F || F.to === F.from || !F.to) return; var id = F.id, to = F.to;
+  updateDoc(ref('shifts/' + id), { receivedWk: to }).then(function () { RCVF = null; closeModal(); toast('The incoming shift is now ' + to); }).catch(function (e) { console.error(e); toast(errText(e)); });
 }
 function histShiftPage(id) {
   histStop();
@@ -6452,6 +6471,9 @@ document.addEventListener('click', function (e) {
   else if (a === 'chv') { HY.cv = b.dataset.v; histDraw(); }
   else if (a === 'caday') calDay(id);
   else if (a === 'shopen' || a === 'shopen2') histShift(id);
+  else if (a === 'rcvfix') rcvFixOpen(id);
+  else if (a === 'rcvpick') { if (RCVF) { RCVF.to = b.dataset.v; rcvFixDraw(); } }
+  else if (a === 'rcvsave') rcvFixSave();
   else if (a === 'hfilter') { modal('<div id="hfs">' + histSheetHtml() + '</div>'); histCounts(); }
   else if (a === 'gotit') { try { localStorage.setItem('sw_note_' + b.dataset.v, String(Date.now())); } catch (x) {} histDraw(); }
   else if (a === 'hgoshift') { HY.dt = histNoon(new Date(+b.dataset.v.slice(0, 4), +b.dataset.v.slice(5, 7) - 1, +b.dataset.v.slice(8, 10))); HY.sid = b.dataset.id; histPage(); }
