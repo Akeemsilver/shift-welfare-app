@@ -228,7 +228,7 @@ body,#main{overflow-anchor:none}
 .sp-row b{font-size:16px;font-weight:600;display:block}.sp-row .muted{font-size:13px;margin-top:2px}
 .sp-ch{color:var(--muted);font-size:24px;flex:none}
 .sp-row.red b{color:var(--exp)}.sp-row.red .sp-ic{background:var(--exp-bg)}
-body.spo nav,body.kb nav{display:none!important}body.kb{--navoff:0px}body.kb .modal>div{margin-bottom:0;max-height:calc(var(--vvh,100vh) - 24px - env(safe-area-inset-bottom))}body.kb .modal.top>div{max-height:var(--vvh,100vh)}
+body.spo nav,body.kb nav{display:none!important}body.kb{--navoff:0px}body.kb .modal>div{margin-bottom:0;max-height:calc(var(--vvh,100vh) - 24px - env(safe-area-inset-bottom))}body.kb .modal.top>div{max-height:var(--vvh,100vh)}body.kb .modal.top>div:has(>.sq+.list){height:var(--vvh,100vh);border-radius:0}   /* a search pop-up fills the space above the keyboard, so the page behind never shows in a gap and Cancel sits right above the keys */
 body.kb{padding-bottom:16px}   /* the bottom bar is hidden, so the end of the page stops right at the top of the keyboard with no gap */
 body.kb .modal:not(.top):not(.mid){align-items:flex-start}
 body.kb .modal:not(.top):not(.mid)>div{height:100%;max-height:none;border-top:0;border-radius:0 0 18px 18px;padding-top:0;box-shadow:0 6px 24px rgba(0,0,0,.35);transition:none}
@@ -297,7 +297,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.62', RULES_VERSION = '2.35';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.64', RULES_VERSION = '2.35';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -485,11 +485,11 @@ function creditCover() {   /* credit given and paid for during this same shift i
   CVC = { ref: S.log, set: set, off: off }; return CVC;
 }
 function totals() {
-  var sh = SH(), sales = sumAmt('sale') + sumAmt('count') - sumAmt('snote'), purch = sumAmt('buy'), loans = sumAmt('loan'), paid = sumAmt('pay'), used = sumAmt('usecash'), repaid = sumAmt('repay'), put = S.log.reduce(function (a, e) { return (e.type === 'addcash' && (!e.sealed || !e.sealId)) || e.type === 'sealopen' ? a + e.amt : a; }, 0);   /* sealed cash is not counted until it is opened */
+  var sh = SH(), sales = sumAmt('sale') + sumAmt('count') - sumAmt('snote') - sumAmt('gnote'), purch = sumAmt('buy'), loans = sumAmt('loan'), paid = sumAmt('pay'), used = sumAmt('usecash'), repaid = sumAmt('repay'), put = S.log.reduce(function (a, e) { return (e.type === 'addcash' && (!e.sealed || !e.sealId)) || e.type === 'sealopen' ? a + e.amt : a; }, 0);   /* sealed cash is not counted until it is opened */
   var cr = S.log.reduce(function (a, e) { return (e.type === 'sale' && e.cr) || e.type === 'cnote' ? a + e.amt : a; }, 0);
   var chg = S.log.reduce(function (a, e) { return e.type === 'usechange' || e.type === 'advsettle' ? a + e.amt : a; }, 0), adv = S.log.reduce(function (a, e) { return e.type === 'usecash' && e.adv ? a + e.amt : a; }, 0);   /* change that came back; cash given to buy stock */
   var sav = S.log.reduce(function (a, e) { return e.type === 'savemove' ? a + (e.dir === 'toCash' ? e.amt : -e.amt) : a; }, 0), off = creditCover().off, don = S.log.reduce(function (a, e) { return e.type === 'donation' ? a + e.amt : a; }, 0);   /* gifts and fundraiser money: counted cash, not sales */
-  return { sav: r2(sav), don: don, sales: sales, purch: purch, cr: cr, crN: r2(cr - off), paidN: r2(paid - off), loans: loans, paid: paid, used: used, repaid: repaid, wo: S.log.reduce(function (a, e) { return e.type === 'buy' ? a + (e.writeoff || 0) : a; }, 0), sold: sumLog('sale') + sumLog('count') - sumLog('snote'), put: r2(put), chg: r2(chg), adv: r2(adv), cash: sh.received + sales - cr - loans + paid - purch - used + repaid + put + chg + don + sav, usedStored: S.log.reduce(function (a, e) { return e.type === 'usecash' && e.fundTake ? a + e.fundTake : a; }, 0) };
+  return { sav: r2(sav), don: don, sales: sales, purch: purch, cr: cr, crN: r2(cr - off), paidN: r2(paid - off), loans: loans, paid: paid, used: used, repaid: repaid, wo: S.log.reduce(function (a, e) { return e.type === 'buy' ? a + (e.writeoff || 0) : a; }, 0), sold: sumLog('sale') + sumLog('count') - sumLog('snote') - sumLog('gnote'), put: r2(put), chg: r2(chg), adv: r2(adv), cash: sh.received + sales - cr - loans + paid - purch - used + repaid + put + chg + don + sav, usedStored: S.log.reduce(function (a, e) { return e.type === 'usecash' && e.fundTake ? a + e.fundTake : a; }, 0) };
 }
 function sameShiftHo(sh) { var l = tosList(); return sh.mode !== 'locked' && l.length > 0 && l.every(function (p) { return p.watch === sh.name; }); }   /* handing over to people of the same shift: the shift keeps going */
 function tosList() { return (SH().tos || []).map(person).filter(Boolean); }
@@ -506,7 +506,7 @@ function sellFrom(i) { return i.shelf ? 'the shelf' : 'the fridge'; }
 /* ---------- writing to Firestore ---------- */
 function errText(e) { return e && e.code === 'view-only' ? 'View only: you are looking inside this workplace' : e && e.code === 'permission-denied' ? (e.accessHint || 'Not allowed: the database refused this change. Selling, counting and handing over need the person in control. Access, shifts and fixes do not.') : 'Could not save: ' + ((e && e.message) || e); }
 /* permanent daily totals (for Profit): every event adds its effect to the day's summary in the same save, and a cancel takes it out again */
-var DAYQ = [], DF = ['sales', 'cogs', 'items', 'spoil', 'short', 'cshort', 'exp', 'cr', 'ln', 'pd', 'sedit', 'wo'];
+var DAYQ = [], DF = ['sales', 'cogs', 'items', 'spoil', 'gw', 'short', 'cshort', 'exp', 'cr', 'ln', 'pd', 'sedit', 'wo'];
 function bizHour() { var h = CFG && CFG.periods && CFG.periods[0] ? +CFG.periods[0].start : 9; return isFinite(h) ? h : 9; }   /* a working day starts when the first shift starts (09:00) and runs 24 hours */
 function bizKey(t) { return dkey(new Date(t - bizHour() * 36e5)); }   /* the working day (YYYY-MM-DD) a moment belongs to */
 var dkey = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
@@ -516,6 +516,7 @@ function dayDelta(e) {
   if (e.type === 'sale') { f.sales = e.amt; f.cogs = e.cogs || 0; f.items = e.qty; if (e.cr) f.cr = e.amt; it = { id: e.item, n: e.qty, p: e.amt - (e.cogs || 0) }; nc = e.nc ? 1 : 0; }
   else if (e.type === 'count') { f.sales = e.amt; f.cogs = e.cogs || 0; f.items = e.qty; it = { id: e.item, n: e.qty, p: e.amt - (e.cogs || 0) }; nc = e.nc ? 1 : 0; }
   else if (e.type === 'cnote') f.cr = e.amt;
+  else if (e.type === 'gnote') { f.sales = -e.amt; f.cogs = -(e.cogs || 0); f.items = -e.qty; f.gw = e.cogs || 0; it = { id: e.item, n: -e.qty, p: -(e.amt - (e.cogs || 0)) }; }
   else if (e.type === 'snote') { f.sales = -e.amt; f.cogs = -(e.cogs || 0); f.items = -e.qty; f.spoil = e.cogs || 0; it = { id: e.item, n: -e.qty, p: -(e.amt - (e.cogs || 0)) }; }
   else if (e.type === 'loan') f.ln = e.amt;
   else if (e.type === 'pay') f.pd = e.amt;
@@ -594,7 +595,7 @@ function reverseEvent(b, e) {
   if (e.type === 'sale') { if (!it) return 'That item no longer exists'; itemInc(b, it.id, { stock: e.qty }); if (e.cr) balInc(b, cid, -e.amt); }
   else if (e.type === 'count') { if (e.qty > 0) { if (!it) return 'That item no longer exists'; itemInc(b, it.id, { stock: e.qty }); } }
   else if (e.type === 'cnote') balInc(b, cid, -e.amt);
-  else if (e.type === 'snote') { /* a note only: nothing else to put back */ }
+  else if (e.type === 'snote' || e.type === 'gnote') { /* a note only: nothing else to put back */ }
   else if (e.type === 'opencredit') balInc(b, cid, -e.amt);
   else if (e.type === 'usecash') {   /* the cash simply counts again; money taken from a stored fund goes back into it */
     if (e.adv && advSettleOf(e.id)) return 'This cash was used for a stock purchase. Cancel the purchase first, or ask the owner or a president.';
@@ -810,7 +811,7 @@ function srCard() {
 }
 
 /* ---------- start over: cancel this shift's entries (counts only, or everything) before the handover ---------- */
-var SO_ALL = ['sale', 'count', 'cnote', 'snote', 'opencredit', 'usecash', 'loan', 'pay', 'spoil', 'adjust', 'cageadj', 'move', 'buy', 'other'];
+var SO_ALL = ['sale', 'count', 'cnote', 'snote', 'gnote', 'opencredit', 'usecash', 'loan', 'pay', 'spoil', 'adjust', 'cageadj', 'move', 'buy', 'other'];
 function soList(all) { return S.log.filter(function (e) { return all ? SO_ALL.indexOf(e.type) >= 0 : e.type === 'count'; }).sort(function (a, b) { return (b.t || 0) - (a.t || 0); }); }
 function startOverAsk() {
   if (!inControl()) return toast('Only the person in control can start over');
@@ -914,8 +915,8 @@ document.addEventListener('contextmenu', function (e) { if (e.target && e.target
 /* ---------- Count ---------- */
 var CN = { to: null, q: 0, mv: 0 };
 function cnum(id) {   /* what has been counted / noted for one item this shift */
-  var r = { sold: 0, cr: 0, sp: 0, counted: false };
-  S.log.forEach(function (e) { if (e.item !== id) return; if (e.type === 'count') { r.sold += e.qty; r.counted = true; } else if (e.type === 'sale') r.sold += e.qty; else if (e.type === 'cnote') r.cr += e.qty; else if (e.type === 'snote') r.sp += e.qty; });
+  var r = { sold: 0, cr: 0, sp: 0, gw: 0, counted: false };
+  S.log.forEach(function (e) { if (e.item !== id) return; if (e.type === 'count') { r.sold += e.qty; r.counted = true; } else if (e.type === 'sale') r.sold += e.qty; else if (e.type === 'cnote') r.cr += e.qty; else if (e.type === 'snote') r.sp += e.qty; else if (e.type === 'gnote') r.gw += e.qty; });
   return r;
 }
 /* an item with nothing left (fridge and cage both 0) leaves the Count page, unless it was sold, counted or noted this shift; it stays at the bottom of Stock */
@@ -1030,10 +1031,10 @@ function vCount() {
   }).join('') + '</div>' + ordHtml();
 }
 function cnPreview(it) {
-  var c = cnum(it.id), miss = it.stock - CN.to, gone = c.sold + miss, sold = Math.max(0, gone - c.sp), cash = Math.max(0, sold - c.cr), over = c.cr > sold || c.sp > gone;
+  var c = cnum(it.id), miss = it.stock - CN.to, gone = c.sold + miss, sold = Math.max(0, gone - c.sp - c.gw), cash = Math.max(0, sold - c.cr), over = c.cr > sold || c.sp + c.gw > gone;
   return '<div class="muted" style="margin-top:12px">Handed over count: <b>' + (it.open || 0) + '</b></div><div class="muted" style="margin-top:2px">My count: <b>' + (c.counted ? it.stock : 'not counted yet') + '</b></div>' +
-    (gone ? '<div style="margin-top:6px;line-height:2"><span class="pill" style="font-size:14px">' + sold + ' sold</span> <span class="muted">(' + cash + ' cash)</span> ' + (c.cr ? '<span class="pill low" style="font-size:14px">' + c.cr + ' on credit</span> ' : '') + (c.sp ? '<span class="pill out" style="font-size:14px">' + c.sp + ' spoiled</span>' : '') + '</div>' + (c.sold && miss ? '<div class="muted" style="font-size:12px">' + c.sold + ' sold earlier this shift + ' + miss + ' now</div>' : '') : '<div class="muted" style="margin-top:4px">Nothing sold yet</div>') +
-    (over ? '<div class="card" style="background:var(--exp-bg);box-shadow:none;margin:8px 0 0;color:var(--exp)"><b>Credit (' + c.cr + ') or spoiled (' + c.sp + ') is more than what was sold or gone (' + sold + ' sold, ' + gone + ' gone).</b> Check it. You cannot hand over until it matches.</div>' : '');
+    (gone ? '<div style="margin-top:6px;line-height:2"><span class="pill" style="font-size:14px">' + sold + ' sold</span> <span class="muted">(' + cash + ' cash)</span> ' + (c.cr ? '<span class="pill low" style="font-size:14px">' + c.cr + ' on credit</span> ' : '') + (c.sp ? '<span class="pill out" style="font-size:14px">' + c.sp + ' spoiled</span> ' : '') + (c.gw ? '<span class="pill" style="font-size:14px;background:var(--okb);color:var(--ok)">' + c.gw + ' goodwill</span>' : '') + '</div>' + (c.sold && miss ? '<div class="muted" style="font-size:12px">' + c.sold + ' sold earlier this shift + ' + miss + ' now</div>' : '') : '<div class="muted" style="margin-top:4px">Nothing sold yet</div>') +
+    (over ? '<div class="card" style="background:var(--exp-bg);box-shadow:none;margin:8px 0 0;color:var(--exp)"><b>Credit (' + c.cr + '), spoiled (' + c.sp + ') or goodwill (' + c.gw + ') is more than what was sold or gone (' + sold + ' sold, ' + gone + ' gone).</b> Check it. You cannot hand over until it matches.</div>' : '');
 }
 function countSheet() {
   var it = item(sel); if (!it) return closeModal();
@@ -1042,15 +1043,15 @@ function countSheet() {
     '<div class="card" style="margin-top:12px"><label>Count now (what is really ' + (it.shelf ? 'on the shelf' : 'in the fridge') + ')</label>' + stepper('cn', CN.to) + '<div id="cn-prev">' + cnPreview(it) + '</div>' +
     '<button class="btn green block" data-act="cnsave" style="margin-top:10px">Save count</button></div>' +
     (hasCage(it) ? '<div class="card"><h2>Add from cage</h2><div class="row"><div>' + stepper('cm', CN.mv) + '</div><div class="grow muted">' + unitPl(unitName(it), 2) + ' = ' + CN.mv * per(it) + ' items onto ' + sellFrom(it) + '</div></div><button class="btn sec block" data-act="cnmove" style="margin-top:10px"' + (it.cage < 1 ? ' disabled' : '') + '>Add from cage</button></div>' : '') +
-    '<div class="card"><h2>Credit and spoiled notes</h2><div class="row"><div>' + stepper('cq', CN.q) + '</div><div class="grow muted">items</div></div>' +
-    '<div class="row" style="margin-top:10px"><button class="btn amber grow" data-act="cnote">On credit to…</button><button class="btn sec grow" data-act="snote">Spoiled</button></div>' +
-    '<p class="muted" style="margin:8px 0 0">Notes do not change the number. They only explain part of the items sold, so those are not counted as cash.</p></div>' +
+    '<div class="card"><h2>Credit, spoiled and goodwill notes</h2><div class="row"><div>' + stepper('cq', CN.q) + '</div><div class="grow muted">items</div></div>' +
+    '<div class="row" style="margin-top:10px"><button class="btn amber" style="flex:1 1 0;min-width:0;box-sizing:border-box;border:2px solid transparent" data-act="cnote">On credit</button><button class="btn sec" style="flex:1 1 0;min-width:0;box-sizing:border-box" data-act="snote">Spoiled</button><button class="btn green" style="flex:1 1 0;min-width:0;box-sizing:border-box;border:2px solid transparent" data-act="gnote">Goodwill</button></div>' +
+    '<p class="muted" style="margin:8px 0 0">Notes do not change the number. They only explain part of the items sold, so those are not counted as cash. <b>Goodwill</b> is a drink given for free.</p></div>' +
     '<div class="row"><button class="btn sec grow" data-act="editfromsell">✎ Edit name / price</button><button class="btn sec grow" data-act="close">Close</button></div></div>');
 }
 function countSave(force) {
   var it = item(sel); if (!it) return; var to = CN.to, miss = it.stock - to; if (miss < 0 || to < 0) return toast('The count cannot be higher than expected. Use Add from cage');
   var c = cnum(it.id);
-  if (!force && (c.cr > Math.max(0, c.sold + miss - c.sp) || c.sp > c.sold + miss)) return askConfirm('More notes than items sold', 'Credit ' + c.cr + ' and spoiled ' + c.sp + ' do not fit the ' + (c.sold + miss) + ' items gone. You will not be able to hand over until this matches.', 'Save the count anyway', function () { countSave(true); });
+  if (!force && (c.cr > Math.max(0, c.sold + miss - c.sp - c.gw) || c.sp + c.gw > c.sold + miss)) return askConfirm('More notes than items sold', 'Credit ' + c.cr + ', spoiled ' + c.sp + ' and goodwill ' + c.gw + ' do not fit the ' + (c.sold + miss) + ' items gone. You will not be able to hand over until this matches.', 'Save the count anyway', function () { countSave(true); });
   var b = writeBatch(DB), id = newEv(); if (miss > 0) itemInc(b, it.id, { stock: -miss });
   mkEvent(b, 'count', it, miss, it.price * miss, { cogs: r2((it.cost || 0) * miss), nc: miss > 0 && !it.cost ? 1 : 0, from: it.stock, to: to, price: it.price, dly: miss > 0 ? 1 : 0 }); commit(b);
   CN.to = null; CN.q = 0; closeModal(); toast(it.name + ' counted: ' + (miss ? miss + ' sold' : 'none sold'), id);
@@ -1073,6 +1074,21 @@ function spoilNote() {
   askConfirm('Spoiled note?', '<b>' + q + ' × ' + esc(it.name) + '</b> were spoiled or damaged.<br><span class="muted">This does not change the number. It explains part of the items sold and is counted as a loss at cost.</span>', 'Yes, add the note', function () {
     var b = writeBatch(DB), id = newEv(); mkEvent(b, 'snote', it, q, it.price * q, { cogs: r2((it.cost || 0) * q) }); commit(b); CN.q = 0; closeModal(); toast('Spoiled note added', id);
   });
+}
+function goodwillNote() {
+  var it = item(sel); if (!it) return closeModal(); var q = CN.q; if (q < 1) return toast('Set how many items first');
+  var names = S.people.map(function (x) { return x.name; }).filter(Boolean);
+  $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div><h2>Goodwill note?</h2><p style="margin-top:0"><b>' + q + ' × ' + esc(it.name) + '</b> given for free.<br><span class="muted">This does not change the number. It explains part of the items sold. It is not a sale, not spoiled and not a shortage. The cost shows on the profit page as goodwill.</span></p>' +
+    '<label>Why was it given? (required)</label><input id="gw-why" placeholder="e.g. cleaned the compound" maxlength="120">' +
+    '<label style="margin-top:10px">Given to (optional)</label><input id="gw-to" list="gw-names" placeholder="Type a name" maxlength="60" autocomplete="off"><datalist id="gw-names">' + names.map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>' +
+    '<button class="btn green block" data-act="gwyes" style="margin-top:12px">Yes, add the note</button><button class="btn sec block" data-act="cno" style="margin-top:10px">Go back</button></div></div>');
+}
+function goodwillSave() {
+  var it = item(sel); if (!it) return closeModal(); var q = CN.q; if (q < 1) return toast('Set how many items first');
+  var why = String(($('#gw-why') || {}).value || '').trim(), to = String(($('#gw-to') || {}).value || '').trim();
+  if (!why) return toast('Write why it was given');
+  var c = $('#cf'); if (c) c.remove();
+  var b = writeBatch(DB), id = newEv(); mkEvent(b, 'gnote', it, q, it.price * q, { cogs: r2((it.cost || 0) * q), note: why, gwTo: to }); commit(b); CN.q = 0; closeModal(); toast('Goodwill note added', id);
 }
 function infoBox(title, html) { $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div><h2>' + title + '</h2><p style="margin-top:0">' + html + '</p><button class="btn block" data-act="cno">OK</button></div></div>'); }
 
@@ -1172,8 +1188,8 @@ function askConfirm(title, body, yes, fn) {
 var PF = { mode: 'day', off: 0 };
 function pfCls(c) { return 'pf1' + (c.profit < 0 ? ' neg' : ' pos'); }
 function sumDocs(docs) {
-  var t = { sales: 0, cogs: 0, items: 0, spoil: 0, short: 0, cshort: 0, exp: 0, cr: 0, ln: 0, pd: 0, sedit: 0, wo: 0, nc: 0 }, by = {};
-  docs.forEach(function (d) { t.nc += d.nc || 0; Object.keys(d.w || {}).forEach(function (w) { by[w] = by[w] || { sales: 0, cogs: 0, items: 0, spoil: 0, short: 0, cshort: 0, exp: 0, cr: 0, ln: 0, pd: 0, sedit: 0, wo: 0 }; DF.forEach(function (f) { var v = (d.w[w] && d.w[w][f]) || 0; t[f] += v; by[w][f] += v; }); }); });
+  var t = { sales: 0, cogs: 0, items: 0, spoil: 0, gw: 0, short: 0, cshort: 0, exp: 0, cr: 0, ln: 0, pd: 0, sedit: 0, wo: 0, nc: 0 }, by = {};
+  docs.forEach(function (d) { t.nc += d.nc || 0; Object.keys(d.w || {}).forEach(function (w) { by[w] = by[w] || { sales: 0, cogs: 0, items: 0, spoil: 0, gw: 0, short: 0, cshort: 0, exp: 0, cr: 0, ln: 0, pd: 0, sedit: 0, wo: 0 }; DF.forEach(function (f) { var v = (d.w[w] && d.w[w][f]) || 0; t[f] += v; by[w][f] += v; }); }); });
   var nm = {}; t.ncSales = 0; t.ncItems = 0;   /* sales of items that have no cost yet: their profit is not worked out (the daily totals keep each item's sales, and an item's first cost fills in its earlier sales) */
   docs.forEach(function (d) { Object.keys(d.it || {}).forEach(function (id) { var x = d.it[id], i = item(id); if (i && !(i.cost > 0) && (x.n || x.p)) { t.ncSales = r2(t.ncSales + (x.p || 0)); t.ncItems += x.n || 0; nm[id] = x.name || i.name; } }); });
   t.ncNames = Object.keys(nm).map(function (k) { return nm[k]; });
@@ -1197,7 +1213,7 @@ function breakdown(t, c, label) {
   var none = pfNone(t), part = pfPart(t);
   return '<div class="card pl"><h2>' + label + '</h2><div><span>Sales</span><b>' + money(t.sales) + '</b></div>' + (t.ncSales > 0.004 ? '<div class="sub"><span>of which items with no cost yet' + (part ? ' (not included)' : '') + '</span><span>' + money(t.ncSales) + '</span></div>' : '') + '<div><span>Cost of what was sold</span><b>' + (none ? 'No cost yet' : mn(t.cogs)) + '</b></div>' +
     '<div><b>Gross profit</b><b class="' + (none ? '' : c.gross < 0 ? 'bad' : 'good') + '">' + (none ? '—' : pm(c.gross)) + '</b></div>' +
-    '<div class="sub"><span>Spoiled / damaged</span><span>' + mn(t.spoil) + '</span></div><div class="sub"><span>Stock counted short at handovers</span><span>' + mn(t.short) + '</span></div><div class="sub"><span>Cash counted short at handovers</span><span>' + mn(t.cshort) + '</span></div><div class="sub"><span>Welfare expenses (cash used)</span><span>' + mn(t.exp) + '</span></div>' + (t.sedit ? '<div class="sub" style="color:var(--exp)"><span>⚠ Stock edited by hand</span><span>' + mn(t.sedit) + '</span></div>' : '') + (t.wo ? '<div class="sub"><span>Change not kept (purchases)</span><span>' + mn(t.wo) + '</span></div>' : '') + '' +
+    '<div class="sub"><span>Spoiled / damaged</span><span>' + mn(t.spoil) + '</span></div>' + (t.gw ? '<div class="sub"><span>Goodwill (cost of what was given, not taken off the profit)</span><span>' + mn(t.gw) + '</span></div>' : '') + '<div class="sub"><span>Stock counted short at handovers</span><span>' + mn(t.short) + '</span></div><div class="sub"><span>Cash counted short at handovers</span><span>' + mn(t.cshort) + '</span></div><div class="sub"><span>Welfare expenses (cash used)</span><span>' + mn(t.exp) + '</span></div>' + (t.sedit ? '<div class="sub" style="color:var(--exp)"><span>⚠ Stock edited by hand</span><span>' + mn(t.sedit) + '</span></div>' : '') + (t.wo ? '<div class="sub"><span>Change not kept (purchases)</span><span>' + mn(t.wo) + '</span></div>' : '') + '' +
     '<div><b>' + (part ? 'Profit on items with a cost' : 'Profit after losses') + '</b><b class="big ' + (none ? '' : c.profit < 0 ? 'bad' : 'good') + '">' + (none ? '—' : pm(c.profit)) + '</b></div></div>';
 }
 function unpaidCard(t, c, scope) {
@@ -2505,7 +2521,7 @@ function vCredit() {
     '<button class="tile tbtn' + (t.crN + t.loans > 0 ? ' owes' : '') + '" data-act="cledger"><div class="l">Credit + loans this shift ›</div><div class="v">' + money(t.crN + t.loans) + '</div></button></div>' +
     '<button class="btn amber block" data-act="lend" style="margin-bottom:14px">🤝 Lend cash (borrowed from the cash)</button>' +
     '<div class="stick"><input id="c-q" placeholder="Search name or number" autocomplete="off"></div><div id="c-list">' + creditList('') + '</div>' +
-    '<p class="muted">To put something on credit, go to Count, tap the item and press “On credit to…”. Tap a name to take a payment.</p>';
+    '<p class="muted">To put something on credit, go to Count, tap the item and press “On credit”. Tap a name to take a payment.</p>';
 }
 /* ---------- Credit ledger: everything given on credit, lent and paid, across all shifts ---------- */
 var CLF = 'all';
@@ -2562,10 +2578,10 @@ function sheetRows() {
     var L = S.log.filter(function (e) { return e.item === i.id; }), s = function (f) { return L.reduce(function (a, e) { return a + f(e); }, 0); };
     var lines = function (types, unitsOnly) { return S.log.reduce(function (a, e) { return types.indexOf(e.type) < 0 ? a : a + (e.lines || []).reduce(function (x, l) { return l.item !== i.id ? x : l.v === 2 ? x + (unitsOnly ? l.ds : l.dc) : (hasCage(i) ? (l.by === 'unit') === !!unitsOnly : !unitsOnly) ? x + l.cases * (l.pk || 1) : x; }, 0); }, 0); };
     var R = { id: i.id, shelf: !!i.shelf, store: hasCage(i), direct: !hasCage(i), unit: unitName(i), name: i.name, price: i.price, per: per(i), open: i.open || 0, stock: i.stock, cageOpen: i.cageOpen || 0, cage: i.cage,
-      gone: s(function (e) { return e.type === 'sale' || e.type === 'count' ? e.qty : 0; }), soldAmt: s(function (e) { return e.type === 'sale' || e.type === 'count' ? e.amt : 0; }), crQ: s(function (e) { return e.type === 'cnote' && !creditCover().set[e.id] ? e.qty : 0; }), crAmt: s(function (e) { return e.type === 'cnote' && !creditCover().set[e.id] ? e.amt : 0; }), spQ: s(function (e) { return e.type === 'snote' ? e.qty : 0; }), spAmt: s(function (e) { return e.type === 'snote' ? e.amt : 0; }), counted: L.some(function (e) { return e.type === 'count'; }), moved: s(function (e) { return e.type === 'move' ? e.qty : 0; }), movedCases: s(function (e) { return e.type === 'move' ? e.cases : 0; }),
+      gone: s(function (e) { return e.type === 'sale' || e.type === 'count' ? e.qty : 0; }), soldAmt: s(function (e) { return e.type === 'sale' || e.type === 'count' ? e.amt : 0; }), crQ: s(function (e) { return e.type === 'cnote' && !creditCover().set[e.id] ? e.qty : 0; }), crAmt: s(function (e) { return e.type === 'cnote' && !creditCover().set[e.id] ? e.amt : 0; }), spQ: s(function (e) { return e.type === 'snote' ? e.qty : 0; }), spAmt: s(function (e) { return e.type === 'snote' ? e.amt : 0; }), gwQ: s(function (e) { return e.type === 'gnote' ? e.qty : 0; }), gwAmt: s(function (e) { return e.type === 'gnote' ? e.amt : 0; }), counted: L.some(function (e) { return e.type === 'count'; }), moved: s(function (e) { return e.type === 'move' ? e.qty : 0; }), movedCases: s(function (e) { return e.type === 'move' ? e.cases : 0; }),
       spoil: s(function (e) { return e.type === 'spoil' ? e.qty : 0; }), adj: s(function (e) { return e.type === 'adjust' ? e.qty : 0; }), edit: s(function (e) { return e.type === 'stockedit' ? e.qty : 0; }), cedit: s(function (e) { return e.type === 'stockedit' ? e.cases : 0; }), cadj: s(function (e) { return e.type === 'cageadj' ? e.qty : 0; }), bought: lines(['buy', 'other']), ub: lines(['buy', 'other'], true) };
     R.store = R.store || R.bought > 0 || R.movedCases > 0; R.direct = !R.store;   /* anything bought into storage this shift shows in the storage list */
-    R.sold = Math.max(0, R.gone - R.spQ);   /* sold = what left the fridge by counting, minus what was spoiled; credit is part of sold */
+    R.sold = Math.max(0, R.gone - R.spQ - R.gwQ);   /* sold = what left the fridge by counting, minus what was spoiled; credit is part of sold */
     return R;
   });
 }
@@ -2575,18 +2591,18 @@ function hoRows() {   /* the handover leaves out items that were 0 at the start 
 function tagList(r, mode) {   /* what happened to one item, as [colour class, text] */
   var cage = mode === 'cage', t = [], g = function (n, txt, cls) { if (n) t.push([cls, txt]); };
   if (cage) { g(r.cedit, '⚠ edited by hand ' + (r.cedit > 0 ? '+' : '') + r.cedit, 'neg'); g(r.bought, '+' + r.bought + ' bought', 'pos'); g(r.movedCases, '−' + r.movedCases + ' to ' + (r.shelf ? 'shelf' : 'fridge'), 'neg'); g(r.cadj, (r.cadj > 0 ? '+' : '') + r.cadj + ' count', ''); }
-  else { g(r.edit, '⚠ edited by hand ' + (r.edit > 0 ? '+' : '') + r.edit, 'neg'); g(r.sold - Math.min(r.sold, r.crQ), (r.sold - Math.min(r.sold, r.crQ)) + ' sold', 'pos'); g(r.crQ, r.crQ + ' sold on credit', 'cr'); g(r.spQ, r.spQ + ' spoiled', 'neg'); if (r.direct) g(r.bought, '+' + r.bought + ' bought', 'pos'); g(r.ub, '+' + r.ub + ' bought', 'pos'); g(r.moved, '+' + r.moved + ' from cage', 'pos'); g(r.spoil, '−' + r.spoil + ' spoiled', 'neg'); g(r.adj, (r.adj > 0 ? '+' : '') + r.adj + ' count', ''); }
+  else { g(r.edit, '⚠ edited by hand ' + (r.edit > 0 ? '+' : '') + r.edit, 'neg'); g(r.sold - Math.min(r.sold, r.crQ), (r.sold - Math.min(r.sold, r.crQ)) + ' sold', 'pos'); g(r.crQ, r.crQ + ' sold on credit', 'cr'); g(r.spQ, r.spQ + ' spoiled', 'neg'); g(r.gwQ, r.gwQ + ' goodwill', 'pos'); if (r.direct) g(r.bought, '+' + r.bought + ' bought', 'pos'); g(r.ub, '+' + r.ub + ' bought', 'pos'); g(r.moved, '+' + r.moved + ' from cage', 'pos'); g(r.spoil, '−' + r.spoil + ' spoiled', 'neg'); g(r.adj, (r.adj > 0 ? '+' : '') + r.adj + ' count', ''); }
   return t;
 }
 function tags(r, mode) { return tagList(r, mode).map(function (x) { return '<span class="tag ' + x[0] + '">' + x[1] + '</span>'; }).join(''); }
 function soldRows(rows) {
-  return rows.filter(function (r) { return r.gone || r.crQ || r.spQ || r.moved || r.edit || r.adj || r.spoil || (r.direct && r.bought) || r.ub || r.open !== r.stock; }).map(function (r) {
+  return rows.filter(function (r) { return r.gone || r.crQ || r.spQ || r.gwQ || r.moved || r.edit || r.adj || r.spoil || (r.direct && r.bought) || r.ub || r.open !== r.stock; }).map(function (r) {
     var plus = r.moved + (r.direct ? r.bought : 0) + (r.ub || 0) + Math.max(0, r.edit) + Math.max(0, r.adj), minus = r.spoil + Math.max(0, -r.edit) + Math.max(0, -r.adj);
-    return { r: r, plus: plus, minus: minus, diff: r.stock - (r.open + plus - minus - r.gone), cash: Math.max(0, r.soldAmt - r.crAmt - r.spAmt), bad: r.crQ > r.sold || r.spQ > r.gone };
+    return { r: r, plus: plus, minus: minus, diff: r.stock - (r.open + plus - minus - r.gone), cash: Math.max(0, r.soldAmt - r.crAmt - r.spAmt - (r.gwAmt || 0)), bad: r.crQ > r.sold || r.spQ + (r.gwQ || 0) > r.gone };
   });
 }
 function soldNotes(x) {
-  var r = x.r, t = (r.crQ ? '<span class="tag cr" style="margin-left:0">' + r.crQ + ' sold on credit</span>' : '') + (r.spQ ? '<span class="tag neg">' + r.spQ + ' spoiled</span>' : '') + (x.minus ? '<span class="tag neg">− ' + x.minus + ' spoiled / edited</span>' : '') + (x.bad ? '<span class="tag neg">⚠ notes more than sold</span>' : '') + (x.diff ? '<span class="tag neg">⚠ ' + (x.diff > 0 ? '+' : '') + x.diff + ' not explained</span>' : '');
+  var r = x.r, t = (r.crQ ? '<span class="tag cr" style="margin-left:0">' + r.crQ + ' sold on credit</span>' : '') + (r.spQ ? '<span class="tag neg">' + r.spQ + ' spoiled</span>' : '') + (r.gwQ ? '<span class="tag pos">' + r.gwQ + ' goodwill</span>' : '') + (x.minus ? '<span class="tag neg">− ' + x.minus + ' spoiled / edited</span>' : '') + (x.bad ? '<span class="tag neg">⚠ notes more than sold</span>' : '') + (x.diff ? '<span class="tag neg">⚠ ' + (x.diff > 0 ? '+' : '') + x.diff + ' not explained</span>' : '');
   return t;
 }
 function soldCard(rows, title, sub) {
@@ -2815,7 +2831,7 @@ function handoverText() {
   if (stl.length) { L.push('', 'IN STORAGE (was → now)'); stl.forEach(function (r) { L.push(r.name + ': ' + r.cageOpen + ' → ' + r.cage + ' ' + unitPl(r.unit, 2) + (r.movedCases ? ' (' + r.movedCases + ' moved to ' + (r.shelf ? 'shelf' : 'fridge') + ')' : '')); }); }
   var eds = S.log.filter(function (e) { return e.type === 'stockedit'; }).map(editInfo);
   if (eds.length) { L.push('', '⚠ STOCK EDITED BY HAND (check carefully)'); eds.forEach(function (x) { L.push(x.name + ': ' + x.text + ' (' + x.reason + ') by ' + x.by); }); }
-  var srs = rows.filter(function (r) { return r.gone || r.crQ || r.spQ; });
+  var srs = rows.filter(function (r) { return r.gone || r.crQ || r.spQ || r.gwQ; });
   if (srs.length) { L.push('', 'SOLD THIS SHIFT (item: was → now, sold, cash)'); srs.forEach(function (r) { L.push(r.name + ': ' + r.open + ' → ' + r.stock + ', sold ' + r.sold + ', cash ' + Math.max(0, r.sold - r.crQ) + (r.crQ ? ' (credit ' + r.crQ + ')' : '') + (r.spQ ? ' (spoiled ' + r.spQ + ')' : '')); }); }
   L.push('', 'SHORTAGES NOT YET REPAID (every shift)'); shortAllList().forEach(function (x) { L.push(x.wk + ': ' + money(x.owed) + (x.short ? ' (short ' + money(x.short) + ', repaid ' + money(x.repaid) + ')' : '')); });
   L.push('', 'WHO OWES ON CREDIT'); if (owingList().length) owingList().forEach(function (x) { L.push(x.label + ': ' + money(x.bal)); }); else L.push('Nobody owes anything.');
@@ -2941,7 +2957,7 @@ function banner() {
   return box('Nobody is in control', 'The president can take control.', isPres() ? tc : '');
 }
 
-var MUT = {}; ['startover', 'sovgo', 'pick', 'cnsave', 'cnmove', 'cnote', 'snote', 'lend', 'loannext', 'pkpick', 'pkadd', 'paynext', 'cancelask', 'newitem', 'saveitem', 'savecount', 'domove', 'dospoil', 'savedetails', 'rmitem', 'buysave', 'prepare', 'dohandover', 'chooseto', 'mode', 'ucopen', 'ucreview', 'acopen', 'acreview', 'chreview', 'acmode', 'sealopenreview', 'sealoutreview', 'sealuse', 'sealcancel', 'editfromsell', 'editstock', 'esack', 'esreview', 'opopen', 'opreview', 'opcredit', 'opcnext', 'swopen', 'swpick'].forEach(function (k) { MUT[k] = 1; });
+var MUT = {}; ['startover', 'sovgo', 'pick', 'cnsave', 'cnmove', 'cnote', 'snote', 'gnote', 'gwyes', 'lend', 'loannext', 'pkpick', 'pkadd', 'paynext', 'cancelask', 'newitem', 'saveitem', 'savecount', 'domove', 'dospoil', 'savedetails', 'rmitem', 'buysave', 'prepare', 'dohandover', 'chooseto', 'mode', 'ucopen', 'ucreview', 'acopen', 'acreview', 'chreview', 'acmode', 'sealopenreview', 'sealoutreview', 'sealuse', 'sealcancel', 'editfromsell', 'editstock', 'esack', 'esreview', 'opopen', 'opreview', 'opcredit', 'opcnext', 'swopen', 'swpick'].forEach(function (k) { MUT[k] = 1; });
 var VIEWS = { sell: vCount, stock: vStock, buy: vBuy, credit: vCredit, handover: vHandover };
 function render() {
   if (DRAGO.on) { DRAGO.pend = true; return; }   /* a tile is being moved: redraw when it is dropped */
@@ -3043,6 +3059,7 @@ function evRow(e, cancelable) {
   else if (e.type === 'sale') { ic = e.cr ? '💳' : '🛒'; tx = e.cr ? (e.crName || plab(e.cr)) + ' took ' + e.qty + ' × ' + e.name + ' on credit' : e.qty + ' × ' + e.name; sub = e.cr ? '' : 'Cash sale'; amt = money(e.amt); col = e.cr ? 'var(--soon)' : 'var(--ink)'; }
   else if (e.type === 'count') { ic = '🧮'; tx = 'Counted ' + e.name + ': ' + e.from + ' → ' + e.to; sub = e.qty ? e.qty + ' sold' : 'none sold'; amt = e.qty ? money(e.amt) : ''; }
   else if (e.type === 'cnote') { ic = '💳'; tx = (e.crName || plab(e.cr)) + ' took ' + e.qty + ' × ' + e.name + ' on credit'; sub = ''; amt = money(e.amt); col = 'var(--soon)'; }
+  else if (e.type === 'gnote') { ic = '🎁'; tx = 'Goodwill: ' + e.qty + ' × ' + e.name; sub = esc(e.note || '') + (e.gwTo ? ' · given to ' + esc(e.gwTo) : ''); }
   else if (e.type === 'snote') { ic = '🗑'; tx = 'Spoiled note: ' + e.qty + ' × ' + e.name; sub = e.qty + (e.qty === 1 ? ' of the items counted was' : ' of the items counted were') + ' spoiled'; }
   else if (e.type === 'loan') { ic = '🤝'; tx = 'Cash lent to ' + (e.crName || plab(e.cr)); sub = e.note || ''; amt = '− ' + money(e.amt); col = 'var(--soon)'; }
   else if (e.type === 'pay') { ic = '💵'; var pwho = e.crName || plab(e.person), pbal = balance(e.person || e.cr || ''); tx = pwho + ' paid ' + money(e.amt); sub = pbal > 0.004 ? money(pbal) + ' still owed' : 'paid in full'; amt = '+ ' + money(e.amt); col = 'var(--ok)'; }
@@ -3090,7 +3107,7 @@ function evRow(e, cancelable) {
 }
 /* ---------- History: one full page. All = the entries of a day or a month, Shifts = the permanent shift summaries (a day, a month or a year), Charts. The Filter is in the top bar ---------- */
 var HY = { tab: 'all', per: 'day', dt: new Date(), types: {}, short: false, wk: '', sid: '', cnt: {}, sper: 'month', pper: 'month', pf: 'all', pq: '', pid: '', pl: null, hm: '', pm: '', cv: 'score', sy: 0, back: false, yr: false, cf: {} }, HUN = null, HEVS = null, HSDOCS = null, HSD = {}, HYSIG = '';
-var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash', 'usechange', 'advsettle']], ['Donations and events', '🎁', ['donation']], ['Savings', '🏦', ['savemove']], ['Stored cash', '💰', ['addcash', 'fundshort', 'fundover', 'sealopen', 'sealout']], ['Shortages and repayments', '⚠️', ['cashshort', 'repay', 'offset', 'gapfix']], ['Corrections', '🛠️', ['hocorr', 'shortfix', 'shiftfix', 'dayfix']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
+var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Goodwill', '🎁', ['gnote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash', 'usechange', 'advsettle']], ['Donations and events', '🎁', ['donation']], ['Savings', '🏦', ['savemove']], ['Stored cash', '💰', ['addcash', 'fundshort', 'fundover', 'sealopen', 'sealout']], ['Shortages and repayments', '⚠️', ['cashshort', 'repay', 'offset', 'gapfix']], ['Corrections', '🛠️', ['hocorr', 'shortfix', 'shiftfix', 'dayfix']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
 function hgroup(e) { if ((e.type === 'adjust' || e.type === 'cageadj') && e.ho) return 'Shortages and repayments'; for (var i = 0; i < HGROUPS.length; i++) if (HGROUPS[i][2].indexOf(e.type) >= 0) return HGROUPS[i][0]; return 'Stock edits by hand'; }
 function histNoon(d) { var x = new Date(d); x.setHours(12, 0, 0, 0); return x; }
 function histToday() { return histNoon(new Date(Date.now() - bizHour() * 36e5)); }   /* History always opens on today, by the phone's own clock */
@@ -3162,11 +3179,11 @@ function histShown() {   /* the entries on show after the type filter */
   return on.length ? ev.filter(function (e) { return HY.types[hgroup(e)]; }) : ev;
 }
 function histEmptyWord() { var p = histPer(); return p === 'day' ? 'this day' : p === 'month' ? 'this month' : p === 'yr' ? 'the last year' : 'this year'; }
-function histSold(evs) { return Math.max(0, evs.reduce(function (a, e) { return a + ((e.type === 'sale' || e.type === 'count') ? (e.qty || 0) : e.type === 'snote' ? -(e.qty || 0) : 0); }, 0)); }   /* items sold: the same count as "Total items sold" on a handover */
+function histSold(evs) { return Math.max(0, evs.reduce(function (a, e) { return a + ((e.type === 'sale' || e.type === 'count') ? (e.qty || 0) : e.type === 'snote' || e.type === 'gnote' ? -(e.qty || 0) : 0); }, 0)); }   /* items sold: the same count as "Total items sold" on a handover */
 function histTiles(evs, now, gaps) {   /* Cash sales, Credit given, Cash lent out / Purchases, Still owed, Paid back */
   var sm = function (f) { return evs.filter(f).reduce(function (a, e) { return a + (e.amt || 0); }, 0); };
   var gapAmt = r2((gaps || []).reduce(function (a, z) { return a + (z.gp.gapSales || 0); }, 0)), gapN = (gaps || []).reduce(function (a, z) { return a + z.units; }, 0);
-  var cash = Math.max(0, r2(sm(function (e) { return (e.type === 'sale' && !e.cr) || e.type === 'count'; }) - sm(function (e) { return e.type === 'snote' || e.type === 'cnote'; }) + gapAmt));
+  var cash = Math.max(0, r2(sm(function (e) { return (e.type === 'sale' && !e.cr) || e.type === 'count'; }) - sm(function (e) { return e.type === 'snote' || e.type === 'gnote' || e.type === 'cnote'; }) + gapAmt));
   var people = {}; evs.forEach(function (e) { if ((e.type === 'sale' && e.cr) || e.type === 'cnote' || e.type === 'pay' || e.type === 'loan') { var k = rootOf(e.person || e.cr || ''); if (k) people[k] = 1; } });
   var owed = r2(Object.keys(people).reduce(function (a, k) { return a + Math.max(0, balance(k)); }, 0));
   var cell = function (l, v, c) { return '<div><div class="l">' + l + '</div><div class="v"' + (c ? ' style="color:' + c + '"' : '') + '>' + money(v) + '</div></div>'; };
@@ -3554,7 +3571,7 @@ function histShift(id) {   /* a shift's own page, on top of History; back return
 }
 /* ---------- the handover record: both sides of one handover on one page, kept in the permanent shift summary ---------- */
 var RCF = {}, HSHDRAW = null, HHO = {}, HREC = null;
-var ITK = ['id', 'name', 'shelf', 'store', 'unit', 'price', 'per', 'open', 'stock', 'cageOpen', 'cage', 'sold', 'credit', 'spoiled', 'gone', 'moved', 'movedCases', 'bought', 'edit', 'cedit', 'adj', 'cadj', 'spoil', 'soldAmt', 'crAmt', 'spAmt', 'ub'];
+var ITK = ['id', 'name', 'shelf', 'store', 'unit', 'price', 'per', 'open', 'stock', 'cageOpen', 'cage', 'sold', 'credit', 'spoiled', 'gone', 'moved', 'movedCases', 'bought', 'edit', 'cedit', 'adj', 'cadj', 'spoil', 'soldAmt', 'crAmt', 'spAmt', 'ub', 'goodwill', 'gwAmt'];
 function packItems(items) { return JSON.stringify((items || []).map(function (i) { return ITK.map(function (k) { return i[k] === undefined ? null : i[k]; }); })); }
 function unpackItems(str) { try { return (JSON.parse(str) || []).map(function (a) { var o = {}; ITK.forEach(function (k, n) { if (a[n] !== null && a[n] !== undefined) o[k] = a[n]; }); return o; }); } catch (e) { return null; } }
 function recRows(d, h) {   /* every item with the giver's number and the receiver's count (rs shop, rg storage; null = not counted yet) */
@@ -3870,7 +3887,7 @@ function calDay(key) {
 }
 function cancelAsk(id) {
   var e = S.log.filter(function (x) { return x.id === id; })[0]; if (!e) return toast('Only entries from this shift can be cancelled');
-  var tx = (e.type === 'sale' || e.type === 'cnote' ? e.qty + ' × ' + e.name + ' · ' + money(e.amt) : e.type === 'count' ? 'Count of ' + e.name + ' (' + e.from + ' → ' + e.to + ')' : e.type === 'snote' ? 'Spoiled note: ' + e.qty + ' × ' + e.name : e.type === 'loan' ? 'Cash loan ' + money(e.amt) : e.type === 'pay' ? 'Payment ' + money(e.amt) : e.type === 'buy' ? 'Purchase ' + money(e.amt) : e.name);
+  var tx = (e.type === 'sale' || e.type === 'cnote' ? e.qty + ' × ' + e.name + ' · ' + money(e.amt) : e.type === 'count' ? 'Count of ' + e.name + ' (' + e.from + ' → ' + e.to + ')' : e.type === 'snote' ? 'Spoiled note: ' + e.qty + ' × ' + e.name : e.type === 'gnote' ? 'Goodwill note: ' + e.qty + ' × ' + e.name : e.type === 'loan' ? 'Cash loan ' + money(e.amt) : e.type === 'pay' ? 'Payment ' + money(e.amt) : e.type === 'buy' ? 'Purchase ' + money(e.amt) : e.name);
   CONF = null; var r = ''; window.__cid = id; window.__reason = '';
   $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div><h2>Cancel this entry?</h2><p style="margin-top:0"><b>' + esc(tx) + '</b><br><span class="muted">Everything it changed (stock, credit, cash) is put back and the entry disappears from the list.</span></p>' +
     '<label>Reason (optional)</label><div class="chips" style="flex-wrap:wrap;overflow:visible">' + REASONS.map(function (x) { return '<button data-act="reason" data-v="' + x + '">' + x + '</button>'; }).join('') + '</div>' +
@@ -4131,8 +4148,8 @@ function prepare() {
   if (!M || !M.signature) return toast('Please sign first');
   if (sh.counted === '' || isNaN(num(sh.counted))) return toast('Count the cash and enter it first');
   if (sealSnap().some(function (x) { return !HOSEAL[x.id]; })) return toast('Tick each sealed item: is it in the cash box, still sealed?');
-  var over = rows.filter(function (r) { return r.crQ > r.sold || r.spQ > r.gone; });
-  if (over.length) return infoBox('The notes do not match the count', over.map(function (r) { return '<b>' + esc(r.name) + '</b>: sold ' + r.sold + ', but credit ' + r.crQ + ', spoiled ' + r.spQ + ', gone ' + r.gone + '.'; }).join('<br>') + '<br><span class="muted">Credit and spoiled notes can only explain items that are sold. Count the item again or cancel a note in History.</span>');
+  var over = rows.filter(function (r) { return r.crQ > r.sold || r.spQ + (r.gwQ || 0) > r.gone; });
+  if (over.length) return infoBox('The notes do not match the count', over.map(function (r) { return '<b>' + esc(r.name) + '</b>: sold ' + r.sold + ', but credit ' + r.crQ + ', spoiled ' + r.spQ + ', goodwill ' + (r.gwQ || 0) + ', gone ' + r.gone + '.'; }).join('<br>') + '<br><span class="muted">Credit, spoiled and goodwill notes can only explain items that are sold. Count the item again or cancel a note in History.</span>');
   var unc = rows.filter(function (r) { return !r.counted && (r.stock > 0 || r.cage > 0); });   /* nothing left = nothing to count */
   if (unc.length) {
     var all = rows.filter(function (r) { return r.stock > 0 || r.cage > 0; }).length;
@@ -4163,7 +4180,7 @@ function doHandover2() {
   var trl = ctlTrail(), ctl = [EMAIL]; trl.forEach(function (x) { [x.fe, x.te].forEach(function (em) { if (em && ctl.indexOf(em) < 0) ctl.push(em); }); });
   var same = sameShiftHo(sh), h = { status: 'open', same: same, at: Date.now(), fromEmail: EMAIL, fromName: myName(), fromWatch: whoOf(EMAIL).wk, trail: trl, ctl: ctl, locked: locked, tos: locked ? [] : (sh.tos || []).slice(), toLabels: locked ? [] : tosList().map(plabelNo), toEmails: toEmails, nw: nextWatch(),
     shift: { name: sh.name, half: sh.half, date: sh.date, sid: sh.sid }, cash: sh.counted === '' ? t.cash : num(sh.counted), computed: t.cash, sales: t.sales, sold: t.sold, cr: t.crN, loans: t.loans, used: t.used, paid: t.paidN, purch: t.purch, received: sh.received, notes: sh.notes, sig: M.signature, expireAt: EXP(),
-    items: rows.map(function (r) { return { id: r.id, shelf: r.shelf, store: r.store, unit: r.unit, name: r.name, price: r.price, per: r.per, open: r.open, stock: r.stock, sold: r.sold, credit: r.crQ, spoiled: r.spQ, cageOpen: r.cageOpen, cage: r.cage, gone: r.gone, moved: r.moved, movedCases: r.movedCases || 0, bought: r.bought, ub: r.ub || 0, edit: r.edit, cedit: r.cedit, adj: r.adj, cadj: r.cadj, spoil: r.spoil, soldAmt: r.soldAmt, crAmt: r.crAmt, spAmt: r.spAmt }; }),
+    items: rows.map(function (r) { return { id: r.id, shelf: r.shelf, store: r.store, unit: r.unit, name: r.name, price: r.price, per: r.per, open: r.open, stock: r.stock, sold: r.sold, credit: r.crQ, spoiled: r.spQ, goodwill: r.gwQ || 0, gwAmt: r.gwAmt || 0, cageOpen: r.cageOpen, cage: r.cage, gone: r.gone, moved: r.moved, movedCases: r.movedCases || 0, bought: r.bought, ub: r.ub || 0, edit: r.edit, cedit: r.cedit, adj: r.adj, cadj: r.cadj, spoil: r.spoil, soldAmt: r.soldAmt, crAmt: r.crAmt, spAmt: r.spAmt }; }),
     edits: S.log.filter(function (e) { return e.type === 'stockedit'; }).map(editInfo),
     crShift: t.crN, owedTotal: owing().reduce(function (a, x) { return a + x.bal; }, 0), owedBy: owingList(), openShort: shortAllList(), stored: fundSnap(), storedTotal: storedTotal(), sealed: sealSnap(), sealGiver: Object.keys(HOSEAL).filter(function (k) { return HOSEAL[k]; }) };
   var hd = String(sh.date || '').split('/'), cashRows = soldRows(rows).map(function (x) { return { n: x.r.name, o: x.r.open, a: x.plus, s: x.r.sold, c: x.cash, w: x.r.stock, cr: x.r.crQ, sp: x.r.spQ }; });
@@ -4204,7 +4221,7 @@ function rxOnList(h) { return RXSTEP === 0 && rxHasDetail(h); }
 function docRows(h, RM) {   /* the rows of a handover, in the same shape as the Handover tab: older handovers only kept sold, credit and spoiled, so the rest is worked out */
   RM = RM || {};
   return (h.items || []).map(function (x) {   /* the same numbers as "Sold this shift"; older handovers only kept sold, credit and spoiled, so the rest is worked out */
-    var old = x.gone == null, gone = old ? (x.sold || 0) + (x.spoiled || 0) : x.gone, pr = x.price || 0, mv = old ? Math.max(0, x.stock - x.open + gone) : x.moved, r = { id: x.id, shelf: !!x.shelf, store: itStore(x), direct: !itStore(x), unit: x.unit || (x.shelf ? 'pack' : 'case'), name: x.name, price: pr, per: x.per, open: x.open || 0, stock: x.stock, cageOpen: x.cageOpen || 0, cage: x.cage || 0, gone: gone, sold: x.sold || 0, crQ: x.credit || 0, spQ: x.spoiled || 0,
+    var old = x.gone == null, gone = old ? (x.sold || 0) + (x.spoiled || 0) : x.gone, pr = x.price || 0, mv = old ? Math.max(0, x.stock - x.open + gone) : x.moved, r = { id: x.id, shelf: !!x.shelf, store: itStore(x), direct: !itStore(x), unit: x.unit || (x.shelf ? 'pack' : 'case'), name: x.name, price: pr, per: x.per, open: x.open || 0, stock: x.stock, cageOpen: x.cageOpen || 0, cage: x.cage || 0, gone: gone, sold: x.sold || 0, crQ: x.credit || 0, spQ: x.spoiled || 0, gwQ: x.goodwill || 0, gwAmt: x.gwAmt || 0,
       moved: !itStore(x) ? 0 : mv, bought: !itStore(x) ? (old ? mv : x.bought || 0) : (old ? 0 : x.bought || 0), ub: old ? 0 : x.ub || 0, movedCases: x.movedCases || 0, edit: old ? 0 : x.edit || 0, cedit: old ? 0 : x.cedit || 0, adj: old ? 0 : x.adj || 0, cadj: old ? 0 : x.cadj || 0, spoil: old ? 0 : x.spoil || 0,
       soldAmt: old ? gone * pr : x.soldAmt || 0, crAmt: old ? (x.credit || 0) * pr : x.crAmt || 0, spAmt: old ? (x.spoiled || 0) * pr : x.spAmt || 0 }; RM[x.id] = r; return r; }).filter(function (r) { return r.open || r.stock || r.cageOpen || r.cage; });
 }
@@ -4214,21 +4231,22 @@ var SOPEN = {}, SALL = false, HOVI = -1;   /* the sold list: which items are ope
 function soldCards(rows, h, title) {   /* what was sold: a clean list; tap an item with something to explain and its details drop down */
   var xs = rows.filter(function (r) { return r.sold > 0; }), key = function (r) { return 's' + (r.id || r.name); };
   var plus = function (r) { return r.moved + (r.direct ? r.bought : 0) + (r.ub || 0); }, sp = function (r) { return r.spQ + r.spoil; };
-  var more = function (r) { return r.crQ || sp(r) || plus(r) || r.edit || r.adj; };
-  var tq = xs.reduce(function (a, r) { return a + r.sold; }, 0), tc = xs.reduce(function (a, r) { return a + Math.max(0, r.soldAmt - r.crAmt - r.spAmt); }, 0), nm = xs.filter(more).length;
+  var more = function (r) { return r.crQ || r.gwQ || sp(r) || plus(r) || r.edit || r.adj; };
+  var tq = xs.reduce(function (a, r) { return a + r.sold; }, 0), tc = xs.reduce(function (a, r) { return a + Math.max(0, r.soldAmt - r.crAmt - r.spAmt - (r.gwAmt || 0)); }, 0), nm = xs.filter(more).length;
   return '<div class="card"><h2>' + (title || 'Sold on the shift that handed over') + '</h2><div class="muted" style="margin:-4px 0 4px">' + esc(h.shift.name) + ' shift · ' + esc(h.shift.date) + ' ' + esc(HL(h.shift.half)) + '</div>' +
     (nm ? '<div class="hohint"><span>' + nm + (nm === 1 ? ' item has details' : ' items have details') + ' · tap a row to read</span><a data-act="soldall">' + (SALL ? 'Close all' : 'Open all') + '</a></div>' : '') +
     (xs.length ? xs.map(function (r) {
-      var cash = Math.max(0, r.soldAmt - r.crAmt - r.spAmt), m = more(r), open = m && (SALL || SOPEN[key(r)]), L = [], eq = [r.open];
+      var cash = Math.max(0, r.soldAmt - r.crAmt - r.spAmt - (r.gwAmt || 0)), m = more(r), open = m && (SALL || SOPEN[key(r)]), L = [], eq = [r.open];
       if (open) {
         if (r.crQ) L.push('<div class="hx pos">' + (r.sold - r.crQ) + ' sold for cash</div>', '<div class="hx cr">' + r.crQ + ' sold on credit · ' + money(r.crAmt) + ' not paid yet</div>');
         if (r.spQ) L.push('<div class="hx neg">' + r.spQ + ' spoiled · not sold, no money</div>');
+        if (r.gwQ) L.push('<div class="hx pos">' + r.gwQ + ' goodwill · given for free, not sold, no money</div>');
         if (r.spoil) L.push('<div class="hx neg">' + r.spoil + ' spoiled from stock · no money</div>');
         if (r.moved) L.push('<div class="hx pos">+ ' + r.moved + ' added from storage' + (r.movedCases ? ' (' + r.movedCases + ' ' + unitPl(r.unit || 'case', r.movedCases) + ')' : '') + '</div>');
         if (r.direct && r.bought) L.push('<div class="hx pos">+ ' + r.bought + ' bought</div>'); if (r.ub) L.push('<div class="hx pos">+ ' + r.ub + ' bought</div>');
         if (r.edit) L.push('<div class="hx neg">⚠ edited by hand ' + (r.edit > 0 ? '+' : '') + r.edit + '</div>');
         if (r.adj) L.push('<div class="hx">' + (r.adj > 0 ? '+' : '') + r.adj + ' count change</div>');
-        var t = '' + r.open; if (plus(r)) t += ' + ' + plus(r); t += ' − ' + r.sold + ' sold'; if (sp(r)) t += ' − ' + sp(r) + ' spoiled'; if (r.edit) t += (r.edit > 0 ? ' + ' : ' − ') + Math.abs(r.edit) + ' edit'; if (r.adj) t += (r.adj > 0 ? ' + ' : ' − ') + Math.abs(r.adj) + ' count'; var df = r.stock - (r.open + plus(r) - r.sold - sp(r) + r.edit + r.adj); if (df) t += ' <b style="color:var(--exp)">' + (df > 0 ? '+ ' : '− ') + Math.abs(df) + ' not explained</b>'; t += ' = ' + r.stock + ' left';
+        var t = '' + r.open; if (plus(r)) t += ' + ' + plus(r); t += ' − ' + r.sold + ' sold'; if (sp(r)) t += ' − ' + sp(r) + ' spoiled'; if (r.gwQ) t += ' − ' + r.gwQ + ' goodwill'; if (r.edit) t += (r.edit > 0 ? ' + ' : ' − ') + Math.abs(r.edit) + ' edit'; if (r.adj) t += (r.adj > 0 ? ' + ' : ' − ') + Math.abs(r.adj) + ' count'; var df = r.stock - (r.open + plus(r) - r.sold - sp(r) - (r.gwQ || 0) + r.edit + r.adj); if (df) t += ' <b style="color:var(--exp)">' + (df > 0 ? '+ ' : '− ') + Math.abs(df) + ' not explained</b>'; t += ' = ' + r.stock + ' left';
         L.push('<div class="hx" style="color:var(--muted);font-weight:500;border-top:1px dashed var(--secb);margin-top:4px;padding-top:4px">' + t + '</div>');
       }
       return '<div style="border-top:1px solid var(--line);padding:10px 0"' + (m ? ' class="horow" data-act="soldopen" data-id="' + esc(key(r)) + '"' : '') + '><div class="row" style="align-items:center"><b class="grow" style="font-size:15px">' + esc(r.name) + (m ? ' <span class="hoch">' + (open ? '▴' : '▾') + '</span>' : '') + '</b><b style="font-size:15px">' + r.sold + ' sold</b><b style="color:var(--ok);margin-left:12px;min-width:52px;text-align:right">' + money(cash) + '</b></div><div class="muted" style="margin-top:2px">' + (r.shelf ? 'On the shelf' : 'In the fridge') + ': ' + r.open + ' → <b style="color:var(--ink)">' + r.stock + '</b></div>' + (open ? '<div class="hoopen" style="margin-top:6px">' + L.join('') + '</div>' : '') + '</div>';
@@ -5180,7 +5198,7 @@ function hlist() {
 function cancelledModal() {
   livePage(cancelledModal, 'Cancelled entries', query(col('cancelled'), orderBy('at', 'desc'), limit(40)), function (docs) {
     return '<h2>Cancelled entries</h2><p class="muted" style="margin-top:0">A private record kept for admins. These no longer show in History.</p><div class="list">' + (docs.length ? docs.map(function (c) {
-      var e = c.event || {}; return '<div><div class="grow"><b>' + esc(e.type === 'sale' || e.type === 'cnote' || e.type === 'snote' ? e.qty + ' × ' + e.name : e.type === 'count' ? 'Count of ' + e.name : e.type === 'buy' ? 'Purchase ' + buyText(e) : e.type === 'loan' ? 'Cash loan' : e.name || e.type) + '</b><div class="muted">' + new Date(c.at).toLocaleString() + ' · cancelled by ' + esc(nameOfEmail(c.by) !== 'A member' ? nameOfEmail(c.by) : (c.byName || 'a member')) + (c.reason ? ' · ' + esc(c.reason) : '') + '</div></div><b>' + (e.amt ? money(e.amt) : '') + '</b></div>';
+      var e = c.event || {}; return '<div><div class="grow"><b>' + esc(e.type === 'sale' || e.type === 'cnote' || e.type === 'snote' || e.type === 'gnote' ? e.qty + ' × ' + e.name : e.type === 'count' ? 'Count of ' + e.name : e.type === 'buy' ? 'Purchase ' + buyText(e) : e.type === 'loan' ? 'Cash loan' : e.name || e.type) + '</b><div class="muted">' + new Date(c.at).toLocaleString() + ' · cancelled by ' + esc(nameOfEmail(c.by) !== 'A member' ? nameOfEmail(c.by) : (c.byName || 'a member')) + (c.reason ? ' · ' + esc(c.reason) : '') + '</div></div><b>' + (e.amt ? money(e.amt) : '') + '</b></div>';
     }).join('') : '<div class="empty">Nothing cancelled.</div>') + '</div><button class="btn sec block" data-act="wpback" style="margin-top:10px">Back</button>';
   });
 }
@@ -6057,7 +6075,7 @@ window.addEventListener('resize', ddClose);
 /* ---------- help: a ? badge on the active tab; tap the active tab again (or the badge) to read the help for that tab ---------- */
 var HELP = {
   sell: { t: 'Count', steps: ['Every item shows its price at the top right until it is counted. Once you count it, a ✓ and the number sold take the price\'s place.', 'Tap an item.', 'To change the order of the items, <b>press and hold</b> one, then drag it where you want it. Everyone in the workplace sees the same order. New items go to the bottom. The button under the list puts everything back in A to Z.', 'Type what is really in the fridge (or on the shelf) now, or use the − and + buttons. The app works out how many were sold: the last count minus yours.', 'Press <b>Save count</b>.', 'Taking cases from storage? Press <b>Add from cage</b> first, then count.', 'Some items sold on credit or spoiled? Add a note (<b>On credit to…</b> or <b>Spoiled</b>) before you save, so they are not counted as cash.', 'Cash taken for the station? Use the dashed <b>Use cash</b> button at the top and give a reason.'],
-    extra: [{ t: 'Selling on credit from the Count page', ol: ['Tap the item that was taken on credit.', 'In <b>Credit and spoiled notes</b>, set how many items were taken on credit with the + and − buttons.', 'Press <b>On credit to…</b> and choose the person. If their name is not on the list, save it as a new name first.', 'Check the pop-up and confirm. The note is saved, but it <b>does not change the number</b> in the fridge.', 'Now count the fridge as usual and press <b>Save count</b>. The items taken on credit are part of what was sold, but they are not counted as cash.', 'Cash for that item = items sold − items on credit. The credit amount is added to what that person owes.'], ul: ['You can add more than one note for the same item, for example two people.', 'The credit notes can never be more than what was sold.', 'The person now shows under <b>People owing</b> in the Credit tab. When they pay, tap their name there and enter the amount.', 'Put the wrong person? Cancel the note from History and add it again.'] }],
+    extra: [{ t: 'Selling on credit from the Count page', ol: ['Tap the item that was taken on credit.', 'In <b>Credit, spoiled and goodwill notes</b>, set how many items were taken on credit with the + and − buttons.', 'Press <b>On credit to…</b> and choose the person. If their name is not on the list, save it as a new name first.', 'Check the pop-up and confirm. The note is saved, but it <b>does not change the number</b> in the fridge.', 'Now count the fridge as usual and press <b>Save count</b>. The items taken on credit are part of what was sold, but they are not counted as cash.', 'Cash for that item = items sold − items on credit. The credit amount is added to what that person owes.'], ul: ['You can add more than one note for the same item, for example two people.', 'The credit notes can never be more than what was sold.', 'The person now shows under <b>People owing</b> in the Credit tab. When they pay, tap their name there and enter the amount.', 'Put the wrong person? Cancel the note from History and add it again.'] }],
     fix: ['Wrong count on one item: tap <b>Undo</b> on the message straight after, or open History (the clock) and use <b>Cancel an item</b>.', 'Several counts wrong: <b>Start over</b> (top of this page) cancels your counts only, or everything on the shift.', 'Credit or spoiled bigger than what was sold? The app warns you. Fix the note or the count.', 'On a different shift from the one working? You are asked once which shift to record on (see Which shift am I on?).'] },
   stock: { t: 'Stock', steps: ['The Stock tab lists every item in two cards: <b>Fridge</b> and <b>Shelf</b>, A to Z. Each row shows how many are in the fridge or on the shelf, how many cases or packs are in storage, and the price. Items that ran out are at the bottom.', 'Tap an item to move a case from storage to the fridge, record spoiled items, or edit its name, price and cost.', '<b>+ Add a new item</b>: give it a name, the selling price, where it is sold from (fridge or shelf), how many are in a case, and how many you have now. The same name cannot be added twice.', 'Cost is optional. When a receipt gives an item its first cost, the app fills in the cost of its earlier sales for you.'],
     fix: ['Moved the wrong number: open History and <b>Cancel an item</b>.', 'Wrong price or name: edit the item. New sales use the new price; past sales keep the old one.', '<b>Edit stock</b> (red) only fixes a real error. It asks for a reason and shows in red in History and in the handover.'] },
@@ -6065,7 +6083,7 @@ var HELP = {
     fix: ['After you start, the counts on the Stock tab are read only. A real error can still be fixed with the red <b>Edit stock</b>, which asks for a reason.', 'Started with the wrong previous handover? Tell the President or the Owner before the first shift is handed over.'] },
   buy: { t: 'Add stock', steps: ['Choose <b>Bought (bill)</b> for a purchase with a bill, or <b>Other (no money)</b> for stock that came without paying.', '<b>1 · Who and when</b>: who it was bought from, and when (leave the time empty for now).', 'Then one card for each item: pick the item and say how many <b>Cases</b> you bought, and how many <b>Singles</b> (loose items) if any. Press <b>Add another item</b> for more.', '<b>Where are they going?</b> Set how many go to the <b>Shop</b> (fridge or shelf) and how many go to <b>Storage</b>.', 'Enter the cost. With several items, the costs must add up to the bill.', '<b>The bill</b>: the total on the bill, and the tax if there is any.', '<b>Payment</b>: how much cash was taken from the cash. If you keep no change, it is the bill total.', '<b>Receipt photo</b>: take a photo. It is recommended and is kept with the purchase.', 'Press <b>Save</b>. The stock goes into storage or onto the shelf.'],
     fix: ['Entered the wrong bill: open History and <b>Cancel an item</b>. It can only be cancelled if that stock has not already been moved or sold.', 'Item not on the list: choose <b>New item</b> in the picker.', 'The bill total must match what you entered. The app tells you what does not add up.'] },
-  credit: { t: 'Credit', steps: ['To put something on credit: go to <b>Count</b>, tap the item, and press <b>On credit to…</b>.', '<b>Lend cash</b> records money taken from the cash and lent to someone.', 'When someone pays, tap their name and enter the amount.', '<b>People owing</b> and <b>Credit + loans this shift</b> show who owes what. Credit stays on the list from shift to shift until it is paid.'],
+  credit: { t: 'Credit', steps: ['To put something on credit: go to <b>Count</b>, tap the item, and press <b>On credit</b>.', '<b>Lend cash</b> records money taken from the cash and lent to someone.', 'When someone pays, tap their name and enter the amount.', '<b>People owing</b> and <b>Credit + loans this shift</b> show who owes what. Credit stays on the list from shift to shift until it is paid.'],
     fix: ['Wrong person or amount: cancel it from History, then enter it again.', 'Ask a President or the Owner for write-offs and other corrections.'] },
   handover: { t: 'Handover', steps: ['<b>Outgoing shift (handing over):</b> count everything on the Count tab, then count the cash and enter it (this is required).', 'Choose the handover type: <b>To a person</b> (only people registered in the app) or <b>Locked</b> (fridge and storage locked, not handed to a person).', 'Sign, then press <b>Prepare handover</b>, check the summary and send it.', '<b>Incoming shift (taking over):</b> open the waiting handover, count the cash and every item, sign and accept. The items are in three lists: <b>In the fridge</b>, <b>On the shelf</b> and <b>Cases / Packs in storage</b>. Anything short is recorded against the shift that was on duty. If you counted more than was handed over, it is noted, not a shortage.', '<b>Previous handover</b> shows the one you received and the one you handed over, read only. A handover entered by hand when the workplace started is listed there too.', 'The <b>Handover record</b> (History, tap the handover, then <b>Open the full handover record</b>) shows both sides. <b>Cash</b> has the Outgoing shift and Incoming shift columns. The item lists say <b>(counted)</b> with Outgoing and Incoming columns, and any difference is marked.', '<b>Switch operator</b> gives the app to someone else on the same shift without a handover.'],
     fix: ['Sent to the wrong person: cancel the handover before it is taken.', 'Counted wrong before accepting: the incoming shift counts again; differences are recorded when it is accepted.', 'A count was wrong after the handover was accepted: use <b>Handover mistake</b> (see that guide).', 'Handing over early or late? You may be asked which shift to record on (see Which shift am I on?).'] },
@@ -6235,6 +6253,8 @@ document.addEventListener('click', function (e) {
   else if (a === 'cnsave') countSave();
   else if (a === 'cnmove') countMove();
   else if (a === 'cnote') { if (CN.q < 1) toast('Set how many items first'); else openPicker('cnote'); }
+  else if (a === 'gnote') { if (CN.q < 1) toast('Set how many items first'); else goodwillNote(); }
+  else if (a === 'gwyes') goodwillSave();
   else if (a === 'snote') { if (CN.q < 1) toast('Set how many items first'); else spoilNote(); }
   else if (a === 'ucopen') ucOpen();
   else if (a === 'uccam') $('#uc-cam').click();
