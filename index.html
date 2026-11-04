@@ -297,7 +297,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.66', RULES_VERSION = '2.35';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.67', RULES_VERSION = '2.35';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1763,7 +1763,7 @@ function alNotice(n, old) {
   if (n.kind === 'fundshort') return alCard(n.over ? '↑' : '⚠', n.over ? 'a' : 'r', (n.over ? 'Stored cash extra found: ' : 'Stored cash short: ') + money(n.amount) + ' · ' + esc(n.what || ''), 'sealed envelope opened · written ' + money(n.was) + ', found ' + money(n.found) + (n.sealBy ? ' · last sealed by ' + esc(n.sealBy) + (n.sealWk ? ' (' + esc(n.sealWk) + ')' : '') : '') + ' · recorded by ' + esc(n.byName || '') + ' · ' + when);
   if (n.kind === 'sealissue') return alCard('⚠', 'r', 'Sealed cash problem: ' + esc(n.what || ''), esc(n.byName || '') + ' took over from ' + esc(n.fromName || '') + (n.fromWk ? ' (' + esc(n.fromWk) + ' → ' + esc(n.wk || '') + ')' : '') + ' and reports: ' + esc(n.issue || '') + '. Written on it ' + money(n.amt) + ' · put in by ' + esc(n.giver || '') + (n.forWk ? ' (' + esc(n.forWk) + ')' : '') + ' · recorded by ' + esc(n.byName || '') + ' · ' + when);
   if (n.kind === 'spendcancel') return alCard('↩', 'b', 'Cancelled: ' + money(n.amount) + ' · ' + esc(n.what || ''), 'recorded by ' + esc(n.byName || '') + (n.wk ? ' · ' + esc(n.wk) + ' shift' : '') + ' · ' + when);
-  if (n.kind === 'hoacc') return alCard('🔁', n.result === 'matched' ? 'g' : 'a', esc(n.byName || '') + ' accepted ' + esc(n.fromName || '') + '\'s handover', esc(n.fromWk || '') + ' → ' + esc(n.toWk || '') + ' · ' + esc(n.result || '') + ' · ' + when, { act: 'hoview', id: n.id, old: old, dot: nw });
+  if (n.kind === 'hoacc') return alCard('🔁', n.result === 'matched' ? 'g' : 'a', esc(n.byName || '') + ' accepted ' + esc(n.fromName || '') + '\'s handover', esc(n.fromWk || '') + ' → ' + esc(noticeRwk(n)) + ' · ' + esc(n.result || '') + ' · ' + when, { act: 'hoview', id: n.id, old: old, dot: nw });
   if (n.kind === 'hcdone' || n.kind === 'hcno') return alCard('✎', n.kind === 'hcdone' ? 'b' : 'a', n.kind === 'hcdone' ? 'Handover corrected' : 'Correction declined', esc(n.wk || '') + ' · ' + esc(n.shiftDate || '') + ' · ' + esc(n.text || '') + ' · ' + (n.kind === 'hcdone' ? 'accepted by ' : 'declined by ') + esc(n.byName || '') + ' · ' + when, { act: 'ntview', id: n.id, old: old, dot: nw });
   var recv = n.kind === 'received', dl = recv ? (ntDiffLoad(n.sid), NTDIFF[n.sid]) : null, matched = recv && (Array.isArray(dl) ? !dl.length : n.diffs === ''), diffs = recv ? (Array.isArray(dl) ? dl : (n.diffs ? ['Counted differently: ' + n.diffs] : [])) : [];
   var gp = n.kind === 'gap', canPay = (n.kind === 'shortage' || gp) && inControl() && !OWNERVIEW && openShortList().some(function (x) { return x.wk === n.wk; });
@@ -3292,9 +3292,12 @@ function spentLoad(d) {   /* the entries of an older shift are not loaded: fetch
     el.outerHTML = spentHtml(d, evs);
   }).catch(function (e) { console.error(e); });
 }
+function noticeRwk(n) {   /* the shift that took the handover: from the handover record when it is loaded (an owner may have corrected it since the notice was written), else what the notice says */
+  var d = n && n.sid ? (HSD[n.sid] || (HSDOCS || []).filter(function (x) { return x.id === n.sid; })[0]) : null; return (d && d.receivedBy && rcvWk(d)) || n.toWk || '';
+}
 function hoSheet(id, kind, wk2) {   /* the short handover pop-up: who, the result in one sentence, what differs, who owes, remarks */
   var d = HSD[id] || (HSDOCS || []).filter(function (x) { return x.id === id; })[0]; if (!d) return;
-  var acc = d.status === 'accepted', giver = d.fromName || 'A member', recvName = d.receivedByName || (d.toLabels || []).join(', ') || 'the next shift', rwk = wk2 || (d.receivedBy ? rcvWk(d) : '');
+  var acc = d.status === 'accepted', giver = d.fromName || 'A member', recvName = d.receivedByName || (d.toLabels || []).join(', ') || 'the next shift', rwk = (d.receivedBy ? rcvWk(d) : '') || wk2 || '';   /* the record says which shift took it (it can be corrected later); the notice's shift is only a fallback */
   var st = hoShort(d), c = st.c, diffs = c.diffs, same = c.same, ni = c.less, cashOk = acc && c.cashDiff === 0, cashDiff = c.cashDiff, gp = acc ? gapDocOf(d.handoverId || id) : null;
   if (gp) { cashOk = !(gp.cashShort > 0 || gp.cashOver > 0); cashDiff = gp.cashShort > 0 ? -gp.cashShort : gp.cashOver > 0 ? gp.cashOver : 0; }   /* after a gap the cash is compared with what it should be: the handed-over cash plus the items sold in the gap */
   var box = !acc ? '<div class="hbox wait"><b>⏳ Waiting for ' + esc(recvName) + ' to count it</b><br>The result shows here as soon as ' + esc(recvName) + ' accepts.</div>'
