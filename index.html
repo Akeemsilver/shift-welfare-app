@@ -297,7 +297,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.64', RULES_VERSION = '2.35';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.65', RULES_VERSION = '2.35';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -591,6 +591,7 @@ function setShift(obj) { var u = {}; for (var k in obj) u['shift.' + k] = obj[k]
 function reverseEvent(b, e) {
   var it = item(e.item), cid = e.cid || rootOf(e.cr || e.person || ''); LE = e.id;   /* the cancelled record carries the same id as the event */
   if (e.type === 'savemove') return 'A savings move cannot be cancelled. Move the money back instead.';
+  if (e.type === 'absorb') return 'Stored cash moved into the cash on hand cannot be cancelled.';
   if (['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'hocorr', 'shiftrec', 'watchchg', 'fundshort', 'fundover', 'sealopen', 'sealout', 'advsettle'].indexOf(e.type) >= 0) return 'This entry cannot be cancelled here. It was made with a stock purchase. Ask the owner or a president.';
   if (e.type === 'sale') { if (!it) return 'That item no longer exists'; itemInc(b, it.id, { stock: e.qty }); if (e.cr) balInc(b, cid, -e.amt); }
   else if (e.type === 'count') { if (e.qty > 0) { if (!it) return 'That item no longer exists'; itemInc(b, it.id, { stock: e.qty }); } }
@@ -1003,12 +1004,54 @@ function cashRedSheet() {
     '<div class="card" style="background:var(--soon-bg);box-shadow:none">Some of the cash that should be kept for ' + esc(names.join(' and ')) + ' is not in cash in hand. Inform the president.</div>' +
     '<button class="btn sec block" data-act="close">Close</button>');
 }
+var AB = null;
+function absorbSplit(amt, sb) {   /* the amount is shared equally by every shift in whole dollars (the extra dollars go to the shift with the most stored); a shift that has less stored than its share gives all it has, and the rest is taken equally from the shifts that still have some. Nobody ends up owing */
+  var sp = shareSplit(amt, sb), take = {}, left = sp.pan, ws = WATCHES.slice(), room = {};
+  ws.forEach(function (w) { take[w] = sp.paid[w]; room[w] = r2(Math.max(0, (sb[w] > 0 ? sb[w] : 0) - take[w])); });
+  for (var g = 0; g < 50 && left > 0.004; g++) {
+    var act = ws.filter(function (w) { return room[w] > 0.004; }); if (!act.length) break;
+    var per = Math.floor(left / act.length); if (per < 1) { act.sort(function (a, b) { return room[b] - room[a]; }); per = Math.min(left, room[act[0]]); act = [act[0]]; }
+    act.forEach(function (w) { var d = r2(Math.min(room[w], per, left)); take[w] = r2(take[w] + d); room[w] = r2(room[w] - d); left = r2(left - d); });
+  }
+  return { take: take, left: left };
+}
+function abMax(id) { var by = fundSB(id), t = 0; Object.keys(by).forEach(function (k) { if (by[k] > 0) t += by[k]; }); var f = S.funds[id]; return r2(Math.min(t, f ? f.bal || 0 : 0)); }
+function abBoxHtml() {
+  var f = S.funds[AB.id], amt = r2(num(AB.amt)), mx = abMax(AB.id); if (!f) return '';
+  if (!(amt > 0)) return '<div class="muted">Type how much to move.</div>';
+  if (amt > mx + 0.004) return '<div style="color:var(--exp)">Only ' + money(mx) + ' is stored in ' + esc(f.name) + '.</div>';
+  var by = fundSB(AB.id), sp = absorbSplit(amt, by), t = totals();
+  return '<div class="card sum" style="margin:0"><h2 style="margin-top:0">Taken from each shift</h2>' + WATCHES.map(function (w) { return '<div><span>' + esc(w) + ' <span class="muted">' + money(by[w] > 0 ? by[w] : 0) + ' stored</span></span><b>− ' + money(sp.take[w] || 0) + '</b></div>'; }).join('') + '</div>' +
+    '<div class="card sum" style="margin:8px 0 0"><div><span>Stored in ' + esc(f.name) + '</span><b>' + money(f.bal || 0) + ' → ' + money(r2((f.bal || 0) - amt)) + '</b></div><div><span>Cash on hand</span><b>' + money(t.cash) + ' (no change)</b></div></div>';
+}
+function abOpen(id) {
+  var f = S.funds[id]; if (!f || !isPres() || OWNERVIEW) return; var mx = abMax(id); if (!(mx > 0)) return toast('Nothing is stored in ' + f.name);
+  AB = { id: id, amt: String(mx) };
+  modal('<h2 style="margin:0 0 6px">Move stored cash into the cash on hand</h2><div class="muted" style="margin-bottom:8px">' + esc(f.name) + ' · ' + money(f.bal || 0) + ' stored. The cash on hand does not change, the stored amount goes down. Debts stay.</div>' +
+    '<label style="margin-top:0">How much?</label><input data-ab="amt" type="number" inputmode="decimal" min="0" value="' + esc(AB.amt) + '"><div id="ab-box" style="margin-top:10px">' + abBoxHtml() + '</div>' +
+    '<button class="btn green block" data-act="abreview" style="margin-top:12px">Review</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>');
+}
+function abReview() {
+  var f = S.funds[AB.id], amt = r2(num(AB.amt)); if (!f) return; if (!(amt > 0)) return toast('Type how much to move'); if (amt > abMax(AB.id) + 0.004) return toast('Only ' + money(abMax(AB.id)) + ' is stored');
+  askConfirm('Move ' + money(amt) + ' into the cash on hand?', abBoxHtml() + '<br><span class="muted">It is listed in History, recorded by ' + esc(myName()) + '. The other owners and presidents are told. It cannot be cancelled.</span>', 'Yes, move ' + money(amt), abSave);
+}
+function abSave() {
+  var f = S.funds[AB.id], amt = r2(num(AB.amt)); if (!f || !(amt > 0) || !isPres() || amt > abMax(AB.id) + 0.004) return;
+  var by = fundSB(AB.id), sp = absorbSplit(amt, by), sbd = {}; Object.keys(sp.take).forEach(function (k) { if (sp.take[k] > 0.004) sbd[k] = -sp.take[k]; });
+  var b = writeBatch(DB), id = newEv(), fid = AB.id;
+  mkEvent(b, 'absorb', null, 1, amt, { name: 'Stored cash moved', fund: fid, fundName: f.name, sbd: sbd, from: r2(f.bal || 0), to: r2((f.bal || 0) - amt) }, id);
+  fundWrite(b, fid, f, -amt, 0, sbd, {}, id);
+  var what = money(amt) + ' of stored cash (' + f.name + ') moved into the cash on hand · ' + Object.keys(sbd).map(function (k) { return k + ' −' + money(-sbd[k]); }).join(', ');
+  closeModal(); toast(money(amt) + ' moved into the cash on hand', id);
+  commit(b).then(function () { tellBosses(id, 'fundabsorb', { amount: amt, what: what }); fundPage(fid); });
+}
 function fundPage(id) {
   var f = S.funds[id]; if (!f) return storedPage(); var by = fundSB(id), owe = fundOwe(id), sl = sealList(id), slAmt = r2(sl.reduce(function (a, x) { return a + x.amt; }, 0)), anyOwe = Object.keys(owe).length;
   var h = '<h2>' + esc(f.name) + '</h2><div class="card" style="border-left:2px solid var(--' + (anyOwe ? 'exp' : 'ok') + ')"><div class="muted">STILL STORED AND COUNTED</div><div style="font-size:28px;font-weight:700">' + money(f.bal || 0) + '</div>' + (sl.length ? '<div class="muted">+ 🔒 ' + sl.length + ' sealed, not counted (' + money(slAmt) + ' written)' + (f.lastSealBy ? ' · last sealed by ' + esc(f.lastSealBy) + (f.lastSealWk ? ' (' + esc(f.lastSealWk) + ')' : '') : '') + '</div>' : '') + storedNote() + '</div>';
   var ks = Object.keys(by), ok = Object.keys(owe);
   if (ks.length || ok.length) h += '<div class="card sum"><h2>By shift</h2>' + ks.map(function (w) { return '<div><span>' + esc(w) + '</span><b>' + money(by[w]) + '</b></div>'; }).join('') + ok.map(function (w) { return '<div><span><b>' + esc(w) + '</b> <span class="muted">owes the cash on hand</span></span><b style="color:var(--exp)">−' + money(owe[w]) + '</b></div>'; }).join('') + (ok.length ? '<div class="card" style="background:var(--exp-bg);box-shadow:none;margin:8px 0 0;color:var(--exp)">A bill was paid in full. The cash on hand paid the part this shift did not have stored. When it adds cash for ' + esc(f.name) + ', the first part pays this back.</div>' : '') + '</div>';
   if (sl.length) h += '<div class="card"><h2>🔒 Sealed, not counted</h2><div class="list">' + sl.map(function (x) { return '<div data-act="sealsheet" data-id="' + esc(x.id) + '"><div class="grow"><b>' + money(x.amt) + ' written on it</b><div class="muted">put in by ' + esc(x.giver || '') + (x.forWk ? ' (' + esc(x.forWk) + ')' : '') + '</div></div><b>›</b></div>'; }).join('') + '</div></div>';
+  if (isPres() && !OWNERVIEW && abMax(id) > 0) h += '<button class="btn sec block" data-act="abopen" data-id="' + esc(id) + '" style="margin-bottom:10px">Move stored cash into the cash on hand</button>';
   h += '<div class="muted" style="margin:6px 2px 10px;font-size:12.5px">Every deposit and every use is listed in History.</div>';
   wpPage(fundPage, [id], h, true);
 }
@@ -1712,6 +1755,7 @@ function alNotice(n, old) {
   if (n.kind === 'offset') return alCard('✓', 'b', n.role === 'to' ? 'Your ' + esc(n.to) + ' shift shortage was cleared' : 'Your ' + esc(n.from) + ' shift cash over was used', money(n.amount) + (n.role === 'to' ? ' cleared with ' + esc(n.from) + ' shift cash over' : ' of your cash over cleared ' + esc(n.to) + ' shift\'s shortage') + ' · by ' + esc(n.byName || 'an admin') + ' · ' + when + '.');
   if (n.kind === 'shiftfix') return alCard('✎', 'b', 'Your shift was corrected to ' + esc(n.wk), 'The ' + esc(n.byName || 'president') + ' changed ' + esc(n.from || '') + ' → ' + esc(n.wk) + ' · ' + when + '. Your entries, handovers and day totals now say ' + esc(n.wk) + '. Cash, stock and counts are unchanged.');
   if (n.kind === 'shiftchg') return n.self ? alCard('👤', 'a', 'Your shift was changed to ' + esc(n.to || 'no shift'), esc(n.from || 'no shift') + ' → ' + esc(n.to || 'no shift') + ' · by ' + esc(n.byName || 'an admin') + ' · ' + when + '. From now on you are counted as ' + esc(n.to || 'no shift') + '. Earlier entries and handovers stay ' + esc(n.from || 'as they were') + '.') : alCard('👤', 'b', esc(n.name || 'Someone') + ' moved to ' + esc(n.to || 'no shift'), esc(n.from || 'no shift') + ' → ' + esc(n.to || 'no shift') + ' · by ' + esc(n.byName || 'an admin') + ' · ' + when + '. Earlier handovers are not changed.');
+  if (n.kind === 'fundabsorb') return alCard('💰', 'a', money(n.amount) + ' of stored cash moved into the cash on hand', esc(n.what || '') + ' · recorded by ' + esc(n.byName || '') + ' · ' + when);
   if (n.kind === 'fundowe') return alCard('⚠', 'r', money(n.amount) + ' owed to the cash on hand', esc(n.what || '') + ' · recorded by ' + esc(n.byName || '') + ' · ' + when);
   if (n.kind === 'fundowedone') return alCard('✓', 'g', money(n.amount) + ' paid back to the cash on hand', esc(n.what || '') + ' · recorded by ' + esc(n.byName || '') + ' · ' + when);
   if (n.kind === 'spend') return alCard('💵', 'a', money(n.amount) + ' · ' + esc(n.what || ''), (n.rcpt ? esc(n.rcpt) + ' · ' : '') + 'recorded by ' + esc(n.byName || '') + (n.wk ? ' · ' + esc(n.wk) + ' shift' : '') + ' · ' + when);
@@ -2820,6 +2864,7 @@ function handoverText() {
   if (t.adv) L.push('Cash given to buy stock (not spending yet): ' + money(t.adv));
   if (t.chg) L.push('Change returned: ' + money(t.chg));
   if (t.don) L.push('Donations and events: ' + money(t.don));
+  var abs = S.log.filter(function (e) { return e.type === 'absorb'; }); if (abs.length) L.push('Stored cash moved into the cash on hand: ' + money(r2(abs.reduce(function (a, e) { return a + e.amt; }, 0))) + ' (' + abs.map(function (e) { return e.fundName; }).join(', ') + ')');
   if (t.sav) L.push('Savings moved: ' + (t.sav > 0 ? '+' : '−') + money(Math.abs(t.sav)));
   if (t.used - t.adv > 0.004) L.push('Cash used: ' + money(r2(t.used - t.usedStored - t.adv)) + (t.usedStored ? ' (' + money(t.usedStored) + ' more came from stored cash)' : '') + ' (' + S.log.filter(function (e) { return e.type === 'usecash'; }).map(function (e) { return e.note + ' ' + money(e.amt); }).join('; ') + ')');
   if (storedTotal() > 0.004) { L.push('Stored cash (counted in the cash below): ' + money(storedTotal())); fundSnap().forEach(function (f) { L.push('  ' + f.name + ': ' + money(f.bal) + (Object.keys(f.by).length ? ' (' + Object.keys(f.by).map(function (w) { return w + ' ' + money(f.by[w]); }).join(', ') + ')' : '')); }); }
@@ -3072,6 +3117,7 @@ function evRow(e, cancelable) {
   else if (e.type === 'usechange') { ic = '↩'; tx = 'Change returned: ' + (e.forNote || ''); sub = money(e.amt) + ' back from the ' + money(e.forAmt) + (e.receipt ? ' · receipt attached' : ' · no receipt: ' + (e.noReceipt || '')); amt = '+ ' + money(e.amt); col = 'var(--ok)'; }
   else if (e.type === 'usecash') { ic = '💵'; tx = 'Cash used: ' + e.note; sub = (e.fundTake ? money(e.fundTake) + ' from stored ' + (e.fundName || '') + (e.amt - e.fundTake > 0.004 ? ' · ' + money(r2(e.amt - e.fundTake)) + ' from cash on hand' : '') + ' · ' : '') + (chgOf(e.id) > 0 ? money(chgOf(e.id)) + ' change returned · cost ' + money(r2(e.amt - chgOf(e.id))) + ' · ' : '') + (e.receipt ? 'Receipt attached' : 'No receipt: ' + e.noReceipt); amt = '− ' + money(e.amt); col = 'var(--soon)'; }
   else if (e.type === 'addcash') { ic = '➕'; tx = 'Cash stored: ' + (e.fundName || ''); sub = (e.sealed ? (e.sealId ? 'sealed, ' + money(e.amt) + ' written on it, not counted' : 'sealed, ' + money(e.amt) + ' written on it') : 'open, counted ' + money(e.amt)) + ' · given by ' + (e.giver || '') + ' · for the ' + (e.forWk || '') + ' shift'; amt = e.sealed && e.sealId ? money(e.amt) : '+ ' + money(e.amt); col = e.sealed && e.sealId ? 'var(--muted)' : 'var(--ok)'; }
+  else if (e.type === 'absorb') { ic = '💰'; tx = 'Stored cash moved into the cash on hand: ' + (e.fundName || ''); sub = Object.keys(e.sbd || {}).map(function (k) { return esc(k) + ' −' + money(-e.sbd[k]); }).join(' · ') + ' · cash on hand unchanged'; amt = money(e.amt); col = 'var(--brand)'; }
   else if (e.type === 'savemove') { ic = '🏦'; tx = e.dir === 'toCash' ? 'Moved from Savings to cash on hand' : 'Moved from cash on hand to Savings'; sub = 'Savings ' + money(e.from || 0) + ' → ' + money(e.to || 0); amt = (e.dir === 'toCash' ? '+ ' : '− ') + money(e.amt); col = e.dir === 'toCash' ? 'var(--ok)' : 'var(--exp)'; }
   else if (e.type === 'donation') { ic = '🎁'; tx = 'Donation' + (e.note && e.note.trim().toLowerCase() !== 'donation' ? ': ' + e.note : ''); sub = 'counted in the cash' + (e.giver ? ' · handed in by ' + e.giver : ''); amt = '+ ' + money(e.amt); col = 'var(--ok)'; }
   else if (e.type === 'sealopen') { ic = '🔓'; tx = 'Sealed cash opened: ' + (e.fundName || ''); sub = 'written ' + money(e.was) + ', found ' + money(e.found) + (e.via === 'use' ? ' · opened to pay a bill' : ' · counted in'); amt = '+ ' + money(e.amt); col = 'var(--ok)'; }
@@ -3107,7 +3153,7 @@ function evRow(e, cancelable) {
 }
 /* ---------- History: one full page. All = the entries of a day or a month, Shifts = the permanent shift summaries (a day, a month or a year), Charts. The Filter is in the top bar ---------- */
 var HY = { tab: 'all', per: 'day', dt: new Date(), types: {}, short: false, wk: '', sid: '', cnt: {}, sper: 'month', pper: 'month', pf: 'all', pq: '', pid: '', pl: null, hm: '', pm: '', cv: 'score', sy: 0, back: false, yr: false, cf: {} }, HUN = null, HEVS = null, HSDOCS = null, HSD = {}, HYSIG = '';
-var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Goodwill', '🎁', ['gnote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash', 'usechange', 'advsettle']], ['Donations and events', '🎁', ['donation']], ['Savings', '🏦', ['savemove']], ['Stored cash', '💰', ['addcash', 'fundshort', 'fundover', 'sealopen', 'sealout']], ['Shortages and repayments', '⚠️', ['cashshort', 'repay', 'offset', 'gapfix']], ['Corrections', '🛠️', ['hocorr', 'shortfix', 'shiftfix', 'dayfix']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
+var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Goodwill', '🎁', ['gnote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash', 'usechange', 'advsettle']], ['Donations and events', '🎁', ['donation']], ['Savings', '🏦', ['savemove']], ['Stored cash', '💰', ['addcash', 'fundshort', 'fundover', 'sealopen', 'sealout', 'absorb']], ['Shortages and repayments', '⚠️', ['cashshort', 'repay', 'offset', 'gapfix']], ['Corrections', '🛠️', ['hocorr', 'shortfix', 'shiftfix', 'dayfix']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
 function hgroup(e) { if ((e.type === 'adjust' || e.type === 'cageadj') && e.ho) return 'Shortages and repayments'; for (var i = 0; i < HGROUPS.length; i++) if (HGROUPS[i][2].indexOf(e.type) >= 0) return HGROUPS[i][0]; return 'Stock edits by hand'; }
 function histNoon(d) { var x = new Date(d); x.setHours(12, 0, 0, 0); return x; }
 function histToday() { return histNoon(new Date(Date.now() - bizHour() * 36e5)); }   /* History always opens on today, by the phone's own clock */
@@ -6586,6 +6632,8 @@ document.addEventListener('click', function (e) {
   else if (a === 'rcvfix') rcvFixOpen(id);
   else if (a === 'savopen') savopen();
   else if (a === 'cashred') cashRedSheet();
+  else if (a === 'abopen') abOpen(id);
+  else if (a === 'abreview') abReview();
   else if (a === 'svdir') { if (SV) { SV.dir = b.dataset.v; savingsPage(); } }
   else if (a === 'svreview') svReview();
   else if (a === 'svset') svSet();
@@ -6822,6 +6870,7 @@ document.addEventListener('input', function (e) {
   else if (t.dataset.ucf) { UC.found = UC.found || {}; UC.found[t.dataset.ucf] = t.value; ucLive(); }
   else if (t.dataset.so) { SO = SO || {}; SO[t.dataset.so] = t.value; if (t.dataset.so === 'found') { var ss2 = S.seals[SEALSHEET]; if ($('#so-box') && ss2) { var F2 = t.value === '' ? null : r2(num(t.value)); $('#so-box').innerHTML = sealOpenBox(ss2, F2, F2 === null ? 0 : r2(F2 - ss2.amt), totals().cash); } } }
   else if (t.dataset.ch) { CH[t.dataset.ch] = t.value; if (t.dataset.ch === 'q' && $('#ch-list')) $('#ch-list').innerHTML = chListHtml(); else if (t.dataset.ch === 'amount' && $('#ch-box')) $('#ch-box').innerHTML = chBoxHtml(); }
+  else if (t.dataset.ab) { if (AB) { AB[t.dataset.ab] = t.value; if ($('#ab-box')) $('#ab-box').innerHTML = abBoxHtml(); } }
   else if (t.dataset.sv) { if (SV) { SV[t.dataset.sv] = t.value; if (t.dataset.sv === 'amt' && $('#sv-box')) $('#sv-box').innerHTML = svBoxHtml(); } }
   else if (t.dataset.ac) { AC[t.dataset.ac] = t.value; if (t.dataset.ac === 'wk') { acForm(); } else acLive(); }
   else if (t.id === 'acw-q') { $('#acw-list').innerHTML = acWho(t.value); }
@@ -7033,7 +7082,7 @@ function startListeners() {
   watch(col('offsets'), function (s) { S.offs = docs(s); scheduleRender(); hLive(); });
   watch(query(col('seals'), where('status', '==', 'sealed')), function (s) { S.seals = {}; s.docs.forEach(function (d) { S.seals[d.id] = d.data(); }); scheduleRender(); refreshModal(); });
   watch(col('funds'), function (s) { S.funds = {}; s.docs.forEach(function (d) { S.funds[d.id] = d.data(); }); scheduleRender(); refreshModal(); });
-  watch(query(col('events'), where('type', 'in', ['addcash', 'fundshort', 'fundover', 'usecash', 'sealopen', 'sealout', 'usechange', 'advsettle']), limit(3000)), function (s) { S.fevs = s.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }).filter(function (x) { return !x.su; }); scheduleRender(); });
+  watch(query(col('events'), where('type', 'in', ['addcash', 'fundshort', 'fundover', 'usecash', 'sealopen', 'sealout', 'usechange', 'advsettle', 'absorb']), limit(3000)), function (s) { S.fevs = s.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }).filter(function (x) { return !x.su; }); scheduleRender(); });
   subs.push(onSnapshot(ref('shop/savings'), function (sn) { S.savings = sn.exists() ? sn.data() : null; scheduleRender(); }, function () {}));
   watch(col('credit'), function (s) { S.bal = {}; s.docs.forEach(function (d) { S.bal[d.id] = d.data().bal || 0; }); scheduleRender(); });
   watch(ref('shop/state'), function (s) {
