@@ -108,6 +108,7 @@ nav{z-index:30!important;position:fixed;left:0;right:0;bottom:0;height:calc(var(
 nav button{border:0;background:none;font:inherit;font-size:10px;font-weight:600;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
 nav button span{font-size:18px}
 nav button.on{color:var(--link);background:var(--soft)}
+.card.sum>.stobox{display:block;background:var(--ok-bg);margin:10px -14px -6px;padding:10px 14px 12px;border-top:2px solid var(--ok);line-height:1.5;border-radius:0 0 14px 14px}.stobox>div{display:block;padding:2px 0;border:0}   /* the green 'Of this $X' box at the bottom of the cash card */
 .sum>div{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--line)}.sum>div:first-child,.sum>h2+div{border-top:0}
 .sum .t{font-weight:600;font-size:14px}
 #toast{position:fixed;left:50%;bottom:calc(var(--navoff,var(--bar)) + 12px);transform:translateX(-50%);background:var(--toast);color:#fff;padding:7px 8px 9px 14px;border-radius:999px;z-index:60;opacity:0;pointer-events:none;transition:opacity .2s;max-width:94%;display:flex;gap:10px;align-items:center;font-size:12px;overflow:hidden}
@@ -299,7 +300,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.77', RULES_VERSION = '2.36';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.78', RULES_VERSION = '2.36';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -947,12 +948,12 @@ function sealCheckHtml(list, st, act, locked) {   /* the sealed cash at a handov
       (act === 'rxseal' ? '<div style="margin:6px 0 0 34px"><a data-act="rxsealbad" data-id="' + esc(x.id) + '" style="color:var(--link);font-weight:700;cursor:pointer">' + (bad ? 'Reported: ' + esc(o.issue || '') : 'Something is wrong with it ›') + '</a></div>' + (st['_open'] === x.id ? '<div class="card" style="background:var(--exp-bg);box-shadow:none;margin:6px 0 0"><b>What is wrong?</b><div class="chips" style="margin-top:6px;flex-wrap:wrap">' + ['Seal looks opened', 'Amount written is different', 'It is missing'].map(function (w) { return '<button data-act="rxsealwhy" data-id="' + esc(x.id) + '" data-v="' + esc(w) + '" class="' + (bad && o.issue === w ? 'on' : '') + '">' + esc(w) + '</button>'; }).join('') + '</div></div>' : '') : '') + '</div>';
   }).join('') + '</div>';
 }
-function storedBreakHtml(list, total, key) {   /* the handover: what is still stored inside the one cash count, by shift, and what a shift owes the cash on hand (folded until tapped) */
+function storedBreakHtml(list, total, key, noHead, alwaysOpen) {   /* the handover: what is still stored inside the one cash count, by shift, and what a shift owes the cash on hand (folded until tapped) */
   if (!list || !list.length) return '';
   var anyOwe = list.some(function (f) { return f.owe && Object.keys(f.owe).length; });
-  return '<div class="slim' + (anyOwe ? ' owe' : '') + '" style="margin-top:0"><div style="display:flex;justify-content:space-between"><b>Stored cash breakdown</b><b>' + money(total) + '</b></div>' + list.map(function (f) {
-    var k = key + f.id, open = !!HOFOLD[k], by = f.by || {}, ow = f.owe || {};
-    return '<div class="stfund" data-act="stho" data-id="' + esc(k) + '"><span><b>' + esc(f.name) + '</b>' + (f.sealed > 0.004 ? ' 🔒' : '') + '<br><span class="muted" style="font-size:12.5px">' + (byText(by, ow) || 'nothing stored') + '</span></span><b>' + money(f.bal) + ' ' + (open ? '⌄' : '›') + '</b></div>' +
+  return '<div class="slim' + (anyOwe ? ' owe' : '') + '" style="margin-top:0">' + (noHead ? '' : '<div style="display:flex;justify-content:space-between"><b>Stored cash breakdown</b><b>' + money(total) + '</b></div>') + list.map(function (f) {
+    var k = key + f.id, open = alwaysOpen || !!HOFOLD[k], by = f.by || {}, ow = f.owe || {};
+    return '<div class="stfund"' + (alwaysOpen ? '' : ' data-act="stho" data-id="' + esc(k) + '"') + '><span><b>' + esc(f.name) + '</b>' + (f.sealed > 0.004 ? ' 🔒' : '') + '<br><span class="muted" style="font-size:12.5px">' + (byText(by, ow) || 'nothing stored') + '</span></span><b>' + money(f.bal) + ' ' + (alwaysOpen ? '' : open ? '⌄' : '›') + '</b></div>' +
       (open ? '<div style="margin:0 0 6px 6px;padding-left:10px;border-left:2px solid var(--' + (Object.keys(ow).length ? 'exp' : 'ok') + ')">' + Object.keys(by).map(function (w) { return '<div class="row" style="padding:3px 0"><span class="grow">' + esc(w) + '</span><b>' + money(by[w]) + '</b></div>'; }).join('') + Object.keys(ow).map(function (w) { return '<div class="row" style="padding:3px 0"><span class="grow">' + esc(w) + ' <span class="muted">owes the cash on hand</span></span><b style="color:var(--exp)">−' + money(ow[w]) + '</b></div>'; }).join('') + (f.sealed > 0.004 ? '<div class="muted" style="font-size:12.5px">🔒 Sealed, ' + money(f.sealed) + ' written on it</div>' : '') + '</div>' : '');
   }).join('') + storedNote() + '</div>';
 }
@@ -2804,25 +2805,18 @@ function vHandover() {
   var cs0 = currentShift(), t = totals(), sh = SH(), rows = hoRows(), counted = sh.counted === '' ? null : num(sh.counted);
   var h = hoChecks(rows, counted) + hoSlim() + (isPres() && S.state && !S.state.openingDone ? '<div class="card" style="border:2px dashed var(--brand)"><b>First time using the app?</b><div class="muted" style="margin:4px 0 10px">President only. Enter the previous handover by hand: the cash received, the stock counted, and who owes.</div><button class="btn block" data-act="opopen">📝 Enter previous handover</button><button class="btn sec sm block" data-act="ophide" style="margin-top:8px">Not needed, hide this</button></div>' : '') +
     '<div class="card sum"><h2><span class="sw ' + swc(cs0.name) + '">' + cs0.name + '</span> shift · ' + cs0.date + ' ' + HL(cs0.half) + '</h2>' + (cs0.name + cs0.date + cs0.half !== sh.name + sh.date + sh.half ? '<div class="muted" style="margin:-4px 0 6px">The records below are still on the ' + esc(sh.name) + ' shift of ' + esc(sh.date) + ' ' + esc(HL(sh.half)) + ' until a handover is accepted.</div>' : '') +
-    '<div><span>Received from previous handover</span><b>' + money(r2(sh.received - (sh.storedIn || 0))) + '</b></div>' +
-    '<div><span>Sales</span><b>+ ' + money(t.sales) + '</b></div>' +
-    '<div><span>Total items sold</span><b>' + t.sold + '</b></div>' +
-    (t.crN ? '<div><span>Sold on credit (not cash)</span><b>− ' + money(t.crN) + '</b></div>' : '') +
-    (t.loans ? '<div><span>Cash lent out (owed)</span><b>− ' + money(t.loans) + '</b></div>' : '') +
-    (t.paidN ? '<div><span>Credit payments received</span><b>+ ' + money(t.paidN) + '</b></div>' : '') + (t.repaid ? '<div><span>Shortage repaid by a watch</span><b>+ ' + money(t.repaid) + '</b></div>' : '') +
-    (t.purch ? '<div><span>Purchases (cash taken)</span><b>− ' + money(t.purch) + '</b></div>' : '') + (t.wo ? '<div class="muted" style="padding-top:0"><span>of which change not kept</span><span>' + money(t.wo) + '</span></div>' : '') +
-    (t.used - t.usedStored - t.adv > 0.004 ? '<div style="background:var(--soon-bg);margin:0 -14px;padding:6px 14px"><span>💵 Cash used</span><b>− ' + money(r2(t.used - t.usedStored - t.adv)) + '</b></div>' : '') +
-    (t.adv > 0.004 ? '<div style="background:var(--soon-bg);margin:0 -14px;padding:6px 14px"><span>⏳ Cash given for stock<br><span class="muted" style="font-size:12.5px">not spending yet</span></span><b>− ' + money(t.adv) + '</b></div>' : '') +
-    (t.chg > 0.004 ? '<div><span>↩ Change returned</span><b style="color:var(--ok)">+ ' + money(t.chg) + '</b></div>' : '') +
-    (storedTotal() > 0.004 ? '<div><span>Stored cash' + storedSub(fundSnap()) + '</span><b>+ ' + money(storedTotal()) + '</b></div>' : '') +
-    '<div class="t"><span>Cash to hand over</span><span>' + money(t.cash) + '</span></div>' +
+    cashRowsHtml({ received: sh.received, sales: t.sales, sold: t.sold, cr: t.crN, loans: t.loans, paid: t.paidN, repaid: t.repaid, put: t.put, purch: t.purch, wo: t.wo, used: t.used, usedStored: t.usedStored, adv: t.adv, chg: t.chg, don: t.don, sav: t.sav, total: t.cash, stored: fundSnap() }) +
     '<div><span>Cash counted <b style="color:var(--exp)">*</b></span><span style="display:flex;align-items:center;gap:4px">$<input style="width:130px;height:46px;font-size:19px;font-weight:700;text-align:right' + (counted === null ? ';border-color:var(--exp)' : '') + '" data-sh="counted" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="count it" value="' + esc(sh.counted) + '"></span></div>' +
     (counted === null ? '<div class="muted" style="color:var(--exp)">Count the cash and enter it. Required to hand over.' + (storedTotal() > 0.004 ? ' Count the stored cash with it, as one total.' : '') + '</div>' : '') +
-    (counted !== null && counted !== t.cash ? '<div><span>' + (counted < t.cash ? 'Cash short' : 'Cash over') + '</span><b style="color:' + (counted < t.cash ? 'var(--exp)' : 'var(--soon)') + '">' + money(Math.abs(counted - t.cash)) + '</b></div>' : '') + '</div>';
-  h += storedBreakHtml(fundSnap(), storedTotal(), 'ho') + sealCheckHtml(sealSnap(), HOSEAL, 'hoseal');
-  if (ctlTrail().length) h += trailHtml(ctlTrail(), sh.name);
+    (counted !== null && counted !== t.cash ? '<div><span>' + (counted < t.cash ? 'Cash short' : 'Cash over') + '</span><b style="color:' + (counted < t.cash ? 'var(--exp)' : 'var(--soon)') + '">' + money(Math.abs(counted - t.cash)) + '</b></div>' : '') + stoBoxHtml(fundSnap(), t.cash) + '</div>';
+  /* the order: the cash, what was spent, the sealed cash check (a required step), the count, anything edited by hand, then the folded reference sections, then who owes */
+  h += spentHtml({ sid: sh.sid, used: t.used, purch: t.purch }, S.log) + sealCheckHtml(sealSnap(), HOSEAL, 'hoseal');
   h += hoStock(rows);
-  h += soldCards(rows, { shift: { name: sh.name, date: sh.date, half: sh.half } }, 'Sold this shift');
+  var eds = S.log.filter(function (e) { return e.type === 'stockedit'; }).map(editInfo); if (eds.length) h += editsCard(eds);
+  if (ctlTrail().length) h += trailHtml(ctlTrail(), sh.name);
+  if (fundSnap().length) h += hoFold('hofsto', '<b>💰 Stored cash breakdown</b> <span class="muted" style="font-size:12px">' + money(storedTotal()) + '</span>', storedBreakHtml(fundSnap(), storedTotal(), 'ho', true));
+  var soldN = rows.filter(function (r) { return r.sold > 0; });
+  h += hoFold('hofsold', '<b>Sold this shift</b> <span class="muted" style="font-size:12px">' + soldN.length + (soldN.length === 1 ? ' item' : ' items') + ' · ' + t.sold + ' sold</span>', soldCards(rows, { shift: { name: sh.name, date: sh.date, half: sh.half } }, 'Sold this shift'));
   h += creditCard(t) + handoverLists(owingList(), shortAllList());
   h += '<div class="card"><label>Remarks</label><input data-sh="notes" value="' + esc(sh.notes) + '" placeholder="e.g. 2 Solo spoiled"></div>';
   var locked = sh.mode === 'locked';
@@ -3280,6 +3274,34 @@ function gapTotalHtml(d, gp, giver) {   /* the gap in totals: what was sold, wha
   var kv = function (l, v) { return '<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0"><span>' + l + '</span><b>' + v + '</b></div>'; }, n = gapUnits(d), handed = gp.cashHanded != null ? gp.cashHanded : (d.counted || 0);
   return '<div class="card" style="box-shadow:none;background:var(--soft);padding:10px 12px;margin:10px 0"><b>Total for this handover (with the gap)</b><div style="margin-top:6px;font-size:13.5px">' + kv('Items sold while nobody took it', n + (n === 1 ? ' item' : ' items') + ' · ' + money(gp.gapSales || 0)) + kv('Cash ' + esc(giver) + ' handed over', money(handed)) + kv('Cash that should be there', money(gp.cashExpected != null ? gp.cashExpected : r2(handed + (gp.gapSales || 0)))) + kv('Cash counted', money(gp.cashCounted != null ? gp.cashCounted : d.receivedCash || 0)) + '<div style="border-top:1px solid var(--line);margin:6px 0"></div>' + (gp.cashShort > 0 ? '<div style="color:var(--exp);font-weight:700">Cash short ' + money(gp.cashShort) + ': the ' + esc(gp.wk) + ' shift owes it</div>' : gp.cashOver > 0 ? '<div style="color:var(--soon);font-weight:700">Cash over ' + money(gp.cashOver) + ': recorded as ' + esc(gp.wk) + '\'s surplus</div>' : '<div style="color:var(--ok);font-weight:700">The cash balanced</div>') + '</div></div>';
 }
+function cashRowsHtml(o) {   /* the lines of 'How the cash adds up', the same on the live Handover page, the handover record and the Previous handover viewer: the TOTAL received, what happened on the shift, and the cash to hand over */
+  var L = function (l, v, st) { return '<div' + (st ? ' style="' + st + '"' : '') + '><span>' + l + '</span><b>' + v + '</b></div>'; };
+  var m = function (v) { return money(Math.abs(v)); }, sg = function (v) { return (v < 0 ? '− ' : '+ ') + m(v); }, n = function (v) { return typeof v === 'number' && isFinite(v) ? v : 0; };
+  var hl = 'background:var(--soon-bg);margin:0 -14px;padding:6px 14px', sub = function (t) { return '<br><span class="muted" style="font-size:12.5px;font-weight:400">' + t + '</span>'; };
+  var adv = n(o.adv), usedCash = r2(n(o.used) - adv), names = (o.stored || []).filter(function (f) { return (f.bal || 0) > 0.004; }).map(function (f) { return f.name; }).join(', ');
+  var sum = n(o.received) + n(o.sales) - n(o.cr) - n(o.loans) + n(o.paid) + n(o.repaid) + n(o.put) - n(o.purch) - n(o.used) + n(o.chg) + n(o.don) + n(o.sav), diff = r2(n(o.total) - sum);
+  return L('Received from previous handover', money(n(o.received))) + L('Sales', '+ ' + money(n(o.sales))) + (typeof o.sold === 'number' ? L('Total items sold', o.sold) : '') +
+    (n(o.cr) ? L('Sold on credit (not cash)', '− ' + m(o.cr)) : '') + (n(o.loans) ? L('Cash lent out (owed)', '− ' + m(o.loans)) : '') +
+    (n(o.paid) ? L('Credit payments received', '+ ' + m(o.paid)) : '') + (n(o.repaid) ? L('Shortage repaid by a watch', '+ ' + m(o.repaid)) : '') +
+    (Math.abs(n(o.put)) > 0.004 ? L('Cash put into stored funds' + (names ? sub(esc(names)) : ''), '<span style="color:' + (o.put < 0 ? 'var(--exp)' : 'var(--ok)') + '">' + sg(o.put) + '</span>') : '') +
+    (n(o.purch) ? L('Purchases (cash taken)', '− ' + m(o.purch)) : '') + (n(o.wo) ? '<div class="muted" style="padding-top:0"><span>of which change not kept</span><span>' + money(o.wo) + '</span></div>' : '') +
+    (usedCash > 0.004 ? L('💵 Cash used' + (n(o.usedStored) > 0.004 ? sub('of which ' + money(o.usedStored) + ' paid from stored cash') : ''), '− ' + m(usedCash), hl) : '') +
+    (adv > 0.004 ? L('⏳ Cash given for stock' + sub('not spending yet'), '− ' + m(adv), hl) : '') +
+    (n(o.chg) > 0.004 ? L('↩ Change returned', '<span style="color:var(--ok)">+ ' + m(o.chg) + '</span>') : '') +
+    (n(o.don) > 0.004 ? L('🎁 Donations and events', '+ ' + m(o.don)) : '') + (Math.abs(n(o.sav)) > 0.004 ? L('🏦 Savings moved', sg(o.sav)) : '') +
+    (Math.abs(diff) > 0.009 ? L('Other cash changes' + sub('not itemised in this older record'), sg(diff)) : '') +
+    '<div class="t"><span>' + (o.totalLabel || 'Cash to hand over') + '</span><span>' + money(n(o.total)) + '</span></div>';
+}
+function stoBoxHtml(list, cash) {   /* 'Of this $605: $540 is stored for the Internet payment, $65 is free cash': stored cash is inside the cash count, this says so in plain words */
+  var fl = (list || []).filter(function (f) { return (f.bal || 0) > 0.004; }); if (!fl.length) return '';
+  var tot = r2(fl.reduce(function (a, f) { return a + (f.bal || 0); }, 0)), free = r2(cash - tot), nm = function (x) { return x === 'Internet payment' ? 'the Internet payment' : esc(x); };
+  return '<div class="stobox"><b>Of this ' + money(cash) + ':</b>' + fl.map(function (f) { return '<div>💰 <b>' + money(f.bal) + '</b> is stored for ' + nm(f.name) + '</div>'; }).join('') +
+    (free > -0.004 ? '<div>💵 <b>' + money(Math.max(0, free)) + '</b> is free cash</div>' : '<div style="color:var(--exp)">⚠ The cash is ' + money(-free) + ' less than the stored cash</div>') + '</div>';
+}
+function hoFold(key, title, body) {   /* a folded section of the Handover page: closed until tapped, and it stays as you left it */
+  var open = !!HOFOLD[key];
+  return '<div class="card" style="padding:0 14px"><div class="fold" data-act="stho" data-id="' + key + '"><span>' + title + '</span><span style="flex:none;color:var(--muted)">' + (open ? '▴' : '▾') + '</span></div></div>' + (open ? body : '');
+}
 function spentOf(d, evs) {   /* the money spent on a shift: cash used and purchases paid in cash (the reasons come from the entries when they are loaded) */
   var sid = d.sid || d.id, used = d.used || 0, purch = d.purch || 0;
   var lines = (evs || HEVS || []).filter(function (e) { return e.sid === sid && (e.type === 'usecash' || (e.type === 'buy' && e.amt > 0)); }).sort(function (a, b) { return a.t - b.t; }).map(function (e) {
@@ -3710,9 +3732,7 @@ function recordHtml(d, evs, h) {
   var sold = rows.filter(function (r) { return r.sold > 0; }), tcash = sold.reduce(function (a, r) { return a + Math.max(0, r.soldAmt - r.crAmt - r.spAmt); }, 0);
   var soldF = fold('sold', 'Sold on the shift <span class="muted" style="font-size:11px">' + sold.length + (sold.length === 1 ? ' item' : ' items') + ' · ' + money(tcash) + '</span>', soldCards(rows, { shift: { name: wk, date: d.date, half: d.half } }, 'Sold on the shift'));
   var line = function (l, v, c) { return '<div><span>' + l + '</span><b' + (c ? ' style="color:' + c + '"' : '') + '>' + v + '</b></div>'; };
-  var sumCard = '<div class="card sum"><h2>How the cash adds up</h2>' + line('Received from previous handover', money(r2(d.received - (d.sin || 0)))) + line('Sales', '+ ' + money(d.sales)) + (d.cr ? line('Sold on credit (not paid)', '− ' + money(d.cr)) : '') + (d.paid ? line('Credit payments received', '+ ' + money(d.paid)) : '') + (d.loans ? line('Cash lent out', '− ' + money(d.loans)) : '') + (d.purch ? line('Purchases', '− ' + money(d.purch)) : '') + (d.used - (d.stu || 0) - (d.adv || 0) > 0.004 ? line('Cash used', '− ' + money(r2(d.used - (d.stu || 0) - (d.adv || 0)))) : '') + (d.adv > 0.004 ? line('Cash given for stock<br><span class="muted" style="font-size:12.5px;font-weight:400">not spending yet</span>', '− ' + money(d.adv)) : '') + (d.chg > 0.004 ? line('Change returned', '+ ' + money(d.chg)) : '') + (d.don > 0.004 ? line('🎁 Donations and events', '+ ' + money(d.don)) : '') + (Math.abs(d.sav || 0) > 0.004 ? line('🏦 Savings moved', (d.sav > 0 ? '+ ' : '− ') + money(Math.abs(d.sav))) : '') +
-    (d.sto > 0.004 ? line('Stored cash' + storedSub(h && h.stored), '+ ' + money(d.sto)) : (d.stp ? line('Cash put in for stored funds', (d.stp < 0 ? '− ' : '+ ') + money(Math.abs(d.stp))) : '')) +
-    '<div class="t"><span>Expected</span><span>' + money(d.expected) + '</span></div></div>';
+  var sumCard = '<div class="card sum"><h2>How the cash adds up</h2>' + cashRowsHtml({ received: d.received, sales: d.sales, sold: d.sold, cr: d.cr, loans: d.loans, paid: d.paid, put: d.stp, purch: d.purch, used: d.used, usedStored: d.stu, adv: d.adv, chg: d.chg, don: d.don, sav: d.sav, total: d.expected, totalLabel: 'Expected', stored: h && h.stored }) + stoBoxHtml(h && h.stored, d.expected) + '</div>';
   var sum = spentHtml(d) + offNotes(d);
   var tr = (d.trail || []).length || (d.fromWatch && d.fromWatch !== wk) ? fold('ctl', 'Who held control', trailHtml(d.trail || [], wk)) : '';
   var eds = d.edits || (h && h.edits) || [], edC = eds.length ? editsCard(eds) : '';
@@ -5256,12 +5276,10 @@ function hoViewShow(i) {
 
 function hoCashCard(h) {   /* the same cash lines the outgoing shift saw on the Handover page, kept in the record */
   if (typeof h.received !== 'number' || typeof h.computed !== 'number') return '';
-  var n = function (v) { return typeof v === 'number' && v; };
-  return '<div class="card sum"><h2>How the cash added up</h2><div><span>Received from previous handover</span><b>' + money(h.received) + '</b></div><div><span>Sales</span><b>+ ' + money(h.sales || 0) + '</b></div>' + (typeof h.sold === 'number' ? '<div><span>Total items sold</span><b>' + h.sold + '</b></div>' : '') +
-    (n(h.cr) ? '<div><span>Sold on credit (not cash)</span><b>− ' + money(h.cr) + '</b></div>' : '') + (n(h.loans) ? '<div><span>Cash lent out (owed)</span><b>− ' + money(h.loans) + '</b></div>' : '') + (n(h.paid) ? '<div><span>Credit payments received</span><b>+ ' + money(h.paid) + '</b></div>' : '') +
-    (n(h.purch) ? '<div><span>Purchases (cash taken)</span><b>− ' + money(h.purch) + '</b></div>' : '') + (n(h.used) ? '<div style="background:var(--soon-bg);margin:0 -14px;padding:6px 14px"><span>💵 Cash used</span><b>− ' + money(h.used) + '</b></div>' : '') +
-    '<div class="t"><span>Cash to hand over</span><span>' + money(h.computed) + '</span></div><div><span>Cash counted</span><b>' + money(h.cash) + '</b></div>' +
-    (h.cash !== h.computed ? '<div><span>' + (h.cash < h.computed ? 'Cash short' : 'Cash over') + '</span><b style="color:' + (h.cash < h.computed ? 'var(--exp)' : 'var(--soon)') + '">' + money(Math.abs(r2(h.cash - h.computed))) + '</b></div>' : '') + '</div>' + spentHtml({ sid: (h.shift || {}).sid, used: n(h.used), purch: n(h.purch) });
+  var n = function (v) { return typeof v === 'number' && v; }, x = HSD[(h.shift || {}).sid] || {};
+  return '<div class="card sum"><h2>How the cash added up</h2>' + cashRowsHtml({ received: h.received, sales: h.sales, sold: h.sold, cr: h.cr, loans: h.loans, paid: h.paid, put: x.stp, purch: h.purch, used: h.used, usedStored: x.stu, adv: x.adv, chg: x.chg, don: x.don, sav: x.sav, total: h.computed, stored: h.stored }) +
+    '<div><span>Cash counted</span><b>' + money(h.cash) + '</b></div>' +
+    (h.cash !== h.computed ? '<div><span>' + (h.cash < h.computed ? 'Cash short' : 'Cash over') + '</span><b style="color:' + (h.cash < h.computed ? 'var(--exp)' : 'var(--soon)') + '">' + money(Math.abs(r2(h.cash - h.computed))) + '</b></div>' : '') + stoBoxHtml(h.stored, h.computed) + '</div>' + (h.stored && h.stored.length ? storedBreakHtml(h.stored, h.storedTotal, 'pv', false, true) : '') + spentHtml({ sid: (h.shift || {}).sid, used: n(h.used), purch: n(h.purch) });
 }
 function hlist() {
   getDocs(query(col('handovers'), orderBy('at', 'desc'), limit(15))).then(function (snap) {
