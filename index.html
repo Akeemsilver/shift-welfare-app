@@ -120,6 +120,7 @@ nav button.on{color:var(--link);background:var(--soft)}
 .modal>div{background:var(--pop);box-shadow:0 -6px 24px rgba(0,0,0,.35);border-top:1px solid var(--line);width:100%;max-width:640px;max-height:calc(100vh - var(--bar) - 24px - env(safe-area-inset-bottom));overflow:auto;border-radius:18px 18px 0 0;padding:14px 16px 20px;margin-bottom:calc(var(--bar) + env(safe-area-inset-bottom))}
 .modal.mid{align-items:center;padding:16px;z-index:40}.modal.mid>div{border-radius:18px;max-height:88vh;margin-bottom:0;border:1px solid var(--line);box-shadow:0 10px 36px rgba(0,0,0,.5)}
 .modal h2{margin:0 0 10px;font-size:14px;font-weight:600}
+.modal.sheetx{z-index:40}.xhd{position:sticky;top:-14px;z-index:5;display:flex;align-items:center;gap:8px;background:var(--pop);margin:-4px -16px 10px;padding:6px 16px 8px}.xhd b{flex:1;font-size:18px;font-weight:700}.xx{width:40px;height:40px;border-radius:50%;border:0;background:var(--soft);color:var(--link);font-size:20px;font-weight:700;padding:0;cursor:pointer;font-family:inherit}   /* information pop-ups: slide up from the bottom, a pull handle, the title and an X that stay at the top while the content scrolls */
 .modal:not(.top):not(.mid)>div::before{content:'';display:block;width:38px;height:4px;border-radius:2px;background:#B5C0C8;margin:-4px auto 10px}   /* the pull bar is drawn by the sheet itself, so every pop-up has it even when its content is redrawn */
 .modal>div{transition:transform .18s ease}.modal>div.pulling{transition:none}
 .seg{display:grid;gap:8px}
@@ -298,7 +299,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.76', RULES_VERSION = '2.36';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.77', RULES_VERSION = '2.36';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1316,17 +1317,17 @@ var PAYS = {};
 function payDetail(key) {
   var x = PAYS[key]; if (!x) return;
   var kv = function (l, v) { return '<div class="hkv"><span>' + l + '</span><b>' + v + '</b></div>'; };
-  $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div><h2>' + money(x.amount) + ' payment</h2>' + kv('For', esc(x.wk) + ' shift shortage') + kv('Paid', x.k === 'over' ? 'by a cash surplus found on the <b>' + esc(x.from) + '</b> shift' : 'in cash' + (x.paidBy ? ' by ' + esc(x.paidBy) : '')) + kv('Recorded by', esc(x.by || '')) + kv('When', hfmt(x.at)) + (x.note ? kv('Note', esc(x.note)) : '') + '<div class="muted" style="margin-top:6px">' + (x.k === 'over' ? 'No cash moved. It settles the books only.' : 'The money was added to the cash on hand.') + '</div><button class="btn block" data-act="cno" style="margin-top:10px">OK</button></div></div>');
+  $('#modal').insertAdjacentHTML('beforeend', xHead(money(x.amount) + ' payment') + kv('For', esc(x.wk) + ' shift shortage') + kv('Paid', x.k === 'over' ? 'by a cash surplus found on the <b>' + esc(x.from) + '</b> shift' : 'in cash' + (x.paidBy ? ' by ' + esc(x.paidBy) : '')) + kv('Recorded by', esc(x.by || '')) + kv('When', hfmt(x.at)) + (x.note ? kv('Note', esc(x.note)) : '') + '<div class="muted" style="margin-top:6px">' + (x.k === 'over' ? 'No cash moved. It settles the books only.' : 'The money was added to the cash on hand.') + '</div></div></div>');
 }
 function shDetail(id) {
   var x = HSH[id]; if (!x) return;
   var it = (x.items || []).map(function (i) { return '<tr><td>' + esc(i.name) + ' <span class="tag">' + esc(i.kind) + '</span></td><td>' + i.handed + '</td><td>' + i.counted + '</td><td>' + money(i.value) + '</td></tr>'; }).join('');
-  $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div style="max-height:90vh;overflow:auto"><h2 style="color:var(--exp)">Shortage · ' + esc(x.wk) + ' watch</h2><div class="card sum" style="box-shadow:none;padding:8px 14px 10px"><div><span>Shift</span><b>' + esc(x.shiftDate) + ' ' + esc(HL(x.shiftHalf)) + '</b></div><div><span>Handed over by</span><b>' + esc(x.fromName) + (x.fromWatch && x.fromWatch !== x.wk ? '<div class="muted" style="font-weight:500">' + esc(x.fromWatch) + ' watch, visiting</div>' : '') + '</b></div><div><span>Received by</span><b>' + esc(x.toName) + '</b></div>' + (x.cashExpected != null && x.cashExpected !== x.cashHanded ? '<div><span>Cash expected (from the sales)</span><b>' + money(x.cashExpected) + '</b></div>' : '') + '<div><span>Cash handed over (counted by the outgoing shift)</span><b>' + money(x.cashHanded) + '</b></div><div><span>Cash counted</span><b>' + money(x.cashCounted) + '</b></div>' +
+  $('#modal').insertAdjacentHTML('beforeend', xHead('<span style="color:var(--exp)">Shortage · ' + esc(x.wk) + ' watch</span>') + '<div class="card sum" style="box-shadow:none;padding:8px 14px 10px"><div><span>Shift</span><b>' + esc(x.shiftDate) + ' ' + esc(HL(x.shiftHalf)) + '</b></div><div><span>Handed over by</span><b>' + esc(x.fromName) + (x.fromWatch && x.fromWatch !== x.wk ? '<div class="muted" style="font-weight:500">' + esc(x.fromWatch) + ' watch, visiting</div>' : '') + '</b></div><div><span>Received by</span><b>' + esc(x.toName) + '</b></div>' + (x.cashExpected != null && x.cashExpected !== x.cashHanded ? '<div><span>Cash expected (from the sales)</span><b>' + money(x.cashExpected) + '</b></div>' : '') + '<div><span>Cash handed over (counted by the outgoing shift)</span><b>' + money(x.cashHanded) + '</b></div><div><span>Cash counted</span><b>' + money(x.cashCounted) + '</b></div>' +
     (x.cashShort ? '<div><span>Cash short</span><b class="bad">' + money(x.cashShort) + '</b></div>' : '') + (x.cashOver ? '<div><span>Cash over</span><b>' + money(x.cashOver) + '</b></div>' : '') + (x.itemsValue ? '<div><span>Stock short (selling price)</span><b class="bad">' + money(x.itemsValue) + '</b></div>' : '') + '<div class="t"><span>Total short</span><span>' + money(x.total) + '</span></div></div>' + (x.fromWatch && x.fromWatch !== x.wk ? '<div class="muted" style="margin-bottom:8px">Recorded against the <b style="color:var(--ink)">' + esc(x.wk) + ' watch</b>, which was on duty.</div>' : '') + ((x.trail || []).length ? '<div class="muted" style="margin-bottom:8px">Held control this shift: ' + (function () { var seen = {}, out = []; x.trail.forEach(function (t) { [[t.from, t.fromWk], [t.to, t.toWk]].forEach(function (q) { if (q[0] && !seen[q[0]]) { seen[q[0]] = 1; out.push('<b style="color:var(--ink)">' + esc(q[0]) + '</b>' + (q[1] ? ' (' + esc(q[1]) + ')' : '')); } }); }); return out.join(', '); })() + '.</div>' : '') +
     (it ? '<table><tr><th>Item</th><th>Handed</th><th>Counted</th><th>Value</th></tr>' + it + '</table>' : '') +
     ((x.corrections || []).length ? '<div class="card" style="margin-top:10px;box-shadow:none;background:var(--soft)"><b>Corrected</b>' + x.corrections.map(function (c) { return '<div class="muted" style="margin-top:4px"><b style="color:var(--ink)">' + esc(c.byName || '') + '</b> · ' + new Date(c.at).toLocaleDateString([], { day: 'numeric', month: 'short' }) + ': total ' + money(c.before.total) + ' → ' + money(c.after.total) + '<br>' + esc(c.reason) + '</div>'; }).join('') + '</div>' : '') +
     (inControl() ? '<div class="row" style="margin-top:10px"><button class="btn green grow" data-act="shrepay" data-id="' + esc(id) + '">💵 Record repayment</button>' + (canAdmin() ? '<button class="btn sec grow" data-act="shfix" data-id="' + esc(id) + '">✎ Correct counts</button>' : '') + '</div>' : '<div class="muted" style="margin-top:10px">To settle this, someone in control records the repayment here. The person does not need to be present.</div>') +
-    '<button class="btn sec block" data-act="cno" style="margin-top:10px">Close</button></div></div>');
+    '</div></div>');
 }
 /* ---------- correct a wrong count on a shortage (admin / president in control; the person does not have to be there) ---------- */
 var FX = null;
@@ -2236,9 +2237,9 @@ function esSave() {
 function showStockEdit(id) {
   var e = HEV[id] || S.log.filter(function (x) { return x.id === id; })[0]; if (!e) return;
   var row = function (l, a, b) { return a === b ? '' : '<div><span>' + l + '</span><b>' + a + ' → ' + b + '</b></div>'; };
-  $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div><h2 style="color:var(--exp)">⚠ Stock edited by hand</h2><div class="card sum" style="box-shadow:none;padding:8px 14px 10px"><div><span>Item</span><b>' + esc(e.name) + '</b></div><div><span>When</span><b>' + new Date(e.t).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div><div><span>Done by</span><b>' + esc(e.byName || '') + '</b></div>' +
+  $('#modal').insertAdjacentHTML('beforeend', xHead('<span style="color:var(--exp)">⚠ Stock edited by hand</span>') + '<div class="card sum" style="box-shadow:none;padding:8px 14px 10px"><div><span>Item</span><b>' + esc(e.name) + '</b></div><div><span>When</span><b>' + new Date(e.t).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div><div><span>Done by</span><b>' + esc(e.byName || '') + '</b></div>' +
     row(e.shelf ? 'Shelf' : 'Fridge', e.fridgeFrom, e.fridgeTo) + ((e.shelf && !e.store) ? '' : row('Cage', e.cageFrom, e.cageTo)) + '<div><span>Reason</span><b>' + esc(e.reason || '') + '</b></div>' + (e.note ? '<div><span>Note</span><b>' + esc(e.note) + '</b></div>' : '') + (e.cogs ? '<div><span>Counted as a loss (at cost)</span><b style="color:var(--exp)">' + money(e.cogs) + '</b></div>' : '') + '</div>' +
-    '<button class="btn sec block" data-act="cno">Close</button></div></div>');
+    '</div></div>');
 }
 function ig(inp, pre, suf) { return '<div class="ig">' + (pre ? '<i>' + pre + '</i>' : '') + inp + (suf ? '<i>' + suf + '</i>' : '') + '</div>'; }
 function whereSeg(id, shelf, act, extra) {   /* two big buttons instead of a drop-down list */
@@ -2502,12 +2503,12 @@ var HEV = {};   /* events seen in lists, so a tapped row can show its details */
 function showPurchase(id) {
   var e = HEV[id] || S.log.filter(function (x) { return x.id === id; })[0] || EVC[id]; if (!e) return;
   var lines = (e.lines || []).map(function (l) { var u = l.v === 2 ? l.items : l.cases * (l.shelf ? (l.pk || 1) : (l.per || 1)); return '<tr><td>' + esc(l.name) + '</td><td>' + (l.v === 2 ? lineBits(l) + '<div class="muted">' + (l.dc > 0 ? 'to storage' : 'to the shop') + '</div>' : l.cases + (l.shelf && l.by !== 'unit' && l.by !== 'pack' ? '' : ' ' + buyWord(l, l.cases)) + (l.by === 'pack' ? ' of ' + l.pk : '')) + '</td><td>' + (l.cost ? money(l.cost) : '–') + '</td><td>' + (l.cost && u ? money(l.cost / u) : '–') + '</td></tr>'; }).join('');
-  $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div style="max-height:90vh;overflow:auto"><h2>' + (e.type === 'buy' ? '🧾 Purchase' : '➕ Stock added') + '</h2>' +
+  $('#modal').insertAdjacentHTML('beforeend', xHead(e.type === 'buy' ? '🧾 Purchase' : '➕ Stock added') +
     '<div class="card sum" style="box-shadow:none;padding:8px 14px 10px"><div><span>When</span><b>' + new Date(e.t).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div>' + (e.supplier ? '<div><span>Bought from</span><b>' + esc(e.supplier) + '</b></div>' : '') + '<div><span>Entered by</span><b>' + esc(e.byName || '') + '</b></div>' + (e.note ? '<div><span>Note</span><b>' + esc(e.note) + '</b></div>' : '') +
     (e.tax ? '<div><span>Tax</span><b>' + money(e.tax) + '</b></div>' : '') + (e.invoice ? '<div><span>Bill total</span><b>' + money(e.invoice) + '</b></div>' : '') + (e.writeoff ? '<div><span>Change not kept</span><b>' + money(e.writeoff) + '</b></div>' : '') + (e.advId ? '<div><span>Paid with</span><b>cash given earlier' + (advOf(e.advId) ? ' (' + money(advOf(e.advId).amt) + (advOf(e.advId).advTo ? ' to ' + esc(advOf(e.advId).advTo) : '') + ')' : '') + '</b></div>' : '') + (e.amt ? '<div class="t"><span>' + (e.advId ? 'More cash taken now' : 'Cash taken') + '</span><span>' + money(e.amt) + '</span></div>' : '') + (e.advId && !e.amt ? '<div class="muted" style="margin-top:6px">This bill was paid with cash given earlier, so no cash was taken from the cash on hand now. The cash was already taken out when it was given.</div>' : '') + '</div>' +
     (lines ? '<table><tr><th>Item</th><th>Qty</th><th>Cost</th><th>Each</th></tr>' + lines + '</table>' : '') +
     (e.receipt ? '<label style="margin-top:12px">Receipt</label><img src="' + e.receipt + '" alt="receipt" style="width:100%;border-radius:10px;border:1px solid var(--line)">' : rclHtml(e)) +
-    '<button class="btn sec block" data-act="cno" style="margin-top:10px">Close</button></div></div>');
+    '</div></div>');
   if (!e.receipt) rclLoad(e);
 }
 function buyWord(l, n) { return l.by === 'unit' ? (n === 1 ? 'unit' : 'units') : l.by === 'pack' ? unitPl('pack', n) : unitPl(l.unit || 'case', n); }   /* what was bought, in older entries: cases, units or packs */
@@ -3060,6 +3061,7 @@ function toast(m, undoId) {
 var REFRESH = null;
 function refreshModal() { if (alTop()) alertsPage(true); var a = document.activeElement; if (REFRESH && !(a && /INPUT|SELECT|TEXTAREA/.test(a.tagName) && $('#modal').contains(a))) REFRESH(); }
 var LASTV = null;
+function xHead(title) { return '<div class="modal sheetx" id="cf"><div><div class="xhd"><b>' + title + '</b><button class="xx" data-act="cno" aria-label="Close">✕</button></div>'; }
 function closeModal() { REFRESH = null; CONF = null; RX = null; HOVI = -1; LASTV = null; if (UNSUB) { UNSUB(); UNSUB = null; } $('#modal').innerHTML = ''; }
 function modal(html, top, full) { REFRESH = null; CONF = null; if (UNSUB) { UNSUB(); UNSUB = null; } $('#modal').innerHTML = '<div class="modal' + (top ? ' top' : '') + (full ? ' full' : '') + '" id="mbg"><div>' + html + '</div></div>'; if (full) { var fd = $('#modal #mbg > div'), fb = [], lc; while ((lc = fd.lastElementChild) && lc.tagName === 'BUTTON' && /^(close|scgo|\w*review)$/.test(lc.dataset.act || '')) { fb.unshift(lc); fd.removeChild(lc); } if (fb.length) { var bar = document.createElement('div'); bar.className = 'fbar'; fb.forEach(function (x) { bar.appendChild(x); }); fd.appendChild(bar); } } }   /* top: pop-ups with a search box stay at the top so the keyboard never covers the results */
 function liveModal(qs, build) {   /* a pop-up that stays in step with the database */
@@ -5795,7 +5797,7 @@ function receiptsModal() {
 function receiptOpen(id) {
   var r = (RC.list || []).filter(function (x) { return x.id === id; })[0]; if (!r) return;
   var show = function (img) {
-    $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div style="max-height:92vh;overflow:auto"><h2>' + esc(r.title || 'Receipt') + '</h2><div class="muted" style="margin-bottom:8px">' + new Date(r.at).toLocaleString() + ' · ' + money(r.amount || 0) + ' · ' + esc(r.by || '') + '</div>' + (img ? '<img src="' + img + '" alt="receipt" style="width:100%;border-radius:10px;border:1px solid var(--line)">' : '<div class="empty">No receipt photo' + (r.noReceipt ? ': ' + esc(r.noReceipt) : '') + '</div>') + '<button class="btn sec block" data-act="cno" style="margin-top:10px">Close</button></div></div>');
+    $('#modal').insertAdjacentHTML('beforeend', xHead(esc(r.title || 'Receipt')) + '<div class="muted" style="margin-bottom:8px">' + new Date(r.at).toLocaleString() + ' · ' + money(r.amount || 0) + ' · ' + esc(r.by || '') + '</div>' + (img ? '<img src="' + img + '" alt="receipt" style="width:100%;border-radius:10px;border:1px solid var(--line)">' : '<div class="empty">No receipt photo' + (r.noReceipt ? ': ' + esc(r.noReceipt) : '') + '</div>') + '</div></div>');
   };
   if (!r.hasImg) return show('');
   getDoc(ref('receiptimgs/' + id)).then(function (sn) { show(sn.exists() ? sn.data().img : ''); }).catch(function (e) { console.error(e); show(''); });
@@ -6270,11 +6272,11 @@ document.addEventListener('touchmove', function (e) {
   function sheetOf(t) { var m = t.closest && t.closest('#mbg:not(.top) > div'); return m && !t.closest('#cf') ? m : null; }
   function dirty(sh) { return Array.prototype.some.call(sh.querySelectorAll('input:not([type=hidden]):not([type=file]):not([type=button]),textarea'), function (i) { return !/-q$/.test(i.id || '') && !i.dataset.step && i.value !== i.defaultValue; }); }
   document.addEventListener('touchstart', function (e) {
-    if (e.touches.length !== 1 || $('#cf')) { st = null; return; }
-    var sh = sheetOf(e.target); if (!sh) { st = null; return; }
+    if (e.touches.length !== 1) { st = null; return; }
+    var cfx = e.target.closest && e.target.closest('#cf.sheetx > div'), sh = cfx || ($('#cf') ? null : sheetOf(e.target)); if (!sh) { st = null; return; }
     var r = sh.getBoundingClientRect(), y = e.touches[0].clientY;
-    st = { sh: sh, y0: y, x0: e.touches[0].clientX, t0: Date.now(), on: false, dead: false, top: false };
-    var h = sh.querySelector(':scope > h2'), hb = h ? Math.min(h.getBoundingClientRect().bottom + 4, r.top + 96) : r.top + 56;   /* only the handle bar and the title row start a pull-down */
+    st = { sh: sh, y0: y, x0: e.touches[0].clientX, t0: Date.now(), on: false, dead: false, top: false, cf: !!cfx };
+    var h = sh.querySelector(':scope > h2'), hb = h ? Math.min(h.getBoundingClientRect().bottom + 4, r.top + 96) : r.top + (cfx ? 72 : 56);   /* only the handle bar and the title row start a pull-down */
     if (y < r.top || y > hb) { st = null; return; }
     st.top = true;
   }, { passive: true });
@@ -6289,10 +6291,11 @@ document.addEventListener('touchmove', function (e) {
   }, { passive: false });
   function end(e) {
     if (!st || !st.on) { st = null; return; }
-    var sh = st.sh, dy = (e.changedTouches ? e.changedTouches[0].clientY : st.y0) - st.y0, v = dy / Math.max(1, Date.now() - st.t0); st = null;
+    var sh = st.sh, isCf = st.cf, dy = (e.changedTouches ? e.changedTouches[0].clientY : st.y0) - st.y0, v = dy / Math.max(1, Date.now() - st.t0); st = null;
     sh.classList.remove('pulling');
     if (dy > 110 || (dy > 50 && v > 0.6)) {
-      if (dirty(sh)) { sh.style.transform = ''; askConfirm('Discard what you typed?', 'If you close this, the changes you made will be lost.', 'Yes, discard', closeModal); }
+      if (isCf) { sh.style.transform = 'translateY(100%)'; setTimeout(function () { var c9 = $('#cf'); if (c9) c9.remove(); }, 160); }
+      else if (dirty(sh)) { sh.style.transform = ''; askConfirm('Discard what you typed?', 'If you close this, the changes you made will be lost.', 'Yes, discard', closeModal); }
       else { sh.style.transform = 'translateY(100%)'; setTimeout(closeModal, 160); }
     } else sh.style.transform = '';
   }
@@ -6308,6 +6311,7 @@ document.addEventListener('click', function (e) {
   if (e.target.id === 'inst') return installApp();
   if (hid === 'hist') return histOpen();
   if (hid === 'prof') { PF = { mode: 'day', off: 0 }; WPS = []; return profitModal(); }
+  if (e.target.id === 'cf' && e.target.classList.contains('sheetx')) { e.target.remove(); return; }
   if (e.target.id === 'mbg') { if (M && !M.personId && !isPres() && $('#who-q, [data-np]')) return; return closeModal(); }
   var b = e.target.closest('[data-act]'); if (!b) return;
   var a = b.dataset.act, id = b.dataset.id, it = id && item(id);
@@ -6374,7 +6378,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'stfund') { closeModal(); fundPage(id); }
   else if (a === 'stdet') stDet(id);
   else if (a === 'stho') { HOFOLD[id] = !HOFOLD[id]; if (id.indexOf('rec') === 0 && HSHDRAW) HSHDRAW(); else if (id.indexOf('rx') === 0) showRx(true); else if (id.indexOf('pr') === 0) prepareShow(); else render(); }   /* each page redraws itself: the record page and the take-over page are not part of the main screen */
-  else if (a === 'rcv') { $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div><img src="' + b.src + '" alt="receipt" style="width:100%;border-radius:10px"><button class="btn sec block" data-act="cno" style="margin-top:10px">Close</button></div></div>'); }
+  else if (a === 'rcv') { $('#modal').insertAdjacentHTML('beforeend', xHead('Receipt') + '<img src="' + b.src + '" alt="receipt" style="width:100%;border-radius:10px"></div></div>'); }
   else if (a === 'pfmode') { PF.mode = b.dataset.v; PF.off = 0; profitModal(); }
   else if (a === 'pfprev') { PF.off++; profitModal(); }
   else if (a === 'shview') shDetail(id);
