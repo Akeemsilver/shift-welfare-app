@@ -71,6 +71,7 @@ b,strong{font-weight:600}
 .cc .cs{font-size:11px;color:var(--muted);margin-top:1px}
 .cc .ck{position:absolute;right:10px;top:8px;font-size:12px;font-weight:700;color:var(--cnt)}
 .rcfix{display:block;color:var(--exp);font-weight:700;font-size:10px}
+.cc.noted{border-left-color:var(--soon)}.cc .nt{position:absolute;right:10px;top:9px;font-size:12px;font-weight:700;color:var(--soon)}.cc .oldn{text-decoration:line-through;color:var(--muted);font-weight:500;margin-right:6px}.chp{display:inline-block;border-radius:10px;padding:1px 8px;font-size:11.5px;font-weight:700;margin:3px 3px 0 0}.chp.sp{background:var(--exp-bg);color:var(--exp)}.chp.cr{background:var(--soon-bg);color:var(--soon)}.chp.gw{background:var(--okb);color:var(--ok)}
 .cc .cpr{position:absolute;right:10px;top:9px;font-size:12px;font-weight:700;line-height:1.2;color:var(--link)}   /* the price sits where the check goes once the item is counted */
 .attn{position:relative}.list>div.attn{padding-left:10px}.attn:before{content:'';position:absolute;left:0;top:20%;height:60%;width:2px;border-radius:2px;background:#d9a400}   /* the one highlight: something that needs someone to look */
 .list>div.shiftmk{padding:4px 0;border-top:0}.shiftmk{display:flex;align-items:center;gap:8px;margin:8px 0;font-size:12px;color:var(--muted)}.shiftmk:before,.shiftmk:after{content:'';flex:1;border-top:1px dashed var(--line)}
@@ -297,7 +298,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.67', RULES_VERSION = '2.35';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.71', RULES_VERSION = '2.35';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1069,19 +1070,27 @@ function vCount() {
   if (inControl() && !(S.state && S.state.pending) && soList(true).length) h += '<button class="btn sec sm" data-act="startover" style="margin:-6px 0 12px;float:right">↺ Start over</button><div style="clear:both"></div>';
   h += n ? '<div class="card" style="padding:10px 14px;margin-bottom:12px"><div class="row"><b class="grow" style="color:var(--cnt)">Counted so far ' + n + ' of ' + LI.length + '</b><span class="muted" style="font-size:12px">tap an item to count it</span></div><div class="cprog"><div style="width:' + Math.round(100 * n / LI.length) + '%"></div></div></div>' : '<div class="muted" style="margin:0 4px 10px">Tap an item to count it · 0 of ' + LI.length + '. What you see is what was handed over to you.</div>';
   return h + ordHint() + '<div class="cgrid">' + LI.map(function (i) {
-    var c = cnum(i.id), cl = c.counted ? ' done' : i.stock <= 0 ? ' out' : i.stock <= 6 ? ' low' : '';
-    return '<button class="cc' + cl + '" data-act="pick" data-id="' + i.id + '"><div class="cn">' + esc(i.name) + '</div>' + (c.counted ? '' : '<span class="cpr">' + money(i.price) + '</span>') + '<div class="cv">' + i.stock + '</div><div class="cs">' + (hasCage(i) ? '📦 Cage: ' + uLab(i, i.cage) : '🧁 On the shelf') + '</div>' + (c.counted ? '<div class="cs" style="margin-top:3px"><span class="pill">Sold ' + Math.max(0, c.sold - c.sp) + '</span>' + (c.cr ? ' <span class="pill low">Credit ' + c.cr + '</span>' : '') + (c.sp ? ' <span class="pill out">Spoiled ' + c.sp + '</span>' : '') + '</div><span class="ck">✓ −' + c.sold + '</span>' : '') + '</button>';
+    var c = cnum(i.id), nl = noteLeft(i, c), nt = !c.counted && nl.extra > 0, cl = c.counted ? ' done' : nt ? ' noted' : i.stock <= 0 ? ' out' : i.stock <= 6 ? ' low' : '';
+    var chips = (c.cr ? '<span class="chp cr">' + c.cr + ' credit</span>' : '') + (c.sp ? '<span class="chp sp">' + c.sp + ' spoiled</span>' : '') + (c.gw ? '<span class="chp gw">' + c.gw + ' goodwill</span>' : '');
+    return '<button class="cc' + cl + '" data-act="pick" data-id="' + i.id + '"><div class="cn">' + esc(i.name) + '</div>' + (c.counted ? '' : nt ? '<span class="nt">◐ noted</span>' : '<span class="cpr">' + money(i.price) + '</span>') + '<div class="cv">' + (nt ? '<span class="oldn">' + i.stock + '</span>' + nl.left : i.stock) + '</div><div class="cs">' + (nt ? 'should be left · not counted yet' : hasCage(i) ? '📦 Cage: ' + uLab(i, i.cage) : '🧁 On the shelf') + '</div>' + (nt ? '<div>' + chips + '</div>' : '') + (c.counted ? '<div class="cs" style="margin-top:3px"><span class="pill">Sold ' + Math.max(0, c.sold - c.sp - c.gw) + '</span>' + (c.cr ? ' <span class="pill low">Credit ' + c.cr + '</span>' : '') + (c.sp ? ' <span class="pill out">Spoiled ' + c.sp + '</span>' : '') + (c.gw ? ' <span class="pill" style="background:var(--okb);color:var(--ok)">Goodwill ' + c.gw + '</span>' : '') + '</div><span class="ck">✓ −' + c.sold + '</span>' : '') + '</button>';
   }).join('') + '</div>' + ordHtml();
 }
 function cnPreview(it) {
-  var c = cnum(it.id), miss = it.stock - CN.to, gone = c.sold + miss, sold = Math.max(0, gone - c.sp - c.gw), cash = Math.max(0, sold - c.cr), over = c.cr > sold || c.sp + c.gw > gone;
-  return '<div class="muted" style="margin-top:12px">Handed over count: <b>' + (it.open || 0) + '</b></div><div class="muted" style="margin-top:2px">My count: <b>' + (c.counted ? it.stock : 'not counted yet') + '</b></div>' +
+  var c = cnum(it.id), nlh = noteLeft(it, c), miss = it.stock - CN.to, gone = c.sold + miss, sold = Math.max(0, gone - c.sp - c.gw), cash = Math.max(0, sold - c.cr), over = c.cr > sold || c.sp + c.gw > gone;
+  var hint = nlh.extra > 0 ? '<div class="card" style="background:var(--soon-bg);box-shadow:none;margin:10px 0 0;padding:9px 12px;font-size:13.5px">Expected ' + it.stock + ' · <b>' + nlh.extra + ' noted</b> (' + [c.cr ? c.cr + ' credit' : '', c.sp ? c.sp + ' spoiled' : '', c.gw ? c.gw + ' goodwill' : ''].filter(Boolean).join(', ') + ') → <b>count ' + nlh.left + '</b> if nothing else is gone. Change it to what is really there.</div>' : '';
+  return hint + '<div class="muted" style="margin-top:12px">Handed over count: <b>' + (it.open || 0) + '</b></div><div class="muted" style="margin-top:2px">My count: <b>' + (c.counted ? it.stock : 'not counted yet') + '</b></div>' +
     (gone ? '<div style="margin-top:6px;line-height:2"><span class="pill" style="font-size:14px">' + sold + ' sold</span> <span class="muted">(' + cash + ' cash)</span> ' + (c.cr ? '<span class="pill low" style="font-size:14px">' + c.cr + ' on credit</span> ' : '') + (c.sp ? '<span class="pill out" style="font-size:14px">' + c.sp + ' spoiled</span> ' : '') + (c.gw ? '<span class="pill" style="font-size:14px;background:var(--okb);color:var(--ok)">' + c.gw + ' goodwill</span>' : '') + '</div>' + (c.sold && miss ? '<div class="muted" style="font-size:12px">' + c.sold + ' sold earlier this shift + ' + miss + ' now</div>' : '') : '<div class="muted" style="margin-top:4px">Nothing sold yet</div>') +
     (over ? '<div class="card" style="background:var(--exp-bg);box-shadow:none;margin:8px 0 0;color:var(--exp)"><b>Credit (' + c.cr + '), spoiled (' + c.sp + ') or goodwill (' + c.gw + ') is more than what was sold or gone (' + sold + ' sold, ' + gone + ' gone).</b> Check it. You cannot hand over until it matches.</div>' : '');
 }
+function noteLeft(it, c) {   /* what should be left once the notes are counted in: notes explain items that are gone, so the ones beyond what was already counted as sold are not on the shelf any more. Display only: the stock changes when someone counts */
+  c = c || cnum(it.id); var n = c.cr + c.sp + c.gw, extra = Math.max(0, n - c.sold); return { n: n, extra: extra, left: Math.max(0, it.stock - extra) };
+}
+function cqMax(it) { var c = cnum(it.id); return Math.max(0, it.stock + c.sold - c.cr - c.sp - c.gw); }   /* the most items a credit, spoiled or goodwill note can still explain: what exists (left + already sold this shift) minus what is already noted */
 function countSheet() {
   var it = item(sel); if (!it) return closeModal();
-  if (CN.to == null || CN.to > it.stock) CN.to = it.stock;
+  CN.q = Math.min(CN.q, cqMax(it));
+  if (CN.to == null) CN.to = noteLeft(it).left;   /* starts at what the notes say should be left; the person changes it to what is really there */
+  if (CN.to > it.stock) CN.to = it.stock;
   modal('<div class="ps"><div class="row"><div class="grow"><h2 style="margin:0">' + esc(it.name) + '</h2><div class="muted">Expected ' + (it.shelf ? 'on the shelf' : 'in the fridge') + (hasCage(it) ? ' · cage ' + uLab(it, it.cage) : '') + '</div></div><b style="font-size:22px;font-weight:600">' + it.stock + '</b></div>' +
     '<div class="card" style="margin-top:12px"><label>Count now (what is really ' + (it.shelf ? 'on the shelf' : 'in the fridge') + ')</label>' + stepper('cn', CN.to) + '<div id="cn-prev">' + cnPreview(it) + '</div>' +
     '<button class="btn green block" data-act="cnsave" style="margin-top:10px">Save count</button></div>' +
@@ -1097,7 +1106,7 @@ function countSave(force) {
   if (!force && (c.cr > Math.max(0, c.sold + miss - c.sp - c.gw) || c.sp + c.gw > c.sold + miss)) return askConfirm('More notes than items sold', 'Credit ' + c.cr + ', spoiled ' + c.sp + ' and goodwill ' + c.gw + ' do not fit the ' + (c.sold + miss) + ' items gone. You will not be able to hand over until this matches.', 'Save the count anyway', function () { countSave(true); });
   var b = writeBatch(DB), id = newEv(); if (miss > 0) itemInc(b, it.id, { stock: -miss });
   mkEvent(b, 'count', it, miss, it.price * miss, { cogs: r2((it.cost || 0) * miss), nc: miss > 0 && !it.cost ? 1 : 0, from: it.stock, to: to, price: it.price, dly: miss > 0 ? 1 : 0 }); commit(b);
-  CN.to = null; CN.q = 0; closeModal(); toast(it.name + ' counted: ' + (miss ? miss + ' sold' : 'none sold'), id);
+  CN.to = null; CN.q = 0; CN.to = null; closeModal(); toast(it.name + ' counted: ' + (miss ? miss + ' sold' : 'none sold'), id);
 }
 function countMove() {
   var mv = item(sel), n = CN.mv; if (mv && n < 1) return toast('Set how many ' + unitPl(unitName(mv), 2) + ' first'); if (!mv || mv.cage < n) return toast('Only ' + (mv ? mv.cage : 0) + ' in the cage');
@@ -1110,12 +1119,12 @@ function creditNote(pid) {
   var it = item(sel); if (!it) return closeModal(); var q = CN.q; if (q < 1) return toast('Set how many items first');
   var b = writeBatch(DB), id = newEv(); ngBatch(b);
   mkEvent(b, 'cnote', it, q, it.price * q, { cogs: r2((it.cost || 0) * q), cr: pid, person: pid, cid: rootOf(pid), crName: PK.ng ? PK.ng.name : plab(pid) }); balInc(b, rootOf(pid), it.price * q); commit(b);
-  var msg = q + ' × ' + it.name + ' put on credit to ' + (PK.ng ? PK.ng.name : plab(pid)); CN.q = 0; closeModal(); toast(msg, id);
+  var msg = q + ' × ' + it.name + ' put on credit to ' + (PK.ng ? PK.ng.name : plab(pid)); CN.q = 0; CN.to = null; closeModal(); toast(msg, id);
 }
 function spoilNote() {
   var it = item(sel); if (!it) return closeModal(); var q = CN.q; if (q < 1) return toast('Set how many items first');
   askConfirm('Spoiled note?', '<b>' + q + ' × ' + esc(it.name) + '</b> were spoiled or damaged.<br><span class="muted">This does not change the number. It explains part of the items sold and is counted as a loss at cost.</span>', 'Yes, add the note', function () {
-    var b = writeBatch(DB), id = newEv(); mkEvent(b, 'snote', it, q, it.price * q, { cogs: r2((it.cost || 0) * q) }); commit(b); CN.q = 0; closeModal(); toast('Spoiled note added', id);
+    var b = writeBatch(DB), id = newEv(); mkEvent(b, 'snote', it, q, it.price * q, { cogs: r2((it.cost || 0) * q) }); commit(b); CN.q = 0; CN.to = null; closeModal(); toast('Spoiled note added', id);
   });
 }
 function goodwillNote() {
@@ -1131,7 +1140,7 @@ function goodwillSave() {
   var why = String(($('#gw-why') || {}).value || '').trim(), to = String(($('#gw-to') || {}).value || '').trim();
   if (!why) return toast('Write why it was given');
   var c = $('#cf'); if (c) c.remove();
-  var b = writeBatch(DB), id = newEv(); mkEvent(b, 'gnote', it, q, it.price * q, { cogs: r2((it.cost || 0) * q), note: why, gwTo: to }); commit(b); CN.q = 0; closeModal(); toast('Goodwill note added', id);
+  var b = writeBatch(DB), id = newEv(); mkEvent(b, 'gnote', it, q, it.price * q, { cogs: r2((it.cost || 0) * q), note: why, gwTo: to }); commit(b); CN.q = 0; CN.to = null; closeModal(); toast('Goodwill note added', id);
 }
 function infoBox(title, html) { $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div><h2>' + title + '</h2><p style="margin-top:0">' + html + '</p><button class="btn block" data-act="cno">OK</button></div></div>'); }
 
@@ -1805,6 +1814,7 @@ function advOpen() {   /* cash given to buy stock that no purchase has used yet,
   var done = {}; (S.fevs || []).forEach(function (e) { if (e.type === 'advsettle') done[e.advId] = 1; });
   return (S.fevs || []).filter(function (e) { return e.type === 'usecash' && e.adv && !done[e.id]; }).sort(function (a, b) { return a.t - b.t; });
 }
+function advOf(id) { return id ? (S.fevs || []).filter(function (x) { return x.id === id && x.type === 'usecash'; })[0] || null : null; }   /* the cash that was given earlier for stock */
 function advSettleOf(id) { return (S.fevs || []).filter(function (e) { return e.type === 'advsettle' && e.advId === id; })[0] || null; }
 function chgOf(id) { return r2((S.fevs || []).filter(function (e) { return e.type === 'usechange' && e.forId === id; }).reduce(function (a, e) { return a + e.amt; }, 0)); }
 /* ---------- stored cash (v3.31): money put in the cash box for a bill. Money that was counted when it was put in is part of the one cash count; a SEALED item is only a note (it is not counted until someone opens it) ---------- */
@@ -2490,7 +2500,7 @@ function showPurchase(id) {
   var lines = (e.lines || []).map(function (l) { var u = l.v === 2 ? l.items : l.cases * (l.shelf ? (l.pk || 1) : (l.per || 1)); return '<tr><td>' + esc(l.name) + '</td><td>' + (l.v === 2 ? lineBits(l) + '<div class="muted">' + (l.dc > 0 ? 'to storage' : 'to the shop') + '</div>' : l.cases + (l.shelf && l.by !== 'unit' && l.by !== 'pack' ? '' : ' ' + buyWord(l, l.cases)) + (l.by === 'pack' ? ' of ' + l.pk : '')) + '</td><td>' + (l.cost ? money(l.cost) : '–') + '</td><td>' + (l.cost && u ? money(l.cost / u) : '–') + '</td></tr>'; }).join('');
   $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div style="max-height:90vh;overflow:auto"><h2>' + (e.type === 'buy' ? '🧾 Purchase' : '➕ Stock added') + '</h2>' +
     '<div class="card sum" style="box-shadow:none;padding:8px 14px 10px"><div><span>When</span><b>' + new Date(e.t).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div>' + (e.supplier ? '<div><span>Bought from</span><b>' + esc(e.supplier) + '</b></div>' : '') + '<div><span>Entered by</span><b>' + esc(e.byName || '') + '</b></div>' + (e.note ? '<div><span>Note</span><b>' + esc(e.note) + '</b></div>' : '') +
-    (e.tax ? '<div><span>Tax</span><b>' + money(e.tax) + '</b></div>' : '') + (e.invoice ? '<div><span>Bill total</span><b>' + money(e.invoice) + '</b></div>' : '') + (e.writeoff ? '<div><span>Change not kept</span><b>' + money(e.writeoff) + '</b></div>' : '') + (e.amt ? '<div class="t"><span>Cash taken</span><span>' + money(e.amt) + '</span></div>' : '') + '</div>' +
+    (e.tax ? '<div><span>Tax</span><b>' + money(e.tax) + '</b></div>' : '') + (e.invoice ? '<div><span>Bill total</span><b>' + money(e.invoice) + '</b></div>' : '') + (e.writeoff ? '<div><span>Change not kept</span><b>' + money(e.writeoff) + '</b></div>' : '') + (e.advId ? '<div><span>Paid with</span><b>cash given earlier' + (advOf(e.advId) ? ' (' + money(advOf(e.advId).amt) + (advOf(e.advId).advTo ? ' to ' + esc(advOf(e.advId).advTo) : '') + ')' : '') + '</b></div>' : '') + (e.amt ? '<div class="t"><span>' + (e.advId ? 'More cash taken now' : 'Cash taken') + '</span><span>' + money(e.amt) + '</span></div>' : '') + (e.advId && !e.amt ? '<div class="muted" style="margin-top:6px">This bill was paid with cash given earlier, so no cash was taken from the cash on hand now. The cash was already taken out when it was given.</div>' : '') + '</div>' +
     (lines ? '<table><tr><th>Item</th><th>Qty</th><th>Cost</th><th>Each</th></tr>' + lines + '</table>' : '') +
     (e.receipt ? '<label style="margin-top:12px">Receipt</label><img src="' + e.receipt + '" alt="receipt" style="width:100%;border-radius:10px;border:1px solid var(--line)">' : rclHtml(e)) +
     '<button class="btn sec block" data-act="cno" style="margin-top:10px">Close</button></div></div>');
@@ -3077,7 +3087,7 @@ function evById(id) {
 function stDet(id) {   /* a stored cash entry, a sealed cash entry, or cash used: everything about it, in one pop-up */
   var e = evById(id); if (!e) return toast('That entry is not loaded. Open it from its fund page.');
   var kv = function (l, v) { return v === '' || v == null ? '' : '<div class="hkv"><span>' + l + '</span><b>' + v + '</b></div>'; }, sh = e.wk ? e.wk + ' shift' : '';
-  var title = e.type === 'usecash' ? '💵 Cash used: ' + esc(e.note || '') : e.type === 'addcash' ? '➕ Cash stored: ' + esc(e.fundName || '') : e.type === 'sealopen' ? '🔓 Sealed cash opened: ' + esc(e.fundName || '') : e.type === 'sealout' ? '📤 Sealed cash taken out: ' + esc(e.fundName || '') : e.type === 'fundshort' ? '⚠ Stored cash short: ' + esc(e.fundName || '') : '↑ Stored cash extra found: ' + esc(e.fundName || '');
+  var title = e.type === 'usecash' ? '💵 Cash used: ' + esc(e.note || '') : e.type === 'addcash' ? '➕ Cash stored: ' + esc(e.fundName || '') : e.type === 'sealopen' ? '🔓 Sealed cash opened: ' + esc(e.fundName || '') : e.type === 'sealout' ? '📤 Sealed cash taken out: ' + esc(e.fundName || '') : e.type === 'fundshort' ? '⚠ Stored cash short: ' + esc(e.fundName || '') : e.type === 'advsettle' ? '↩ Stock purchase paid with cash given earlier' : e.type === 'usechange' ? '↩ Change returned: ' + esc(e.forNote || '') : '↑ Stored cash extra found: ' + esc(e.fundName || '');
   var b = '';
   if (e.type === 'usecash') {
     b += kv('Amount', '<span style="color:var(--exp)">− ' + money(e.amt) + '</span>') + kv('Used for', esc(e.note || ''));
@@ -3089,6 +3099,10 @@ function stDet(id) {   /* a stored cash entry, a sealed cash entry, or cash used
     if (e.sealed && e.sealId) b += kv('Now', still ? '🔒 still sealed' : res ? (res.type === 'sealopen' ? 'opened: found ' + money(res.found) + ' (' + new Date(res.t).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ')' : 'taken out: ' + esc(res.to || '') + (res.toWho ? ' · ' + esc(res.toWho) : '')) : 'opened or taken out');
   } else if (e.type === 'sealopen') {
     b += kv('Written on it', money(e.was)) + kv('Found inside', money(e.found)) + kv('Went into the cash count', '<span style="color:var(--ok)">+ ' + money(e.amt) + '</span>') + kv('Why', e.via === 'use' ? 'opened to pay a bill' : 'opened and counted');
+  } else if (e.type === 'advsettle') {
+    b += kv('Bill', money(e.bill || 0)) + kv('Cash given earlier', money(e.advAmt || 0)) + (e.supplier ? kv('Bought from', esc(e.supplier)) : '') + (e.amt > 0 ? kv('Change back into the cash on hand', '<span style="color:var(--ok)">+ ' + money(e.amt) + '</span>') : e.extra > 0 ? kv('More taken from the cash on hand', '<span style="color:var(--exp)">− ' + money(e.extra) + '</span>') : kv('Change', 'none: the cash given paid the bill exactly'));
+  } else if (e.type === 'usechange') {
+    b += kv('Change back into the cash on hand', '<span style="color:var(--ok)">+ ' + money(e.amt) + '</span>') + kv('From the ' + money(e.forAmt || 0), esc(e.forNote || '')) + kv('Receipt', e.receipt ? 'attached' : 'none: ' + esc(e.noReceipt || ''));
   } else if (e.type === 'sealout') {
     b += kv('Written on it', money(e.amt)) + kv('Where it went', esc(e.to || '')) + kv('Received by', esc(e.toWho || '')) + '<div class="muted" style="margin:4px 0">Handed over still sealed. It was never in the cash count.</div>';
   } else {
@@ -3110,7 +3124,7 @@ function evRow(e, cancelable) {
   else if (e.type === 'snote') { ic = '🗑'; tx = 'Spoiled note: ' + e.qty + ' × ' + e.name; sub = e.qty + (e.qty === 1 ? ' of the items counted was' : ' of the items counted were') + ' spoiled'; }
   else if (e.type === 'loan') { ic = '🤝'; tx = 'Cash lent to ' + (e.crName || plab(e.cr)); sub = e.note || ''; amt = '− ' + money(e.amt); col = 'var(--soon)'; }
   else if (e.type === 'pay') { ic = '💵'; var pwho = e.crName || plab(e.person), pbal = balance(e.person || e.cr || ''); tx = pwho + ' paid ' + money(e.amt); sub = pbal > 0.004 ? money(pbal) + ' still owed' : 'paid in full'; amt = '+ ' + money(e.amt); col = 'var(--ok)'; }
-  else if (e.type === 'buy') { ic = '🧾'; tx = 'Bought ' + buyText(e); sub = (e.supplier || '') + (e.tax ? ' · tax ' + money(e.tax) : '') + (e.writeoff ? ' · change not kept ' + money(e.writeoff) : ''); amt = '− ' + money(e.amt); }
+  else if (e.type === 'buy') { ic = '🧾'; tx = 'Bought ' + buyText(e); sub = (e.supplier || '') + (e.tax ? ' · tax ' + money(e.tax) : '') + (e.writeoff ? ' · change not kept ' + money(e.writeoff) : '') + (e.advId ? ' · paid with cash given earlier' + (advOf(e.advId) ? ' (' + money(advOf(e.advId).amt) + ')' : '') : ''); amt = e.advId && !(e.amt > 0) ? 'paid earlier' : '− ' + money(e.amt); }
   else if (e.type === 'other') { ic = '➕'; tx = 'Added ' + buyText(e) + ' to stock'; sub = e.note; }
   else if (e.type === 'spoil') { ic = '🗑'; tx = 'Spoiled ' + e.qty + ' × ' + e.name; }
   else if (e.type === 'move') { var mvi = item(e.item) || {}; ic = mvi.shelf ? '🧁' : '🧊'; tx = 'Moved ' + uLab(mvi, e.cases) + ' of ' + e.name + ' to ' + (mvi.shelf ? 'shelf' : 'fridge'); sub = e.qty + ' items'; }
@@ -3293,8 +3307,11 @@ function spentLoad(d) {   /* the entries of an older shift are not loaded: fetch
   }).catch(function (e) { console.error(e); });
 }
 function noticeRwk(n) {   /* the shift that took the handover: from the handover record when it is loaded (an owner may have corrected it since the notice was written), else what the notice says */
-  var d = n && n.sid ? (HSD[n.sid] || (HSDOCS || []).filter(function (x) { return x.id === n.sid; })[0]) : null; return (d && d.receivedBy && rcvWk(d)) || n.toWk || '';
+  var d = n && n.sid ? (HSD[n.sid] || (HSDOCS || []).filter(function (x) { return x.id === n.sid; })[0]) : null;
+  if (!d && n && n.sid && DB && !NRLOAD[n.sid]) { NRLOAD[n.sid] = 1; getDoc(ref('shifts/' + n.sid)).then(function (sn) { if (sn.exists()) { var x = sn.data(); x.id = n.sid; HSD[n.sid] = x; if (alTop()) alertsPage(true); else scheduleRender(); } }).catch(function () {}); }   /* the record is fetched once, then the card shows the shift that really took it */
+  return (d && d.receivedBy && rcvWk(d)) || n.toWk || '';
 }
+var NRLOAD = {};
 function hoSheet(id, kind, wk2) {   /* the short handover pop-up: who, the result in one sentence, what differs, who owes, remarks */
   var d = HSD[id] || (HSDOCS || []).filter(function (x) { return x.id === id; })[0]; if (!d) return;
   var acc = d.status === 'accepted', giver = d.fromName || 'A member', recvName = d.receivedByName || (d.toLabels || []).join(', ') || 'the next shift', rwk = (d.receivedBy ? rcvWk(d) : '') || wk2 || '';   /* the record says which shift took it (it can be corrected later); the notice's shift is only a fallback */
@@ -6300,7 +6317,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'editfromsell') { var ei = item(sel); if (ei) { ST = { id: ei.id, fridge: ei.stock, cage: ei.cage, move: 0, spoil: 0 }; stockSheet(); } }
   else if (a === 'cn+' || a === 'cn-') { var ci = item(sel); CN.to = stepTo(CN.to == null ? ci.stock : CN.to, a === 'cn+' ? 1 : -1, 0, ci.stock); countSheet(); }
   else if (a === 'cm+' || a === 'cm-') { var cmi = item(sel); CN.mv = stepTo(CN.mv, a === 'cm+' ? 1 : -1, 0, Math.max(0, cmi.cage)); countSheet(); }
-  else if (a === 'cq+' || a === 'cq-') { CN.q = stepTo(CN.q, a === 'cq+' ? 1 : -1, 0, 999); countSheet(); }
+  else if (a === 'cq+' || a === 'cq-') { var cqi = item(sel), cqm = cqi ? cqMax(cqi) : 999; if (a === 'cq+' && CN.q >= cqm) toast(cqm ? 'Only ' + cqm + (cqm === 1 ? ' item' : ' items') + ' left to note' : 'No items left to note'); CN.q = stepTo(CN.q, a === 'cq+' ? 1 : -1, 0, cqm); countSheet(); }
   else if (a === 'cnsave') countSave();
   else if (a === 'cnmove') countMove();
   else if (a === 'cnote') { if (CN.q < 1) toast('Set how many items first'); else openPicker('cnote'); }
@@ -6939,7 +6956,7 @@ document.addEventListener('change', function (e) {
     if (a2 === 'cn') { var qi = item(sel), nv = Math.max(0, Math.min(isNaN(n) ? 0 : n, qi ? qi.stock : n)); if (nv !== CN.to) { CN.to = nv; countSheet(); } else t.value = nv; }
     else if (a2 === 'crf') { if (CF) corrSet(t.dataset.k, Math.max(0, n || 0)); }
     else if (a2 === 'cm') { var cmi2 = item(sel); CN.mv = Math.max(0, Math.min(n || 0, Math.max(0, cmi2.cage))); countSheet(); }
-    else if (a2 === 'cq') { CN.q = Math.max(0, Math.min(n || 0, 999)); countSheet(); }
+    else if (a2 === 'cq') { var cqj = item(sel), cqn = cqj ? cqMax(cqj) : 999; if ((n || 0) > cqn) toast(cqn ? 'Only ' + cqn + (cqn === 1 ? ' item' : ' items') + ' left to note' : 'No items left to note'); CN.q = Math.max(0, Math.min(n || 0, cqn)); countSheet(); }
     else if (a2 === 'sf') { ST.fridge = Math.max(0, n); stRender(); }
     else if (a2 === 'sg') { ST.cage = Math.max(0, n); stRender(); }
     else if (a2 === 'sm') { var mi2 = item(ST.id); ST.move = Math.max(0, Math.min(n || 0, Math.max(0, mi2.cage))); stockSheet(); }
