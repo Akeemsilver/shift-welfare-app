@@ -298,7 +298,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.71', RULES_VERSION = '2.35';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.74', RULES_VERSION = '2.36';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -565,9 +565,9 @@ function spendTell(e) {   /* money out of the till: cash lent, a purchase paid i
   else if (e.type === 'usecash') tellBosses(e.id, 'spend', { amount: e.amt, what: (e.note || 'Cash used') + (e.fundTake ? ' · ' + money(e.fundTake) + ' from stored ' + e.fundName : '') + (e.fundElse ? ' (stored cash used for something else)' : '') + (e.intStored ? ' · Internet payment cash of ' + money(e.intStored) + ' is still stored' : ''), rcpt: e.receipt ? 'receipt' : 'no receipt' });
   else if (e.type === 'buy') tellBosses(e.id, 'spend', { amount: e.amt, what: 'Purchase' + (e.supplier ? ' · ' + e.supplier : ''), rcpt: e.receipt ? 'receipt' : 'no receipt' });
 }
-function spendCancelTell(e, many) {
+function spendCancelTell(e, many, why) {
   if (many) return tellBosses('sc' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), 'spendcancel', { amount: many.amt, what: many.n + ' entries (start over)' });
-  if (e && e.amt > 0 && ['loan', 'usecash', 'buy', 'addcash'].indexOf(e.type) >= 0) tellBosses('sc' + e.id, 'spendcancel', { amount: e.amt, what: e.type === 'addcash' ? 'Cash stored: ' + (e.fundName || '') : e.type === 'loan' ? 'Cash lent to ' + (e.crName || 'a customer') : e.type === 'usecash' ? (e.note || 'Cash used') : 'Purchase' + (e.supplier ? ' · ' + e.supplier : '') });
+  if (e && e.amt > 0 && ['loan', 'usecash', 'buy', 'addcash', 'absorb'].indexOf(e.type) >= 0) tellBosses('sc' + e.id, 'spendcancel', { amount: e.amt, what: e.type === 'absorb' ? 'Stored cash move into the cash on hand cancelled: ' + (e.fundName || '') + (why ? ' · ' + why : '') : e.type === 'addcash' ? 'Cash stored: ' + (e.fundName || '') : e.type === 'loan' ? 'Cash lent to ' + (e.crName || 'a customer') : e.type === 'usecash' ? (e.note || 'Cash used') : 'Purchase' + (e.supplier ? ' · ' + e.supplier : '') });
 }
 function commit(b) { dayFlush(b); var q = PLQ; PLQ = []; return b.commit().then(function () { q.forEach(function (x) { if (x.del) deleteDoc(ref('plog/' + x.id)).catch(function () {}); else setDoc(ref('plog/' + x.id), x.d).catch(function () {}); }); }).catch(function (e) { console.error(e); toast(errText(e)); }); }   /* the credit lines are best effort: if they fail the entry itself is still saved */
 function guard(p) { return p.catch(function (e) { console.error(e); toast(errText(e)); }); }
@@ -592,7 +592,6 @@ function setShift(obj) { var u = {}; for (var k in obj) u['shift.' + k] = obj[k]
 function reverseEvent(b, e) {
   var it = item(e.item), cid = e.cid || rootOf(e.cr || e.person || ''); LE = e.id;   /* the cancelled record carries the same id as the event */
   if (e.type === 'savemove') return 'A savings move cannot be cancelled. Move the money back instead.';
-  if (e.type === 'absorb') return 'Stored cash moved into the cash on hand cannot be cancelled.';
   if (['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'hocorr', 'shiftrec', 'watchchg', 'fundshort', 'fundover', 'sealopen', 'sealout', 'advsettle'].indexOf(e.type) >= 0) return 'This entry cannot be cancelled here. It was made with a stock purchase. Ask the owner or a president.';
   if (e.type === 'sale') { if (!it) return 'That item no longer exists'; itemInc(b, it.id, { stock: e.qty }); if (e.cr) balInc(b, cid, -e.amt); }
   else if (e.type === 'count') { if (e.qty > 0) { if (!it) return 'That item no longer exists'; itemInc(b, it.id, { stock: e.qty }); } }
@@ -606,6 +605,11 @@ function reverseEvent(b, e) {
       if (e.opened && e.opened.length) return 'This use opened sealed cash, so it cannot be cancelled here. Ask the owner or a president to correct it.';
       if (e.fundTake) { var fd2 = S.funds[e.fund], d2 = { bal: increment(e.fundTake), lastEvent: e.id }; if (fd2 && e.sbd) { d2.sb = {}; Object.keys(e.sbd).forEach(function (k) { d2.sb[k] = increment(-e.sbd[k]); }); if (e.oweD && fd2.owe) { d2.owe = {}; Object.keys(e.oweD).forEach(function (k) { d2.owe[k] = increment(-e.oweD[k]); }); } } else if (fd2 && fd2.sb) { d2.sb = deleteField(); } b.set(ref('funds/' + e.fund), d2, { merge: true }); }
     }
+  }
+  else if (e.type === 'absorb') {   /* the stored cash goes back into its fund, each shift gets back what it gave; the cash on hand never changed */
+    var fda = S.funds[e.fund]; if (!fda) return 'That fund no longer exists';
+    var da = { bal: increment(e.amt), lastEvent: e.id }; if (fda.sb || e.sbd) { da.sb = {}; Object.keys(e.sbd || {}).forEach(function (k) { da.sb[k] = increment(-e.sbd[k]); }); }
+    b.set(ref('funds/' + e.fund), da, { merge: true });
   }
   else if (e.type === 'addcash') {
     var fd = S.funds[e.fund];
@@ -649,7 +653,7 @@ function cancelEvent(id, reason, quiet) {
   b.delete(ref('events/' + id)); delete EVC[id]; if (PLT[e.type]) PLQ.push({ id: id, del: true });
   if (e.type === 'buy' && e.advId) { var sv = advSettleOf(e.advId); if (sv) { var rc2 = {}; for (var k2 in sv) if (k2 !== 'id') rc2[k2] = sv[k2]; b.set(ref('cancelled/' + sv.id), { at: Date.now(), by: EMAIL, byName: myName(), reason: reason || '', sid: sv.sid, event: rc2, expireAt: EXP() }); b.delete(ref('events/' + sv.id)); } }   /* the purchase and its settlement go together: the cash given earlier is open again */
   if (e.type === 'buy' || e.type === 'usecash' || e.type === 'usechange') getDoc(ref('receipts/' + id)).then(function (sn) { if (sn.exists()) b.update(ref('receipts/' + id), { cancelled: true }); commit(b); }, function () { commit(b); }); else commit(b);
-  if (!quiet) spendCancelTell(e);
+  if (!quiet) spendCancelTell(e, null, reason);
   toast(quiet ? 'Undone' : 'Cancelled and removed');
 }
 
@@ -986,7 +990,7 @@ function svSave() {
   var nb = r2(dir === 'toCash' ? bal - amt : bal + amt), b = writeBatch(DB), id = newEv();
   mkEvent(b, 'savemove', null, 1, amt, { name: 'Savings moved', dir: dir, from: bal, to: nb }, id);
   b.set(ref('shop/savings'), { bal: nb, lastEvent: id, lastBy: myName(), lastAt: Date.now() }, { merge: true });
-  SV.amt = ''; closeModal(); toast(money(amt) + (dir === 'toCash' ? ' moved to the cash on hand' : ' moved to Savings'), id);
+  SV.amt = ''; closeModal(); toast(money(amt) + (dir === 'toCash' ? ' moved to the cash on hand' : ' moved to Savings'));
   commit(b).then(function () { savingsPage(); });
 }
 function svSet() {
@@ -1043,7 +1047,7 @@ function abSave() {
   mkEvent(b, 'absorb', null, 1, amt, { name: 'Stored cash moved', fund: fid, fundName: f.name, sbd: sbd, from: r2(f.bal || 0), to: r2((f.bal || 0) - amt) }, id);
   fundWrite(b, fid, f, -amt, 0, sbd, {}, id);
   var what = money(amt) + ' of stored cash (' + f.name + ') moved into the cash on hand · ' + Object.keys(sbd).map(function (k) { return k + ' −' + money(-sbd[k]); }).join(', ');
-  closeModal(); toast(money(amt) + ' moved into the cash on hand', id);
+  closeModal(); toast(money(amt) + ' moved into the cash on hand');
   commit(b).then(function () { tellBosses(id, 'fundabsorb', { amount: amt, what: what }); fundPage(fid); });
 }
 function fundPage(id) {
@@ -3955,10 +3959,10 @@ function calDay(key) {
 }
 function cancelAsk(id) {
   var e = S.log.filter(function (x) { return x.id === id; })[0]; if (!e) return toast('Only entries from this shift can be cancelled');
-  var tx = (e.type === 'sale' || e.type === 'cnote' ? e.qty + ' × ' + e.name + ' · ' + money(e.amt) : e.type === 'count' ? 'Count of ' + e.name + ' (' + e.from + ' → ' + e.to + ')' : e.type === 'snote' ? 'Spoiled note: ' + e.qty + ' × ' + e.name : e.type === 'gnote' ? 'Goodwill note: ' + e.qty + ' × ' + e.name : e.type === 'loan' ? 'Cash loan ' + money(e.amt) : e.type === 'pay' ? 'Payment ' + money(e.amt) : e.type === 'buy' ? 'Purchase ' + money(e.amt) : e.name);
+  var tx = (e.type === 'sale' || e.type === 'cnote' ? e.qty + ' × ' + e.name + ' · ' + money(e.amt) : e.type === 'count' ? 'Count of ' + e.name + ' (' + e.from + ' → ' + e.to + ')' : e.type === 'snote' ? 'Spoiled note: ' + e.qty + ' × ' + e.name : e.type === 'gnote' ? 'Goodwill note: ' + e.qty + ' × ' + e.name : e.type === 'absorb' ? 'Stored cash moved: ' + money(e.amt) + ' (' + (e.fundName || '') + ')' : e.type === 'loan' ? 'Cash loan ' + money(e.amt) : e.type === 'pay' ? 'Payment ' + money(e.amt) : e.type === 'buy' ? 'Purchase ' + money(e.amt) : e.name);
   CONF = null; var r = ''; window.__cid = id; window.__reason = '';
   $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div><h2>Cancel this entry?</h2><p style="margin-top:0"><b>' + esc(tx) + '</b><br><span class="muted">Everything it changed (stock, credit, cash) is put back and the entry disappears from the list.</span></p>' +
-    '<label>Reason (optional)</label><div class="chips" style="flex-wrap:wrap;overflow:visible">' + REASONS.map(function (x) { return '<button data-act="reason" data-v="' + x + '">' + x + '</button>'; }).join('') + '</div>' +
+    (e.type === 'absorb' ? '<div class="muted" style="margin:0 0 6px">The ' + money(e.amt) + ' goes back into ' + esc(e.fundName || 'the fund') + ', each shift gets back what it gave. The cash on hand does not change.</div><label>Why? (required)</label><input id="cx-why" placeholder="Write why it is being cancelled" maxlength="120"><div class="chips" style="flex-wrap:wrap;overflow:visible">' + ['Wrong amount', 'Wrong fund', 'Done by mistake'].map(function (x) { return '<button data-act="abreason" data-v="' + x + '">' + x + '</button>'; }).join('') + '</div>' : '<label>Reason (optional)</label><div class="chips" style="flex-wrap:wrap;overflow:visible">' + REASONS.map(function (x) { return '<button data-act="reason" data-v="' + x + '">' + x + '</button>'; }).join('') + '</div>') +
     '<button class="btn red block" data-act="cancelyes" style="margin-top:6px">Yes, cancel it</button><button class="btn sec block" data-act="cno" style="margin-top:10px">Keep it</button></div></div>');
 }
 
@@ -6398,7 +6402,8 @@ document.addEventListener('click', function (e) {
   else if (a === 'cyes') { var f = CONF; CONF = null; var c1 = $('#cf'); if (c1) c1.remove(); if (f) f(); }
   else if (a === 'cno') { CONF = null; var c2 = $('#cf'); if (c2) c2.remove(); }
   else if (a === 'reason') { window.__reason = b.dataset.v; document.querySelectorAll('#cf .chips button').forEach(function (x) { x.classList.toggle('on', x.dataset.v === window.__reason); }); }
-  else if (a === 'cancelyes') { var c3 = $('#cf'); if (c3) c3.remove(); cancelEvent(window.__cid, window.__reason); }
+  else if (a === 'abreason') { var wi = $('#cx-why'); if (wi) { wi.value = b.dataset.v; wi.focus(); } }
+  else if (a === 'cancelyes') { var wy = $('#cx-why'); if (wy) { window.__reason = wy.value.trim(); if (!window.__reason) return toast('Write why before you cancel it'); } var c3 = $('#cf'); if (c3) c3.remove(); cancelEvent(window.__cid, window.__reason); }
   else if (a === 'cancelask') cancelAsk(id);
   else if (a === 'hovlist') hoViewList();
   else if (a === 'hovopen') hoViewShow(+b.dataset.i);
