@@ -298,7 +298,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.75', RULES_VERSION = '2.36';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.76', RULES_VERSION = '2.36';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1095,7 +1095,7 @@ function countSheet() {
   CN.q = Math.min(CN.q, cqMax(it));
   if (CN.to == null) CN.to = noteLeft(it).left;   /* starts at what the notes say should be left; the person changes it to what is really there */
   if (CN.to > it.stock) CN.to = it.stock;
-  modal('<div class="ps"><div class="row"><div class="grow"><h2 style="margin:0">' + esc(it.name) + '</h2><div class="muted">Expected ' + (it.shelf ? 'on the shelf' : 'in the fridge') + (hasCage(it) ? ' · cage ' + uLab(it, it.cage) : '') + '</div></div><b style="font-size:22px;font-weight:600;text-align:right">' + (noteLeft(it).extra > 0 ? '<span class="oldn" style="font-size:17px">' + it.stock + '</span>' + noteLeft(it).left : it.stock) + (noteLeft(it).extra > 0 ? '<div class="muted" style="font-size:11px;font-weight:500">should be left</div>' : '') + '</b></div>' +
+  modal('<div class="ps"><div class="row"><div class="grow"><h2 style="margin:0">' + esc(it.name) + '</h2><div class="muted">Expected ' + (it.shelf ? 'on the shelf' : 'in the fridge') + (hasCage(it) ? ' · cage ' + uLab(it, it.cage) : '') + '</div></div><b style="font-size:22px;font-weight:600;text-align:right">' + (noteLeft(it).extra > 0 ? noteLeft(it).left : it.stock) + (noteLeft(it).extra > 0 ? '<div class="muted" style="font-size:11px;font-weight:500">should be left (was ' + it.stock + ')</div>' : '') + '</b></div>' +
     '<div class="card" style="margin-top:12px"><label>Count now (what is really ' + (it.shelf ? 'on the shelf' : 'in the fridge') + ')</label>' + stepper('cn', CN.to) + '<div id="cn-prev">' + cnPreview(it) + '</div>' +
     '<button class="btn green block" data-act="cnsave" style="margin-top:10px">Save count</button></div>' +
     (hasCage(it) ? '<div class="card"><h2>Add from cage</h2><div class="row"><div>' + stepper('cm', CN.mv) + '</div><div class="grow muted">' + unitPl(unitName(it), 2) + ' = ' + CN.mv * per(it) + ' items onto ' + sellFrom(it) + '</div></div><button class="btn sec block" data-act="cnmove" style="margin-top:10px"' + (it.cage < 1 ? ' disabled' : '') + '>Add from cage</button></div>' : '') +
