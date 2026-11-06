@@ -301,7 +301,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.83', RULES_VERSION = '2.36';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.84', RULES_VERSION = '2.36';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -828,9 +828,25 @@ function startOverAsk() {
   var nc = soList(false).length, na = soList(true).length;
   if (!na) return toast('Nothing to cancel yet');
   modal('<h2>Start over</h2><div class="card"><p style="margin-top:0">Choose what to cancel. The entries are removed from this shift and the history, and kept in <b>Cancelled entries</b> for a year. Stock goes back to how it was.</p>' +
+    '<button class="btn amber block" data-act="sovone"' + (nc ? '' : ' disabled') + '>Cancel one count…</button><div class="muted" style="margin:4px 0 12px">Pick the one count that was wrong. Everything else stays.</div>' +
     '<button class="btn red block" data-act="sovgo" data-v="count"' + (nc ? '' : ' disabled') + '>Cancel my counts only (' + nc + ')</button><div class="muted" style="margin:4px 0 12px">Credit, cash lent, payments, purchases and spoilage stay.</div>' +
     '<button class="btn red block" data-act="sovgo" data-v="all">Cancel everything this shift (' + na + ')</button><div class="muted" style="margin:4px 0 8px">Counts, credit, payments, purchases, spoilage and cage moves.</div><div style="padding:9px 12px;border-radius:12px;background:var(--soft);font-size:13px"><b>What always stays</b><br>The opening handover, new items, hand edits to stock, who held control, and shortage repayments. They are the record of how the shift was set up and run. After a handover, nothing can be changed.</div></div>' +
     '<button class="btn sec block" data-act="close">Keep everything</button>');
+}
+function cancelOneOpen() {   /* Start over > Cancel one count: pick the one count that was wrong from the counts already made this shift */
+  if (!inControl()) return toast('Only the person in control can cancel a count');
+  if (S.state && S.state.pending) return toast('The handover was already sent');
+  var cs = soList(false); if (!cs.length) return toast('No counts to cancel yet');
+  var latest = {}; cs.forEach(function (e) { if (!latest[e.item]) latest[e.item] = e.id; });   /* newest first: the first one seen for an item is its latest count */
+  modal('<h2>Cancel one count</h2><div class="muted" style="margin:0 2px 8px">Newest first. Tap Cancel next to the count that was wrong.</div><div class="card" style="padding:4px 14px">' + cs.map(function (e) {
+    var last = latest[e.item] === e.id;
+    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line)"><span><b>' + esc(e.name) + '</b><div class="muted" style="font-size:12.5px">' + e.from + ' → ' + e.to + ' · ' + e.qty + ' sold' + (e.amt ? ' · ' + money(e.amt) : '') + ' · ' + hhmm(e.t) + '</div></span>' +
+      (last ? '<button class="btn red sm" data-act="sovone2" data-id="' + esc(e.id) + '">Cancel</button>' : '<span class="muted" style="font-size:12px;text-align:right;max-width:120px">counted again later: cancel that one first</span>') + '</div>';
+  }).join('') + '</div><button class="btn sec block" data-act="sovback">Back</button>');
+}
+function cancelOneAsk(id) {
+  var e = S.log.filter(function (x) { return x.id === id; })[0]; if (!e) return toast('That count is no longer there'); var it = item(e.item);
+  askConfirm('Cancel this count?', '<b>' + esc(e.name) + ': ' + e.from + ' → ' + e.to + '</b><br><span class="muted">' + (it && it.shelf ? 'The shelf' : 'The fridge') + ' goes back to <b style="color:var(--ink)">' + e.from + '</b>' + (e.qty ? '. The ' + e.qty + ' sold' + (e.amt ? ' (' + money(e.amt) + ')' : '') + ' is taken off this shift' : '') + '. The entry is removed from the list and kept in Cancelled entries for a year.</span>', 'Yes, cancel this count', function () { closeModal(); cancelEvent(id, 'Cancelled one count'); });
 }
 function startOverGo(all) {
   var list = soList(all); if (!list.length) return toast('Nothing to cancel');
@@ -3015,7 +3031,7 @@ function banner() {
   return box('Nobody is in control', 'The president can take control.', isPres() ? tc : '');
 }
 
-var MUT = {}; ['startover', 'sovgo', 'pick', 'cnsave', 'cnmove', 'cnote', 'snote', 'gnote', 'gwyes', 'lend', 'loannext', 'pkpick', 'pkadd', 'paynext', 'cancelask', 'newitem', 'saveitem', 'savecount', 'domove', 'dospoil', 'savedetails', 'rmitem', 'buysave', 'prepare', 'dohandover', 'chooseto', 'mode', 'ucopen', 'ucreview', 'acopen', 'acreview', 'chreview', 'acmode', 'sealopenreview', 'sealoutreview', 'sealuse', 'sealcancel', 'editfromsell', 'editstock', 'esack', 'esreview', 'opopen', 'opreview', 'opcredit', 'opcnext', 'swopen', 'swpick'].forEach(function (k) { MUT[k] = 1; });
+var MUT = {}; ['startover', 'sovgo', 'sovone', 'sovone2', 'pick', 'cnsave', 'cnmove', 'cnote', 'snote', 'gnote', 'gwyes', 'lend', 'loannext', 'pkpick', 'pkadd', 'paynext', 'cancelask', 'newitem', 'saveitem', 'savecount', 'domove', 'dospoil', 'savedetails', 'rmitem', 'buysave', 'prepare', 'dohandover', 'chooseto', 'mode', 'ucopen', 'ucreview', 'acopen', 'acreview', 'chreview', 'acmode', 'sealopenreview', 'sealoutreview', 'sealuse', 'sealcancel', 'editfromsell', 'editstock', 'esack', 'esreview', 'opopen', 'opreview', 'opcredit', 'opcnext', 'swopen', 'swpick'].forEach(function (k) { MUT[k] = 1; });
 var VIEWS = { sell: vCount, stock: vStock, buy: vBuy, credit: vCredit, handover: vHandover };
 function render() {
   if (DRAGO.on) { DRAGO.pend = true; return; }   /* a tile is being moved: redraw when it is dropped */
@@ -6479,6 +6495,9 @@ document.addEventListener('click', function (e) {
   else if (a === 'shreqno') guard(updateDoc(ref('shiftreqs/' + id), { status: 'declined' }));
   else if (a === 'startover') startOverAsk();
   else if (a === 'sovgo') startOverGo(b.dataset.v === 'all');
+  else if (a === 'sovone') cancelOneOpen();
+  else if (a === 'sovone2') cancelOneAsk(id);
+  else if (a === 'sovback') startOverAsk();
   else if (a === 'cmtog') { CM = !CM; if (histIsOpen()) histDraw(); else { var bx = $('#modal .modal > div'); if (bx && LASTV) bx.innerHTML = LASTV(); } }
   else if (a === 'pkw') { PK.w = b.dataset.w; document.querySelectorAll('#pk-chips button').forEach(function (x) { x.classList.toggle('on', x.dataset.w === PK.w); }); $('#pk-list').innerHTML = pickerList($('#pk-q').value); }
   else if (a === 'pkpick') pickParty(id);
