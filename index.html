@@ -301,7 +301,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.82', RULES_VERSION = '2.36';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.83', RULES_VERSION = '2.36';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -6640,10 +6640,10 @@ document.addEventListener('click', function (e) {
     askConfirm('Save this purchase?', '<b>' + esc(BUY.sup.trim()) + '</b><br>' + BUY.lines.map(function (l) { var li = item(l.item), pt = lineParts(l), w = lineWord(l); return [pt.b ? pt.b + ' ' + unitPl(w, pt.b) : '', pt.u ? pt.u + ' ' + unitPl('single', pt.u) : ''].filter(Boolean).join(' + ') + ' of ' + esc(li ? li.name : l.name) + ' <span class="muted">(' + (pt.dc > 0 ? 'storage' : 'the shop') + ')</span>'; }).join('<br>') + '<br><br>Bill total <b>' + money(tot) + '</b> · ' + (advSplit() ? 'paid from the ' + money(advSplit().a.amt) + ' given earlier' + (advSplit().extra > 0 ? ' + ' + money(advSplit().extra) + ' from the cash on hand' : '') + (advSplit().change > 0 ? '<br><b>' + money(advSplit().change) + ' change goes back into the cash on hand</b>' : '') : 'cash taken <b>' + money(paidAmt()) + '</b>') + (woAmt() > 0 ? '<br>Change not kept: <b>' + money(woAmt()) + '</b>' + (woAmt() > 5 ? '<br><b style="color:var(--exp)">This writes off ' + money(woAmt()) + '. Is that right?</b>' : '') : '') + '<br>' + cs + ' item' + (cs === 1 ? '' : 's') + ' are added to the stock.<br><span class="muted">' + (BUY.receipt ? '📎 Receipt photo attached.' : 'No receipt photo attached.') + '</span>', 'Yes, save purchase', buySave);
   }
   else if (a === 'htab') { HT = b.dataset.v; render(); }
-  else if (a === 'hoopen') { HOPEN[id] = !HOPEN[id]; render(); }
+  else if (a === 'hoopen') { HOPEN[id] = !HOPEN[id]; soldRedraw(); }   /* the page that is open redraws itself: the Handover tab, the receiving page, the handover record or the viewer */
   else if (a === 'soldopen') { SOPEN[id] = !SOPEN[id]; soldRedraw(); }
   else if (a === 'soldall') { SALL = !SALL; SOPEN = {}; soldRedraw(); }
-  else if (a === 'hoall') { HOALL = !HOALL; HOPEN = {}; render(); }
+  else if (a === 'hoall') { HOALL = !HOALL; HOPEN = {}; soldRedraw(); }
   else if (a === 'hochip') { var hv = b.dataset.v; if (hv === 'items') { tab = 'sell'; render(); window.scrollTo(0, 0); return; } var hel = hv === 'cash' ? $('[data-sh=counted]') : $(hv === 'who' ? '#ho-who' : '#ho-sig'); if (hel) { hel.scrollIntoView({ block: 'center' }); if (hv === 'cash') hel.focus(); } }
   else if (a === 'hogot') hoGotIt(id);
   else if (a === 'mode') setShift({ mode: b.dataset.m });
