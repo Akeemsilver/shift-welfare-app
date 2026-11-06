@@ -301,7 +301,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.79', RULES_VERSION = '2.36';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.80', RULES_VERSION = '2.36';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -3768,7 +3768,7 @@ function recordHtml(d, evs, h) {
   var result = acc && gp ? '<div class="card sum"><h2>Result</h2>' + line(esc(wk) + ' shift: everything matched', '$0', 'var(--ok)') + line('Items sold in the gap (' + esc(gp.wk) + ')', money(gp.gapSales || 0)) + line('Cash short against ' + esc(gp.wk), money(gp.cashShort || 0), gp.cashShort > 0 ? 'var(--exp)' : 'var(--ok)') + '</div>' : acc ? '<div class="card sum"><h2>Result</h2>' + line('Shortage from this handover', money(d.short || 0), d.short > 0 ? 'var(--exp)' : 'var(--ok)') + line('Repaid so far (all shortages)', money(so.repaid), 'var(--ok)') + '<div><span>' + wsw(wk) + ' still owes (all shortages)</span><b style="color:' + (so.owed > 0 ? 'var(--exp)' : 'var(--ok)') + '">' + money(so.owed) + '</b></div></div>' : '';
   HREC = { d: d, h: h, rows: rows };
   setTimeout(function () { spentLoad(d); }, 400);
-  return '<h2>Handover record</h2>' + head + (acc && canApprove() && !OWNERVIEW ? '<div class="noprint" style="margin:-4px 0 10px;text-align:right"><button class="btn sec sm" data-act="rcvfix" data-id="' + esc(d.id || '') + '">Wrong incoming shift? Fix it</button></div>' : '') + (gp ? gapBanner(gp, d.wk) : gapMoveCard(d)) + corrNote(d) + corrBanner(d) + (corrEligible(d, h) ? '<button class="btn red block noprint" data-act="corrstart" style="margin-bottom:10px">✎ Handover mistake</button>' : '') + sumCard + cash + shopC + storC + notesCardsHtml(evs, rows) + soldF + sum + (h && h.stored && h.stored.length ? storedBreakHtml(h.stored, h.storedTotal, 'rec') : '') + sealRecordHtml(h) + handoverLists(d.owedBy, d.openShort) + tr + edC + (d.notes ? '<div class="card"><label>Remarks</label>' + esc(d.notes) + '</div>' : '') + entF + sigs + result + '<div class="row noprint" style="gap:8px"><button class="btn grow" data-act="rccopy">Copy</button><button class="btn grow" data-act="rcshare">Share</button><button class="btn grow" data-act="rcprint">Print</button></div>';
+  return '<h2>Handover record</h2>' + head + '' + (gp ? gapBanner(gp, d.wk) : gapMoveCard(d)) + corrNote(d) + corrBanner(d) + (fixOpts(d, h).length ? '<button class="btn red block noprint" data-act="fixmenu" data-id="' + esc(d.id || '') + '" style="margin-bottom:10px">✎ Fix a mistake</button>' : '') + sumCard + cash + shopC + storC + notesCardsHtml(evs, rows) + soldF + sum + (h && h.stored && h.stored.length ? storedBreakHtml(h.stored, h.storedTotal, 'rec') : '') + sealRecordHtml(h) + handoverLists(d.owedBy, d.openShort) + tr + edC + (d.notes ? '<div class="card"><label>Remarks</label>' + esc(d.notes) + '</div>' : '') + entF + sigs + result + '<div class="row noprint" style="gap:8px"><button class="btn grow" data-act="rccopy">Copy</button><button class="btn grow" data-act="rcshare">Share</button><button class="btn grow" data-act="rcprint">Print</button></div>';
 }
 
 /* ---------- the president moves a shortage to the shift that skipped the handover (when it was recorded against the shift that handed over) ---------- */
@@ -4909,6 +4909,17 @@ function corrOther(c) { return c.byEmail === c.fromEmail ? c.toName : c.fromName
 var CORRSH = {};   /* the shift records of the waiting corrections (for the time of the handover and the incoming shift's name) */
 function corrToWk(c) { var w = c.toWk || (S.state && S.state.shift && S.state.shift.prevEmail === c.fromEmail ? S.state.shift.name : '') || (c.toEmail ? whoOf(c.toEmail).wk : ''); return w || c.toName || 'the incoming shift'; }
 function corrTitle(c) { var sh = CORRSH[c.sid]; return esc(c.wk || '') + ' → ' + esc(corrToWk(c)) + ' · ' + esc(c.date || '') + ' ' + esc(HL(c.half)) + (sh && sh.receivedAt ? ' · ' + hhmm(sh.receivedAt) : ''); }
+function fixOpts(d, h) {   /* what can be fixed on this handover record, for this person: a wrong count (the two people in the latest handover), the incoming shift (owner, presidents and admins) */
+  var o = []; if (corrEligible(d, h)) o.push('corr'); if (d && d.status === 'accepted' && canApprove() && !OWNERVIEW) o.push('rcv'); return o;
+}
+function fixMenu(id) {
+  var rec = HREC && HREC.d, o = fixOpts(rec, HREC && HREC.h); if (!o.length) return;
+  if (o.length === 1) return fixOptGo(o[0], id);   /* only one thing to fix: no choice to make */
+  $('#modal').insertAdjacentHTML('beforeend', xHead('What is wrong?') +
+    (o.indexOf('corr') >= 0 ? '<div class="card" data-act="fixoptgo" data-v="corr" data-id="' + esc(id) + '" style="cursor:pointer;margin-bottom:10px"><b>✎ A count is wrong</b><div class="muted">Cash or items. Send it for correction.</div></div>' : '') +
+    (o.indexOf('rcv') >= 0 ? '<div class="card" data-act="fixoptgo" data-v="rcv" data-id="' + esc(id) + '" style="cursor:pointer;margin-bottom:10px"><b>🔁 The incoming shift is wrong</b><div class="muted">Pick the shift that really took it.</div></div>' : '') + '</div></div>');
+}
+function fixOptGo(kind, id) { var c = $('#cf'); if (c) c.remove(); if (kind === 'corr') corrStart(); else rcvFixOpen(id); }
 function corrEligible(d, h) {   /* the Handover mistake button: the latest handover, before the next one is made, for the two people in it */
   return !!(d && h && d.status === 'accepted' && h.status === 'accepted' && !h.same && S.state && !S.state.pending && !OWNERVIEW && (EMAIL === h.fromEmail || EMAIL === h.acceptedBy)
     && S.state.shift && S.state.shift.prevEmail === h.fromEmail && !corrOpenFor(d.handoverId));
@@ -6502,6 +6513,8 @@ document.addEventListener('click', function (e) {
   else if (a === 'pnon') pnTurnOn();
   else if (a === 'pnretry') { try { localStorage.removeItem('sw.pusherr'); } catch (x) {} PUSHTRIED = true; pushRegister(); toast('Trying…'); setTimeout(function () { if ($('#modal') && /Phone alerts/.test($('#modal').innerText || '')) pnSheet(); }, 3500); }
   else if (a === 'corrstart') corrStart();
+  else if (a === 'fixmenu') fixMenu(id);
+  else if (a === 'fixoptgo') fixOptGo(b.dataset.v, id);
   else if (a === 'corrstart2') corrStart2(b.dataset.id);
   else if (a === 'crside') { if (CF && CF.side !== b.dataset.v) { CF.side = b.dataset.v; CF.v = {}; corrForm(); } }
   else if (a === 'crwhy') { if (CF) { CF.why = b.dataset.v; b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); } }
