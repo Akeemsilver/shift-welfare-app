@@ -108,6 +108,7 @@ nav{z-index:30!important;position:fixed;left:0;right:0;bottom:0;height:calc(var(
 nav button{border:0;background:none;font:inherit;font-size:10px;font-weight:600;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
 nav button span{font-size:18px}
 nav button.on{color:var(--link);background:var(--soft)}
+.card.nts{border-left:3px solid var(--line)}.card.nts.cr{border-left-color:var(--soon)}.card.nts.sp{border-left-color:var(--exp)}.card.nts.gw{border-left-color:var(--ok)}.nts .nh{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px}.nts .nh b:last-child{white-space:nowrap}.nts .nl{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line)}.nts .nl small{display:block;color:var(--muted);font-size:12.5px;margin-top:1px}.nts .nf{color:var(--muted);font-size:12.5px;margin-top:4px}   /* the credit / spoiled / goodwill cards on the handover pages */
 .card.sum>.stobox{display:block;background:var(--ok-bg);margin:10px -14px -6px;padding:10px 14px 12px;border-top:2px solid var(--ok);line-height:1.5;border-radius:0 0 14px 14px}.stobox>div{display:block;padding:2px 0;border:0}   /* the green 'Of this $X' box at the bottom of the cash card */
 .sum>div{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--line)}.sum>div:first-child,.sum>h2+div{border-top:0}
 .sum .t{font-weight:600;font-size:14px}
@@ -300,7 +301,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.78', RULES_VERSION = '2.36';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.79', RULES_VERSION = '2.36';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2813,6 +2814,7 @@ function vHandover() {
   h += spentHtml({ sid: sh.sid, used: t.used, purch: t.purch }, S.log) + sealCheckHtml(sealSnap(), HOSEAL, 'hoseal');
   h += hoStock(rows);
   var eds = S.log.filter(function (e) { return e.type === 'stockedit'; }).map(editInfo); if (eds.length) h += editsCard(eds);
+  h += notesCardsHtml(S.log);
   if (ctlTrail().length) h += trailHtml(ctlTrail(), sh.name);
   if (fundSnap().length) h += hoFold('hofsto', '<b>💰 Stored cash breakdown</b> <span class="muted" style="font-size:12px">' + money(storedTotal()) + '</span>', storedBreakHtml(fundSnap(), storedTotal(), 'ho', true));
   var soldN = rows.filter(function (r) { return r.sold > 0; });
@@ -3298,6 +3300,29 @@ function stoBoxHtml(list, cash) {   /* 'Of this $605: $540 is stored for the Int
   return '<div class="stobox"><b>Of this ' + money(cash) + ':</b>' + fl.map(function (f) { return '<div>💰 <b>' + money(f.bal) + '</b> is stored for ' + nm(f.name) + '</div>'; }).join('') +
     (free > -0.004 ? '<div>💵 <b>' + money(Math.max(0, free)) + '</b> is free cash</div>' : '<div style="color:var(--exp)">⚠ The cash is ' + money(-free) + ' less than the stored cash</div>') + '</div>';
 }
+function notesCardsHtml(evs, rows) {   /* credit, spoiled and goodwill of the shift, each with its own card so none can be missed. From the entries when they are loaded (names, reasons, cost); otherwise from the item totals a handover kept */
+  var nm = function (e) { return esc(e.name || ''); }, q = function (n) { return n + ' × '; }, cards = '';
+  var card = function (cls, title, right, lines, note) { return lines.length ? '<div class="card nts ' + cls + '"><div class="nh"><b>' + title + '</b><b style="color:var(--' + (cls === 'cr' ? 'soon' : cls === 'sp' ? 'exp' : 'ok') + ')">' + right + '</b></div>' + lines.map(function (l) { return '<div class="nl"><span>' + l[0] + (l[1] ? '<small>' + l[1] + '</small>' : '') + '</span><b>' + l[2] + '</b></div>'; }).join('') + '<div class="nf">' + note + '</div></div>' : ''; };
+  var cr = [], sp = [], gw = [], crT = 0, spT = 0, spN = 0, gwT = 0, gwN = 0, crN = 0;
+  if (evs && evs.length) {
+    evs.slice().sort(function (a, b) { return a.t - b.t; }).forEach(function (e) {
+      if (e.type === 'cnote' || (e.type === 'sale' && e.cr)) { var who = e.crName || plab(e.cr || e.person || ''); cr.push([q(e.qty) + nm(e), 'to ' + esc(who), money(e.amt)]); crT = r2(crT + e.amt); crN += e.qty; }
+      else if (e.type === 'snote' || e.type === 'spoil') { sp.push([nm(e), e.type === 'spoil' ? 'taken out of the fridge as spoiled' : 'spoiled note', String(e.qty)]); spT = r2(spT + (e.cogs || 0)); spN += e.qty; }
+      else if (e.type === 'gnote') { gw.push([q(e.qty) + nm(e), esc(e.note || '') + (e.gwTo ? ' · given to ' + esc(e.gwTo) : ''), money(e.cogs || 0)]); gwT = r2(gwT + (e.cogs || 0)); gwN += e.qty; }
+    });
+    var by = {}; sp.forEach(function (l) { var k = l[0] + '|' + l[1]; if (!by[k]) by[k] = [l[0], l[1], 0]; by[k][2] += +l[2]; }); sp = Object.keys(by).map(function (k) { return [by[k][0], by[k][1], String(by[k][2])]; });
+  } else if (rows && rows.length) {
+    rows.forEach(function (r) {
+      if (r.crQ) { cr.push([q(r.crQ) + esc(r.name), '', money(r.crAmt || 0)]); crT = r2(crT + (r.crAmt || 0)); crN += r.crQ; }
+      if (r.spQ || r.spoil) { var n = (r.spQ || 0) + (r.spoil || 0); sp.push([esc(r.name), '', String(n)]); spN += n; }
+      if (r.gwQ) { gw.push([q(r.gwQ) + esc(r.name), '', String(r.gwQ)]); gwN += r.gwQ; }
+    });
+  }
+  cards += card('cr', '💳 On credit this shift', money(crT), cr, 'Not cash. Still owed.');
+  cards += card('sp', '🗑 Spoiled this shift', spN + (spN === 1 ? ' item' : ' items') + (spT > 0 ? ' · ' + money(spT) : ''), sp, spT > 0 ? 'Loss at cost. Not sold, no money.' : 'Not sold, no money.');
+  cards += card('gw', '🎁 Goodwill this shift', gwN + (gwN === 1 ? ' item' : ' items') + (gwT > 0 ? ' · ' + money(gwT) : ''), gw, 'Given free. Not a sale, not spoiled, not a shortage.');
+  return cards;
+}
 function hoFold(key, title, body) {   /* a folded section of the Handover page: closed until tapped, and it stays as you left it */
   var open = !!HOFOLD[key];
   return '<div class="card" style="padding:0 14px"><div class="fold" data-act="stho" data-id="' + key + '"><span>' + title + '</span><span style="flex:none;color:var(--muted)">' + (open ? '▴' : '▾') + '</span></div></div>' + (open ? body : '');
@@ -3743,7 +3768,7 @@ function recordHtml(d, evs, h) {
   var result = acc && gp ? '<div class="card sum"><h2>Result</h2>' + line(esc(wk) + ' shift: everything matched', '$0', 'var(--ok)') + line('Items sold in the gap (' + esc(gp.wk) + ')', money(gp.gapSales || 0)) + line('Cash short against ' + esc(gp.wk), money(gp.cashShort || 0), gp.cashShort > 0 ? 'var(--exp)' : 'var(--ok)') + '</div>' : acc ? '<div class="card sum"><h2>Result</h2>' + line('Shortage from this handover', money(d.short || 0), d.short > 0 ? 'var(--exp)' : 'var(--ok)') + line('Repaid so far (all shortages)', money(so.repaid), 'var(--ok)') + '<div><span>' + wsw(wk) + ' still owes (all shortages)</span><b style="color:' + (so.owed > 0 ? 'var(--exp)' : 'var(--ok)') + '">' + money(so.owed) + '</b></div></div>' : '';
   HREC = { d: d, h: h, rows: rows };
   setTimeout(function () { spentLoad(d); }, 400);
-  return '<h2>Handover record</h2>' + head + (acc && canApprove() && !OWNERVIEW ? '<div class="noprint" style="margin:-4px 0 10px;text-align:right"><button class="btn sec sm" data-act="rcvfix" data-id="' + esc(d.id || '') + '">Wrong incoming shift? Fix it</button></div>' : '') + (gp ? gapBanner(gp, d.wk) : gapMoveCard(d)) + corrNote(d) + corrBanner(d) + (corrEligible(d, h) ? '<button class="btn red block noprint" data-act="corrstart" style="margin-bottom:10px">✎ Handover mistake</button>' : '') + sumCard + cash + shopC + storC + soldF + sum + (h && h.stored && h.stored.length ? storedBreakHtml(h.stored, h.storedTotal, 'rec') : '') + sealRecordHtml(h) + handoverLists(d.owedBy, d.openShort) + tr + edC + (d.notes ? '<div class="card"><label>Remarks</label>' + esc(d.notes) + '</div>' : '') + entF + sigs + result + '<div class="row noprint" style="gap:8px"><button class="btn grow" data-act="rccopy">Copy</button><button class="btn grow" data-act="rcshare">Share</button><button class="btn grow" data-act="rcprint">Print</button></div>';
+  return '<h2>Handover record</h2>' + head + (acc && canApprove() && !OWNERVIEW ? '<div class="noprint" style="margin:-4px 0 10px;text-align:right"><button class="btn sec sm" data-act="rcvfix" data-id="' + esc(d.id || '') + '">Wrong incoming shift? Fix it</button></div>' : '') + (gp ? gapBanner(gp, d.wk) : gapMoveCard(d)) + corrNote(d) + corrBanner(d) + (corrEligible(d, h) ? '<button class="btn red block noprint" data-act="corrstart" style="margin-bottom:10px">✎ Handover mistake</button>' : '') + sumCard + cash + shopC + storC + notesCardsHtml(evs, rows) + soldF + sum + (h && h.stored && h.stored.length ? storedBreakHtml(h.stored, h.storedTotal, 'rec') : '') + sealRecordHtml(h) + handoverLists(d.owedBy, d.openShort) + tr + edC + (d.notes ? '<div class="card"><label>Remarks</label>' + esc(d.notes) + '</div>' : '') + entF + sigs + result + '<div class="row noprint" style="gap:8px"><button class="btn grow" data-act="rccopy">Copy</button><button class="btn grow" data-act="rcshare">Share</button><button class="btn grow" data-act="rcprint">Print</button></div>';
 }
 
 /* ---------- the president moves a shortage to the shift that skipped the handover (when it was recorded against the shift that handed over) ---------- */
@@ -5268,7 +5293,7 @@ function hoViewShow(i) {
     '<div class="card sum"><div><span>From</span><b>' + esc(hnl(h.fromName, h.fromEmail)) + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (not handed to a person)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Sent</span><b>' + when(h.at) + '</b></div>' +
     (h.receivedName ? '<div><span>Received by</span><b>' + esc(hnl(h.receivedName, h.acceptedBy)) + ' · ' + when(h.acceptedAt) + '</b></div>' : '<div><span>Status</span><b>' + (h.status === 'open' ? 'Waiting to be taken' : esc(h.status)) + '</b></div>') + cashRow +
     (h.owedTotal != null ? '<div><span>Owed by people at the time</span><b>' + money(h.owedTotal) + '</b></div>' : '') + '</div>' +
-    hoCashCard(h) + editsCard(h.edits || []) + soldCards(vrows, h, 'Sold this shift') + table('Fridge', its.filter(function (x) { return !x.shelf && (x.open || x.stock); }), false) + table('Shelf', its.filter(function (x) { return x.shelf; }), false) + table('Cage', its.filter(function (x) { return itStore(x) && (x.cageOpen || x.cage); }), true) +
+    hoCashCard(h) + editsCard(h.edits || []) + notesCardsHtml(null, vrows) + soldCards(vrows, h, 'Sold this shift') + table('Fridge', its.filter(function (x) { return !x.shelf && (x.open || x.stock); }), false) + table('Shelf', its.filter(function (x) { return x.shelf; }), false) + table('Cage', its.filter(function (x) { return itStore(x) && (x.cageOpen || x.cage); }), true) +
     (h.status === 'accepted' && ri ? '<div class="card"><h2>Check when it was received</h2>' + (diffs.length ? diffs.map(function (d) { return '<div style="color:var(--exp)">' + esc(d) + '</div>'; }).join('') : '<div style="color:var(--ok)"><b>✓ Everything matched</b></div>') + '</div>' : '') +
     '<div class="card"><h2>Signatures</h2>' + sig(h.sig, hnl(h.fromName, h.fromEmail), h.at) + sig(h.receivedSig, hnl(h.receivedName, h.acceptedBy), h.acceptedAt) + '</div>' +
     '<div class="row"><button class="btn sec grow" data-act="hovlist">Back</button><button class="btn sec grow" data-act="close">Close</button></div>');
