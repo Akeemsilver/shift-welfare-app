@@ -301,7 +301,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.81', RULES_VERSION = '2.36';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.82', RULES_VERSION = '2.36';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2817,8 +2817,8 @@ function vHandover() {
   h += notesCardsHtml(S.log);
   if (ctlTrail().length) h += trailHtml(ctlTrail(), sh.name);
   if (fundSnap().length) h += hoFold('hofsto', '<b>💰 Stored cash breakdown</b> <span class="muted" style="font-size:12px">' + money(storedTotal()) + '</span>', storedBreakHtml(fundSnap(), storedTotal(), 'ho', true));
-  var soldN = rows.filter(function (r) { return r.sold > 0; });
-  h += hoFold('hofsold', '<b>Sold this shift</b> <span class="muted" style="font-size:12px">' + soldN.length + (soldN.length === 1 ? ' item' : ' items') + ' · ' + t.sold + ' sold</span>', soldCards(rows, { shift: { name: sh.name, date: sh.date, half: sh.half } }, 'Sold this shift'));
+  var soldN = rows.filter(function (r) { return r.sold > 0; }), soldCash = soldN.reduce(function (a, r) { return a + Math.max(0, r.soldAmt - r.crAmt - r.spAmt - (r.gwAmt || 0)); }, 0), soldQ = soldN.reduce(function (a, r) { return a + r.sold; }, 0);
+  h += hoFold('hofsold', '<b>Sold this shift</b> <span class="muted" style="font-size:12px">' + soldQ + (soldQ === 1 ? ' item' : ' items') + ' sold · ' + money(soldCash) + '</span>', soldCards(rows, { shift: { name: sh.name, date: sh.date, half: sh.half } }, 'Sold this shift'));
   h += creditCard(t) + handoverLists(owingList(), shortAllList());
   h += '<div class="card"><label>Remarks</label><input data-sh="notes" value="' + esc(sh.notes) + '" placeholder="e.g. 2 Solo spoiled"></div>';
   var locked = sh.mode === 'locked';
@@ -3754,8 +3754,8 @@ function recordHtml(d, evs, h) {
   var shopG = function (list, title) { return list.length ? '<div class="card"><h2>' + title + '</h2>' + rctbl(list.map(function (r) { return [esc(r.name), r.stock, acc ? r.rs : null, undefined, fx[r.id + ':stock']]; })) + '</div>' : ''; };
   var shopC = shop.length ? shopG(shop.filter(function (r) { return !r.shelf; }), '🧊 In the fridge (counted)') + shopG(shop.filter(function (r) { return r.shelf; }), '🧁 On the shelf (counted)') + (itNote ? '<div class="card" style="padding-top:8px;padding-bottom:8px">' + itNote + '</div>' : '') : '<div class="card"><h2>In the shop</h2><div class="muted">No items.</div></div>';
   var storC = stor.length ? '<div class="card"><h2>📦 Cases / Packs in storage (counted)</h2>' + rctbl(stor.map(function (r) { return [cageName(r.name, r.unit), r.cage, acc ? r.rg : null, undefined, fx[r.id + ':cage']]; })) + '</div>' : '';
-  var sold = rows.filter(function (r) { return r.sold > 0; }), tcash = sold.reduce(function (a, r) { return a + Math.max(0, r.soldAmt - r.crAmt - r.spAmt); }, 0);
-  var soldF = fold('sold', 'Sold on the shift <span class="muted" style="font-size:11px">' + sold.length + (sold.length === 1 ? ' item' : ' items') + ' · ' + money(tcash) + '</span>', soldCards(rows, { shift: { name: wk, date: d.date, half: d.half } }, 'Sold on the shift'));
+  var sold = rows.filter(function (r) { return r.sold > 0; }), tcash = sold.reduce(function (a, r) { return a + Math.max(0, r.soldAmt - r.crAmt - r.spAmt - (r.gwAmt || 0)); }, 0), soldQty = sold.reduce(function (a, r) { return a + r.sold; }, 0);
+  var soldF = fold('sold', 'Sold on the shift <span class="muted" style="font-size:11px">' + soldQty + (soldQty === 1 ? ' item' : ' items') + ' sold · ' + money(tcash) + '</span>', soldCards(rows, { shift: { name: wk, date: d.date, half: d.half } }, 'Sold on the shift'));
   var line = function (l, v, c) { return '<div><span>' + l + '</span><b' + (c ? ' style="color:' + c + '"' : '') + '>' + v + '</b></div>'; };
   var sumCard = '<div class="card sum"><h2>How the cash adds up</h2>' + cashRowsHtml({ received: d.received, sales: d.sales, sold: d.sold, cr: d.cr, loans: d.loans, paid: d.paid, put: d.stp, purch: d.purch, used: d.used, usedStored: d.stu, adv: d.adv, chg: d.chg, don: d.don, sav: d.sav, total: d.expected, totalLabel: 'Expected', stored: h && h.stored }) + stoBoxHtml(h && h.stored, d.expected) + '</div>';
   var sum = spentHtml(d) + offNotes(d);
