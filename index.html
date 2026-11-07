@@ -302,7 +302,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.85', RULES_VERSION = '2.36';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.86', RULES_VERSION = '2.37';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -440,7 +440,7 @@ function inControl() { return !OWNERVIEW && !!(S.state && EMAIL && S.state.contr
 function viewOnly() { return OWNERVIEW || !inControl(); }
 function isPres() { return EMAIL === PRESIDENT; }
 function roleShown(m) { return m.email === PRESIDENT && !isPres() ? 'user' : m.role; }   /* only the owner sees that title; everyone else sees a plain user */
-function roleLabel(r) { return r === 'owner' ? 'Owner' : r === 'president' ? 'President' : r === 'admin' ? 'Admin' : 'User'; }
+function roleLabel(r) { return r === 'owner' ? 'President' : r === 'president' ? 'President' : r === 'admin' ? 'Admin' : 'User'; }
 function myRole() { return isPres() ? 'owner' : (M && M.role) || 'user'; }
 function canAdmin() { return myRole() === 'owner' || myRole() === 'president'; }   /* the admin tools: people, corrections, cancelled entries ... */
 function canApprove() { return canAdmin() || myRole() === 'admin'; }   /* accept or decline access requests */
@@ -596,17 +596,17 @@ function setShift(obj) { var u = {}; for (var k in obj) u['shift.' + k] = obj[k]
 function reverseEvent(b, e) {
   var it = item(e.item), cid = e.cid || rootOf(e.cr || e.person || ''); LE = e.id;   /* the cancelled record carries the same id as the event */
   if (e.type === 'savemove') return 'A savings move cannot be cancelled. Move the money back instead.';
-  if (['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'hocorr', 'shiftrec', 'watchchg', 'fundshort', 'fundover', 'sealopen', 'sealout', 'advsettle'].indexOf(e.type) >= 0) return 'This entry cannot be cancelled here. It was made with a stock purchase. Ask the owner or a president.';
+  if (['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'hocorr', 'shiftrec', 'watchchg', 'fundshort', 'fundover', 'sealopen', 'sealout', 'advsettle'].indexOf(e.type) >= 0) return 'This entry cannot be cancelled here. It was made with a stock purchase. Ask a president.';
   if (e.type === 'sale') { if (!it) return 'That item no longer exists'; itemInc(b, it.id, { stock: e.qty }); if (e.cr) balInc(b, cid, -e.amt); }
   else if (e.type === 'count') { if (e.qty > 0) { if (!it) return 'That item no longer exists'; itemInc(b, it.id, { stock: e.qty }); } }
   else if (e.type === 'cnote') balInc(b, cid, -e.amt);
   else if (e.type === 'snote' || e.type === 'gnote') { /* a note only: nothing else to put back */ }
   else if (e.type === 'opencredit') balInc(b, cid, -e.amt);
   else if (e.type === 'usecash') {   /* the cash simply counts again; money taken from a stored fund goes back into it */
-    if (e.adv && advSettleOf(e.id)) return 'This cash was used for a stock purchase. Cancel the purchase first, or ask the owner or a president.';
+    if (e.adv && advSettleOf(e.id)) return 'This cash was used for a stock purchase. Cancel the purchase first, or ask a president.';
     if (chgOf(e.id) > 0) return 'Change was already returned for this. Cancel the change entry first.';
     if (e.fund) {
-      if (e.opened && e.opened.length) return 'This use opened sealed cash, so it cannot be cancelled here. Ask the owner or a president to correct it.';
+      if (e.opened && e.opened.length) return 'This use opened sealed cash, so it cannot be cancelled here. Ask a president to correct it.';
       if (e.fundTake) { var fd2 = S.funds[e.fund], d2 = { bal: increment(e.fundTake), lastEvent: e.id }; if (fd2 && e.sbd) { d2.sb = {}; Object.keys(e.sbd).forEach(function (k) { d2.sb[k] = increment(-e.sbd[k]); }); if (e.oweD && fd2.owe) { d2.owe = {}; Object.keys(e.oweD).forEach(function (k) { d2.owe[k] = increment(-e.oweD[k]); }); } } else if (fd2 && fd2.sb) { d2.sb = deleteField(); } b.set(ref('funds/' + e.fund), d2, { merge: true }); }
     }
   }
@@ -639,7 +639,7 @@ function reverseEvent(b, e) {
   else if (e.type === 'cageadj') { if (!it || it.cage - e.qty < 0) return 'Cannot undo: the cage would go below zero'; itemInc(b, it.id, { cage: -e.qty }); }
   else if (e.type === 'move') { if (!it || it.stock < e.qty) return 'Cannot undo: those items were already sold'; itemInc(b, it.id, { stock: -e.qty, cage: e.cases }); }
   else if (e.type === 'buy' || e.type === 'other') {
-    if (e.advId) { var sv0 = advSettleOf(e.advId); if (!sv0 || sv0.sid !== e.sid) return 'This purchase was paid with cash given earlier, in another shift, so it cannot be cancelled here. Ask the owner or a president.'; }
+    if (e.advId) { var sv0 = advSettleOf(e.advId); if (!sv0 || sv0.sid !== e.sid) return 'This purchase was paid with cash given earlier, in another shift, so it cannot be cancelled here. Ask a president.'; }
     for (var k = 0; k < (e.lines || []).length; k++) { var l = e.lines[k], li = item(l.item); if (!li || (l.v === 2 ? (li.cage < l.dc || li.stock < l.ds) : (l.shelf ? li.stock : li.cage) < l.cases * (l.pk || 1))) return 'Cannot undo: that stock was already moved or sold'; }
     (e.lines || []).forEach(function (l) { itemInc(b, l.item, l.v === 2 ? { cage: -l.dc, stock: -l.ds } : l.shelf ? { stock: -l.cases * (l.pk || 1) } : { cage: -l.cases }); });
   }
@@ -996,7 +996,13 @@ function storedPage() {
   wpPage(storedPage, [], h, true);
 }
 var SV = null;
-function savopen() { SV = { dir: 'toCash', amt: '', set: '' }; savingsPage(); }
+function svMine() { return canAdmin() && !OWNERVIEW; }   /* who moves or sets the savings: the president (the rules say the same) */
+function whoCanPage() {
+  var Y = '<b style="color:var(--ok)">✓</b>', N = '<span class="muted">—</span>';
+  var rows = [['See the savings amount', 1, 1, 0], ['Add money to Savings', 1, 0, 0], ['Move savings to cash', 1, 0, 0], ['Set the savings figure', 1, 0, 0], ['Move stored cash into the cash on hand', 1, 1, 0]];
+  wpPage(whoCanPage, [], '<h2>Who can do what</h2><div class="card"><table style="width:100%;border-collapse:collapse;font-size:14px"><tr><th style="text-align:left;padding:6px 0"></th><th style="padding:6px 4px">President</th><th style="padding:6px 4px">Admin</th><th style="padding:6px 4px">Others</th></tr>' + rows.map(function (r) { return '<tr style="border-top:1px solid var(--line)"><td style="padding:9px 6px 9px 0">' + r[0] + '</td><td style="text-align:center">' + (r[1] ? Y : N) + '</td><td style="text-align:center">' + (r[2] ? Y : N) + '</td><td style="text-align:center">' + (r[3] ? Y : N) + '</td></tr>'; }).join('') + '</table></div>', true);
+}
+function savopen() { var b0 = S.savings && typeof S.savings.bal === 'number' ? S.savings.bal : 0; SV = { dir: b0 > 0 ? 'toCash' : 'toSave', amt: '', set: '' }; savingsPage(); }
 function svBoxHtml() {
   var sv = S.savings, bal = sv && typeof sv.bal === 'number' ? sv.bal : 0, amt = r2(num(SV.amt)), cash = totals().cash; if (!(amt > 0)) return '<div class="muted">Type how much to move.</div>';
   if (SV.dir === 'toCash' && amt > bal + 0.004) return '<div style="color:var(--exp)">There is only ' + money(bal) + ' in Savings.</div>';
@@ -1005,11 +1011,12 @@ function svBoxHtml() {
   return 'Savings ' + money(bal) + ' → <b>' + money(nb) + '</b><br>Cash on hand ' + money(cash) + ' → <b>' + money(nc) + '</b>';
 }
 function savingsPage() {
-  var sv = S.savings, bal = sv && typeof sv.bal === 'number' ? sv.bal : null, adm = isPres() && !OWNERVIEW;
+  if (!canApprove()) return wpPage(savingsPage, [], '<h2>Savings</h2><div class="card" style="text-align:center;padding:28px 16px"><div style="font-size:34px">🔒</div><div style="font-weight:700;margin-top:6px">Only admins and the president can see the savings.</div></div>', true);
+  var sv = S.savings, bal = sv && typeof sv.bal === 'number' ? sv.bal : null, adm = svMine();
   var h = '<h2>Savings</h2><div class="card"><div class="muted">SAVINGS</div><div style="font-size:30px;font-weight:700">' + (bal === null ? 'Not set' : money(bal)) + '</div><div class="muted" style="margin-top:4px">Not part of the cash on hand or the cash count.</div></div>';
-  if (adm && bal !== null) h += '<div class="card"><label style="margin-top:0">Move money</label><div class="row" style="gap:8px"><button class="btn sec grow" data-act="svdir" data-v="toCash" style="height:auto;padding:10px 6px;' + (SV.dir === 'toCash' ? 'background:var(--brand);color:#fff' : '') + '">Savings → Cash on hand</button><button class="btn sec grow" data-act="svdir" data-v="toSave" style="height:auto;padding:10px 6px;' + (SV.dir === 'toSave' ? 'background:var(--brand);color:#fff' : '') + '">Cash on hand → Savings</button></div><div class="f" style="margin-top:8px"><label>How much</label><input data-sv="amt" type="number" inputmode="decimal" min="0" value="' + esc(SV.amt) + '" placeholder="0"></div><div class="card" id="sv-box" style="background:var(--soft);box-shadow:none;margin:8px 0 0">' + svBoxHtml() + '</div><button class="btn green block" data-act="svreview" style="margin-top:10px">Review</button></div>';
+  if (adm) h += '<div class="card"><label style="margin-top:0">Move money</label><div class="row" style="gap:8px"><button class="btn sec grow" data-act="svdir" data-v="toCash" style="height:auto;padding:10px 6px;' + (SV.dir === 'toCash' ? 'background:var(--brand);color:#fff' : '') + '">Savings → Cash on hand</button><button class="btn sec grow" data-act="svdir" data-v="toSave" style="height:auto;padding:10px 6px;' + (SV.dir === 'toSave' ? 'background:var(--brand);color:#fff' : '') + '">Cash on hand → Savings</button></div><div class="f" style="margin-top:8px"><label>How much</label><input data-sv="amt" type="number" inputmode="decimal" min="0" value="' + esc(SV.amt) + '" placeholder="0"></div><div class="card" id="sv-box" style="background:var(--soft);box-shadow:none;margin:8px 0 0">' + svBoxHtml() + '</div><button class="btn green block" data-act="svreview" style="margin-top:10px">Review</button></div>';
   if (adm) h += '<div class="card"><label style="margin-top:0">' + (bal === null ? 'Set the savings figure' : 'Set the savings figure (president)') + '</label><input data-sv="set" type="number" inputmode="decimal" min="0" value="' + esc(SV.set) + '" placeholder="New total, e.g. 5000"><div class="muted" style="margin:6px 0 0;font-size:12.5px">Changing the figure is not listed in History.</div><button class="btn sec block" data-act="svset" style="margin-top:10px">Set the figure</button></div>';
-  else h += '<div class="muted" style="margin:8px 2px">Only the owner and the president can move money or change this figure. Every move is listed in History.</div>';
+  else h += '<div class="muted" style="margin:8px 2px">Only the president can move money or change this figure. Every move is listed in History.</div>';
   wpPage(savingsPage, [], h, true);
 }
 function svReview() {
@@ -1020,7 +1027,7 @@ function svReview() {
   askConfirm('Move ' + money(amt) + (SV.dir === 'toCash' ? ' to the cash on hand?' : ' to Savings?'), svBoxHtml() + '<br><span class="muted">It is listed in History, recorded by ' + esc(myName()) + '.</span>', 'Yes, move ' + money(amt), svSave);
 }
 function svSave() {
-  var sv = S.savings, bal = sv && typeof sv.bal === 'number' ? sv.bal : 0, amt = r2(num(SV.amt)), dir = SV.dir; if (!(amt > 0) || !isPres()) return;
+  var sv = S.savings, bal = sv && typeof sv.bal === 'number' ? sv.bal : 0, amt = r2(num(SV.amt)), dir = SV.dir; if (!(amt > 0) || !svMine()) return;
   var nb = r2(dir === 'toCash' ? bal - amt : bal + amt), b = writeBatch(DB), id = newEv();
   mkEvent(b, 'savemove', null, 1, amt, { name: 'Savings moved', dir: dir, from: bal, to: nb }, id);
   b.set(ref('shop/savings'), { bal: nb, lastEvent: id, lastBy: myName(), lastAt: Date.now() }, { merge: true });
@@ -1064,7 +1071,7 @@ function abBoxHtml() {
     '<div class="card sum" style="margin:8px 0 0"><div><span>Stored in ' + esc(f.name) + '</span><b>' + money(f.bal || 0) + ' → ' + money(r2((f.bal || 0) - amt)) + '</b></div><div><span>Cash on hand</span><b>' + money(t.cash) + ' (no change)</b></div></div>';
 }
 function abOpen(id) {
-  var f = S.funds[id]; if (!f || !isPres() || OWNERVIEW) return; var mx = abMax(id); if (!(mx > 0)) return toast('Nothing is stored in ' + f.name);
+  var f = S.funds[id]; if (!f || !canApprove() || OWNERVIEW) return; var mx = abMax(id); if (!(mx > 0)) return toast('Nothing is stored in ' + f.name);
   AB = { id: id, amt: String(mx) };
   modal('<h2 style="margin:0 0 6px">Move stored cash into the cash on hand</h2><div class="muted" style="margin-bottom:8px">' + esc(f.name) + ' · ' + money(f.bal || 0) + ' stored. The cash on hand does not change, the stored amount goes down. Debts stay.</div>' +
     '<label style="margin-top:0">How much?</label><input data-ab="amt" type="number" inputmode="decimal" min="0" value="' + esc(AB.amt) + '"><div id="ab-box" style="margin-top:10px">' + abBoxHtml() + '</div>' +
@@ -1072,10 +1079,10 @@ function abOpen(id) {
 }
 function abReview() {
   var f = S.funds[AB.id], amt = r2(num(AB.amt)); if (!f) return; if (!(amt > 0)) return toast('Type how much to move'); if (amt > abMax(AB.id) + 0.004) return toast('Only ' + money(abMax(AB.id)) + ' is stored');
-  askConfirm('Move ' + money(amt) + ' into the cash on hand?', abBoxHtml() + '<br><span class="muted">It is listed in History, recorded by ' + esc(myName()) + '. The other owners and presidents are told. It cannot be cancelled.</span>', 'Yes, move ' + money(amt), abSave);
+  askConfirm('Move ' + money(amt) + ' into the cash on hand?', abBoxHtml() + '<br><span class="muted">It is listed in History, recorded by ' + esc(myName()) + '. The president is told. It cannot be cancelled.</span>', 'Yes, move ' + money(amt), abSave);
 }
 function abSave() {
-  var f = S.funds[AB.id], amt = r2(num(AB.amt)); if (!f || !(amt > 0) || !isPres() || amt > abMax(AB.id) + 0.004) return;
+  var f = S.funds[AB.id], amt = r2(num(AB.amt)); if (!f || !(amt > 0) || !canApprove() || OWNERVIEW || amt > abMax(AB.id) + 0.004) return;
   var by = fundSB(AB.id), sp = absorbSplit(amt, by), sbd = {}; Object.keys(sp.take).forEach(function (k) { if (sp.take[k] > 0.004) sbd[k] = -sp.take[k]; });
   var b = writeBatch(DB), id = newEv(), fid = AB.id;
   mkEvent(b, 'absorb', null, 1, amt, { name: 'Stored cash moved', fund: fid, fundName: f.name, sbd: sbd, from: r2(f.bal || 0), to: r2((f.bal || 0) - amt) }, id);
@@ -1090,7 +1097,7 @@ function fundPage(id) {
   var ks = Object.keys(by), ok = Object.keys(owe);
   if (ks.length || ok.length) h += '<div class="card sum"><h2>By shift</h2>' + ks.map(function (w) { return '<div><span>' + esc(w) + '</span><b>' + money(by[w]) + '</b></div>'; }).join('') + ok.map(function (w) { return '<div><span><b>' + esc(w) + '</b> <span class="muted">owes the cash on hand</span></span><b style="color:var(--exp)">−' + money(owe[w]) + '</b></div>'; }).join('') + (ok.length ? '<div class="card" style="background:var(--exp-bg);box-shadow:none;margin:8px 0 0;color:var(--exp)">A bill was paid in full. The cash on hand paid the part this shift did not have stored. When it adds cash for ' + esc(f.name) + ', the first part pays this back.</div>' : '') + '</div>';
   if (sl.length) h += '<div class="card"><h2>🔒 Sealed, not counted</h2><div class="list">' + sl.map(function (x) { return '<div data-act="sealsheet" data-id="' + esc(x.id) + '"><div class="grow"><b>' + money(x.amt) + ' written on it</b><div class="muted">put in by ' + esc(x.giver || '') + (x.forWk ? ' (' + esc(x.forWk) + ')' : '') + '</div></div><b>›</b></div>'; }).join('') + '</div></div>';
-  if (isPres() && !OWNERVIEW && abMax(id) > 0) h += '<button class="btn sec block" data-act="abopen" data-id="' + esc(id) + '" style="margin-bottom:10px">Move stored cash into the cash on hand</button>';
+  if (canApprove() && !OWNERVIEW && abMax(id) > 0) h += '<button class="btn sec block" data-act="abopen" data-id="' + esc(id) + '" style="margin-bottom:10px">Move stored cash into the cash on hand</button>';
   h += '<div class="muted" style="margin:6px 2px 10px;font-size:12.5px">Every deposit and every use is listed in History.</div>';
   wpPage(fundPage, [id], h, true);
 }
@@ -1100,7 +1107,7 @@ function vCount() {
   h += '<div class="tiles"><div class="tile dk"><div class="l">Sales this shift</div><div class="v">' + money(t.sales) + '</div></div>' +
        '<div class="tile dk"><div class="l">Items sold</div><div class="v">' + t.sold + '</div></div>' +
        '<div class="tile' + (redCash ? ' redc' : '') + '"><div class="l">Cash on hand</div><div class="v">' + money(t.cash) + '</div>' + (stT > 0.004 ? '<div class="muted" style="font-size:12px">includes ' + money(stT) + ' stored</div>' : '') + (redCash ? '<span class="rtap" data-act="cashred">tap to view</span>' : '') + '</div>' +
-       '<div class="tile sv" data-act="savopen"><div class="l">Savings</div><div class="v">' + (sv && typeof sv.bal === 'number' ? money(sv.bal) : '—') + '</div><div class="muted" style="font-size:12px">' + (isPres() && !OWNERVIEW ? (sv ? 'tap to move money ›' : 'tap to set it ›') : 'tap to view ›') + '</div></div></div>';
+       '<div class="tile sv" data-act="savopen"><div class="l">Savings</div><div class="v">' + (!canApprove() ? '🔒' : sv && typeof sv.bal === 'number' ? money(sv.bal) : '—') + '</div><div class="muted" style="font-size:12px">' + (!canApprove() ? 'Admins only' : svMine() ? (sv ? 'tap to move money ›' : 'tap to add money ›') : 'tap to view ›') + '</div></div></div>';
   h += storedRowHtml();
   h += '<div class="row" style="gap:10px;margin-bottom:14px"><button class="btn sec grow" data-act="ucopen" style="border:2px dashed var(--brand);height:50px">💵 Use cash</button><button class="btn sec grow" data-act="acopen" style="border:2px solid var(--ok);background:var(--ok-bg);color:var(--ok);height:50px">➕ Add cash</button></div>';
   if (!S.items.length) return h + '<div class="card empty">No items yet.<br>Go to <b>Stock</b> and add your items and prices.</div>';
@@ -1406,7 +1413,7 @@ function payOpen(wk) {   /* one Pay pop-up for every shift that still owes: pick
 var OFF = null;
 function offsetOpen(wk) {   /* the owner, a president or an admin clears one shift's shortage with another shift's cash over: no cash moves */
   if (!(canApprove() && !OWNERVIEW)) {
-    modal('<h2>Ask an admin</h2><p>Paying this shortage with another shift\'s cash over has to be done by an admin, a president or the owner. Ask one of them to make this.</p><button class="btn block" data-act="afxshort">Ask for a fix</button><button class="btn sec block" data-act="close" style="margin-top:8px">OK</button>');
+    modal('<h2>Ask an admin</h2><p>Paying this shortage with another shift\'s cash over has to be done by an admin or a president. Ask one of them to make this.</p><button class="btn block" data-act="afxshort">Ask for a fix</button><button class="btn sec block" data-act="close" style="margin-top:8px">OK</button>');
     return;
   }
   var o = openShortList(), srcs = WATCHES.filter(function (w) { return overOf(w) > 0.004; });
@@ -1422,7 +1429,7 @@ function offsetDraw() {
   var owed = (o.filter(function (x) { return x.wk === F.to; })[0] || { owed: 0 }).owed, avail = F.from ? overOf(F.from) : 0, max = r2(Math.min(owed, avail));
   if (F.amount === '' || num(F.amount) > max) F.amount = String(max);
   var amt = num(F.amount), okAmt = amt > 0 && amt <= max + 0.004;
-  modal('<h2>Pay with cash over</h2><div class="muted" style="margin:-4px 0 8px">For the president, the owner and admins. You do not need to be in control. No cash moves.</div><div class="card"><label>Shift that owes</label>' + seg(o.map(function (x) { return [x.wk, esc(x.wk) + ' · ' + money(x.owed)]; }), 'ofto', F.to, Math.min(o.length, 4)) +
+  modal('<h2>Pay with cash over</h2><div class="muted" style="margin:-4px 0 8px">For the president and admins. You do not need to be in control. No cash moves.</div><div class="card"><label>Shift that owes</label>' + seg(o.map(function (x) { return [x.wk, esc(x.wk) + ' · ' + money(x.owed)]; }), 'ofto', F.to, Math.min(o.length, 4)) +
     '<label style="margin-top:12px">Pay it with the cash over of</label>' + (srcs.length ? seg(srcs.map(function (w) { return [w, esc(w) + ' · ' + money(overOf(w))]; }), 'offrom', F.from, Math.min(srcs.length, 4)) : '<div class="muted">No other shift has cash over.</div>') +
     '<div class="f" style="margin-top:12px"><label>Amount <span class="muted">(up to ' + money(max) + ')</span></label><input id="of-amt" data-of="amount" type="number" inputmode="decimal" min="0" step="any" value="' + esc(F.amount) + '"></div></div>' +
     (okAmt ? '<div class="card" style="background:var(--soon-bg);border-left:2px solid var(--soon);box-shadow:none"><b>What will change</b><div style="margin-top:6px;font-size:13.5px"><div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line)"><span>' + esc(F.to) + ' owes</span><b>' + money(owed) + ' → ' + money(r2(owed - amt)) + '</b></div><div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line)"><span>' + esc(F.from) + ' cash over</span><b>' + money(avail) + ' → ' + money(r2(avail - amt)) + '</b></div><div class="muted" style="margin-top:6px">Nothing moves in the cash. The extra cash counted is already in the till and the missing cash is already out of it, so this only settles the books. It is written to History and each shift is told.</div></div></div>' : '') +
@@ -1623,7 +1630,7 @@ function myInfoSave() {
 var FIXS = [], FIXF = null, FIXREQ = '';
 function recFix() {   /* the yellow "recording for X shift" line: is that right? */
   var sh = S.state.shift, cs = currentShift();
-  modal('<h2>Recording for the ' + esc(sh.name) + ' shift</h2><p>The roster says <b>' + esc(cs.name) + '</b> is on duty now, but your entries are filed under <b>' + esc(sh.name) + '</b>.</p><p class="muted">That is right when you are covering for them or recording for the shift you took over from. If it is a mistake, ask the president or the owner to fix it.</p><button class="btn block" data-act="afxhere">This is wrong. Ask for a fix</button><button class="btn sec block" data-act="close" style="margin-top:8px">It is right</button>');
+  modal('<h2>Recording for the ' + esc(sh.name) + ' shift</h2><p>The roster says <b>' + esc(cs.name) + '</b> is on duty now, but your entries are filed under <b>' + esc(sh.name) + '</b>.</p><p class="muted">That is right when you are covering for them or recording for the shift you took over from. If it is a mistake, ask the president to fix it.</p><button class="btn block" data-act="afxhere">This is wrong. Ask for a fix</button><button class="btn sec block" data-act="close" style="margin-top:8px">It is right</button>');
 }
 function fixCan() { return canApprove() && !OWNERVIEW; }
 function fixRoster(start) {   /* the shift the roster says works when something started at this time (a little early still counts for the next shift) */
@@ -1676,7 +1683,7 @@ function fixHub() {
   wpPage(fixHub, [], '<h2>Fix mistakes</h2><div class="empty">Looking…</div>');
   fixLoad().then(function (list) {
     FIXS = list; var bad = list.filter(function (x) { return x.flag; }), reqs = (S.fixreqs || []).filter(function (r) { return r.status === 'open'; });
-    wpPage(fixHub, [], '<h2>Fix mistakes</h2><p class="muted" style="margin-top:0">Only the president, the owner and admins can use these. Each fix shows exactly what it will change before it does anything.</p>' +
+    wpPage(fixHub, [], '<h2>Fix mistakes</h2><p class="muted" style="margin-top:0">Only the president and admins can use these. Each fix shows exactly what it will change before it does anything.</p>' +
       (reqs.length ? '<div class="sp-h">People asking for a fix</div>' + reqs.map(fixreqCard).join('') : '') +
       '<div class="sp-card">' + spRow('🧾', 'Shortages on the wrong shift', 'A shift skipped a handover and the shortage was charged to the wrong one', 'gaplist') + spRow('🗓️', 'Day totals by working day', 'Move old totals made before 09:00 to the right working day', 'rkpage') + spRow('🛠️', 'Fix any shift', 'Pick a shift yourself, for example one recorded under the wrong shift that the list below does not show', 'fixpick') + '</div>' +
       '<div class="sp-h">Shifts recorded under the wrong shift</div>' +
@@ -1738,7 +1745,7 @@ function afxOpen(ctx) {
 }
 function afxDraw() {
   var q = FIXQ, note = ($('#afx-note') || {}).value || q.note || ''; q.note = note;
-  modal('<h2>Ask for a fix</h2><p class="muted" style="margin-top:0">The president or the owner will look at it. Nothing changes until they check it and confirm.</p><label>What is wrong?</label>' + seg([['shift', 'A shift is wrong'], ['shortage', 'A shortage'], ['other', 'Something else']], 'afxtype', q.type, 3) +
+  modal('<h2>Ask for a fix</h2><p class="muted" style="margin-top:0">The president will look at it. Nothing changes until they check it and confirm.</p><label>What is wrong?</label>' + seg([['shift', 'A shift is wrong'], ['shortage', 'A shortage'], ['other', 'Something else']], 'afxtype', q.type, 3) +
     (q.wk ? '<div class="muted" style="margin:8px 2px 0">About: <b>' + esc(q.wk) + ' shift</b>' + (q.date ? ' · ' + esc(q.date) : '') + '</div>' : '') +
     '<label style="margin-top:12px">Tell them what is wrong</label><textarea id="afx-note" rows="3" maxlength="400" placeholder="For example: I am recording for White, not Red" style="width:100%">' + esc(note) + '</textarea>' +
     '<button class="btn block" data-act="afxsend" style="margin-top:10px">Send</button><button class="btn sec block" data-act="close" style="margin-top:8px">Cancel</button>');
@@ -1748,7 +1755,7 @@ function afxSend() {
   if (!note) return toast('Say what is wrong');
   if ((S.myfix || []).some(function (r) { return r.status === 'open' && r.sid === (q.sid || '') && r.type === q.type; })) return toast('You already asked for this one');
   var id = newId('fixreqs');
-  setDoc(ref('fixreqs/' + id), { email: EMAIL, name: myName(), type: q.type, note: note.slice(0, 400), sid: q.sid || '', wk: q.wk || '', date: q.date || '', half: q.half || '', hid: q.hid || '', at: Date.now(), status: 'open', expireAt: EXPY() }).then(function () { closeModal(); toast('Sent to the president and the owner'); }).catch(function (e) { console.error(e); toast(errText(e)); });
+  setDoc(ref('fixreqs/' + id), { email: EMAIL, name: myName(), type: q.type, note: note.slice(0, 400), sid: q.sid || '', wk: q.wk || '', date: q.date || '', half: q.half || '', hid: q.hid || '', at: Date.now(), status: 'open', expireAt: EXPY() }).then(function () { closeModal(); toast('Sent to the president'); }).catch(function (e) { console.error(e); toast(errText(e)); });
 }
 function fixreqCard(r) {
   return alCard('🛠️', 'a', esc(r.name) + ' asks for a fix', esc(afxLabel(r.type)) + (r.wk ? ' · ' + esc(r.wk) + ' shift' : '') + ' · ' + alTime(r.at) + '<br>“' + esc(r.note) + '”',
@@ -1997,7 +2004,7 @@ function sealSheet(id) {
   var s = S.seals[id]; if (!s) return closeModal(); SEALSHEET = id;
   var btn = function (act, t, d) { return '<button class="btn sec block" data-act="' + act + '" data-id="' + esc(id) + '" style="text-align:left;margin-top:8px;height:auto;padding:12px 14px"><b>' + t + '</b><div class="muted" style="font-weight:400;font-size:12.5px">' + d + '</div></button>'; };
   modal('<h2>🔒 ' + esc(s.fundName) + '</h2><div class="muted" style="margin-bottom:6px">Sealed · written on it ' + money(s.amt) + ' · put in by ' + esc(s.giver || '') + (s.forWk ? ' (' + esc(s.forWk) + ')' : '') + ' · not in the cash count</div>' +
-    btn('sealopen', 'Open it and count it', 'It goes into the cash count. Any difference from what is written is recorded.') + btn('sealuse', 'Use it for a bill', 'Use cash: it is opened and paid from.') + btn('sealout', 'Take it out of the cash box', 'For example, handed to the owner. Not used for a bill.') + btn('sealcancel', 'Added by mistake? Cancel the entry', 'Only while it is still sealed.') + '<button class="btn sec block" data-act="close" style="margin-top:10px">Close</button>');
+    btn('sealopen', 'Open it and count it', 'It goes into the cash count. Any difference from what is written is recorded.') + btn('sealuse', 'Use it for a bill', 'Use cash: it is opened and paid from.') + btn('sealout', 'Take it out of the cash box', 'For example, handed to the president. Not used for a bill.') + btn('sealcancel', 'Added by mistake? Cancel the entry', 'Only while it is still sealed.') + '<button class="btn sec block" data-act="close" style="margin-top:10px">Close</button>');
 }
 var SO = null;
 function sealOpenForm() {
@@ -2022,7 +2029,7 @@ function sealOpenSave(sid, F) {
   commit(b).then(function () { if (aid) tellBosses(aid, 'fundshort', { amount: Math.abs(d), what: s.fundName, over: d > 0, was: s.amt, found: F, sealBy: s.giver || '', sealWk: s.forWk || '' }); });
 }
 function sealOutForm() {
-  var s = S.seals[SEALSHEET]; if (!s) return closeModal(); SO = SO || {}; var W = ['Handed to the owner', 'Deposited at the bank', 'Other'];
+  var s = S.seals[SEALSHEET]; if (!s) return closeModal(); SO = SO || {}; var W = ['Handed to the president', 'Deposited at the bank', 'Other'];
   modal('<h2>Take out: ' + esc(s.fundName) + '</h2><div class="muted" style="margin-bottom:6px">Sealed · written on it ' + money(s.amt) + '</div><label>Where does it go? <b style="color:var(--exp)">*</b></label><div class="chips" style="margin-bottom:8px">' + W.map(function (w) { return '<button data-act="soto" data-v="' + esc(w) + '" class="' + (SO.to === w ? 'on' : '') + '">' + esc(w) + '</button>'; }).join('') + '</div>' +
     '<div class="f"><label>Who received it <b style="color:var(--exp)">*</b></label><input data-so="who" value="' + esc(SO.who || '') + '" autocomplete="off"></div><div class="card" style="background:var(--soft);box-shadow:none">The ' + money(s.amt) + ' leaves the stored cash. The cash count does not change, because it was never in it. It is handed over still sealed.</div>' +
     '<button class="btn green block" data-act="sealoutreview">Review</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>');
@@ -2145,7 +2152,7 @@ function ucReview() {
   var go = function () { ucConfirm(purpose); };
   if (UC.mode === 'other' && UC.fund && p) {
     var w = ucStoredWord(p.id);
-    return ucDialog('<h2>⚠ Use the ' + esc(w.name) + ' cash for something else?</h2><p style="margin-top:0">The ' + money(w.tot) + ' stored for <b>' + esc(w.name) + '</b> was put in by ' + esc(w.by || 'the shifts') + '. If you use it for <b>' + esc(purpose) + '</b>, the app can no longer show that this money was for ' + esc(w.name) + ', or which shifts put it in.<br><br>The owner and presidents will be told.</p>', 'Yes, use it for something else', 'Go back', go, null);
+    return ucDialog('<h2>⚠ Use the ' + esc(w.name) + ' cash for something else?</h2><p style="margin-top:0">The ' + money(w.tot) + ' stored for <b>' + esc(w.name) + '</b> was put in by ' + esc(w.by || 'the shifts') + '. If you use it for <b>' + esc(purpose) + '</b>, the app can no longer show that this money was for ' + esc(w.name) + ', or which shifts put it in.<br><br>The president will be told.</p>', 'Yes, use it for something else', 'Go back', go, null);
   }
   if (UC.mode === 'other' && !UC.fund) {
     var nw = ucStoredWord('internet-payment');
@@ -3003,9 +3010,9 @@ function stageHtml() {
   if (STAGE === 'newplace') return newPlaceHtml();
   if (STAGE === 'wizard') return WZ ? wizardHtml() : '';
   if (STAGE === 'pickplace') return '<div class="card"><h2>Which workplace?</h2><div class="card" style="padding:0;box-shadow:none">' + PLACES.map(function (x) { return '<div class="sp-row" data-act="goplace" data-id="' + esc(x.id) + '"><div class="grow"><b>' + esc(x.name) + '</b></div><span class="sp-ch">›</span></div>'; }).join('') + '</div><button class="btn sec block" data-act="wmore" style="margin-top:10px">Join or start another workplace</button><button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>';
-  if (STAGE === 'updating') return '<div class="card"><h2>The app is being updated</h2><p class="muted" style="margin-top:0">The shop\'s records are being moved to the new layout. The owner needs to open the app once to finish it. Try again in a few minutes.</p><button class="btn block" data-act="recheck">Try again</button><button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>';
+  if (STAGE === 'updating') return '<div class="card"><h2>The app is being updated</h2><p class="muted" style="margin-top:0">The shop\'s records are being moved to the new layout. The president needs to open the app once to finish it. Try again in a few minutes.</p><button class="btn block" data-act="recheck">Try again</button><button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>';
   if (STAGE === 'migrate') return '<div class="card"><h2>Move the shop to the new layout</h2><p class="muted" style="margin-top:0">One time only. This copies everything (items, sales, people, handovers, credit, requests) into the new layout. The old copy is not touched. It takes a minute or two. Keep this screen open until it says finished.</p><div id="mg-msg" class="muted" style="margin-bottom:10px"></div><button class="btn block" id="mg-go" data-act="domigrate">Move it now</button><button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>';
-  if (STAGE === 'setup') return '<div class="card"><h2>Waiting for set-up</h2><p>The owner has not set the app up yet. Try again in a moment.</p><button class="btn sec block" data-act="signout">Sign out</button></div>';
+  if (STAGE === 'setup') return '<div class="card"><h2>Waiting for set-up</h2><p>The president has not set the app up yet. Try again in a moment.</p><button class="btn sec block" data-act="signout">Sign out</button></div>';
   return '';
 }
 
@@ -3124,7 +3131,7 @@ function stDet(id) {   /* a stored cash entry, a sealed cash entry, or cash used
   var b = '';
   if (e.type === 'usecash') {
     b += kv('Amount', '<span style="color:var(--exp)">− ' + money(e.amt) + '</span>') + kv('Used for', esc(e.note || ''));
-    if (e.fund) b += kv('From stored ' + esc(e.fundName || ''), money(e.fundTake || 0)) + kv('From cash on hand', money(r2(e.amt - (e.fundTake || 0)))) + (e.opened && e.opened.length ? kv('Sealed cash opened for it', e.opened.length + (e.opened.length === 1 ? ' item' : ' items')) : '') + (e.fundElse ? '<div class="muted" style="margin:4px 0">The stored cash was used for something else. The owner and presidents were told.</div>' : '') + (e.intStored ? '<div class="muted" style="margin:4px 0">Internet payment cash of ' + money(e.intStored) + ' was still stored when this was used.</div>' : '');
+    if (e.fund) b += kv('From stored ' + esc(e.fundName || ''), money(e.fundTake || 0)) + kv('From cash on hand', money(r2(e.amt - (e.fundTake || 0)))) + (e.opened && e.opened.length ? kv('Sealed cash opened for it', e.opened.length + (e.opened.length === 1 ? ' item' : ' items')) : '') + (e.fundElse ? '<div class="muted" style="margin:4px 0">The stored cash was used for something else. The president was told.</div>' : '') + (e.intStored ? '<div class="muted" style="margin:4px 0">Internet payment cash of ' + money(e.intStored) + ' was still stored when this was used.</div>' : '');
     b += (e.receipt ? kv('Receipt', 'attached') : '<div id="rclkv">' + kv('Receipt', 'none: ' + esc(e.noReceipt || '')) + '</div>') + (e.receipt ? '<img src="' + e.receipt + '" alt="receipt" style="width:100%;max-height:300px;object-fit:contain;border-radius:12px;border:1px solid var(--line);background:#fff;margin:6px 0">' : '');
   } else if (e.type === 'addcash') {
     var res = (S.fevs || []).filter(function (x) { return x.sealId === e.sealId && (x.type === 'sealopen' || x.type === 'sealout'); })[0], still = e.sealed && e.sealId && S.seals[e.sealId];
@@ -3180,7 +3187,7 @@ function evRow(e, cancelable) {
   else if (e.type === 'cashshort') { ic = '⚠️'; tx = 'Cash counted short at handover'; sub = e.wk + ' watch handed over'; amt = money(e.amt); col = 'var(--exp)'; }
   else if (e.type === 'stockedit') { ic = '⚠️'; tx = 'Stock edited by hand: ' + e.name; sub = (e.reason || '') + (e.note ? ' · ' + e.note : ''); amt = (e.qty ? (e.qty > 0 ? '+' : '−') + Math.abs(e.qty) : '') + (e.qty && e.cases ? ' / ' : '') + (e.cases ? (e.cases > 0 ? '+' : '−') + Math.abs(e.cases) + (Math.abs(e.cases) === 1 ? ' case' : ' cases') : ''); col = 'var(--exp)'; }
   else if (e.type === 'shortfix') { ic = '✎'; tx = 'Shortage corrected: ' + (e.wk || '') + ' watch'; sub = e.note || ''; col = 'var(--cnt)'; }
-  else if (e.type === 'gapfix') { ic = '↔'; tx = e.name || 'Shortage moved'; sub = 'Nobody took the handover · moved by ' + (e.byName || 'the owner'); }
+  else if (e.type === 'gapfix') { ic = '↔'; tx = e.name || 'Shortage moved'; sub = 'Nobody took the handover · moved by ' + (e.byName || 'the president'); }
   else if (e.type === 'hocorr') { ic = '✎'; tx = 'Handover corrected'; sub = (e.note || '') + (e.chk && e.chk.length ? ' · stock ' + e.chk.map(function (x) { return x.name + ' ' + x.from + ' → ' + x.to; }).join(', ') : ''); col = 'var(--exp)'; }
   else if (e.type === 'repay') { ic = '💵'; tx = 'Shortage repaid by ' + (e.forWk || '') + ' watch'; sub = e.note || ''; amt = '+ ' + money(e.amt); col = 'var(--ok)'; }
   else if (e.type === 'takeover') { ic = '🛡️'; tx = 'Control taken'; sub = e.note; }
@@ -4243,7 +4250,7 @@ function medit(email) {
   var locked = email && !canManage(m);   /* the owner manages everyone; a president manages admins and users; admins manage nobody */
   var used = {}; S.members.forEach(function (x) { if (x.email !== email && x.personId) used[x.personId] = 1; });
   var roles = rqRoles().map(function (r) { return [r, roleLabel(r)]; });
-  if (email === PRESIDENT) roles = [['owner', 'Owner']];
+  if (email === PRESIDENT) roles = [['owner', 'President']];
   PE = { person: m.personId };
   var pcur = person(m.personId);
   modal('<h2>' + (email ? 'Edit access' : 'Invite someone') + '</h2><div class="card"><label>This person is</label>' +
@@ -5127,7 +5134,7 @@ function corrVerify(chk) {   /* right after accepting: read the items back, and 
   (chk || []).forEach(function (x) {
     getDoc(ref('items/' + x.id)).then(function (d) {
       if (!d.exists() || d.data().stock === x.to) return;
-      modal('<h2 style="color:var(--exp)">⚠ Check the stock</h2><div class="card" style="border:2px solid var(--exp)"><b>' + esc(x.name) + '</b> should now be <b>' + x.to + '</b> after the correction, but it shows <b>' + d.data().stock + '</b>.<div class="muted" style="margin-top:6px">It was ' + x.from + ' before. Count it, and fix it in Stock if it is wrong. Tell the owner what happened.</div></div><button class="btn block" data-act="close">OK</button>');
+      modal('<h2 style="color:var(--exp)">⚠ Check the stock</h2><div class="card" style="border:2px solid var(--exp)"><b>' + esc(x.name) + '</b> should now be <b>' + x.to + '</b> after the correction, but it shows <b>' + d.data().stock + '</b>.<div class="muted" style="margin-top:6px">It was ' + x.from + ' before. Count it, and fix it in Stock if it is wrong. Tell the president what happened.</div></div><button class="btn block" data-act="close">OK</button>');
     }).catch(function () {});
   });
 }
@@ -5230,7 +5237,7 @@ function spRender() {
   if (SPMODE === 'places') return wpRender();
   var old = pg.querySelector('.sp-body'), st = old ? old.scrollTop : 0, unread = (S.notices || []).filter(function (x) { return !x.read; }).length;
   var h = '<div class="sp-top"><button data-act="close" aria-label="Back">‹</button><b style="margin-right:0">Settings</b><button data-act="wpopen" aria-label="Workplaces" style="width:auto;height:38px;border-radius:19px;padding:0 14px;background:var(--brand);color:#fff;font-size:14px;font-weight:700;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.25)">🏢 Workplaces</button></div><div class="sp-body">' +
-    '<div class="card"><div class="sp-row" style="padding:0 0 8px;cursor:default"><div class="grow"><b>Account</b></div></div>' + (placeName() ? '<div class="muted" style="margin:-2px 0 8px">🏢 <b style="color:var(--ink)">' + esc(placeName()) + '</b></div>' : '') + '<div><b>' + esc(myPerson() ? myName() : isPres() ? 'Owner' : 'Your name is not set') + '</b></div><div class="muted">' + esc(roleLabel(myRole())) + ' (<span class="myem">' + esc(EMAIL || '') + '</span>)</div>' + (M && !M.personId ? '<p class="muted">Your email is not linked to a name yet. Ask a President or an Admin to link it under Access.</p>' : '') + '<div class="f" style="margin:12px 0 0"><label>App link to share</label><div class="row"><input readonly id="sp-link" value="' + esc(location.origin + location.pathname) + '" style="font-size:12px"><button class="btn sm" data-act="copylink">Copy</button></div><button class="btn sec block" data-act="sharelink" style="margin-top:8px">↗ Share the app link</button></div><button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>' +
+    '<div class="card"><div class="sp-row" style="padding:0 0 8px;cursor:default"><div class="grow"><b>Account</b></div></div>' + (placeName() ? '<div class="muted" style="margin:-2px 0 8px">🏢 <b style="color:var(--ink)">' + esc(placeName()) + '</b></div>' : '') + '<div><b>' + esc(myPerson() ? myName() : isPres() ? 'President' : 'Your name is not set') + '</b></div><div class="muted">' + esc(roleLabel(myRole())) + ' (<span class="myem">' + esc(EMAIL || '') + '</span>)</div>' + (M && !M.personId ? '<p class="muted">Your email is not linked to a name yet. Ask a President or an Admin to link it under Access.</p>' : '') + '<div class="f" style="margin:12px 0 0"><label>App link to share</label><div class="row"><input readonly id="sp-link" value="' + esc(location.origin + location.pathname) + '" style="font-size:12px"><button class="btn sm" data-act="copylink">Copy</button></div><button class="btn sec block" data-act="sharelink" style="margin-top:8px">↗ Share the app link</button></div><button class="btn sec block" data-act="signout" style="margin-top:10px">Sign out</button></div>' +
     '<div class="sp-h">Me</div><div class="sp-card">' +
     (M && !M.personId ? spRow('🪪', 'My name', 'Not set yet. Tap to choose your name', 'whoopen') : '') +
     spRow('📇', 'My info', (function () { var mp = M && M.personId ? person(M.personId) : null; return mp ? esc((mp.rank ? 'Rank: ' + mp.rank + ' · ' : '') + 'Shift: ' + (mp.watch || 'not set') + ' · name and number are set by an admin') : 'Choose your name first'; })(), 'myinfo') +
@@ -5252,17 +5259,18 @@ function spRender() {
     (canAdmin() ? spRow('🏷️', 'Saved names', 'Names typed in when selling on credit', 'guests') + spRow('🗑️', 'Cancelled entries', 'Kept for a year', 'cancelled') : '') + '</div>' +
     '<div class="sp-h">Shifts</div><div class="sp-card">' +
     spRow('📅', 'Roster', esc(CFG.periods.map(function (pd, i) { return pd.label + ' ' + hr12(pd.start) + '–' + hr12(CFG.periods[(i + 1) % CFG.periods.length].start); }).join(' · ')), 'rostersheet') +
-    spRow('📋', 'Past handovers', 'Kept for a year', 'pasthos') + (isPres() && !OWNERVIEW ? spRow('🗓️', 'Keep records a year', 'Update the saved records so they last a year. Owner only', 'keepyear') : '') + (canAdmin() && !OWNERVIEW ? spRow('📊', 'Storage used', 'How much room the records take', 'storage') : '') +
+    spRow('📋', 'Past handovers', 'Kept for a year', 'pasthos') + (isPres() && !OWNERVIEW ? spRow('🗓️', 'Keep records a year', 'Update the saved records so they last a year. President only', 'keepyear') : '') + (canAdmin() && !OWNERVIEW ? spRow('📊', 'Storage used', 'How much room the records take', 'storage') : '') +
     spRow('🧾', 'Receipts', 'Every receipt photo, with dates. Kept for a year', 'receipts') +
-    (isPres() ? spRow('📝', 'Enter previous handover', 'Owner only. Opening cash, stock and credit by hand', 'opopen') : '') +
+    (isPres() ? spRow('📝', 'Enter previous handover', 'President only. Opening cash, stock and credit by hand', 'opopen') : '') +
     (isPres() && viewOnlyText() ? spRow('🛡️', 'Take control now', 'Someone else is in control or a handover is stuck', 'ptake') : '') + '</div>' +
     '<div class="sp-h">App</div><div class="sp-card">' +
-    (fixCan() ? spRow('🛠️', 'Fix mistakes', 'A shift filed under the wrong shift, or a shortage on the wrong one. The president, the owner and admins', 'fixhub') : '') +
-    spRow('🙋', 'Ask for a fix', 'Tell the president or the owner about a mistake', 'afxask') +
+    (fixCan() ? spRow('🛠️', 'Fix mistakes', 'A shift filed under the wrong shift, or a shortage on the wrong one. The president and admins', 'fixhub') : '') +
+    (canApprove() ? spRow('🔑', 'Who can do what', 'The president, admins and everyone else, side by side', 'whocan') : '') +
+    spRow('🙋', 'Ask for a fix', 'Tell the president about a mistake', 'afxask') +
     spRow('⬆️', 'App version ' + APP_VERSION, 'Needs rules ' + RULES_VERSION + '. Tap to check for updates', 'updcheck') +
     (canAdmin() ? spRow('🧹', 'Tidy old shift summaries', 'One-time: remove handover summaries older than a year', 'oldtidy') : '') +
     (canAdmin() ? spRow('🛡️', 'Check the rules', 'Tests that the Firebase rules ' + RULES_VERSION + ' are published', 'rulescheck') : '') +
-    (isPres() ? spRow('💾', 'Back up all data', 'Owner only. Saves everything into one file on this phone', 'backup') : '') +
+    (isPres() ? spRow('💾', 'Back up all data', 'President only. Saves everything into one file on this phone', 'backup') : '') +
     (isPres() ? spRow('⚠️', 'Reset app to default', 'Clears stock, sales, handovers, credit and profit history', 'resetask', ' red') : '') + '</div></div>';
   pg.innerHTML = h; var nb = pg.querySelector('.sp-body'); if (nb) nb.scrollTop = st;
 }
@@ -5281,7 +5289,7 @@ function rosterSheet() {
   modal('<h2>Roster</h2><div class="card"><h2>' + esc(tl) + '</h2><div class="ros" style="grid-template-columns:auto repeat(' + P.length + ',1fr)"><b></b>' + P.map(function (pd) { return '<b>' + esc(pd.label) + '</b>'; }).join('') + rows + '</div></div><button class="btn sec block" data-act="close">Close</button>');
 }
 function pastHandovers() { modal('<h2>Past handovers</h2><p class="muted" style="margin-top:0">Kept for a year (drawn signatures 90 days).</p><div id="hl"><div class="empty">Loading…</div></div><button class="btn sec block" data-act="close" style="margin-top:10px">Close</button>'); hlist(); }
-function viewOnlyText() { return inControl() ? '' : 'Someone else is in control, or a handover is waiting. As the Owner you can override this if it is stuck.'; }
+function viewOnlyText() { return inControl() ? '' : 'Someone else is in control, or a handover is waiting. As the president you can override this if it is stuck.'; }
 function diffsOf(h) {
   var d = []; if (!h.receivedItems) return d;
   (h.items || []).forEach(function (i) { var r = h.receivedItems[i.id]; if (!r) return; if (r.stock !== i.stock) d.push(i.name + ': counted ' + r.stock + ', handed over ' + i.stock); if (itStore(i) && r.cage !== i.cage) d.push(i.name + ' (cage): counted ' + r.cage + ' ' + unitPl(i.unit || 'case', 2) + ', handed over ' + i.cage); });
@@ -5616,7 +5624,7 @@ function bkValue(v) {   /* Firestore values that JSON cannot hold */
   return v;
 }
 function backupSheet() {
-  modal('<h2>Back up all data</h2><div class="card"><p class="muted" style="margin-top:0">This saves everything in the app (items, stock, sales, credit, people, handovers and history) into one file on this phone. Keep the file somewhere safe, such as Google Drive or WhatsApp to yourself. Only you, the owner, can do this. The file holds names and emails, so do not share it with anyone else.</p><div id="bk-msg" class="muted" style="margin-bottom:8px"></div><button class="btn block" id="bk-go" data-act="bkgo">Start the backup</button></div><button class="btn sec block" data-act="close">Close</button>');
+  modal('<h2>Back up all data</h2><div class="card"><p class="muted" style="margin-top:0">This saves everything in the app (items, stock, sales, credit, people, handovers and history) into one file on this phone. Keep the file somewhere safe, such as Google Drive or WhatsApp to yourself. Only you, the president, can do this. The file holds names and emails, so do not share it with anyone else.</p><div id="bk-msg" class="muted" style="margin-bottom:8px"></div><button class="btn block" id="bk-go" data-act="bkgo">Start the backup</button></div><button class="btn sec block" data-act="close">Close</button>');
 }
 async function backupRun() {
   var msg = $('#bk-msg'), go = $('#bk-go'), say = function (t) { if (msg) msg.textContent = t; };
@@ -5996,7 +6004,7 @@ function wpRender() {
   if (OWNERVIEW) h += ownerBar();
   if (isPres()) {
     var l = OP.list;
-    h += '<p class="muted" style="margin-top:0">You are the app\'s owner. Open any workplace to look around (view only), or change its limit, code or name.</p>';
+    h += '<p class="muted" style="margin-top:0">You run the app. Open any workplace to look around (view only), or change its limit, code or name.</p>';
     if (l === null) h += '<div class="card empty">Loading…</div>';
     else if (!l.length) h += '<div class="card empty">No workplaces yet.</div>';
     else h += l.map(function (p) {
@@ -6239,21 +6247,21 @@ var HELP = {
   stock: { t: 'Stock', steps: ['The Stock tab lists every item in two cards: <b>Fridge</b> and <b>Shelf</b>, A to Z. Each row shows how many are in the fridge or on the shelf, how many cases or packs are in storage, and the price. Items that ran out are at the bottom.', 'Tap an item to move a case from storage to the fridge, record spoiled items, or edit its name, price and cost.', '<b>+ Add a new item</b>: give it a name, the selling price, where it is sold from (fridge or shelf), how many are in a case, and how many you have now. The same name cannot be added twice.', 'Cost is optional. When a receipt gives an item its first cost, the app fills in the cost of its earlier sales for you.'],
     fix: ['Moved the wrong number: open History and <b>Cancel an item</b>.', 'Wrong price or name: edit the item. New sales use the new price; past sales keep the old one.', '<b>Edit stock</b> (red) only fixes a real error. It asks for a reason and shows in red in History and in the handover.'] },
   start: { t: 'Starting a workplace', steps: ['A new workplace begins in <b>Startup</b>. The Stock tab shows a yellow Startup note. While you set up, the things you add or change are kept but are not counted as miscounts, and nobody gets an alert.', '<b>+ Add a new item</b> for every item. Tap an item to set how many are in the fridge or on the shelf, and how many cases or packs are in storage, then press <b>Save counts</b>.', 'When everything is ready, press <b>✓ Start workplace</b>.', 'The app asks: <b>Was there a handover before?</b>', '<b>Yes</b>: fill in the <b>Previous handover (by hand)</b>. Pick who handed over (search the people list), their shift, the date and the part of the day, and the time you took it over. Then the cash received, the sales on that handover if you know them, and a remark if you like.', 'Under <b>Stock counted</b>, enter what was there for every item in three lists: <b>In the fridge</b>, <b>On the shelf</b> and <b>Cases / Packs in storage</b>.', 'Add any <b>shortages still owed</b>, then press <b>Review</b> and confirm.', '<b>No</b>: the workplace starts fresh with the cash you enter.'],
-    fix: ['After you start, the counts on the Stock tab are read only. A real error can still be fixed with the red <b>Edit stock</b>, which asks for a reason.', 'Started with the wrong previous handover? Tell the President or the Owner before the first shift is handed over.'] },
+    fix: ['After you start, the counts on the Stock tab are read only. A real error can still be fixed with the red <b>Edit stock</b>, which asks for a reason.', 'Started with the wrong previous handover? Tell the President before the first shift is handed over.'] },
   buy: { t: 'Add stock', steps: ['Choose <b>Bought (bill)</b> for a purchase with a bill, or <b>Other (no money)</b> for stock that came without paying.', '<b>1 · Who and when</b>: who it was bought from, and when (leave the time empty for now).', 'Then one card for each item: pick the item and say how many <b>Cases</b> you bought, and how many <b>Singles</b> (loose items) if any. Press <b>Add another item</b> for more.', '<b>Where are they going?</b> Set how many go to the <b>Shop</b> (fridge or shelf) and how many go to <b>Storage</b>.', 'Enter the cost. With several items, the costs must add up to the bill.', '<b>The bill</b>: the total on the bill, and the tax if there is any.', '<b>Payment</b>: how much cash was taken from the cash. If you keep no change, it is the bill total.', '<b>Receipt photo</b>: take a photo. It is recommended and is kept with the purchase.', 'Press <b>Save</b>. The stock goes into storage or onto the shelf.'],
     fix: ['Entered the wrong bill: open History and <b>Cancel an item</b>. It can only be cancelled if that stock has not already been moved or sold.', 'Item not on the list: choose <b>New item</b> in the picker.', 'The bill total must match what you entered. The app tells you what does not add up.'] },
   credit: { t: 'Credit', steps: ['To put something on credit: go to <b>Count</b>, tap the item, and press <b>On credit</b>.', '<b>Lend cash</b> records money taken from the cash and lent to someone.', 'When someone pays, tap their name and enter the amount.', '<b>People owing</b> and <b>Credit + loans this shift</b> show who owes what. Credit stays on the list from shift to shift until it is paid.'],
-    fix: ['Wrong person or amount: cancel it from History, then enter it again.', 'Ask a President or the Owner for write-offs and other corrections.'] },
+    fix: ['Wrong person or amount: cancel it from History, then enter it again.', 'Ask a President for write-offs and other corrections.'] },
   handover: { t: 'Handover', steps: ['<b>Outgoing shift (handing over):</b> count everything on the Count tab, then count the cash and enter it (this is required).', 'Choose the handover type: <b>To a person</b> (only people registered in the app) or <b>Locked</b> (fridge and storage locked, not handed to a person).', 'Sign, then press <b>Prepare handover</b>, check the summary and send it.', '<b>Incoming shift (taking over):</b> open the waiting handover, count the cash and every item, sign and accept. The items are in three lists: <b>In the fridge</b>, <b>On the shelf</b> and <b>Cases / Packs in storage</b>. Anything short is recorded against the shift that was on duty. If you counted more than was handed over, it is noted, not a shortage.', '<b>Previous handover</b> shows the one you received and the one you handed over, read only. A handover entered by hand when the workplace started is listed there too.', 'The <b>Handover record</b> (History, tap the handover, then <b>Open the full handover record</b>) shows both sides. <b>Cash</b> has the Outgoing shift and Incoming shift columns. The item lists say <b>(counted)</b> with Outgoing and Incoming columns, and any difference is marked.', '<b>Switch operator</b> gives the app to someone else on the same shift without a handover.'],
     fix: ['Sent to the wrong person: cancel the handover before it is taken.', 'Counted wrong before accepting: the incoming shift counts again; differences are recorded when it is accepted.', 'A count was wrong after the handover was accepted: use <b>Handover mistake</b> (see that guide).', 'Handing over early or late? You may be asked which shift to record on (see Which shift am I on?).'] },
-  mistake: { t: 'Handover mistake', steps: ['<b>Who and when:</b> only the two people in the latest handover can ask, and only until the next handover is made.', 'Open the handover in History (tap it, then <b>✎ Handover mistake</b>), or open the full handover record and tap the red button.', '<b>Which count was wrong?</b> Pick <b>Incoming shift</b> if the people who took over counted wrong (this also lets you correct the cash they counted), or <b>Outgoing shift</b> if the numbers handed over were wrong.', 'Rows where the two counts differ are highlighted yellow: that is where to look first. Type the right number or use − and +. Change only what was wrong.', 'Pick <b>why</b> it was wrong, add a short note if you like, and press <b>Send for approval</b>.', 'The other person gets a pop-up and a red item at the top of <b>Alerts</b>. They look at it and <b>Accept</b>, <b>Decline</b>, or tap <b>Later</b>. Nobody can accept their own request.', 'If they do not answer, the person taking the <b>next handover</b> sees a red card and can check the stock and accept or decline it. A President or the Owner can decide at any time.', 'When it is accepted, the handover record, the Over / Short result and any shortage are corrected. Before the next handover, the stock and the cash now shown change by the same difference.', 'A red <b>Corrected after the handover</b> note stays on the record for good, and <b>Handover corrected</b> stays at the top of the Important list in History.'],
+  mistake: { t: 'Handover mistake', steps: ['<b>Who and when:</b> only the two people in the latest handover can ask, and only until the next handover is made.', 'Open the handover in History (tap it, then <b>✎ Handover mistake</b>), or open the full handover record and tap the red button.', '<b>Which count was wrong?</b> Pick <b>Incoming shift</b> if the people who took over counted wrong (this also lets you correct the cash they counted), or <b>Outgoing shift</b> if the numbers handed over were wrong.', 'Rows where the two counts differ are highlighted yellow: that is where to look first. Type the right number or use − and +. Change only what was wrong.', 'Pick <b>why</b> it was wrong, add a short note if you like, and press <b>Send for approval</b>.', 'The other person gets a pop-up and a red item at the top of <b>Alerts</b>. They look at it and <b>Accept</b>, <b>Decline</b>, or tap <b>Later</b>. Nobody can accept their own request.', 'If they do not answer, the person taking the <b>next handover</b> sees a red card and can check the stock and accept or decline it. A President can decide at any time.', 'When it is accepted, the handover record, the Over / Short result and any shortage are corrected. Before the next handover, the stock and the cash now shown change by the same difference.', 'A red <b>Corrected after the handover</b> note stays on the record for good, and <b>Handover corrected</b> stays at the top of the Important list in History.'],
     fix: ['Sent the wrong numbers: open Alerts or the handover record and press <b>Cancel my request</b>, then send it again.', 'Declined: you are told in Alerts. You can send a new request while it is still the latest handover.', 'Nobody decided before the next handover was taken: the request closes and the handover stays as it was. Ask a President if it still needs fixing.'] },
-  phone: { t: 'Phone alerts', steps: ['The red number on the <b>bell</b> counts what is waiting for you. A handover mistake you have to accept or decline stays counted until it is decided.', 'To also see it in your phone\'s notification bar, open <b>Settings</b> and tap <b>Phone alerts</b>, then allow notifications when the phone asks. Do this once on each phone.', 'When a mistake is waiting for you and the app is in the background, a <b>Handover mistake waiting for you</b> notification shows in the notification bar. It stays there until it is decided.', 'Tap it to open the app straight on that mistake, where you can accept or decline it. Opening the app takes the notification away; it comes back if you leave the app while the mistake still waits.', 'It only works while the app is open or running in the background. If the app is fully closed, nothing shows, so check the bell when you open it.', 'A President or Owner is only told about mistakes they have to decide. Optional ones just show on the bell.'] },
+  phone: { t: 'Phone alerts', steps: ['The red number on the <b>bell</b> counts what is waiting for you. A handover mistake you have to accept or decline stays counted until it is decided.', 'To also see it in your phone\'s notification bar, open <b>Settings</b> and tap <b>Phone alerts</b>, then allow notifications when the phone asks. Do this once on each phone.', 'When a mistake is waiting for you and the app is in the background, a <b>Handover mistake waiting for you</b> notification shows in the notification bar. It stays there until it is decided.', 'Tap it to open the app straight on that mistake, where you can accept or decline it. Opening the app takes the notification away; it comes back if you leave the app while the mistake still waits.', 'It only works while the app is open or running in the background. If the app is fully closed, nothing shows, so check the bell when you open it.', 'A President is only told about mistakes they have to decide. Optional ones just show on the bell.'] },
   history: { t: 'History', steps: ['Tap the clock at the top. <b>Day</b> shows one day with arrows to move: pick <b>All of the day</b> or one shift.', 'The box at the top shows <b>Cash sales</b> with the number of items sold, credit given, cash lent out, purchases, still owed and paid back.', 'Each shift lists its <b>Important</b> entries (handovers, shortages, corrections), then <b>Setting up</b> and <b>Counts</b>. Shorts and corrections are shown in red, and a <b>Handover corrected</b> line is always at the top.', 'Tap a handover for the short summary, then <b>Open the full handover record</b> for everything. The short summary also has the <b>Handover mistake</b> button.', '<b>Handovers</b> lists every handover for the year, <b>People</b> shows each person\'s credit, and <b>Charts</b> shows the totals.', '<b>Filter</b> (top right) picks the types of entry or the month.'],
     fix: ['Entries and handovers are kept for a year, under Handovers.', 'A wrong entry: use <b>Cancel an item</b> at the bottom of the Day page (not every kind can be cancelled).'] },
   profit: { t: 'Profit & loss', steps: ['Tap the chart icon at the top. There are three tabs: <b>Day</b>, <b>Month</b> and <b>Shortages</b>.', 'Tap the date in the middle to pick a day from the calendar, or a month from the month picker. The arrows move one day or month at a time.', '<b>Day</b> and <b>Month</b> show the profit after losses and how it adds up (sales, the cost of what was sold, spoiled items, shortages), and the money not yet paid back.', '<b>Shortages</b> shows what each shift still owes. Tap <b>Pay for a shift</b> to record money put back (the person in control does this).'], fix: [] },
   notes: { t: 'Alerts', steps: ['The bell at the top shows a number when something needs you.', '<b>✎ Handover mistake</b> (red): a correction is waiting for you to accept or decline. Tap it to look.', '<b>Your correction is waiting</b> (amber): you asked for a correction and the other person has not answered yet.', '<b>Asked for access</b> (Admins and above): stays at the top until it is accepted or declined.', '<b>Handover received</b>: tells you the person taking over counted. It says <b>all matched ✓</b>, or <b>nothing short</b> with what was counted differently.', '<b>Counted short</b>: a shortage was recorded against your shift. The person in control can press <b>Pay</b> there.'], fix: [] },
-  ranks: { t: 'Ranks and access', steps: ['<b>Owner</b>: does everything. Other people see the Owner as a normal user.', '<b>President</b>: has the admin tools (People, Cancelled entries, corrections) and can manage Admins and Users. A President or the Owner can also accept or decline a Handover mistake at any time.', '<b>Admin</b>: can accept or decline access requests, as User.', '<b>User</b>: counts, sells and hands over.', '<b>New people</b> sign in, pick their name (or add it), and press <b>Send request</b>. They see <b>Awaiting access from Admin</b> until someone lets them in.', 'Admins and above see a card at the top of every tab for each request: <b>Accept</b> (choose the rank), <b>Maybe later</b>, or open Settings → <b>Access</b> to accept or decline.'], fix: [] },
+  ranks: { t: 'Ranks and access', steps: ['<b>President</b>: does everything, including the savings and the admin tools (People, Cancelled entries, corrections), and manages Admins and Users. A President can also accept or decline a Handover mistake at any time.', '<b>Admin</b>: can see the savings and accept or decline access requests, as User.', '<b>User</b>: counts, sells and hands over.', '<b>New people</b> sign in, pick their name (or add it), and press <b>Send request</b>. They see <b>Awaiting access from Admin</b> until someone lets them in.', 'Admins and above see a card at the top of every tab for each request: <b>Accept</b> (choose the rank), <b>Maybe later</b>, or open Settings → <b>Access</b> to accept or decline.'], fix: [] },
   shift: { t: 'Which shift am I on?', steps: ['The header always shows the shift working now, from your phone clock.', 'Your records stay on the shift record until a handover is accepted. If it differs from the clock, the header says <b>recording on</b> …', 'On a different watch from the working one, you are asked once which shift to record on:', '<b>Record on my watch</b>: the next shift of your watch, for example when you took a handover early.', '<b>Record on the working shift</b>: the person who handed over to you must approve it.', '<b>My watch has changed</b>: moves your name to the new watch. History shows the change.', '<b>Making a correction</b> (Admin and above): records on the working shift; every entry is marked <b>Correction by</b> your name.', 'Your choice lasts until the shift on the clock changes.'], fix: [] }
 };
 var HELPORDER = ['sell', 'stock', 'start', 'buy', 'credit', 'handover', 'mistake', 'phone', 'history', 'profit', 'notes', 'ranks', 'shift'];
@@ -6701,6 +6709,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'gapmove') gapMove(id);
   else if (a === 'gaplist') gapListPage();
   else if (a === 'fixhub') fixHub();
+  else if (a === 'whocan') { if (canApprove()) whoCanPage(); }
   else if (a === 'rkpage') rkPage(false);
   else if (a === 'rkgo') rkPage(true);
   else if (a === 'fixpick') fixPick();
@@ -7099,7 +7108,7 @@ function authMsg(e) {
   if (c === 'auth/weak-password') return 'Use a password with at least 6 characters.';
   if (c === 'auth/too-many-requests') return 'Too many tries. Wait a few minutes and try again.';
   if (c === 'auth/network-request-failed') return 'No connection. Check your signal and try again.';
-  if (c === 'auth/operation-not-allowed') return 'Email and password sign-in is not switched on yet. The Owner needs to enable it in Firebase: Authentication, Sign-in method, Email/Password.';
+  if (c === 'auth/operation-not-allowed') return 'Email and password sign-in is not switched on yet. The president needs to enable it in Firebase: Authentication, Sign-in method, Email/Password.';
   if (c === 'auth/requires-recent-login') return 'For safety, sign out and sign in again first, then try again.';
   return 'That did not work (' + (c || (e && e.message) || 'error') + ').';
 }
@@ -7111,7 +7120,7 @@ function googleLogin() {   /* no email is sent and no password is needed: Google
     if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') { if (msg) msg.textContent = ''; return; }
     if (c === 'auth/popup-blocked') { if (msg) msg.textContent = 'Your browser blocked the Google window. Allow pop-ups for this page and try again, or use your email and password.'; return; }
     if (c === 'auth/account-exists-with-different-credential') { if (msg) msg.textContent = 'This email already signs in another way. Use your email and password, or the email link.'; return; }
-    if (c === 'auth/operation-not-allowed') { if (msg) msg.textContent = 'Google sign-in is not switched on yet. The Owner needs to enable it in Firebase: Authentication, Sign-in method, Google.'; return; }
+    if (c === 'auth/operation-not-allowed') { if (msg) msg.textContent = 'Google sign-in is not switched on yet. The president needs to enable it in Firebase: Authentication, Sign-in method, Google.'; return; }
     if (msg) msg.textContent = authMsg(e);
   });
 }
@@ -7160,7 +7169,12 @@ function pwSave() {
   if (a !== b) { msg.textContent = 'The two passwords are not the same.'; return; }
   updatePassword(AUTH.currentUser, a).then(function () { closeModal(); toast('Password saved. You can sign in with it now.'); }, function (e) { msg.textContent = authMsg(e); });
 }
-function stopListeners() { subs.forEach(function (u) { u(); }); subs = []; if (unsubLog) unsubLog(); if (unsubHand) unsubHand(); unsubLog = unsubHand = null; logSid = handId = null; S.all = []; S.items = []; S.layout = null; S.people = []; S.guests = []; S.requests = []; S.shreqIn = []; S.shreqOut = [];  S.suppliers = []; S.members = []; S.state = null; S.log = []; S.bal = {}; S.hand = null; S.pc = null; S.funds = {}; S.fevs = []; S.seals = {}; }
+var SVON = false;
+function svSub() {   /* the savings can be read only by admins and above: listen once the role is known */
+  if (SVON || !canApprove() || !PID) return; SVON = true;
+  subs.push(onSnapshot(ref('shop/savings'), function (sn) { S.savings = sn.exists() ? sn.data() : null; scheduleRender(); }, function () { SVON = false; }));
+}
+function stopListeners() { SVON = false; S.savings = null; subs.forEach(function (u) { u(); }); subs = []; if (unsubLog) unsubLog(); if (unsubHand) unsubHand(); unsubLog = unsubHand = null; logSid = handId = null; S.all = []; S.items = []; S.layout = null; S.people = []; S.guests = []; S.requests = []; S.shreqIn = []; S.shreqOut = [];  S.suppliers = []; S.members = []; S.state = null; S.log = []; S.bal = {}; S.hand = null; S.pc = null; S.funds = {}; S.fevs = []; S.seals = {}; }
 function watch(q, fn) { subs.push(onSnapshot(q, fn, function (e) { console.error(e); toast(errText(e)); })); }
 function docs(s) { return s.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); }
 function migrate() {   /* items made by the earlier version counted the cage in single items; cases are the unit now */
@@ -7199,7 +7213,7 @@ function startListeners() {
     scheduleRender();
   }, function (e) { console.error(e); }));
   subs.push(onSnapshot(query(col('shiftreqs'), where('fromEmail', '==', EMAIL)), function (s) { S.shreqOut = docs(s); shReqSeen(); }, function (e) { console.error(e); }));
-  watch(col('members'), function (s) { S.members = s.docs.map(function (d) { return d.data(); }); var ow = S.members.filter(function (m) { return m.email === PRESIDENT; })[0], legacy = PID === 'coover' && (!ow || ow.ranks !== 2); if (legacy) S.members = S.members.map(function (m) { return Object.assign({}, m, { role: m.email === PRESIDENT ? 'owner' : ({ president: 'president', admin: 'president', user: 'admin' }[m.role] || 'admin') }); }); var me = S.members.filter(function (m) { return m.email === EMAIL; })[0]; if (me) M = me;   /* until the owner converts the ranks, old roles are read as: admin = President, user = Admin */ updateBell(); scheduleRender(); refreshModal(); });
+  watch(col('members'), function (s) { S.members = s.docs.map(function (d) { return d.data(); }); var ow = S.members.filter(function (m) { return m.email === PRESIDENT; })[0], legacy = PID === 'coover' && (!ow || ow.ranks !== 2); if (legacy) S.members = S.members.map(function (m) { return Object.assign({}, m, { role: m.email === PRESIDENT ? 'owner' : ({ president: 'president', admin: 'president', user: 'admin' }[m.role] || 'admin') }); }); var me = S.members.filter(function (m) { return m.email === EMAIL; })[0]; if (me) M = me; svSub();   /* until the owner converts the ranks, old roles are read as: admin = President, user = Admin */ updateBell(); scheduleRender(); refreshModal(); });
   var hLive = function () { var top = WPS[WPS.length - 1]; if (top && top.fn === histPage && !$('#spage').hidden) histDraw(); };   /* History's charts follow payments live */
   watch(col('shortages'), function (s) { S.shAll = docs(s); scheduleRender(); hLive(); });
   watch(col('repayments'), function (s) { S.repAll = docs(s); scheduleRender(); hLive(); });
@@ -7207,7 +7221,7 @@ function startListeners() {
   watch(query(col('seals'), where('status', '==', 'sealed')), function (s) { S.seals = {}; s.docs.forEach(function (d) { S.seals[d.id] = d.data(); }); scheduleRender(); refreshModal(); });
   watch(col('funds'), function (s) { S.funds = {}; s.docs.forEach(function (d) { S.funds[d.id] = d.data(); }); scheduleRender(); refreshModal(); });
   watch(query(col('events'), where('type', 'in', ['addcash', 'fundshort', 'fundover', 'usecash', 'sealopen', 'sealout', 'usechange', 'advsettle', 'absorb']), limit(3000)), function (s) { S.fevs = s.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }).filter(function (x) { return !x.su; }); scheduleRender(); });
-  subs.push(onSnapshot(ref('shop/savings'), function (sn) { S.savings = sn.exists() ? sn.data() : null; scheduleRender(); }, function () {}));
+  svSub();
   watch(col('credit'), function (s) { S.bal = {}; s.docs.forEach(function (d) { S.bal[d.id] = d.data().bal || 0; }); scheduleRender(); });
   watch(ref('shop/state'), function (s) {
     if (!s.exists()) {
