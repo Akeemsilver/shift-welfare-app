@@ -302,7 +302,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.86', RULES_VERSION = '2.37';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.87', RULES_VERSION = '2.37';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -999,8 +999,11 @@ var SV = null;
 function svMine() { return canAdmin() && !OWNERVIEW; }   /* who moves or sets the savings: the president (the rules say the same) */
 function whoCanPage() {
   var Y = '<b style="color:var(--ok)">✓</b>', N = '<span class="muted">—</span>';
-  var rows = [['See the savings amount', 1, 1, 0], ['Add money to Savings', 1, 0, 0], ['Move savings to cash', 1, 0, 0], ['Set the savings figure', 1, 0, 0], ['Move stored cash into the cash on hand', 1, 1, 0]];
-  wpPage(whoCanPage, [], '<h2>Who can do what</h2><div class="card"><table style="width:100%;border-collapse:collapse;font-size:14px"><tr><th style="text-align:left;padding:6px 0"></th><th style="padding:6px 4px">President</th><th style="padding:6px 4px">Admin</th><th style="padding:6px 4px">Others</th></tr>' + rows.map(function (r) { return '<tr style="border-top:1px solid var(--line)"><td style="padding:9px 6px 9px 0">' + r[0] + '</td><td style="text-align:center">' + (r[1] ? Y : N) + '</td><td style="text-align:center">' + (r[2] ? Y : N) + '</td><td style="text-align:center">' + (r[3] ? Y : N) + '</td></tr>'; }).join('') + '</table></div>', true);
+  var G = [['Day to day', [['Sell, count and restock items', 1, 1, 1], ['Take over and hand over a shift', 1, 1, 1], ['Add cash, use stored cash for a bill', 1, 1, 1], ['Write a credit, spoiled or goodwill note', 1, 1, 1], ['Ask for a fix', 1, 1, 1]]],
+    ['People and mistakes', [['Accept or decline a request to join', 1, 1, 0], ['Fix mistakes (wrong shift, shortages)', 1, 1, 0], ['Decide a handover correction', 1, 1, 0], ['Pay a shortage with another shift\'s cash over', 1, 1, 0], ['Change people\'s ranks', 1, 0, 0]]],
+    ['Money and records', [['See the savings amount', 1, 1, 0], ['Add money to Savings', 1, 0, 0], ['Move savings to cash', 1, 0, 0], ['Set the savings figure', 1, 0, 0], ['Move stored cash into the cash on hand', 1, 1, 0], ['See cancelled entries and saved names', 1, 0, 0], ['Change the shifts, names and workplace settings', 1, 0, 0]]]];
+  var tb = G.map(function (g) { return '<tr><td colspan="4" style="padding:16px 0 4px;font-weight:700;font-size:12px;letter-spacing:.5px;color:var(--link);text-transform:uppercase">' + g[0] + '</td></tr>' + g[1].map(function (r) { return '<tr style="border-top:1px solid var(--line)"><td style="padding:9px 6px 9px 0">' + r[0] + '</td><td style="text-align:center">' + (r[1] ? Y : N) + '</td><td style="text-align:center">' + (r[2] ? Y : N) + '</td><td style="text-align:center">' + (r[3] ? Y : N) + '</td></tr>'; }).join(''); }).join('');
+  wpPage(whoCanPage, [], '<h2>Who can do what</h2><div class="card"><table style="width:100%;border-collapse:collapse;font-size:14px"><tr><th style="text-align:left;padding:6px 0"></th><th style="padding:6px 4px">President</th><th style="padding:6px 4px">Admin</th><th style="padding:6px 4px">Others</th></tr>' + tb + '</table></div>', true);
 }
 function savopen() { var b0 = S.savings && typeof S.savings.bal === 'number' ? S.savings.bal : 0; SV = { dir: b0 > 0 ? 'toCash' : 'toSave', amt: '', set: '' }; savingsPage(); }
 function svBoxHtml() {
