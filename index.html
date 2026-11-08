@@ -302,7 +302,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.87', RULES_VERSION = '2.37';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.88', RULES_VERSION = '2.37';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2218,12 +2218,16 @@ function vStock() {
   h += sec('Fridge', '🧊', S.items.filter(function (i) { return !i.shelf; })) + sec('Shelf', '🧁', S.items.filter(function (i) { return i.shelf; })) + stc + (su ? '<button class="btn block" data-act="stbegin" style="background:var(--okb);margin-top:4px">✓ Start workplace</button><p class="muted">Press when your items are ready. You can still edit items afterwards.</p>' : '') + '<p class="muted">Tap an item to count it, move a case to the fridge, or record spoilage.</p>';
   return h;
 }
+function stockInfoHtml(it) {   /* price, cost, profit and what is in stock: the same two cards for someone looking (view only) and at the bottom of the item sheet for the person in control */
+  var cost = Number(it.cost) > 0, line = function (l, v) { return '<div class="hkv"><span>' + l + '</span><b>' + v + '</b></div>'; };
+  return '<div class="card sum">' + line('Selling price (each)', money(it.price)) + line('Cost (each)', cost ? money(it.cost) : '<span style="color:var(--soon)">Not set</span>') + line('Profit (each)', cost ? money(r2(it.price - it.cost)) : '—') + '</div>' +
+    '<div class="card sum">' + line(it.shelf ? 'On the shelf' : 'In the fridge', it.stock) + (hasCage(it) ? line('In storage', it.cage + ' ' + unitPl(unitName(it), it.cage)) : '') + '</div>';
+}
 function stockView(id) {   /* a person who is not in control can look at an item: price, cost and stock, nothing to change */
-  var it = item(id); if (!it) return; var st = S.state || {}, cost = Number(it.cost) > 0, line = function (l, v) { return '<div class="hkv"><span>' + l + '</span><b>' + v + '</b></div>'; };
+  var it = item(id); if (!it) return; var st = S.state || {};
   modal('<div class="ps"><div class="row"><h2 class="grow" style="margin:0;font-size:21px">' + esc(it.name) + '</h2><b style="color:var(--link);font-size:21px">' + money(it.price) + '</b></div>' +
     '<div class="card" style="background:var(--soon-bg);box-shadow:none;margin:10px 0">🔒 View only' + (st.controlEmail ? ' · ' + esc(st.controlName || st.controlEmail) + ' is in control' : '') + '</div>' +
-    '<div class="card sum">' + line('Selling price (each)', money(it.price)) + line('Cost (each)', cost ? money(it.cost) : '<span style="color:var(--soon)">Not set</span>') + line('Profit (each)', cost ? money(r2(it.price - it.cost)) : '—') + '</div>' +
-    '<div class="card sum">' + line(it.shelf ? 'On the shelf' : 'In the fridge', it.stock) + (hasCage(it) ? line('In storage', it.cage + ' ' + unitPl(unitName(it), it.cage)) : '') + '</div>' +
+    stockInfoHtml(it) +
     '<button class="btn sec block" data-act="close">Close</button></div>');
 }
 function stockSheet() {
@@ -2239,7 +2243,7 @@ function stockSheet() {
     '<button class="btn sec block" data-act="dospoil" style="margin-top:10px"' + (it.stock < 1 || ST.spoil < 1 ? ' disabled' : '') + '>Record spoiled</button></div>' +
     '<div class="card"><h2>Item details</h2><div class="f"><label>Name</label><input id="sd-name" value="' + esc(it.name) + '" autocomplete="off"></div><div class="f"><label>Kept in</label>' + whereSeg('sd-where', it.shelf, 'wsel', ' data-for="sd"') + '</div><div class="row f"><div class="grow"><label>Selling price (each item)</label>' + ig('<input id="sd-price" type="number" inputmode="decimal" min="0" value="' + it.price + '">', '$') + '</div></div>' + unitBlock('sd', it.unit, it.shelf ? (it.per > 1 ? it.per : '') : per(it), it.shelf) + '<div class="f"><label>Cost price each (what you paid)</label>' + ig('<input id="sd-cost" type="number" inputmode="decimal" min="0" value="' + (it.cost || '') + '">', '$') + '</div>' +
     '<button class="btn sec block" data-act="savedetails">Save details</button><button class="btn red block" data-act="rmitem" style="margin-top:10px">Remove item</button></div>' +
-    (startupOn() ? '' : '<button class="btn red block" data-act="editstock">⚠ Edit stock</button>') + '<button class="btn sec block" data-act="close" style="margin-top:10px">Close</button></div>');
+    (startupOn() ? '' : '<button class="btn red block" data-act="editstock">⚠ Edit stock</button>') + '<div style="margin-top:12px">' + stockInfoHtml(it) + '</div><button class="btn sec block" data-act="close" style="margin-top:10px">Close</button></div>');
 }
 /* ---------- Edit stock by hand: a deliberate, red, recorded last resort ---------- */
 var ES = null, ES_REASONS = ['Miscounted', 'Found extra', 'Missing or stolen', 'Damaged', 'Other'];
