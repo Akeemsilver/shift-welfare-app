@@ -302,7 +302,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.88', RULES_VERSION = '2.37';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.90', RULES_VERSION = '2.37';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -496,7 +496,9 @@ function totals() {
   var sav = S.log.reduce(function (a, e) { return e.type === 'savemove' ? a + (e.dir === 'toCash' ? e.amt : -e.amt) : a; }, 0), off = creditCover().off, don = S.log.reduce(function (a, e) { return e.type === 'donation' ? a + e.amt : a; }, 0);   /* gifts and fundraiser money: counted cash, not sales */
   return { sav: r2(sav), don: don, sales: sales, purch: purch, cr: cr, crN: r2(cr - off), paidN: r2(paid - off), loans: loans, paid: paid, used: used, repaid: repaid, wo: S.log.reduce(function (a, e) { return e.type === 'buy' ? a + (e.writeoff || 0) : a; }, 0), sold: sumLog('sale') + sumLog('count') - sumLog('snote') - sumLog('gnote'), put: r2(put), chg: r2(chg), adv: r2(adv), cash: sh.received + sales - cr - loans + paid - purch - used + repaid + put + chg + don + sav, usedStored: S.log.reduce(function (a, e) { return e.type === 'usecash' && e.fundTake ? a + e.fundTake : a; }, 0) };
 }
-function sameShiftHo(sh) { var l = tosList(); return sh.mode !== 'locked' && l.length > 0 && l.every(function (p) { return p.watch === sh.name; }); }   /* handing over to people of the same shift: the shift keeps going */
+var HOSAME = '';   /* the people I answered "no, they record for the next shift" about */
+function samKey() { return SH().name + '|' + (SH().tos || []).slice().sort().join(','); }
+function sameShiftHo(sh) { var l = tosList(); return sh.mode !== 'locked' && l.length > 0 && HOSAME !== samKey() && l.every(function (p) { return p.watch === sh.name; }); }   /* handing over to people of the same shift: the shift keeps going */
 function tosList() { return (SH().tos || []).map(person).filter(Boolean); }
 function tosText() { return tosList().map(plabel).join(', '); }
 function wsw(w) { return '<span class="sw ' + swc(w) + '">' + esc(w || 'Saved') + '</span>'; }
@@ -748,12 +750,29 @@ function shiftGate(a, b) {   /* true = stop this action and ask which shift to r
   if (shCovered()) return false;   /* you chose to cover that shift when you took the handover: no pop-up asks again */
   var cs = currentShift(), sh = SH();
   if (p.watch === cs.name) { if (shKey(sh) !== shKey(cs)) shiftTo(cs); return false; }
-  if (sh.name === p.watch || shOk()) return false;
-  var it = b && b.dataset && b.dataset.id ? item(b.dataset.id) : null;
-  var tx = ((b && b.tagName === 'BUTTON' && b.textContent) || '').replace(/\s+/g, ' ').trim();
-  SHPEND = { b: b, a: a, id: b && b.dataset ? b.dataset.id : '', what: a === 'pick' && it ? 'Counting ' + it.name : (tx && tx.length < 40 ? tx + (it ? ' · ' + it.name : '') : it ? 'A change to ' + it.name : 'A change') };
-  shiftAsk(); return true;
+  return false;   /* v3.90: nobody is asked and nobody has to approve: a handover closes the shift that handed over, and whoever took it (or took control, or was switched in) records on the shift of record */
 }
+function incomingShiftOf(sh) {   /* the next shift after this one: its name and when it starts */
+  var H = slotOfShift(sh); if (!H) return null; var s2 = slotNext(H.day, H.i);
+  for (var k = 0; k < 30; k++) { var nm = slotShift(s2.day, s2.i); if (nm && nm !== sh.name) return { name: nm, start: ('0' + CFG.periods[s2.i].start).slice(-2) + ':00' }; s2 = slotNext(s2.day, s2.i); }
+  return null;
+}
+function sameWarn() {   /* v3.90: a handover closes the shift: handing over to someone on the same shift is only right if they will record for the next one */
+  var sh = SH(), l = tosList(), nm = l.map(function (x) { return esc(x.name); }).join(', ');
+  shShow('<h2>Same shift</h2><p style="margin-top:0"><b>' + nm + '</b> ' + (l.length > 1 ? 'are' : 'is') + ' on the <b>' + esc(sh.name) + '</b> shift, the same as you. A handover closes ' + esc(sh.name) + '.</p><p>Will ' + (l.length > 1 ? 'they' : '<b>' + nm + '</b>') + ' keep recording for <b>' + esc(sh.name) + '</b>?</p>' +
+    '<button class="btn block" data-act="samno">No, they will record for the next shift</button><button class="btn sec block" data-act="samyes" style="margin-top:10px">Yes, they will keep recording for ' + esc(sh.name) + '</button>');
+}
+function samNo() {
+  var sh = SH(), l = tosList(), nx = incomingShiftOf(sh), nm = l.map(function (x) { return esc(x.name); }).join(', ');
+  shShow('<h2>Handing over to ' + nm + '</h2><div class="card" style="background:var(--okb);box-shadow:none;margin:0 0 12px">✓ ' + (l.length > 1 ? 'They' : nm) + ' will record for the incoming <b>' + (nx ? esc(nx.name) : 'next') + '</b> shift' + (nx ? ' (starts ' + nx.start + ')' : '') + '. ' + esc(sh.name) + ' is closed and its numbers will not change.</div>' +
+    '<button class="btn block" data-act="samgo">Continue the handover</button><button class="btn sec block" data-act="samback" style="margin-top:10px">Back</button>');
+}
+function samYes() {
+  var sh = SH();
+  shShow('<h2>Use Switch operator instead</h2><p style="margin-top:0">A handover cannot keep a shift going. Once it is accepted, <b>' + esc(sh.name) + ' is finished</b>.</p><p>To let them carry on recording for ' + esc(sh.name) + ', switch the operator. ' + esc(sh.name) + ' stays open and nothing is handed over.</p>' +
+    '<button class="btn block" data-act="samsw">Switch operator</button><button class="btn sec block" data-act="samcancel" style="margin-top:10px">Cancel the handover</button>');
+}
+function pkFinish() { if ($('#spage').hidden) closeModal(); else spClose(); render(); }
 function shClose() { var c = $('#cf'); if (c) c.remove(); }
 function shShow(html) {   /* one pop-up that is redrawn in place: removing and adding pop-ups in quick succession confuses the phone back-button layers */
   var c = $('#cf'); if (c) { c.firstElementChild.innerHTML = html; return; }
@@ -813,6 +832,7 @@ function shReqSeen() {   /* the person who asked hears the answer */
   });
 }
 function srCard() {
+  return '';   /* v3.90: recording on another shift no longer needs anybody's approval */
   var l = S.shreqIn.filter(function (r) { return r.status === 'pending'; }); if (!l.length) return '';
   return l.map(function (r) {
     return '<div class="card" style="border-left:4px solid var(--soon);margin-bottom:12px"><b>🕘 ' + esc(r.fromName) + '</b> wants to record on the <b>' + esc(shText(r.target)) + '</b><div class="muted" style="margin-top:2px">They tried: ' + esc(r.what || 'a change') + '</div>' +
@@ -3155,7 +3175,7 @@ function stDet(id) {   /* a stored cash entry, a sealed cash entry, or cash used
   } else {
     b += kv('Written on it', money(e.was)) + kv('Found inside', money(e.found)) + kv(e.type === 'fundshort' ? 'Missing' : 'Extra', '<span style="color:var(--' + (e.type === 'fundshort' ? 'exp' : 'soon') + ')">' + money(e.amt) + '</span>') + kv('Last sealed by', esc(e.sealBy || '') + (e.sealWk ? ' (' + esc(e.sealWk) + ')' : '')) + '<div class="muted" style="margin:4px 0">Recorded on the fund. It is not charged to a shift.</div>';
   }
-  b += kv('When', hfmt(e.t)) + kv('Shift', esc(sh)) + kv('Recorded by', esc(e.byName || 'A member')) + (e.corr ? kv('Entered as a correction', esc(e.corr)) : '');
+  b += kv('When', hfmt(e.t)) + kv('Shift', esc(sh)) + kv('Recorded by', esc(e.byName || 'A member')) + (e.corr ? kv('Entered by', esc(e.corr) + ' · not on this shift') : '');
   var still2 = e.sealId && S.seals[e.sealId];
   if ((e.type === 'usecash' || e.type === 'usechange') && !e.receipt && !e.adv) b += rclHtml(e);
   modal('<h2 style="margin:0 0 8px">' + title + '</h2>' + b + (still2 && inControl() ? '<button class="btn sec block" data-act="sealsheet" data-id="' + esc(e.sealId) + '" style="margin-top:8px">Open, use or take out this sealed cash ›</button>' : '') + (e.fund ? '<button class="btn sec block" data-act="stfund" data-id="' + esc(e.fund) + '" style="margin-top:8px">Open the ' + esc(e.fundName || 'fund') + ' page ›</button>' : '') + '<button class="btn block" data-act="close" style="margin-top:8px">Close</button>');
@@ -3205,12 +3225,12 @@ function evRow(e, cancelable) {
   else if (e.type === 'remove') { ic = '🚫'; tx = 'Item removed: ' + e.name; sub = e.note; }
   else if (e.type === 'edit') { ic = '✏️'; tx = 'Item changed: ' + e.name; sub = e.note; }
   else if (e.type === 'costfill') { ic = '🧮'; tx = 'Cost filled in: ' + e.name; sub = e.note; }
-  else if (e.type === 'shiftrec') { ic = '🕘'; var srm = /(records|is making corrections) on the (.+?)(?: \(|\.|:|$)/.exec(e.note || ''); tx = srm ? (srm[1] === 'records' ? 'Recording on the ' : 'Corrections on the ') + srm[2] : 'Recording on another shift'; sub = e.note; }   /* which shift this person's entries go on, from their answer to "Which shift am I on?" */
+  else if (e.type === 'shiftrec') { ic = '🕘'; var srm = /^(.+?) (records|is making corrections) on the (\S+)/.exec(e.note || ''); tx = srm ? srm[1] + ' is recording on the ' + srm[3] + ' shift' : 'Recording on another shift'; sub = srm && srm[2] !== 'records' ? srm[1] + ' is not on the ' + srm[3] + ' shift, so everything they record now is entered for it, until the shift changes.' : e.note; }   /* which shift this person's entries go on, from their answer to "Which shift am I on?" */
   else if (e.type === 'watchchg') { ic = '🔄'; tx = 'Watch changed'; sub = e.note; }
   else if (e.type === 'cageadj') { ic = '📦'; tx = 'Cage count changed: ' + e.name + ' (' + (e.qty > 0 ? '+' : '') + e.qty + ' cases)'; }
   else { ic = '✏️'; tx = 'Count changed: ' + e.name + ' (' + (e.qty > 0 ? '+' : '') + e.qty + ')'; }
   var lt = e.gap ? '' : lateOf(e); if (lt) sub = (sub ? sub + ' · ' : '') + '⏱ ' + e.wk + ' held control, ' + lt + ' on duty';
-  if (e.corr) sub = (sub ? sub + ' · ' : '') + 'Correction by ' + e.corr;
+  if (e.corr) sub = (sub ? sub + ' · ' : '') + 'Entered by ' + e.corr + ' · not on this shift';
   HEV[e.id] = e;
   return '<div' + (['addcash', 'sealopen', 'sealout', 'fundshort', 'fundover', 'usecash', 'usechange', 'advsettle'].indexOf(e.type) >= 0 ? ' data-act="stdet" data-id="' + e.id + '" style="cursor:pointer"' + (e.type === 'fundshort' ? ' class="attn"' : '') : e.type === 'buy' || e.type === 'other' ? ' data-act="buyview" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'pay' || e.type === 'cnote' || e.type === 'loan' || (e.type === 'sale' && e.cr) ? ' data-act="evsheet" data-id="' + e.id + '" style="cursor:pointer"' : e.type === 'stockedit' ? ' data-act="editview" data-id="' + e.id + '" class="attn" style="cursor:pointer"' : e.type === 'cashshort' ? ' class="attn" style="cursor:pointer"' : '') + '><span style="font-size:18px;width:26px;flex:none;text-align:center">' + ic + '</span><div class="grow"><b>' + esc(tx) + '</b><div class="muted">' + (hdt(e) ? hdt(e) + ' ' : '') + hhmm(e.t) + (sub ? ' · ' + esc(sub) : '') + (e.byName ? ' · recorded by ' + esc(e.byName) : '') + '</div></div>' + (e.receipt ? '<img data-act="rcv" src="' + e.receipt + '" alt="receipt" style="width:44px;height:54px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">' : '') + '<b style="color:' + col + '">' + amt + '</b>' + (CM && cancelable && ['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'repay', 'shortfix', 'shiftrec', 'watchchg', 'fundshort', 'fundover', 'sealopen', 'sealout', 'advsettle'].indexOf(e.type) < 0 ? '<button class="btn red sm" data-act="cancelask" data-id="' + e.id + '">Cancel</button>' : '') + '</div>';
 }
@@ -6260,7 +6280,7 @@ var HELP = {
   credit: { t: 'Credit', steps: ['To put something on credit: go to <b>Count</b>, tap the item, and press <b>On credit</b>.', '<b>Lend cash</b> records money taken from the cash and lent to someone.', 'When someone pays, tap their name and enter the amount.', '<b>People owing</b> and <b>Credit + loans this shift</b> show who owes what. Credit stays on the list from shift to shift until it is paid.'],
     fix: ['Wrong person or amount: cancel it from History, then enter it again.', 'Ask a President for write-offs and other corrections.'] },
   handover: { t: 'Handover', steps: ['<b>Outgoing shift (handing over):</b> count everything on the Count tab, then count the cash and enter it (this is required).', 'Choose the handover type: <b>To a person</b> (only people registered in the app) or <b>Locked</b> (fridge and storage locked, not handed to a person).', 'Sign, then press <b>Prepare handover</b>, check the summary and send it.', '<b>Incoming shift (taking over):</b> open the waiting handover, count the cash and every item, sign and accept. The items are in three lists: <b>In the fridge</b>, <b>On the shelf</b> and <b>Cases / Packs in storage</b>. Anything short is recorded against the shift that was on duty. If you counted more than was handed over, it is noted, not a shortage.', '<b>Previous handover</b> shows the one you received and the one you handed over, read only. A handover entered by hand when the workplace started is listed there too.', 'The <b>Handover record</b> (History, tap the handover, then <b>Open the full handover record</b>) shows both sides. <b>Cash</b> has the Outgoing shift and Incoming shift columns. The item lists say <b>(counted)</b> with Outgoing and Incoming columns, and any difference is marked.', '<b>Switch operator</b> gives the app to someone else on the same shift without a handover.'],
-    fix: ['Sent to the wrong person: cancel the handover before it is taken.', 'Counted wrong before accepting: the incoming shift counts again; differences are recorded when it is accepted.', 'A count was wrong after the handover was accepted: use <b>Handover mistake</b> (see that guide).', 'Handing over early or late? You may be asked which shift to record on (see Which shift am I on?).'] },
+    fix: ['Sent to the wrong person: cancel the handover before it is taken.', 'Counted wrong before accepting: the incoming shift counts again; differences are recorded when it is accepted.', 'A count was wrong after the handover was accepted: use <b>Handover mistake</b> (see that guide).', 'Handing over early or late? Whoever accepts records on the shift that takes over (see Which shift am I on?).'] },
   mistake: { t: 'Handover mistake', steps: ['<b>Who and when:</b> only the two people in the latest handover can ask, and only until the next handover is made.', 'Open the handover in History (tap it, then <b>✎ Handover mistake</b>), or open the full handover record and tap the red button.', '<b>Which count was wrong?</b> Pick <b>Incoming shift</b> if the people who took over counted wrong (this also lets you correct the cash they counted), or <b>Outgoing shift</b> if the numbers handed over were wrong.', 'Rows where the two counts differ are highlighted yellow: that is where to look first. Type the right number or use − and +. Change only what was wrong.', 'Pick <b>why</b> it was wrong, add a short note if you like, and press <b>Send for approval</b>.', 'The other person gets a pop-up and a red item at the top of <b>Alerts</b>. They look at it and <b>Accept</b>, <b>Decline</b>, or tap <b>Later</b>. Nobody can accept their own request.', 'If they do not answer, the person taking the <b>next handover</b> sees a red card and can check the stock and accept or decline it. A President can decide at any time.', 'When it is accepted, the handover record, the Over / Short result and any shortage are corrected. Before the next handover, the stock and the cash now shown change by the same difference.', 'A red <b>Corrected after the handover</b> note stays on the record for good, and <b>Handover corrected</b> stays at the top of the Important list in History.'],
     fix: ['Sent the wrong numbers: open Alerts or the handover record and press <b>Cancel my request</b>, then send it again.', 'Declined: you are told in Alerts. You can send a new request while it is still the latest handover.', 'Nobody decided before the next handover was taken: the request closes and the handover stays as it was. Ask a President if it still needs fixing.'] },
   phone: { t: 'Phone alerts', steps: ['The red number on the <b>bell</b> counts what is waiting for you. A handover mistake you have to accept or decline stays counted until it is decided.', 'To also see it in your phone\'s notification bar, open <b>Settings</b> and tap <b>Phone alerts</b>, then allow notifications when the phone asks. Do this once on each phone.', 'When a mistake is waiting for you and the app is in the background, a <b>Handover mistake waiting for you</b> notification shows in the notification bar. It stays there until it is decided.', 'Tap it to open the app straight on that mistake, where you can accept or decline it. Opening the app takes the notification away; it comes back if you leave the app while the mistake still waits.', 'It only works while the app is open or running in the background. If the app is fully closed, nothing shows, so check the bell when you open it.', 'A President is only told about mistakes they have to decide. Optional ones just show on the bell.'] },
@@ -6269,7 +6289,7 @@ var HELP = {
   profit: { t: 'Profit & loss', steps: ['Tap the chart icon at the top. There are three tabs: <b>Day</b>, <b>Month</b> and <b>Shortages</b>.', 'Tap the date in the middle to pick a day from the calendar, or a month from the month picker. The arrows move one day or month at a time.', '<b>Day</b> and <b>Month</b> show the profit after losses and how it adds up (sales, the cost of what was sold, spoiled items, shortages), and the money not yet paid back.', '<b>Shortages</b> shows what each shift still owes. Tap <b>Pay for a shift</b> to record money put back (the person in control does this).'], fix: [] },
   notes: { t: 'Alerts', steps: ['The bell at the top shows a number when something needs you.', '<b>✎ Handover mistake</b> (red): a correction is waiting for you to accept or decline. Tap it to look.', '<b>Your correction is waiting</b> (amber): you asked for a correction and the other person has not answered yet.', '<b>Asked for access</b> (Admins and above): stays at the top until it is accepted or declined.', '<b>Handover received</b>: tells you the person taking over counted. It says <b>all matched ✓</b>, or <b>nothing short</b> with what was counted differently.', '<b>Counted short</b>: a shortage was recorded against your shift. The person in control can press <b>Pay</b> there.'], fix: [] },
   ranks: { t: 'Ranks and access', steps: ['<b>President</b>: does everything, including the savings and the admin tools (People, Cancelled entries, corrections), and manages Admins and Users. A President can also accept or decline a Handover mistake at any time.', '<b>Admin</b>: can see the savings and accept or decline access requests, as User.', '<b>User</b>: counts, sells and hands over.', '<b>New people</b> sign in, pick their name (or add it), and press <b>Send request</b>. They see <b>Awaiting access from Admin</b> until someone lets them in.', 'Admins and above see a card at the top of every tab for each request: <b>Accept</b> (choose the rank), <b>Maybe later</b>, or open Settings → <b>Access</b> to accept or decline.'], fix: [] },
-  shift: { t: 'Which shift am I on?', steps: ['The header always shows the shift working now, from your phone clock.', 'Your records stay on the shift record until a handover is accepted. If it differs from the clock, the header says <b>recording on</b> …', 'On a different watch from the working one, you are asked once which shift to record on:', '<b>Record on my watch</b>: the next shift of your watch, for example when you took a handover early.', '<b>Record on the working shift</b>: the person who handed over to you must approve it.', '<b>My watch has changed</b>: moves your name to the new watch. History shows the change.', '<b>Making a correction</b> (Admin and above): records on the working shift; every entry is marked <b>Correction by</b> your name.', 'Your choice lasts until the shift on the clock changes.'], fix: [] }
+  shift: { t: 'Which shift am I on?', steps: ['The header always shows the shift working now, from your phone clock.', 'When you accept a handover you record on the shift that is taking over, whatever shift you belong to. The shift that handed over is finished.', 'If you took control, or were switched in as the operator, you record on the shift that is running.', 'If the header says <b>recording for</b> another shift, that is the shift your entries go on.', 'To let someone keep recording for the same shift, use <b>Switch operator</b>, not a handover.'], fix: [] }
 };
 var HELPORDER = ['sell', 'stock', 'start', 'buy', 'credit', 'handover', 'mistake', 'phone', 'history', 'profit', 'notes', 'ranks', 'shift'];
 function helpOpen(k, back) {
@@ -6545,7 +6565,13 @@ document.addEventListener('click', function (e) {
   else if (a === 'rqdno') rqdAnswer(-1);
   else if (a === 'rqdecsame') rqDecided(+b.dataset.i);
   else if (a === 'rqdecdiff') rqDecided(-1);
-  else if (a === 'pkdone') { if ($('#spage').hidden) closeModal(); else spClose(); render(); }
+  else if (a === 'pkdone') { if (PK && PK.mode === 'to' && sameShiftHo(SH())) sameWarn(); else pkFinish(); }
+  else if (a === 'samno') samNo();
+  else if (a === 'samyes') samYes();
+  else if (a === 'samgo') { HOSAME = samKey(); shClose(); pkFinish(); }
+  else if (a === 'samback') shClose();
+  else if (a === 'samcancel') { shClose(); setShift({ tos: [] }); HOSAME = ''; pkFinish(); }
+  else if (a === 'samsw') { shClose(); setShift({ tos: [] }); HOSAME = ''; pkFinish(); setTimeout(swOpen, 150); }
   else if (a === 'lend') openPicker('loan');
   else if (a === 'cledger') creditLedger();
   else if (a === 'oshadd') { OP.sh.push({ date: '', wk: '', who: '', cash: '', stock: '', note: '' }); opForm(); }
