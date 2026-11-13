@@ -112,9 +112,9 @@ nav button.on{color:var(--link);background:var(--soft)}
 .gapA{border:2px solid var(--soon);background:var(--soon-bg);box-shadow:0 0 0 4px rgba(224,168,0,.15)}
 .gapA.gok{border-color:var(--ok);background:var(--okb);box-shadow:0 0 0 4px rgba(46,125,79,.15)}
 .gapA.gbad{border-color:var(--exp);background:var(--exp-bg);box-shadow:0 0 0 4px rgba(201,54,43,.15)}
-.gapA .gh{margin:0 0 6px;font-size:15.5px}
-.gapA .gl{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:15px}.gapA .gl b{font-size:17px}
-.gapA .gpill{margin-top:8px;border-radius:12px;padding:9px;text-align:center;font-weight:700;font-size:14.5px;background:rgba(127,127,127,.16)}
+.gapA .gh{margin:0 0 4px;font-size:inherit;font-weight:700}
+.gapA .gl{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:inherit}.gapA .gl b{font-size:inherit}
+.gapA .gpill{margin-top:8px;border-radius:12px;padding:8px;text-align:center;font-weight:700;font-size:inherit;background:rgba(127,127,127,.16)}
 .gapA.gok .gpill{background:var(--ok);color:#fff}.gapA.gbad .gpill{background:var(--exp);color:#fff}
 .hsafe{background:var(--okb);border-left:4px solid var(--ok);border-radius:8px;padding:8px 10px;font-size:14px;line-height:1.4;margin:6px 0 4px}
 .hnote{background:var(--surface);border-left:4px solid #d9a400;border-radius:8px;padding:8px 10px;font-size:14px;line-height:1.4;margin:6px 0 4px}
@@ -311,7 +311,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.94', RULES_VERSION = '2.40';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.95', RULES_VERSION = '2.40';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -4545,8 +4545,12 @@ function rxGap(h) {   /* the shift that should have taken this handover (the fir
   if (gEnd && h.at && gEnd - h.at < 2 * 36e5) { out.safe = true; out.on = false; out.late = false; }   /* v3.92: the safety net: made less than 2 hours before the receiving shift ended (or after): that shift is not charged */
   return out;
 }
-function rxGapCard(h) {   /* which shift is taking over: only shifts that are running or about to start, never the one that handed over; and when a shift was skipped, what to do */
-  var g = rxGap(h); RXGAP = g; if (!g.ask && !g.on) return '';
+function rxCompactHead(h, g) {   /* after "Check items": one short card instead of the locked notice, the shift choice, the warning and the From table (all seen on the first screen) */
+  return '<div class="card" style="padding:10px 14px"><div class="muted" style="font-size:inherit">From <b>' + esc(hnl(h.fromName, h.fromEmail)) + '</b> · ' + esc(h.shift.name) + ' shift · ' + new Date(h.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</div>' +
+    (g && (g.ask || g.on) ? '<div style="margin-top:6px">Recording as <b>' + esc(g.rwk) + '</b>' + (g.rwk === g.mw ? ' (my shift)' : ' (holding on)') + ' · <a data-act="rxmore2" style="color:var(--link);font-weight:700;cursor:pointer">' + (RXMORE ? 'Hide' : 'Change') + ' ›</a></div>' : '') + '</div>';
+}
+function rxGapCard(h, compact) {   /* which shift is taking over: only shifts that are running or about to start, never the one that handed over; and when a shift was skipped, what to do */
+  var g = rxGap(h); RXGAP = g; if (!g.ask && !g.on) return ''; if (compact && !RXMORE) return '';
   var lab = function (o) {
     var w = o.w;
     if (w === g.mw) { var e1 = g.early && w === g.gw; return [o.kind === 'soon' ? w + ' — my shift, starts ' + g.nstart : e1 ? w + ' — taking over early' : w + ' — my shift', o.kind === 'soon' ? 'I take over as ' + w + '. ' + w + ' is coming in.' : e1 ? 'I take over as ' + w + '. The ' + w + ' shift starts at ' + g.gstart + '.' : 'I take over as ' + w + '.']; }
@@ -4556,7 +4560,7 @@ function rxGapCard(h) {   /* which shift is taking over: only shifts that are ru
     g.opts.map(function (o) { var l = lab(o), on = o.w === g.rwk; return '<button type="button" data-act="rxwk" data-v="' + esc(o.w) + '" class="rxopt' + (on ? ' on' : '') + '"><b>' + (on ? '✓ ' : '') + esc(l[0]) + '</b><span>' + esc(l[1]) + '</span></button>'; }).join('') +
     '<div style="text-align:center"><a data-act="rxchg" style="color:var(--link);font-weight:700;font-size:14px;cursor:pointer">' + (g.mw ? 'I\'m no longer on ' + esc(g.mw) + ' — change my shift' : 'Choose my shift') + '</a></div></div>';
   var safeN = g.safe && g.rwk !== g.gw ? '<div class="card" style="background:var(--okb);box-shadow:none"><b>' + esc(g.gw) + ' is not charged.</b> ' + esc(hnl(h.fromName, h.fromEmail)) + ' handed over at ' + hhmm(h.at) + ', less than 2 hours before the ' + esc(g.gw) + ' shift ended. Anything sold or missing is recorded against <b>' + esc(h.shift.name) + '</b>, the shift that handed over.</div>' : '';
-  if (!g.on) return q + safeN;
+  if (!g.on || compact) return q + safeN;
   var own = g.rwk === g.gw;
   return q + '<div class="card" style="background:var(--soon-bg);border-left:2px solid var(--soon);box-shadow:none"><b>⚠ ' + (g.late ? 'The ' + esc(g.gw) + ' shift ended without taking this handover' : esc(g.gw) + ' never took this handover') + '</b><div style="margin-top:4px">' + esc(h.shift.name) + '\'s handover is assumed correct. <b>Count the items and the cash.</b> Anything sold or missing is recorded against ' + (own ? 'your own shift, <b>' + esc(g.gw) + '</b>' : '<b>' + esc(g.gw) + '</b>') + ', not ' + esc(h.shift.name) + (own ? '' : ' and not you') + '.</div></div>';
 }
@@ -4587,7 +4591,7 @@ function rxGapSum(gs, cashTxt, gu) {   /* the gap in numbers: items sold, sales,
   else if (d === 0) { cls = 'gok'; st = '✓ Balanced · the sales are recorded for ' + esc(g.gw); }
   else if (d < 0) { cls = 'gbad'; st = 'Cash short ' + money(-d) + ' · recorded against ' + esc(g.gw); }
   else st = 'Cash over ' + money(d) + ' · recorded as ' + esc(g.gw) + '\'s surplus';
-  return { exp: exp, cls: cls, html: '<h4 class="gh">⚠ Gap check · ' + esc(g.gw) + ' never took this</h4><div class="gl"><span>Items sold</span><b>' + n + (n === 1 ? ' item' : ' items') + '</b></div><div class="gl"><span>Sales while nobody was in control</span><b>' + money(gs) + '</b></div><div class="gl"><span>Cash ' + esc(h.shift.name) + ' handed over</span><b>' + money(h.cash) + '</b></div><div class="gl"><span>Cash that should be there</span><b>' + money(exp) + '</b></div><div class="gpill">' + st + '</div>' };
+  return { exp: exp, cls: cls, html: '<h4 class="gh">⚠ Gap check · ' + (g.late ? 'The ' + esc(g.gw) + ' shift ended without taking this handover' : esc(g.gw) + ' never took this handover') + '</h4><div class="gl"><span>Items sold</span><b>' + n + (n === 1 ? ' item' : ' items') + '</b></div><div class="gl"><span>Sales while nobody was in control</span><b>' + money(gs) + '</b></div><div class="gl"><span>Cash ' + esc(h.shift.name) + ' handed over</span><b>' + money(h.cash) + '</b></div><div class="gl"><span>Cash that should be there</span><b>' + money(exp) + '</b></div><div class="gpill">' + st + '</div>' };
 }
 function rxGapBlock() { return RXGAP && RXGAP.on ? '<div class="card rx-gapb gapA gwait">' + rxGapSum(0, '', 0).html + '</div>' : ''; }   /* above the cash, and again above the signature */
 function rxShow(v, p, k, i) { return (p === 'g' ? i.cage : i.stock) > 0 || !!(v.x && v.x[p + k]); }   /* an item handed over as 0 is not counted, unless the receiver found some */
@@ -4662,9 +4666,9 @@ function showRx(keep) {
   var h = S.hand; if (!h) return;
   if (keep) rxKeep(); else { RXV = null; RXSTEP = 0; RXTAB = 'fridge'; RXF = {}; RXWK = ''; RXMORE = false; }
   RX = h; var v = RXV || { cash: '', c: {}, g: {}, t: {}, x: {}, xo: false };
-  var stay = keep === true && !RXFLIP; RXFLIP = false; var gapTop = rxGapCard(h);   /* v3.93: which shift, what is missing and the numbers come first */
-  wpPage(showRx, [true], '<h2>' + (h.locked ? '🔒 Locked handover' : h.same ? 'Handover within the shift' : 'Handover received') + '</h2>' + (h.same ? '<div class="card" style="background:var(--soon-bg);box-shadow:none"><b>Same shift</b><div style="margin-top:4px">This hand over is inside the ' + esc(h.shift.name) + ' shift, so the shift keeps going. Count what is here. Any difference is recorded against the shift, and the sales, credit and totals carry on until the shift is handed over to the next one.</div></div>' : '') + (h.locked ? '<div class="card" style="background:var(--soon-bg)"><b>Fridge and cage were locked.</b> Open them and check everything below before accepting.</div>' : '') +
-    gapTop + (rxOnList(h) || !rxHasDetail(h) ? corrCards() + rxWarn(h) : '') + '<div class="card sum"><div><span>From</span><b>' + esc(hnl(h.fromName, h.fromEmail)) + (h.fromWatch ? '<div class="muted" style="font-weight:500">' + esc(h.fromWatch) + ' watch' + (h.fromWatch !== h.shift.name ? ' · visiting, the ' + esc(h.shift.name) + ' watch was on duty' : '') + '</div>' : '') + '</b></div><div><span>Handed over</span><b>' + new Date(h.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (no one in particular)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Shift</span><b>' + esc(h.shift.name) + ' · ' + esc(h.shift.date) + ' ' + esc(HL(h.shift.half)) + '</b></div><div><span>Sales</span><b>' + money(h.sales) + '</b></div>' + (typeof h.sold === 'number' ? '<div><span>Total items sold</span><b>' + h.sold + '</b></div>' : '') + '<div><span>Cash handed over</span><b>' + money(h.cash) + '</b></div>' + (typeof h.computed === 'number' && r2(h.computed - h.cash) > 0 ? '<div><span>Cash short when counted</span><b style="color:var(--exp)">' + money(r2(h.computed - h.cash)) + '</b></div>' : '') + (typeof h.computed === 'number' && r2(h.cash - h.computed) > 0 ? '<div><span>Cash over when counted</span><b style="color:var(--soon)">' + money(r2(h.cash - h.computed)) + '</b></div>' : '') + '</div>' +
+  var stay = keep === true && !RXFLIP; RXFLIP = false; var compact = rxHasDetail(h) && !rxOnList(h), gapTop = rxGapCard(h, compact);   /* v3.93: which shift, what is missing and the numbers come first */
+  wpPage(showRx, [true], '<h2>' + (h.locked ? '🔒 Locked handover' : h.same ? 'Handover within the shift' : 'Handover received') + '</h2>' + (h.same ? '<div class="card" style="background:var(--soon-bg);box-shadow:none"><b>Same shift</b><div style="margin-top:4px">This hand over is inside the ' + esc(h.shift.name) + ' shift, so the shift keeps going. Count what is here. Any difference is recorded against the shift, and the sales, credit and totals carry on until the shift is handed over to the next one.</div></div>' : '') + (compact ? rxCompactHead(h, RXGAP) + gapTop : (h.locked ? '<div class="card" style="background:var(--soon-bg)"><b>Fridge and cage were locked.</b> Open them and check everything below before accepting.</div>' : '') +
+    gapTop + (rxOnList(h) || !rxHasDetail(h) ? corrCards() + rxWarn(h) : '') + '<div class="card sum"><div><span>From</span><b>' + esc(hnl(h.fromName, h.fromEmail)) + (h.fromWatch ? '<div class="muted" style="font-weight:500">' + esc(h.fromWatch) + ' watch' + (h.fromWatch !== h.shift.name ? ' · visiting, the ' + esc(h.shift.name) + ' watch was on duty' : '') + '</div>' : '') + '</b></div><div><span>Handed over</span><b>' + new Date(h.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (no one in particular)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Shift</span><b>' + esc(h.shift.name) + ' · ' + esc(h.shift.date) + ' ' + esc(HL(h.shift.half)) + '</b></div><div><span>Sales</span><b>' + money(h.sales) + '</b></div>' + (typeof h.sold === 'number' ? '<div><span>Total items sold</span><b>' + h.sold + '</b></div>' : '') + '<div><span>Cash handed over</span><b>' + money(h.cash) + '</b></div>' + (typeof h.computed === 'number' && r2(h.computed - h.cash) > 0 ? '<div><span>Cash short when counted</span><b style="color:var(--exp)">' + money(r2(h.computed - h.cash)) + '</b></div>' : '') + (typeof h.computed === 'number' && r2(h.cash - h.computed) > 0 ? '<div><span>Cash over when counted</span><b style="color:var(--soon)">' + money(r2(h.cash - h.computed)) + '</b></div>' : '') + '</div>') +
     (rxOnList(h) ? rxDetail(h) + '<button class="btn block" data-act="rxcheck">Check items</button><button class="btn sec block" data-act="close" style="margin-top:10px">Back to Count</button>' : (rxHasDetail(h) ? '<button class="btn sec sm" data-act="rxlist" style="margin-bottom:10px">‹ See what was sold again</button>' : '') + '<div class="rxbar" id="rx-bar"></div>' + rxCashCard(h, v) + rxNote() +
     rxCard(h, v, 'fridge') + rxCard(h, v, 'shelf') + rxCard(h, v, 'cage') + rxExtraCard(h, v) +
     hoCashCard(h) + editsCard(h.edits) + (rxHasDetail(h) ? '' : rxCredit(h)) + handoverLists(h.owedBy, h.openShort) + ((h.trail || []).length ? trailHtml(h.trail, h.shift.name, h.fromName, h.fromWatch) : '') +
@@ -6821,6 +6825,7 @@ document.addEventListener('click', function (e) {
     else showRx(true);
   }
   else if (a === 'rxchg') rxChgPick();
+  else if (a === 'rxmore2') { RXMORE = !RXMORE; showRx(true); }
   else if (a === 'rxchgset') rxChgSet(b.dataset.v);
   else if (a === 'gapmove') gapMove(id);
   else if (a === 'gaplist') gapListPage();
