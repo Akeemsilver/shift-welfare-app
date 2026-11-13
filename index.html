@@ -311,7 +311,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.96', RULES_VERSION = '2.40';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.97', RULES_VERSION = '2.40';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -4679,7 +4679,7 @@ function showRx(keep) {
     gapTop + (rxOnList(h) || !rxHasDetail(h) ? corrCards() + rxWarn(h) : '') + '<div class="card sum"><div><span>From</span><b>' + esc(hnl(h.fromName, h.fromEmail)) + (h.fromWatch ? '<div class="muted" style="font-weight:500">' + esc(h.fromWatch) + ' watch' + (h.fromWatch !== h.shift.name ? ' · visiting, the ' + esc(h.shift.name) + ' watch was on duty' : '') + '</div>' : '') + '</b></div><div><span>Handed over</span><b>' + new Date(h.at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</b></div><div><span>To</span><b>' + (h.locked ? 'Locked (no one in particular)' : esc((h.toLabels || []).join(', '))) + '</b></div><div><span>Shift</span><b>' + esc(h.shift.name) + ' · ' + esc(h.shift.date) + ' ' + esc(HL(h.shift.half)) + '</b></div><div><span>Sales</span><b>' + money(h.sales) + '</b></div>' + (typeof h.sold === 'number' ? '<div><span>Total items sold</span><b>' + h.sold + '</b></div>' : '') + '<div><span>Cash handed over</span><b>' + money(h.cash) + '</b></div>' + (typeof h.computed === 'number' && r2(h.computed - h.cash) > 0 ? '<div><span>Cash short when counted</span><b style="color:var(--exp)">' + money(r2(h.computed - h.cash)) + '</b></div>' : '') + (typeof h.computed === 'number' && r2(h.cash - h.computed) > 0 ? '<div><span>Cash over when counted</span><b style="color:var(--soon)">' + money(r2(h.cash - h.computed)) + '</b></div>' : '') + '</div>') +
     (rxOnList(h) ? rxDetail(h) + '<button class="btn block" data-act="rxcheck">Check items</button><button class="btn sec block" data-act="close" style="margin-top:10px">Back to Count</button>' : (rxHasDetail(h) ? '<button class="btn sec sm" data-act="rxlist" style="margin-bottom:10px">‹ See what was sold again</button>' : '') + '<div class="rxbar" id="rx-bar"></div>' + rxCashCard(h, v) + rxNote() +
     rxCard(h, v, 'fridge') + rxCard(h, v, 'shelf') + rxCard(h, v, 'cage') + rxExtraCard(h, v) +
-    hoCashCard(h) + editsCard(h.edits) + (rxHasDetail(h) ? '' : rxCredit(h)) + handoverLists(h.owedBy, h.openShort) + ((h.trail || []).length ? trailHtml(h.trail, h.shift.name, h.fromName, h.fromWatch) : '') +
+    (compact ? (function () { var cc = hoCashCard(h, true); return cc ? rxFold('cashadd', 'How the cash added up', cc) : ''; })() : hoCashCard(h)) + editsCard(h.edits) + (rxHasDetail(h) ? '' : rxCredit(h)) + handoverLists(h.owedBy, h.openShort) + ((h.trail || []).length ? trailHtml(h.trail, h.shift.name, h.fromName, h.fromWatch) : '') +
     (h.notes ? '<div class="card"><label>Remarks</label>' + esc(h.notes) + '</div>' : '') +
     (h.sig ? '<div class="card"><label>Signed by ' + esc(hnl(h.fromName, h.fromEmail)) + '</label><img class="sigimg" src="' + h.sig + '" alt="signature"></div>' : '') +
     rxGapBlock() +
@@ -5469,12 +5469,12 @@ function hoViewShow(i) {
     '<div class="row"><button class="btn sec grow" data-act="hovlist">Back</button><button class="btn sec grow" data-act="close">Close</button></div>');
 }
 
-function hoCashCard(h) {   /* the same cash lines the outgoing shift saw on the Handover page, kept in the record */
+function hoCashCard(h, lean) {   /* the same cash lines the outgoing shift saw on the Handover page, kept in the record. lean: without the stored-cash box and the second stored-cash list (the accept page already shows them above the cash) */
   if (typeof h.received !== 'number' || typeof h.computed !== 'number') return '';
   var n = function (v) { return typeof v === 'number' && v; }, x = HSD[(h.shift || {}).sid] || {};
   return '<div class="card sum"><h2>How the cash added up</h2>' + cashRowsHtml({ received: h.received, sales: h.sales, sold: h.sold, cr: h.cr, loans: h.loans, paid: h.paid, put: x.stp, purch: h.purch, used: h.used, usedStored: x.stu, adv: x.adv, chg: x.chg, don: x.don, sav: x.sav, total: h.computed, stored: h.stored }) +
     '<div><span>Cash counted</span><b>' + money(h.cash) + '</b></div>' +
-    (h.cash !== h.computed ? '<div><span>' + (h.cash < h.computed ? 'Cash short' : 'Cash over') + '</span><b style="color:' + (h.cash < h.computed ? 'var(--exp)' : 'var(--soon)') + '">' + money(Math.abs(r2(h.cash - h.computed))) + '</b></div>' : '') + stoBoxHtml(h.stored, h.computed) + '</div>' + (h.stored && h.stored.length ? storedBreakHtml(h.stored, h.storedTotal, 'pv', false, true) : '') + spentHtml({ sid: (h.shift || {}).sid, used: n(h.used), purch: n(h.purch) });
+    (h.cash !== h.computed ? '<div><span>' + (h.cash < h.computed ? 'Cash short' : 'Cash over') + '</span><b style="color:' + (h.cash < h.computed ? 'var(--exp)' : 'var(--soon)') + '">' + money(Math.abs(r2(h.cash - h.computed))) + '</b></div>' : '') + (lean ? '' : stoBoxHtml(h.stored, h.computed)) + '</div>' + (!lean && h.stored && h.stored.length ? storedBreakHtml(h.stored, h.storedTotal, 'pv', false, true) : '') + spentHtml({ sid: (h.shift || {}).sid, used: n(h.used), purch: n(h.purch) });
 }
 function hlist() {
   getDocs(query(col('handovers'), orderBy('at', 'desc'), limit(15))).then(function (snap) {
