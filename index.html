@@ -311,7 +311,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '4.00', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '4.01', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1434,13 +1434,17 @@ function shFixGo(id) {
   });
 }
 var RP = null;
+function rpLeft() {   /* under Pay amount: what will still be owed */
+  var el = $('#rp-left'); if (!el || !RP) return; var ow = openShortList().filter(function (x) { return x.wk === RP.wk; })[0], a = num(RP.amount);
+  el.textContent = ow && a > 0 ? (a > ow.owed + 0.004 ? 'More than the ' + money(ow.owed) + ' owed' : a >= ow.owed - 0.004 ? 'Paid in full' : money(r2(ow.owed - a)) + ' will still be owed after this') : '';
+}
 function payOpen(wk) {   /* one Pay pop-up for every shift that still owes: pick the shift, the amount fills in */
   var o = openShortList();
   if (!inControl()) { if (canApprove() && !OWNERVIEW) return offsetOpen(wk); return toast('A payment goes into the cash, so the person in control records it'); }
   if (!o.length) return toast('No shortages owed');
   var cur = o.filter(function (x) { return x.wk === wk; })[0] || o[0];
-  RP = { wk: cur.wk, amount: String(cur.owed), note: '', by: '' };
-  modal('<h2>💵 Pay for a shift</h2><div class="card"><label>Which shift</label>' + seg(o.map(function (x) { return [x.wk, esc(x.wk)]; }), 'rpwk', RP.wk, Math.min(o.length, 4)) + '<div class="f" style="margin-top:10px"><label>Amount owes <b id="rp-owes" style="font-size:16px;color:var(--ink);letter-spacing:0">' + money(cur.owed) + '</b></label><input id="rp-amt" data-rp="amount" type="number" inputmode="decimal" min="0" step="any" value="' + esc(RP.amount) + '" placeholder="0"></div><div class="f"><label>Paid by (the person, or someone paying for them)</label><input data-rp="by" value="" placeholder="e.g. Ali, or Sgt Baptiste for Ali" autocomplete="off"></div><div class="f" style="margin-bottom:0"><label>Note (optional)</label><input data-rp="note" value="" placeholder="e.g. paid cash on Friday" autocomplete="off"></div></div><button class="btn block" data-act="rpgo">Continue</button><button class="btn sec block" data-act="payover" data-id="' + esc(cur.wk) + '" style="margin-top:10px">Pay with another shift\'s cash over</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>');
+  RP = { wk: cur.wk, amount: '', note: '', by: '' };
+  modal('<h2>💵 Pay for a shift</h2><div class="card"><label>Which shift</label>' + seg(o.map(function (x) { return [x.wk, esc(x.wk)]; }), 'rpwk', RP.wk, Math.min(o.length, 4)) + '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:10px 12px;background:var(--bg);border-radius:12px"><span class="muted" style="font-size:13px;letter-spacing:.4px;text-transform:uppercase">Amount owes</span><b id="rp-owes" style="font-size:20px">' + money(cur.owed) + '</b></div><div class="f" style="margin-top:10px"><label>Pay amount</label><div style="display:flex;gap:8px"><input id="rp-amt" data-rp="amount" type="number" inputmode="decimal" min="0" step="any" value="" placeholder="0" style="flex:1"><button class="btn sec" data-act="rpfull" style="width:auto;padding:0 16px;margin:0">Full</button></div><div class="muted" id="rp-left" style="margin-top:6px;font-size:13.5px"></div></div><div class="f"><label>Paid by (the person, or someone paying for them)</label><input data-rp="by" list="rp-names" value="" placeholder="Type to search a name" autocomplete="off"><datalist id="rp-names">' + S.people.filter(function (x) { return x.name; }).map(function (x) { return '<option value="' + esc(x.name) + '" label="' + esc(x.watch || '') + '">'; }).join('') + '</datalist></div><div class="f" style="margin-bottom:0"><label>Note (optional)</label><input data-rp="note" value="" autocomplete="off"></div></div><button class="btn block" data-act="rpgo">Continue</button><button class="btn sec block" data-act="payover" data-id="' + esc(cur.wk) + '" style="margin-top:10px">Pay with another shift\'s cash over</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>');
 }
 var OFF = null;
 function offsetOpen(wk) {   /* the owner, a president or an admin clears one shift's shortage with another shift's cash over: no cash moves */
@@ -6621,7 +6625,8 @@ document.addEventListener('click', function (e) {
   else if (a === 'ofgo') offsetGo();
   else if (a === 'afxshort') { closeModal(); afxOpen({ type: 'shortage' }); }
   else if (a === 'owedetail') owedDetail(id);
-  else if (a === 'rpwk') { var ox = openShortList().filter(function (x) { return x.wk === b.dataset.v; })[0]; if (!ox || !RP) return; RP.wk = ox.wk; RP.amount = String(ox.owed); b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); $('#rp-amt').value = RP.amount; $('#rp-owes').textContent = money(ox.owed); }
+  else if (a === 'rpwk') { var ox = openShortList().filter(function (x) { return x.wk === b.dataset.v; })[0]; if (!ox || !RP) return; RP.wk = ox.wk; RP.amount = ''; b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); $('#rp-amt').value = ''; $('#rp-owes').textContent = money(ox.owed); rpLeft(); }
+  else if (a === 'rpfull') { var ow2 = openShortList().filter(function (x) { return x.wk === RP.wk; })[0]; if (!ow2 || !RP) return; RP.amount = String(ow2.owed); $('#rp-amt').value = RP.amount; rpLeft(); }
   else if (a === 'rpgo') repayGo();
   else if (a === 'rcfold') { RCF[b.dataset.v] = !RCF[b.dataset.v]; if (HSHDRAW) HSHDRAW(); }
   else if (a === 'rccopy') recShare(true);
@@ -7143,7 +7148,7 @@ document.addEventListener('input', function (e) {
   else if (t.dataset.step === 'bl') { BUY.lines[+t.dataset.k].cases = Math.max(0, Math.floor(num(t.value)) || 0); buyLive(); }
   else if (t.dataset.step === 'bu') { BUY.lines[+t.dataset.k].units = Math.max(0, Math.floor(num(t.value)) || 0); buyLive(); }
   else if (t.dataset.step === 'bs' || t.dataset.step === 'bh') { var tl = BUY.lines[+t.dataset.k], tp = lineParts(tl), tn = Math.max(0, Math.floor(num(t.value)) || 0); tl.sto = Math.max(0, Math.min(tp.n, t.dataset.step === 'bs' ? tn : tp.n - tn)); buyLive(); var dd = $('#bw' + t.dataset.k), oth = dd && dd.querySelector('[data-step=' + (t.dataset.step === 'bs' ? 'bh' : 'bs') + ']'); if (oth) oth.value = t.dataset.step === 'bs' ? tp.n - tl.sto : tl.sto; }
-  else if (t.dataset.rp) RP[t.dataset.rp] = t.value;
+  else if (t.dataset.rp) { RP[t.dataset.rp] = t.value; if (t.dataset.rp === 'amount') rpLeft(); }
   else if (t.dataset.of && OFF) OFF[t.dataset.of] = t.value;
   else if (t.dataset.es) ES[t.dataset.es] = t.value;
   else if (t.dataset.uc) { UC[t.dataset.uc] = t.value; if (t.dataset.uc === 'amount') ucLive(); }
