@@ -311,7 +311,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.98', RULES_VERSION = '2.41';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.99', RULES_VERSION = '2.41';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -4575,13 +4575,29 @@ function rxChgSet(w) {
   mkEvent(b, 'watchchg', null, 0, 0, { note: myName() + ' changed shift ' + (old || 'none') + ' → ' + w, dly: 0 });
   commit(b).then(function () { p.watch = w; shClose(); RXWK = ''; showRx(true); toast('You are now on the ' + w + ' shift'); }).catch(function (e) { console.error(e); toast(errText(e)); });
 }
+var DIAG = null;
+function dgSum(v, d) {   /* a short, readable copy of a value for the failure report */
+  d = d || 0; if (v === null || v === undefined || typeof v === 'number' || typeof v === 'boolean') return v;
+  if (typeof v === 'string') return v.length > 80 ? v.slice(0, 30) + '…(' + v.length + ' chars)' : v;
+  if (Array.isArray(v)) return v.length > 12 ? v.slice(0, 12).map(function (x) { return dgSum(x, d + 1); }).concat(['…+' + (v.length - 12)]) : v.map(function (x) { return dgSum(x, d + 1); });
+  if (typeof v === 'object') { if (typeof v.toMillis === 'function') return '[time]'; if (v._methodName) return '[' + v._methodName + ']'; if (d > 3) return '{…}'; var o = {}; Object.keys(v).slice(0, 40).forEach(function (k) { o[k] = dgSum(v[k], d + 1); }); return o; }
+  return String(v);
+}
+function diagBatch(b) {   /* the same batch, with a record of what it writes (shown if the database refuses it) */
+  var log = [], w = { log: log, set: function (r, d) { log.push({ op: 'set', path: r && r.path, data: dgSum(d) }); b.set.apply(b, arguments); return w; }, update: function (r, d) { log.push({ op: 'update', path: r && r.path, data: dgSum(d) }); b.update.apply(b, arguments); return w; }, delete: function (r) { log.push({ op: 'delete', path: r && r.path }); b.delete.apply(b, arguments); return w; }, commit: function () { return b.commit(); } };
+  return w;
+}
+function diagCopy() {
+  var t = JSON.stringify(DIAG || {}); try { navigator.clipboard.writeText(t).then(function () { toast('Copied. Paste it into the chat.'); }, function () { throw 0; }); } catch (x) { var ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('Copied. Paste it into the chat.'); } catch (y) { toast('Could not copy'); } ta.remove(); }
+}
 function commitX(b, onFail) {   /* like commit, but the caller hears about a refusal */
   dayFlush(b); var q = PLQ; PLQ = [];
-  return b.commit().then(function () { q.forEach(function (x) { if (x.del) deleteDoc(ref('plog/' + x.id)).catch(function () {}); else setDoc(ref('plog/' + x.id), x.d).catch(function () {}); }); return true; }).catch(function (e) { console.error(e); if (onFail) onFail(e); else toast(errText(e)); return false; });
+  return b.commit().then(function () { q.forEach(function (x) { if (x.del) deleteDoc(ref('plog/' + x.id)).catch(function () {}); else setDoc(ref('plog/' + x.id), x.d).catch(function () {}); }); return true; }).catch(function (e) { console.error(e); if (onFail) onFail(e, b); else toast(errText(e)); return false; });
 }
-function accFail(e) {   /* v3.96: the database refused the accepting save: say so and say why, until the person closes it */
+function accFail(e, b) {   /* v3.96: the database refused the accepting save: say so and say why, until the person closes it */
   var m = String((e && e.message) || e || '').replace(/\s+/g, ' ').slice(0, 800);
-  ucDialog('<h2>The handover was not accepted</h2><p style="margin-top:0">The database refused it, so nothing was changed and the handover is still waiting. Please send a screenshot of this message to the person who looks after the app.</p><div class="hnote" style="word-break:break-word;font-size:12.5px">' + esc((e && e.code) || 'error') + ': ' + esc(m) + '</div>', 'OK', 'Close', null, null);
+  DIAG = { v: APP_VERSION, rules: RULES_VERSION, at: new Date().toISOString(), err: { code: e && e.code, message: m }, who: EMAIL, ops: b && b.log ? b.log : [] }; window.__diag = DIAG;
+  ucDialog('<h2>The handover was not accepted</h2><p style="margin-top:0">The database refused it, so nothing was changed and the handover is still waiting. Please send a screenshot of this message to the person who looks after the app.</p><div class="hnote" style="word-break:break-word;font-size:12.5px">' + esc((e && e.code) || 'error') + ': ' + esc(m) + '</div><button class="btn sec block" data-act="diagcopy" style="margin-top:10px">Copy details</button>', 'OK', 'Close', null, null);
 }
 function gapNotify(g) {   /* after the accepting save went through: one notice per member of the skipped shift, six at a time */
   if (!g || !g.to.length) return;
@@ -4707,7 +4723,7 @@ function rxAccept2() {
   if (!M || !M.signature) return toast('Please sign first');
   var hd = String(h.shift.date || '').split('/'), sday = hd.length === 3 ? hd[2] + '-' + hd[1] + '-' + hd[0] : '';   /* the shortage belongs to the shift that handed over, on that shift's date */
   var GP = rxGap(h), gap = GP.on ? GP : null, gwk = gap ? gap.gw : h.shift.name, gday = gap ? dkey(gap.G.day) : sday, gsales = 0, diffs = [], RI = {}, cashC = num($('#rx-cash').value), c0 = (gap || (GP.early && GP.R) || (GP.R && GP.rwk && GP.rwk !== GP.cw)) ? { name: GP.rwk, half: CFG.periods[GP.R.i].key, date: dstr(GP.R.day) } : currentShift(), same = h.same === true, cur = S.state.shift, expC0 = typeof h.computed === 'number' ? h.computed : h.cash,
-    ns = same ? Object.assign({}, cur, { received: r2((cur.received || 0) + cashC - expC0), counted: '', mode: 'person', tos: [] }) : newShift(c0, cashC), b = writeBatch(DB); DAYQ = []; if (!same) ns.storedIn = storedTotal(); ns.prevEmail = h.fromEmail || ''; ns.prevName = h.fromName || '';   /* a same-shift handover keeps the shift: same id, the cash count difference goes into what the shift started with */
+    ns = same ? Object.assign({}, cur, { received: r2((cur.received || 0) + cashC - expC0), counted: '', mode: 'person', tos: [] }) : newShift(c0, cashC), b = diagBatch(writeBatch(DB)); DAYQ = []; if (!same) ns.storedIn = storedTotal(); ns.prevEmail = h.fromEmail || ''; ns.prevName = h.fromName || '';   /* a same-shift handover keeps the shift: same id, the cash count difference goes into what the shift started with */
   var rcf = [];
   h.items.forEach(function (i, k) {
     var it = item(i.id); if (!it) return;
@@ -6833,6 +6849,7 @@ document.addEventListener('click', function (e) {
     else showRx(true);
   }
   else if (a === 'rxchg') rxChgPick();
+  else if (a === 'diagcopy') diagCopy();
   else if (a === 'rxmore2') { RXMORE = !RXMORE; showRx(true); }
   else if (a === 'rxchgset') rxChgSet(b.dataset.v);
   else if (a === 'gapmove') gapMove(id);
