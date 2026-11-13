@@ -109,6 +109,13 @@ nav button{border:0;background:none;font:inherit;font-size:10px;font-weight:600;
 nav button span{font-size:18px}
 nav button.on{color:var(--link);background:var(--soft)}
 .btn.undo{width:50px;flex:none;padding:0;border:2px solid var(--exp);color:var(--exp);background:var(--surface);font-size:26px;line-height:1;display:inline-flex;align-items:center;justify-content:center;font-weight:700;box-shadow:none}   /* the round-arrow undo button on the item sheet */
+.gapA{border:2px solid var(--soon);background:var(--soon-bg);box-shadow:0 0 0 4px rgba(224,168,0,.15)}
+.gapA.gok{border-color:var(--ok);background:var(--okb);box-shadow:0 0 0 4px rgba(46,125,79,.15)}
+.gapA.gbad{border-color:var(--exp);background:var(--exp-bg);box-shadow:0 0 0 4px rgba(201,54,43,.15)}
+.gapA .gh{margin:0 0 6px;font-size:15.5px}
+.gapA .gl{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:15px}.gapA .gl b{font-size:17px}
+.gapA .gpill{margin-top:8px;border-radius:12px;padding:9px;text-align:center;font-weight:700;font-size:14.5px;background:rgba(127,127,127,.16)}
+.gapA.gok .gpill{background:var(--ok);color:#fff}.gapA.gbad .gpill{background:var(--exp);color:#fff}
 .hsafe{background:var(--okb);border-left:4px solid var(--ok);border-radius:8px;padding:8px 10px;font-size:14px;line-height:1.4;margin:6px 0 4px}
 .hnote{background:var(--surface);border-left:4px solid #d9a400;border-radius:8px;padding:8px 10px;font-size:14px;line-height:1.4;margin:6px 0 4px}
 .card.nts{border-left:3px solid var(--line)}.card.nts.cr{border-left-color:var(--soon)}.card.nts.sp{border-left-color:var(--exp)}.card.nts.gw{border-left-color:var(--ok)}.nts .nh{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px}.nts .nh b:last-child{white-space:nowrap}.nts .nl{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line)}.nts .nl small{display:block;color:var(--muted);font-size:12.5px;margin-top:1px}.nts .nf{color:var(--muted);font-size:12.5px;margin-top:4px}   /* the credit / spoiled / goodwill cards on the handover pages */
@@ -304,7 +311,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.93', RULES_VERSION = '2.40';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.94', RULES_VERSION = '2.40';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -4551,7 +4558,7 @@ function rxGapCard(h) {   /* which shift is taking over: only shifts that are ru
   var safeN = g.safe && g.rwk !== g.gw ? '<div class="card" style="background:var(--okb);box-shadow:none"><b>' + esc(g.gw) + ' is not charged.</b> ' + esc(hnl(h.fromName, h.fromEmail)) + ' handed over at ' + hhmm(h.at) + ', less than 2 hours before the ' + esc(g.gw) + ' shift ended. Anything sold or missing is recorded against <b>' + esc(h.shift.name) + '</b>, the shift that handed over.</div>' : '';
   if (!g.on) return q + safeN;
   var own = g.rwk === g.gw;
-  return q + '<div class="card" style="background:var(--soon-bg);border-left:2px solid var(--soon);box-shadow:none"><b>⚠ ' + (g.late ? 'The ' + esc(g.gw) + ' shift ended without taking this handover' : esc(g.gw) + ' never took this handover') + '</b><div style="margin-top:4px">' + esc(h.shift.name) + '\'s handover is assumed correct. <b>Count the items and the cash.</b> Anything sold or missing is recorded against ' + (own ? 'your own shift, <b>' + esc(g.gw) + '</b>' : '<b>' + esc(g.gw) + '</b>') + ', not ' + esc(h.shift.name) + (own ? '' : ' and not you') + '.</div></div><div class="card rx-gapb" style="box-shadow:none">' + rxGapSum(0, '').html + '</div>';
+  return q + '<div class="card" style="background:var(--soon-bg);border-left:2px solid var(--soon);box-shadow:none"><b>⚠ ' + (g.late ? 'The ' + esc(g.gw) + ' shift ended without taking this handover' : esc(g.gw) + ' never took this handover') + '</b><div style="margin-top:4px">' + esc(h.shift.name) + '\'s handover is assumed correct. <b>Count the items and the cash.</b> Anything sold or missing is recorded against ' + (own ? 'your own shift, <b>' + esc(g.gw) + '</b>' : '<b>' + esc(g.gw) + '</b>') + ', not ' + esc(h.shift.name) + (own ? '' : ' and not you') + '.</div></div>';
 }
 function rxChgPick() {
   var g = RXGAP || {}, p = myPerson();
@@ -4574,10 +4581,15 @@ function gapNotify(g) {   /* after the accepting save went through: one notice p
     }
   }).catch(function (e) { console.error(e); });
 }
-function rxGapSum(gs, cashTxt) {   /* the gap in numbers: what was sold, what the cash should be, and the result */
-  var h = RX, exp = r2(h.cash + gs), cv = String(cashTxt).trim(), cnt = cv === '' ? null : num(cv), g = RXGAP, d = cnt === null ? 0 : r2(cnt - exp);
-  return { exp: exp, html: '<div>Items sold while nobody was in control: <b>' + money(gs) + '</b></div><div>Cash ' + esc(h.shift.name) + ' handed over: ' + money(h.cash) + '</div><div>Cash that should be there: <b>' + money(exp) + '</b></div>' + (cnt === null ? '<div class="muted">Count the cash to see if it balances.</div>' : d === 0 ? '<div style="color:var(--ok);font-weight:700">✓ Balanced. Nothing short. The sales are recorded for ' + esc(g.gw) + '.</div>' : d < 0 ? '<div style="color:var(--exp);font-weight:700">Cash short ' + money(-d) + '. Recorded against ' + esc(g.gw) + '.</div>' : '<div style="color:var(--soon);font-weight:700">Cash over ' + money(d) + '. Recorded as ' + esc(g.gw) + '\'s surplus.</div>') };
+function rxGapSum(gs, cashTxt, gu) {   /* the gap in numbers: items sold, sales, the cash and the result. cls: yellow until counted, green when it balances, red when cash is short */
+  var h = RX, exp = r2(h.cash + gs), cv = String(cashTxt).trim(), cnt = cv === '' ? null : num(cv), g = RXGAP, d = cnt === null ? 0 : r2(cnt - exp), n = gu || 0, cls = 'gwait', st;
+  if (cnt === null) st = 'Count the items and the cash to see if it balances';
+  else if (d === 0) { cls = 'gok'; st = '✓ Balanced · the sales are recorded for ' + esc(g.gw); }
+  else if (d < 0) { cls = 'gbad'; st = 'Cash short ' + money(-d) + ' · recorded against ' + esc(g.gw); }
+  else st = 'Cash over ' + money(d) + ' · recorded as ' + esc(g.gw) + '\'s surplus';
+  return { exp: exp, cls: cls, html: '<h4 class="gh">⚠ Gap check · ' + esc(g.gw) + ' never took this</h4><div class="gl"><span>Items sold</span><b>' + n + (n === 1 ? ' item' : ' items') + '</b></div><div class="gl"><span>Sales while nobody was in control</span><b>' + money(gs) + '</b></div><div class="gl"><span>Cash ' + esc(h.shift.name) + ' handed over</span><b>' + money(h.cash) + '</b></div><div class="gl"><span>Cash that should be there</span><b>' + money(exp) + '</b></div><div class="gpill">' + st + '</div>' };
 }
+function rxGapBlock() { return RXGAP && RXGAP.on ? '<div class="card rx-gapb gapA gwait">' + rxGapSum(0, '', 0).html + '</div>' : ''; }   /* above the cash, and again above the signature */
 function rxShow(v, p, k, i) { return (p === 'g' ? i.cage : i.stock) > 0 || !!(v.x && v.x[p + k]); }   /* an item handed over as 0 is not counted, unless the receiver found some */
 function rxTbl(title, rows, tick) { return '<div class="card"><h2>' + title + ' <b style="color:var(--exp)">*</b></h2><table class="rxt"><colgroup><col><col style="width:54px"><col style="width:68px"><col style="width:44px"></colgroup><tr><th>Item</th><th>Handed<br>over</th><th>Your<br>count</th><th>' + (tick ? 'Same' : '') + '</th></tr>' + rows + '</table>' + (tick ? '<div class="rxall"><a data-act="rxtickall">✓ Tick all the rest</a></div>' : '') + '</div>'; }
 function rxCell(id, exp, val, tk, pr) {   /* the count starts as what was handed over; tick it if it is the same, or type what you found and the tick turns into the difference */
@@ -4594,21 +4606,21 @@ function rxCard(h, v, kind) {   /* the count boxes: In the shop (fridge and shel
   }).join('');
   return rows ? rxTbl(g ? '📦 Cases / Packs in storage' : kind === 'shelf' ? '🧁 On the shelf' : '🧊 In the fridge', rows, true) : '';
 }
-function rxCashCard(h, v) { if (RXSEAL.hid !== h.id) RXSEAL = { hid: h.id }; return storedBreakHtml(h.stored, h.storedTotal, 'rx') + rxTbl('Cash', '<tr><td>Cash</td><td class="rxh">' + money(h.cash) + '</td><td><input class="rxn" id="rx-cash" data-exp="' + h.cash + '" enterkeyhint="next" type="number" inputmode="decimal" placeholder="$" value="' + esc(v.cash) + '"></td><td><span class="rxd" id="d-rx-cash" style="font-size:12px"></span></td></tr>') + '<div id="rx-seals">' + sealCheckHtml(h.sealed, RXSEAL, 'rxseal') + '</div>'; }
+function rxCashCard(h, v) { if (RXSEAL.hid !== h.id) RXSEAL = { hid: h.id }; return storedBreakHtml(h.stored, h.storedTotal, 'rx') + rxGapBlock() + rxTbl('Cash', '<tr><td>Cash</td><td class="rxh">' + money(h.cash) + '</td><td><input class="rxn" id="rx-cash" data-exp="' + h.cash + '" enterkeyhint="next" type="number" inputmode="decimal" placeholder="$" value="' + esc(v.cash) + '"></td><td><span class="rxd" id="d-rx-cash" style="font-size:12px"></span></td></tr>') + '<div id="rx-seals">' + sealCheckHtml(h.sealed, RXSEAL, 'rxseal') + '</div>'; }
 function rxNote() { return '<div class="card" style="background:var(--soon-bg);box-shadow:none"><b>✎ Your count is filled in with what was handed over</b><div style="margin-top:4px">Same? Tick the box. Different? Type what you found: the box is replaced by the difference. Cash is not filled in: count it and type it.</div></div>'; }
 function rxProg() {   /* the pinned bar: how many are checked, how many changed, and the next one; the rows turn green (ticked) or red (changed) */
   var pg = $('#spage'); if (!pg || !RX || !$('#rx-bar')) return;
-  var n = 0, d = 0, tot = 0, first = null, gp = !!(RXGAP && RXGAP.on), gs = 0; pg.classList.toggle('gapmode', gp);
+  var n = 0, d = 0, tot = 0, first = null, gp = !!(RXGAP && RXGAP.on), gs = 0, gu = 0; pg.classList.toggle('gapmode', gp);
   pg.querySelectorAll('input.rxn').forEach(function (e) {
     var cash = e.id === 'rx-cash', has = String(e.value).trim() !== '', dv = has ? num(e.value) - num(e.dataset.exp) : 0, chg = has && dv !== 0, ck = cash ? null : pg.querySelector('.rxck[data-k="' + e.id.slice(3) + '"]'), sp = pg.querySelector('#d-' + e.id), tr = e.closest('tr'); tot++;
     if (ck) { if (chg) ck.checked = false; ck.style.display = chg ? 'none' : ''; }
     var done = cash ? has : chg || (has && ck && ck.checked);
     if (done) { n++; if (chg) d++; } else if (!first) first = tr.children[0].textContent;
-    if (gp && !cash && dv < 0) gs += -dv * num(e.dataset.pr);
+    if (gp && !cash && dv < 0) { gs += -dv * num(e.dataset.pr); if (e.id.indexOf('rx-c') === 0) gu += -dv; }
     if (sp) sp.textContent = chg ? (dv < 0 ? '−' : '+') + (cash ? money(Math.abs(dv)) : Math.abs(dv)) + (gp && !cash && dv < 0 && num(e.dataset.pr) ? ' sold' : '') : '';
     tr.classList.toggle('rxchg', chg); tr.classList.toggle('rxok', !chg && !!(ck && ck.checked)); tr.classList.remove('rxnone');
   });
-  if (gp) { var gh = rxGapSum(r2(gs), $('#rx-cash') ? $('#rx-cash').value : '').html; document.querySelectorAll('.rx-gapb').forEach(function (gb) { gb.innerHTML = gh; }); }   /* the numbers show at the top and again just above the signature */
+  if (gp) { var gh = rxGapSum(r2(gs), $('#rx-cash') ? $('#rx-cash').value : '', gu); document.querySelectorAll('.rx-gapb').forEach(function (gb) { gb.innerHTML = gh.html; gb.className = 'card rx-gapb gapA ' + gh.cls; }); }   /* v3.94: the numbers show above the cash and again above the signature: yellow, green or red */
   var left = tot - n;
   $('#rx-bar').innerHTML = 'Checked <b>' + n + ' of ' + tot + '</b>' + (d ? ' · <b style="color:var(--exp)">' + d + ' changed</b>' : '') + (left ? ' · <b data-act="rxnext" style="color:var(--link);cursor:pointer">next: ' + esc(first) + ' ›</b>' : ' · all checked');
   var sg = !!(M && M.signature), ok = !left && sg;
@@ -4620,9 +4632,9 @@ function rxReview() {   /* before accepting: the differences, and what is record
   if (rxMissing() || !(M && M.signature)) return false;
   RXGAP = rxGap(h);
   if (RXGAP.on) {   /* after a gap the accept sheet says what is recorded for whom */
-    var gs = 0; h.items.forEach(function (i, k) { var ce = $('#rx-c' + k), c = ce ? Math.max(0, Math.floor(num(ce.value))) : 0; if (c < i.stock) gs += (i.stock - c) * i.price; });
-    var gsum = rxGapSum(r2(gs), $('#rx-cash').value);
-    askConfirm('Accept this handover after a gap?', gsum.html.replace(/class="muted"/g, '') + '<br><span class="muted">' + esc(h.shift.name) + '\'s handover is assumed correct. Anything sold or short is recorded against the ' + esc(RXGAP.gw) + ' shift. You start the ' + esc(RXGAP.rwk) + ' shift.</span>', 'Yes, accept & take control', function () { RXOK = true; rxAccept(); });
+    var gs = 0, gu = 0; h.items.forEach(function (i, k) { var ce = $('#rx-c' + k), c = ce ? Math.max(0, Math.floor(num(ce.value))) : 0; if (c < i.stock) { gs += (i.stock - c) * i.price; gu += i.stock - c; } });
+    var gsum = rxGapSum(r2(gs), $('#rx-cash').value, gu);
+    askConfirm('Accept this handover after a gap?', '<div class="gapA ' + gsum.cls + '" style="border-radius:14px;padding:10px 12px">' + gsum.html + '</div><br><span class="muted">' + esc(h.shift.name) + '\'s handover is assumed correct. Anything sold or short is recorded against the ' + esc(RXGAP.gw) + ' shift. You start the ' + esc(RXGAP.rwk) + ' shift.</span>', 'Yes, accept & take control', function () { RXOK = true; rxAccept(); });
     return true;
   }
   var cashC = num($('#rx-cash').value), expC = typeof h.computed === 'number' ? h.computed : h.cash, L = [], ups = [], sVal = 0;
@@ -4658,7 +4670,7 @@ function showRx(keep) {
     hoCashCard(h) + editsCard(h.edits) + (rxHasDetail(h) ? '' : rxCredit(h)) + handoverLists(h.owedBy, h.openShort) + ((h.trail || []).length ? trailHtml(h.trail, h.shift.name, h.fromName, h.fromWatch) : '') +
     (h.notes ? '<div class="card"><label>Remarks</label>' + esc(h.notes) + '</div>' : '') +
     (h.sig ? '<div class="card"><label>Signed by ' + esc(hnl(h.fromName, h.fromEmail)) + '</label><img class="sigimg" src="' + h.sig + '" alt="signature"></div>' : '') +
-    (RXGAP && RXGAP.on ? '<div class="card rx-gapb" style="box-shadow:none">' + rxGapSum(0, '').html + '</div>' : '') +
+    rxGapBlock() +
     sigCard('Your signature (receiving)') +
     '<button class="btn sec block" data-act="close" style="margin-top:10px">Not now</button><div class="rxfoot" id="rx-foot"><span id="rx-left" class="grow"></span><button class="btn green" data-act="rxaccept">Accept &amp; take control</button></div>'), stay);
   rxProg();
