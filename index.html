@@ -311,7 +311,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '3.95', RULES_VERSION = '2.40';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '3.96', RULES_VERSION = '2.40';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1621,12 +1621,12 @@ function mvDecide(id, st) {
   if (st === 'moved' && m.personId) { var pe = person(m.personId); b.update(ref('people/' + m.personId), { watch: m.to }); b.set(ref('names/' + m.personId), { name: pe ? pe.name : m.name, watch: m.to }); }
   b.commit().then(function () { toast(st === 'moved' ? m.name + ' is now on ' + m.to : st === 'today' ? 'Just for today. Nothing changed.' : 'Not now. Nothing changed.'); }).catch(function (e) { console.error(e); toast(errText(e)); });
 }
-function sealIssueTell(h, hid) {   /* a sealed item the next shift reported: the owner and presidents are told */
-  (h.sealed || []).forEach(function (x) { var o = RXSEAL[x.id]; if (o && o.ok === false) tellBosses('si_' + hid + '_' + x.id, 'sealissue', { what: x.name, amt: x.amt, giver: x.giver || '', forWk: x.wk || '', issue: o.issue || '', fromName: h.fromName || '', fromWk: h.shift && h.shift.name || '' }); });
+function sealIssueTell(h, hid, rs) {   /* a sealed item the next shift reported: the owner and presidents are told */
+  rs = rs || RXSEAL; (h.sealed || []).forEach(function (x) { var o = rs[x.id]; if (o && o.ok === false) tellBosses('si_' + hid + '_' + x.id, 'sealissue', { what: x.name, amt: x.amt, giver: x.giver || '', forWk: x.wk || '', issue: o.issue || '', fromName: h.fromName || '', fromWk: h.shift && h.shift.name || '' }); });
 }
-function hoAccTell(h, gwk, gap, diffs, cShort, cOver, sTot, ns) {   /* once per accepted handover: the owner and every president are told how it went */
+function hoAccTell(h, gwk, gap, diffs, cShort, cOver, sTot, ns, hid) {   /* once per accepted handover: the owner and every president are told how it went */
   var res = gap ? 'after a gap, recorded on ' + gwk : sTot > 0 ? 'short ' + money(sTot) : diffs.length ? 'differences noted' : 'matched';
-  tellBosses('ha_' + S.state.pending, 'hoacc', { fromName: h.fromName || '', sid: h.shift && h.shift.sid || '', handoverId: S.state.pending, fromWk: h.shift && h.shift.name || '', toWk: gwk || ns.name || '', result: res, amount: sTot || 0, shiftDate: h.shift && h.shift.date || '', shiftHalf: h.shift && h.shift.half || '' });
+  tellBosses('ha_' + (hid || S.state.pending), 'hoacc', { fromName: h.fromName || '', sid: h.shift && h.shift.sid || '', handoverId: (hid || S.state.pending), fromWk: h.shift && h.shift.name || '', toWk: gwk || ns.name || '', result: res, amount: sTot || 0, shiftDate: h.shift && h.shift.date || '', shiftHalf: h.shift && h.shift.half || '' });
 }
 function mvCover(GP, h) {   /* after a handover is accepted as a shift that is not mine on the people list: ask the owner / presidents once a day for each person and shift (not for covering the shift on duty) */
   try {
@@ -4575,6 +4575,14 @@ function rxChgSet(w) {
   mkEvent(b, 'watchchg', null, 0, 0, { note: myName() + ' changed shift ' + (old || 'none') + ' → ' + w, dly: 0 });
   commit(b).then(function () { p.watch = w; shClose(); RXWK = ''; showRx(true); toast('You are now on the ' + w + ' shift'); }).catch(function (e) { console.error(e); toast(errText(e)); });
 }
+function commitX(b, onFail) {   /* like commit, but the caller hears about a refusal */
+  dayFlush(b); var q = PLQ; PLQ = [];
+  return b.commit().then(function () { q.forEach(function (x) { if (x.del) deleteDoc(ref('plog/' + x.id)).catch(function () {}); else setDoc(ref('plog/' + x.id), x.d).catch(function () {}); }); return true; }).catch(function (e) { console.error(e); if (onFail) onFail(e); else toast(errText(e)); return false; });
+}
+function accFail(e) {   /* v3.96: the database refused the accepting save: say so and say why, until the person closes it */
+  var m = String((e && e.message) || e || '').replace(/\s+/g, ' ').slice(0, 800);
+  ucDialog('<h2>The handover was not accepted</h2><p style="margin-top:0">The database refused it, so nothing was changed and the handover is still waiting. Please send a screenshot of this message to the person who looks after the app.</p><div class="hnote" style="word-break:break-word;font-size:12.5px">' + esc((e && e.code) || 'error') + ': ' + esc(m) + '</div>', 'OK', 'Close', null, null);
+}
 function gapNotify(g) {   /* after the accepting save went through: one notice per member of the skipped shift, six at a time */
   if (!g || !g.to.length) return;
   getDoc(ref('handovers/' + g.hid)).then(function (d) {
@@ -4591,7 +4599,7 @@ function rxGapSum(gs, cashTxt, gu) {   /* the gap in numbers: items sold, sales,
   else if (d === 0) { cls = 'gok'; st = '✓ Balanced · the sales are recorded for ' + esc(g.gw); }
   else if (d < 0) { cls = 'gbad'; st = 'Cash short ' + money(-d) + ' · recorded against ' + esc(g.gw); }
   else st = 'Cash over ' + money(d) + ' · recorded as ' + esc(g.gw) + '\'s surplus';
-  return { exp: exp, cls: cls, html: '<h4 class="gh">⚠ Gap check · ' + (g.late ? 'The ' + esc(g.gw) + ' shift ended without taking this handover' : esc(g.gw) + ' never took this handover') + '</h4><div class="gl"><span>Items sold</span><b>' + n + (n === 1 ? ' item' : ' items') + '</b></div><div class="gl"><span>Sales while nobody was in control</span><b>' + money(gs) + '</b></div><div class="gl"><span>Cash ' + esc(h.shift.name) + ' handed over</span><b>' + money(h.cash) + '</b></div><div class="gl"><span>Cash that should be there</span><b>' + money(exp) + '</b></div><div class="gpill">' + st + '</div>' };
+  return { exp: exp, cls: cls, html: '<h4 class="gh">⚠ Gap check · ' + (g.late ? 'The ' + esc(g.gw) + ' shift ended without taking this handover' : esc(g.gw) + ' never took this handover') + '</h4><div class="gl"><span>Items sold</span><b>' + n + (n === 1 ? ' item' : ' items') + '</b></div><div class="gl"><span>Sales while nobody was in control</span><b>' + money(gs) + '</b></div><div class="gl"><span>Cash ' + esc(h.shift.name) + ' handed over</span><b>' + money(h.cash) + '</b></div><div class="gl"><span>Cash that should be there</span><b>' + money(exp) + '</b></div>' + (cnt === null ? '' : '<div class="gl"><span>Cash you counted</span><b>' + money(cnt) + '</b></div>') + '<div class="gpill">' + st + '</div>' };
 }
 function rxGapBlock() { return RXGAP && RXGAP.on ? '<div class="card rx-gapb gapA gwait">' + rxGapSum(0, '', 0).html + '</div>' : ''; }   /* above the cash, and again above the signature */
 function rxShow(v, p, k, i) { return (p === 'g' ? i.cage : i.stock) > 0 || !!(v.x && v.x[p + k]); }   /* an item handed over as 0 is not counted, unless the receiver found some */
@@ -4740,7 +4748,7 @@ function rxAccept2() {
   b.update(ref('handovers/' + S.state.pending), Object.assign({ status: 'accepted', acceptedBy: EMAIL, acceptedAt: Date.now(), check: gap ? 'Received after a gap (the ' + gwk + ' shift never took it). Assumed correct.' + (diffs.length ? '\n' + diffs.join('\n') : '') : diffs.length ? diffs.join('\n') : 'everything matched', receivedSig: M.signature, receivedName: myName(), receivedItems: Object.assign({ _v: vnum(APP_VERSION) }, RI), receivedCash: cashC }, (h.sealed || []).length ? { sealRecv: Object.keys(RXSEAL).filter(function (k) { return k !== 'hid' && k !== '_open'; }).reduce(function (m, k) { m[k] = RXSEAL[k] === true ? { ok: true } : { ok: false, issue: RXSEAL[k].issue || '' }; return m; }, {}) } : {}));
   b.update(ref('shop/state'), { controlEmail: EMAIL, controlName: myName(), pending: '', shift: ns, openingDone: true });
   (S.corrs || []).forEach(function (cc) { if (cc.status === 'open') b.update(ref('corrections/' + cc.id), { status: 'closed' }); });   /* a handover correction nobody decided is closed, unchanged, when the next handover is taken */
-  commit(b).then(function () { gapNotify(gapTell); }); mvCover(GP, h); hoAccTell(h, gwk, gap, diffs, cShort, cOver, sTot, ns); sealIssueTell(h, S.state.pending); RXSEAL = {}; if (GP.rwk && GP.rwk !== GP.mw) shCover(ns.sid); RX = null; RXSTEP = 0; sel = null; qty = 1; tab = 'sell'; closeModal(); spClose(); toast(gap ? 'Accepted after a gap, recorded for ' + gwk : diffs.length ? 'Accepted, differences noted' : 'Accepted, all matched');
+  var hidAcc = S.state.pending, sealAcc = RXSEAL; commitX(b, accFail).then(function (done) { if (!done) return; gapNotify(gapTell); mvCover(GP, h); hoAccTell(h, gwk, gap, diffs, cShort, cOver, sTot, ns, hidAcc); sealIssueTell(h, hidAcc, sealAcc); });   /* v3.96: the notices go out only once the accepting save went through */ RXSEAL = {}; if (GP.rwk && GP.rwk !== GP.mw) shCover(ns.sid); RX = null; RXSTEP = 0; sel = null; qty = 1; tab = 'sell'; closeModal(); spClose(); toast(gap ? 'Accepted after a gap, recorded for ' + gwk : diffs.length ? 'Accepted, differences noted' : 'Accepted, all matched');
 }
 
 /* ---------- president: who are you? ---------- */
