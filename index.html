@@ -116,6 +116,7 @@ nav button.on{color:var(--link);background:var(--soft)}
 .gapA .gl{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:inherit}.gapA .gl b{font-size:inherit}
 .gapA .gpill{margin-top:8px;border-radius:12px;padding:8px;text-align:center;font-weight:700;font-size:inherit;background:rgba(127,127,127,.16)}
 .gapA.gok .gpill{background:var(--ok);color:#fff}.gapA.gbad .gpill{background:var(--exp);color:#fff}
+.spok{background:var(--okb);color:var(--ok);border-left:3px solid var(--ok)}.spbad{background:var(--exp-bg);color:var(--exp);border-left:3px solid var(--exp)}
 .hsafe{background:var(--okb);border-left:4px solid var(--ok);border-radius:8px;padding:8px 10px;font-size:14px;line-height:1.4;margin:6px 0 4px}
 .hnote{background:var(--surface);border-left:4px solid #d9a400;border-radius:8px;padding:8px 10px;font-size:14px;line-height:1.4;margin:6px 0 4px}
 .card.nts{border-left:3px solid var(--line)}.card.nts.cr{border-left-color:var(--soon)}.card.nts.sp{border-left-color:var(--exp)}.card.nts.gw{border-left-color:var(--ok)}.nts .nh{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px}.nts .nh b:last-child{white-space:nowrap}.nts .nl{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line)}.nts .nl small{display:block;color:var(--muted);font-size:12.5px;margin-top:1px}.nts .nf{color:var(--muted);font-size:12.5px;margin-top:4px}   /* the credit / spoiled / goodwill cards on the handover pages */
@@ -311,7 +312,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '4.02', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '4.03', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -607,6 +608,7 @@ function setShift(obj) { var u = {}; for (var k in obj) u['shift.' + k] = obj[k]
 function reverseEvent(b, e) {
   var it = item(e.item), cid = e.cid || rootOf(e.cr || e.person || ''); LE = e.id;   /* the cancelled record carries the same id as the event */
   if (e.type === 'savemove') return 'A savings move cannot be cancelled. Move the money back instead.';
+  if (e.type === 'split') return 'A split cannot be cancelled. Ask a president.';
   if (['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'hoopen', 'repay', 'shortfix', 'hocorr', 'shiftrec', 'watchchg', 'fundshort', 'fundover', 'sealopen', 'sealout', 'advsettle'].indexOf(e.type) >= 0) return 'This entry cannot be cancelled here. It was made with a stock purchase. Ask a president.';
   if (e.type === 'sale') { if (!it) return 'That item no longer exists'; itemInc(b, it.id, { stock: e.qty }); if (e.cr) balInc(b, cid, -e.amt); }
   else if (e.type === 'count') { if (e.qty > 0) { if (!it) return 'That item no longer exists'; itemInc(b, it.id, { stock: e.qty }); } }
@@ -2275,7 +2277,7 @@ function stockSheet() {
     '<div class="card"><h2>Spoiled / damaged</h2><div class="row"><div>' + stepper('sp', ST.spoil) + '</div><div class="grow muted">out of the ' + (it.shelf ? 'shelf' : 'fridge') + '</div></div>' +
     '<button class="btn sec block" data-act="dospoil" style="margin-top:10px"' + (it.stock < 1 || ST.spoil < 1 ? ' disabled' : '') + '>Record spoiled</button></div>' +
     '<div class="card"><h2>Item details</h2><div class="f"><label>Name</label><input id="sd-name" value="' + esc(it.name) + '" autocomplete="off"></div><div class="f"><label>Kept in</label>' + whereSeg('sd-where', it.shelf, 'wsel', ' data-for="sd"') + '</div><div class="row f"><div class="grow"><label>Selling price (each item)</label>' + ig('<input id="sd-price" type="number" inputmode="decimal" min="0" value="' + it.price + '">', '$') + '</div></div>' + unitBlock('sd', it.unit, it.shelf ? (it.per > 1 ? it.per : '') : per(it), it.shelf) + '<div class="f"><label>Cost price each (what you paid)</label>' + ig('<input id="sd-cost" type="number" inputmode="decimal" min="0" value="' + (it.cost || '') + '">', '$') + '</div>' +
-    '<button class="btn sec block" data-act="savedetails">Save details</button><button class="btn red block" data-act="rmitem" style="margin-top:10px">Remove item</button></div>' +
+    '<button class="btn sec block" data-act="splitopen">✂ Split into two items</button><button class="btn sec block" data-act="savedetails" style="margin-top:10px">Save details</button><button class="btn red block" data-act="rmitem" style="margin-top:10px">Remove item</button></div>' +
     (startupOn() ? '' : '<button class="btn red block" data-act="editstock">⚠ Edit stock</button>') + '<div style="margin-top:12px">' + stockInfoHtml(it) + '</div><button class="btn sec block" data-act="close" style="margin-top:10px">Close</button></div>');
 }
 /* ---------- Edit stock by hand: a deliberate, red, recorded last resort ---------- */
@@ -2305,6 +2307,51 @@ function esReview() {
   if (ES.reason === 'Other' && !ES.note.trim()) return toast('Add a note for “Other”');
   var line = function (l, a, b) { return a === b ? '' : '<br>' + l + ' <b>' + a + ' → ' + b + '</b>'; };
   askConfirm('Save this stock change?', '<b>' + esc(it.name) + '</b>' + line(it.shelf ? 'Shelf' : 'Fridge', it.stock, ST.fridge) + (hasCage(it) ? line('Cage', it.cage, ST.cage) : '') + '<br>Reason: <b>' + esc(ES.reason) + '</b>' + (ES.note.trim() ? ' · ' + esc(ES.note.trim()) : '') + '<br><span style="color:var(--exp)">This is recorded in red in History with your name and changes the handover. It cannot be cancelled.</span>', 'Yes, change the stock', esSave);
+}
+/* ---------- Split an item into two (Beers → Stag + Pilsner): the stock moves across in one recorded save, nothing is lost ---------- */
+var SP = null;
+function spMoved() { var it = item(SP.id); return it ? { f: it.stock - SP.f1, c: it.cage - SP.c1 } : { f: 0, c: 0 }; }
+function spCheck() {   /* the message under the numbers, and whether Review can be tapped */
+  var it = item(SP.id), n1 = SP.n1.trim(), n2 = SP.n2.trim(), st = { ok: false, bad: true, msg: '' };
+  if (!it) return st;
+  var df = SP.f1 + SP.f2 - it.stock, dc = hasCage(it) ? SP.c1 + SP.c2 - it.cage : 0, nm = function (x) { return String(x).toLowerCase().replace(/\s+/g, ' ').trim(); };
+  if (df !== 0) st.msg = SP.f1 + ' + ' + SP.f2 + ' = ' + (SP.f1 + SP.f2) + ', but ' + it.stock + (it.shelf ? ' are on the shelf' : ' are in the fridge') + '. ' + Math.abs(df) + (df > 0 ? ' too many' : ' too few');
+  else if (dc !== 0) st.msg = 'In storage ' + SP.c1 + ' + ' + SP.c2 + ' = ' + (SP.c1 + SP.c2) + ', but ' + it.cage + ' are there. ' + Math.abs(dc) + (dc > 0 ? ' too many' : ' too few');
+  else if (!n1 || !n2) { st.msg = 'Give both items a name'; st.bad = false; }
+  else if (nm(n1) === nm(n2)) st.msg = 'The two names must be different';
+  else if (S.items.some(function (i) { return i.id !== it.id && nm(i.name) === nm(n1); })) st.msg = n1 + ' already exists';
+  else if (S.items.some(function (i) { return nm(i.name) === nm(n2); })) st.msg = n2 + ' already exists';
+  else if ((it.open || 0) - (it.stock - SP.f1) < 0 || (it.cageOpen || 0) - (it.cage - SP.c1) < 0) st.msg = 'Too much has been bought or moved on this shift to split it now. Split it at the start of a shift.';
+  else { st.ok = true; st.bad = false; st.msg = SP.f1 + ' + ' + SP.f2 + ' = ' + it.stock + (hasCage(it) && it.cage > 0 ? ' and ' + SP.c1 + ' + ' + SP.c2 + ' = ' + it.cage + ' in storage' : '') + ' · every ' + esc(it.name.toLowerCase()) + ' is counted'; }
+  return st;
+}
+function spLive() {
+  var st = spCheck(), box = $('#sp-st'), btn = $('[data-act=spreview]'); if (!box) return;
+  ['f1', 'f2', 'c1', 'c2'].forEach(function (k) { var i = document.querySelector('[data-step=sp' + k + ']'); if (i && document.activeElement !== i) i.value = SP[k]; });
+  box.className = st.ok ? 'spok' : st.bad ? 'spbad' : 'muted'; box.textContent = (st.ok ? '✓ ' : '') + st.msg; if (btn) btn.disabled = !st.ok;
+}
+function spForm() {
+  var it = item(SP.id); if (!it) return closeModal(); var cg = hasCage(it) && it.cage > 0, unit = unitPl(unitName(it), 2), where = it.shelf ? 'On the shelf' : 'In the fridge';
+  var blk = function (k, lbl, ph) { return '<label>' + lbl + '</label><input data-sp="n' + k + '" value="' + esc(SP['n' + k]) + '" placeholder="' + ph + '" maxlength="40" autocomplete="off"><div class="row" style="margin-top:8px"><div class="grow"><b>' + where + '</b></div><div>' + stepper('spf' + k, SP['f' + k]) + '</div></div>' + (cg ? '<div class="row" style="margin-top:6px"><div class="grow"><b>In storage (' + esc(unit) + ')</b></div><div>' + stepper('spc' + k, SP['c' + k]) + '</div></div>' : ''); };
+  modal('<h2>✂ Split ' + esc(it.name) + '</h2><div class="card"><div class="muted">' + esc(it.name) + ' becomes two items with the same price (' + money(it.price) + '), cost and size. How many of the <b>' + it.stock + '</b> ' + (it.shelf ? 'on the shelf' : 'in the fridge') + (cg ? ' and <b>' + it.cage + '</b> ' + esc(unit) + ' in storage' : '') + ' are each?</div>' +
+    blk(1, 'First item (keeps the history)', 'e.g. Stag') + '<div style="height:12px"></div>' + blk(2, 'Second item', 'e.g. Pilsner') + '<div id="sp-st" style="margin-top:12px;border-radius:12px;padding:10px 12px;font-weight:700"></div></div>' +
+    '<button class="btn block" data-act="spreview" disabled>Review</button><button class="btn sec block" data-act="stockback" style="margin-top:10px">Back</button>', true);
+  spLive();
+}
+function spReview() {
+  var it = item(SP.id), st = spCheck(); if (!it || !st.ok) return toast(st.msg || 'Check the numbers');
+  var n1 = SP.n1.trim(), n2 = SP.n2.trim(), cg = hasCage(it) && it.cage > 0, row = function (a, b) { return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-top:1px solid var(--line)"><span>' + a + '</span><b>' + b + '</b></div>'; }, loc = function (f, c) { return f + (it.shelf ? ' on the shelf' : ' in the fridge') + (cg ? ' · ' + c + ' ' + esc(unitPl(unitName(it), 2)) : ''); };
+  askConfirm('Split ' + esc(it.name) + '?', row('<b>' + esc(n1) + '</b>' + (n1 !== it.name ? ' (was ' + esc(it.name) + ')' : ''), loc(SP.f1, SP.c1)) + row('<b>' + esc(n2) + '</b> (new)', loc(SP.f2, SP.c2)) + row('Price · cost', money(it.price) + ' · ' + (it.cost ? money(it.cost) : 'same')) + row('Total', loc(it.stock, it.cage) + ' → ' + loc(SP.f1 + SP.f2, SP.c1 + SP.c2)) +
+    '<div class="muted" style="margin-top:8px">Nothing is lost or gained, so no shortage and no cash change. Old sales stay under "' + esc(it.name) + '" in History. It is written to History as one entry.</div>', 'Yes, split it', spSave);
+}
+function spSave() {
+  var it = item(SP.id), st = spCheck(); if (!it || !st.ok) return;
+  var n1 = SP.n1.trim(), n2 = SP.n2.trim(), mf = it.stock - SP.f1, mc = hasCage(it) ? it.cage - SP.c1 : 0, nid = newId('items'), b = writeBatch(DB); newEv();
+  var cg = hasCage(it) ? SP.c2 : 0, d2 = { name: n2, price: it.price, per: per(it), stock: SP.f2, open: SP.f2, cage: cg, cageOpen: cg, shelf: !!it.shelf, ord: (typeof it.ord === 'number' ? it.ord : Date.now()) + 1, lastEvent: LE, cost: it.cost || 0 }; if (it.unit) d2.unit = it.unit;
+  b.update(ref('items/' + it.id), { name: n1, stock: SP.f1, open: (it.open || 0) - mf, cage: hasCage(it) ? SP.c1 : it.cage, cageOpen: (it.cageOpen || 0) - mc, lastEvent: LE });
+  b.set(ref('items/' + nid), d2);
+  mkEvent(b, 'split', it, 0, 0, { items: [it.id, nid], name: n1, splitFrom: it.name, splitTo: n2, f1: SP.f1, f2: SP.f2, c1: SP.c1, c2: SP.c2, shelf: !!it.shelf, note: it.name + ' split into ' + n1 + ' (' + SP.f1 + (hasCage(it) && it.cage > 0 ? ' + ' + SP.c1 + ' ' + unitPl(unitName(it), 2) : '') + ') and ' + n2 + ' (' + SP.f2 + (hasCage(it) && it.cage > 0 ? ' + ' + SP.c2 + ' ' + unitPl(unitName(it), 2) : '') + ')' });
+  commit(b); SP = null; closeModal(); toast(it.name + ' split into ' + n1 + ' and ' + n2);
 }
 function esSave() {
   var it = item(ES.id); if (!it) return;
@@ -3271,6 +3318,7 @@ function evRow(e, cancelable) {
   else if (e.type === 'opening') { ic = '📝'; tx = e.fresh ? 'Workplace started' : 'Opening handover entered by hand'; sub = (e.fromName ? 'From ' + e.fromName + ' · ' + e.fromWk + ' shift · ' + e.fromDate + ' ' + HL(e.fromHalf) + (e.fromTime ? ' · taken over at ' + fmtTime(e.fromTime) : '') + ' · ' : '') + 'Cash ' + money(e.cash || 0) + ' · ' + (e.lines || []).length + ' items counted' + (e.prevSales ? ' · previous sales ' + money(num(e.prevSales)) : ''); }
   else if (e.type === 'opencredit') { ic = '📒'; tx = 'Opening credit: ' + (e.crName || plab(e.cr)); sub = e.note || 'Owed from before'; amt = money(e.amt); col = 'var(--soon)'; }
   else if (e.type === 'newitem') { ic = '🆕'; tx = 'New item: ' + e.name; sub = e.note; }
+  else if (e.type === 'split') { ic = '✂️'; tx = 'Item split: ' + (e.splitFrom || '') + ' → ' + e.name + ' and ' + (e.splitTo || ''); sub = e.note; }
   else if (e.type === 'remove') { ic = '🚫'; tx = 'Item removed: ' + e.name; sub = e.note; }
   else if (e.type === 'edit') { ic = '✏️'; tx = 'Item changed: ' + e.name; sub = e.note; }
   else if (e.type === 'costfill') { ic = '🧮'; tx = 'Cost filled in: ' + e.name; sub = e.note; }
@@ -6747,6 +6795,10 @@ document.addEventListener('click', function (e) {
     mkEvent(nb, 'newitem', { id: nid, name: name }, fr, 0, { cases: cg, note: 'New item ' + name + ' at ' + money(num($('#ni-price').value)) }); commit(nb); closeModal(); toast(name + ' added');
   }
   else if (a === 'editstock') esWarn();
+  else if (a === 'splitopen') { var spi = item(ST.id); if (!spi) return; SP = { id: spi.id, n1: spi.name, n2: '', f1: spi.stock, c1: spi.cage, f2: 0, c2: 0 }; spForm(); }
+  else if (/^sp[fc][12][+-]$/.test(a)) { var spk = a.slice(2, 4), spc = SP && item(SP.id); if (!spc) return; SP[spk] = Math.max(0, SP[spk] + (a.slice(-1) === '+' ? 1 : -1)); spLive(); }
+  else if (a === 'spreview') spReview();
+  else if (a === 'stockback') { SP = null; stockSheet(); }
   else if (a === 'esquiet') { var qd = item(ES.id); if (qd && ST.fridge === qd.stock && (!hasCage(qd) || ST.cage === qd.cage)) toast('Nothing has changed'); else esSave(); }
   else if (a === 'stbegin') startupAsk();
   else if (a === 'stsave') { var qd2 = item(ST.id); if (!qd2) return; if (ST.fridge === qd2.stock && (!hasCage(qd2) || ST.cage === qd2.cage)) toast('Nothing has changed'); else { ES = { id: qd2.id, reason: 'Setting up', note: '' }; esSave(); } }
@@ -7145,6 +7197,8 @@ document.addEventListener('input', function (e) {
   else if (t.dataset.oc) { OP.counts[t.dataset.oc] = OP.counts[t.dataset.oc] || {}; OP.counts[t.dataset.oc][t.dataset.f] = t.value; }
   else if (t.id === 'sw-q') $('#sw-list').innerHTML = swList(t.value);
   else if (t.id === 'ip-q') { $('#ip-list').innerHTML = ipList(t.value); $('#ip-new').innerHTML = ipNewRow(t.value); }
+  else if (t.dataset.sp) { SP[t.dataset.sp] = t.value; spLive(); }
+  else if (t.dataset.step && /^sp[fc][12]$/.test(t.dataset.step) && SP) { SP[t.dataset.step.slice(2)] = Math.max(0, Math.floor(num(t.value)) || 0); spLive(); }
   else if (t.dataset.step === 'bl') { BUY.lines[+t.dataset.k].cases = Math.max(0, Math.floor(num(t.value)) || 0); buyLive(); }
   else if (t.dataset.step === 'bu') { BUY.lines[+t.dataset.k].units = Math.max(0, Math.floor(num(t.value)) || 0); buyLive(); }
   else if (t.dataset.step === 'bs' || t.dataset.step === 'bh') { var tl = BUY.lines[+t.dataset.k], tp = lineParts(tl), tn = Math.max(0, Math.floor(num(t.value)) || 0); tl.sto = Math.max(0, Math.min(tp.n, t.dataset.step === 'bs' ? tn : tp.n - tn)); buyLive(); var dd = $('#bw' + t.dataset.k), oth = dd && dd.querySelector('[data-step=' + (t.dataset.step === 'bs' ? 'bh' : 'bs') + ']'); if (oth) oth.value = t.dataset.step === 'bs' ? tp.n - tl.sto : tl.sto; }
