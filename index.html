@@ -116,7 +116,7 @@ nav button.on{color:var(--link);background:var(--soft)}
 .gapA .gl{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:inherit}.gapA .gl b{font-size:inherit}
 .gapA .gpill{margin-top:8px;border-radius:12px;padding:8px;text-align:center;font-weight:700;font-size:inherit;background:rgba(127,127,127,.16)}
 .gapA.gok .gpill{background:var(--ok);color:#fff}.gapA.gbad .gpill{background:var(--exp);color:#fff}
-.spok{background:var(--okb);color:var(--ok);border-left:3px solid var(--ok)}.spbad{background:var(--exp-bg);color:var(--exp);border-left:3px solid var(--exp)}
+.spok{background:var(--ok-bg);color:var(--ok);border-left:3px solid var(--ok)}.spbad{background:var(--exp-bg);color:var(--exp);border-left:3px solid var(--exp)}
 .chips2{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}.chips2 button{border:2px solid var(--link);color:var(--link);background:transparent;border-radius:999px;padding:6px 14px;font-weight:700;font-size:13.5px}
 .mxr{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--line)}.mxr b{font-size:16px;font-weight:600}
 .spgr{display:flex;align-items:center;gap:10px;margin-top:14px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;cursor:pointer}.spgr b{font-size:14px}
@@ -320,7 +320,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '4.07', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '4.08', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2445,6 +2445,10 @@ function esReview() {
 }
 /* ---------- Split an item into two (Beers → Stag + Pilsner): the stock moves across in one recorded save, nothing is lost ---------- */
 var SP = null;   /* SP.grp, SP.gname: also put the two items in a group */
+function spSet(k, v) {   /* the two amounts always add up to what there was before the split: changing one moves the other */
+  var it = item(SP.id); if (!it) return; var tot = k.charAt(0) === 'f' ? it.stock : it.cage, o = k.charAt(0) + (k.charAt(1) === '1' ? '2' : '1');
+  v = Math.max(0, Math.min(tot, Math.floor(+v) || 0)); SP[k] = v; SP[o] = tot - v;
+}
 function spMoved() { var it = item(SP.id); return it ? { f: it.stock - SP.f1, c: it.cage - SP.c1 } : { f: 0, c: 0 }; }
 function spCheck() {   /* the message under the numbers, and whether Review can be tapped */
   var it = item(SP.id), n1 = SP.n1.trim(), n2 = SP.n2.trim(), gn = String(SP.gname || '').trim(), st = { ok: false, bad: true, msg: '' };
@@ -2462,9 +2466,9 @@ function spCheck() {   /* the message under the numbers, and whether Review can 
   else { st.ok = true; st.bad = false; st.msg = SP.f1 + ' + ' + SP.f2 + ' = ' + it.stock + (hasCage(it) && it.cage > 0 && !SP.grp ? ' and ' + SP.c1 + ' + ' + SP.c2 + ' = ' + it.cage + ' in storage' : '') + ' · every ' + esc(it.name.toLowerCase()) + ' is counted'; }
   return st;
 }
-function spLive() {
+function spLive(all) {
   var st = spCheck(), box = $('#sp-st'), btn = $('[data-act=spreview]'); if (!box) return;
-  ['f1', 'f2', 'c1', 'c2'].forEach(function (k) { var i = document.querySelector('[data-step=sp' + k + ']'); if (i && document.activeElement !== i) i.value = SP[k]; });
+  ['f1', 'f2', 'c1', 'c2'].forEach(function (k) { var i = document.querySelector('[data-step=sp' + k + ']'); if (i && (all || document.activeElement !== i)) i.value = SP[k]; });
   box.className = st.ok ? 'spok' : st.bad ? 'spbad' : 'muted'; box.textContent = (st.ok ? '✓ ' : '') + st.msg; if (btn) btn.disabled = !st.ok;
 }
 function spForm() {
@@ -6976,7 +6980,7 @@ document.addEventListener('click', function (e) {
   }
   else if (a === 'splitopen') { var spi = item(ST.id); if (!spi) return; SP = { id: spi.id, n1: spi.name, n2: '', f1: spi.stock, c1: spi.cage, f2: 0, c2: 0, grp: false, gname: '' }; spForm(); }
   else if (a === 'spgrp') { if (SP) { SP.grp = !SP.grp; if (SP.grp && !SP.gname) SP.gname = (item(SP.id) || {}).name || ''; spForm(); } }
-  else if (/^sp[fc][12][+-]$/.test(a)) { var spk = a.slice(2, 4), spc = SP && item(SP.id); if (!spc) return; SP[spk] = Math.max(0, SP[spk] + (a.slice(-1) === '+' ? 1 : -1)); spLive(); }
+  else if (/^sp[fc][12][+-]$/.test(a)) { var spk = a.slice(2, 4), spc = SP && item(SP.id); if (!spc) return; spSet(spk, SP[spk] + (a.slice(-1) === '+' ? 1 : -1)); spLive(true); }
   else if (a === 'spreview') spReview();
   else if (a === 'stockback') { SP = null; stockSheet(); }
   else if (a === 'esquiet') { var qd = item(ES.id); if (qd && ST.fridge === qd.stock && (!hasCage(qd) || ST.cage === qd.cage)) toast('Nothing has changed'); else esSave(); }
@@ -7380,7 +7384,7 @@ document.addEventListener('input', function (e) {
   else if (t.id === 'sw-q') $('#sw-list').innerHTML = swList(t.value);
   else if (t.id === 'ip-q') { $('#ip-list').innerHTML = ipList(t.value); $('#ip-new').innerHTML = ipNewRow(t.value); }
   else if (t.dataset.sp) { SP[t.dataset.sp] = t.value; spLive(); }
-  else if (t.dataset.step && /^sp[fc][12]$/.test(t.dataset.step) && SP) { SP[t.dataset.step.slice(2)] = Math.max(0, Math.floor(num(t.value)) || 0); spLive(); }
+  else if (t.dataset.step && /^sp[fc][12]$/.test(t.dataset.step) && SP) { spSet(t.dataset.step.slice(2), Math.floor(num(t.value)) || 0); spLive(); }
   else if (t.dataset.mx) { var mc = grpCtx(t.dataset.mx); if (mc) { mc.mix[t.dataset.b] = Math.max(0, Math.floor(num(t.value)) || 0); mixLive(t.dataset.mx); } }
   else if (t.dataset.gn) { if (GN) GN[t.dataset.gn] = t.value; }
   else if (t.dataset.step === 'bl') { BUY.lines[+t.dataset.k].cases = Math.max(0, Math.floor(num(t.value)) || 0); buyLive(); }
