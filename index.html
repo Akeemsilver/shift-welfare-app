@@ -119,11 +119,11 @@ nav button.on{color:var(--link);background:var(--soft)}
 .spok{background:var(--okb);color:var(--ok);border-left:3px solid var(--ok)}.spbad{background:var(--exp-bg);color:var(--exp);border-left:3px solid var(--exp)}
 .chips2{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}.chips2 button{border:2px solid var(--link);color:var(--link);background:transparent;border-radius:999px;padding:6px 14px;font-weight:700;font-size:13.5px}
 .mxr{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--line)}.mxr b{font-size:16px;font-weight:600}
+.spgr{display:flex;align-items:center;gap:10px;margin-top:14px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;cursor:pointer}.spgr b{font-size:14px}
 .mixbox{margin-top:12px;padding:12px;border-radius:12px;background:var(--soft)}
 .brow.sub{margin-left:14px;border-left:3px solid var(--link);padding-left:10px}.gtag{font-size:11px;background:var(--soft);color:var(--link);border-radius:6px;padding:1px 6px;margin-left:6px;font-weight:700;vertical-align:middle}
 .stsec{margin:12px 0 0}.sth{font-size:14px;font-weight:700;margin:4px 2px 6px}.sth small{color:var(--muted);font-weight:400;font-size:11px;margin-left:6px}
-.strow2{display:flex;align-items:center;gap:10px;padding:9px 12px 9px 12px;border-top:1px solid var(--line);cursor:pointer}.strow2:first-child{border-top:0}.stundo{border:1px solid var(--secb);background:transparent;color:var(--link);border-radius:8px;padding:3px 9px;font-size:11px;font-weight:700}
-.strow2 .nm{flex:1}.strow2 .nm b{font-size:12px;font-weight:700;line-height:1.2;display:block}.strow2 .nm small{color:var(--muted);font-size:11px}.strow2 .q{font-size:15px;font-weight:500;text-align:right;line-height:1.15}.strow2 .q small{display:block;font-size:11px;color:var(--muted);font-weight:400}
+.strow2{display:flex;align-items:center;gap:10px;padding:9px 12px 9px 12px;border-top:1px solid var(--line);cursor:pointer}.strow2:first-child{border-top:0}.strow2 .nm{flex:1}.strow2 .nm b{font-size:12px;font-weight:700;line-height:1.2;display:block}.strow2 .nm small{color:var(--muted);font-size:11px}.strow2 .q{font-size:15px;font-weight:500;text-align:right;line-height:1.15}.strow2 .q small{display:block;font-size:11px;color:var(--muted);font-weight:400}
 .chk2{width:22px;height:22px;border-radius:7px;border:2px solid var(--secb);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;flex:none}.chk2.on{background:var(--ok);border-color:var(--ok)}
 .hsafe{background:var(--okb);border-left:4px solid var(--ok);border-radius:8px;padding:8px 10px;font-size:14px;line-height:1.4;margin:6px 0 4px}
 .hnote{background:var(--surface);border-left:4px solid #d9a400;border-radius:8px;padding:8px 10px;font-size:14px;line-height:1.4;margin:6px 0 4px}
@@ -320,7 +320,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '4.05', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '4.06', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2397,12 +2397,8 @@ function stoSection() {   /* the bottom of the Count tab: the cases in storage, 
   var n = L.filter(function (i) { return done[i.id]; }).length;
   return '<div class="stsec"><div class="sth">📦 Storage <small>count the cases in the cage</small></div><div class="card" style="padding:0;overflow:hidden">' + L.map(function (i) {
     var d = done[i.id], st = d && d.cases === i.cage;
-    return '<div class="strow2"' + (st ? '' : ' data-act="stchk" data-id="' + i.id + '"') + '><div class="nm"><b>' + esc(i.name) + '</b><small>' + (st ? 'checked by ' + esc(d.byName || '') + ' · ' + hhmm(d.t) : unitPl(unitName(i), 2) + ' of ' + per(i)) + '</small></div><div class="q">' + i.cage + '<small>' + unitPl(unitName(i), i.cage) + '</small></div>' + (st ? '<button class="stundo" data-act="stundo" data-id="' + d.id + '">Undo</button>' : '') + '<div class="chk2' + (st ? ' on' : '') + '">' + (st ? '✓' : '') + '</div></div>';
-  }).join('') + '</div><div class="muted" style="margin:4px 4px 10px;font-size:11px">View only. Tap a row to confirm it. Checked ' + n + ' of ' + L.length + '.</div></div>';
-}
-function stChk(id) {
-  var it = item(id); if (!it) return; if (!inControl()) return toast('Only the person in control can check the storage');
-  $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div><h2>' + esc(it.name) + '</h2><p style="margin-top:0">The app has <b>' + it.cage + ' ' + unitPl(unitName(it), it.cage) + '</b> in storage.<br>Is that what is in the cage?</p><button class="btn green block" data-act="stok" data-id="' + id + '">Yes, ' + it.cage + ' ' + unitPl(unitName(it), it.cage) + '</button><button class="btn sec block" data-act="cno" style="margin-top:10px">Cancel</button><div class="muted" style="margin-top:8px;font-size:12px">View only. The stock cannot be changed from here.</div></div></div>');
+    return '<div class="strow2" data-act="stchk" data-id="' + i.id + '"><div class="nm"><b>' + esc(i.name) + '</b><small>' + (st ? 'checked by ' + esc(d.byName || '') + ' · ' + hhmm(d.t) : unitPl(unitName(i), 2) + ' of ' + per(i)) + '</small></div><div class="q">' + i.cage + '<small>' + unitPl(unitName(i), i.cage) + '</small></div><div class="chk2' + (st ? ' on' : '') + '">' + (st ? '✓' : '') + '</div></div>';
+  }).join('') + '</div><div class="muted" style="margin:4px 4px 10px;font-size:11px">View only. Tick a row once you have counted it, tap again to untick. Checked ' + n + ' of ' + L.length + '.</div></div>';
 }
 function stockSheet() {
   var it = item(ST.id); if (!it) return closeModal(); if (isGrp(it)) return grpSheet();
@@ -2448,20 +2444,22 @@ function esReview() {
   askConfirm('Save this stock change?', '<b>' + esc(it.name) + '</b>' + line(it.shelf ? 'Shelf' : 'Fridge', it.stock, ST.fridge) + (hasCage(it) ? line('Cage', it.cage, ST.cage) : '') + '<br>Reason: <b>' + esc(ES.reason) + '</b>' + (ES.note.trim() ? ' · ' + esc(ES.note.trim()) : '') + '<br><span style="color:var(--exp)">This is recorded in red in History with your name and changes the handover. It cannot be cancelled.</span>', 'Yes, change the stock', esSave);
 }
 /* ---------- Split an item into two (Beers → Stag + Pilsner): the stock moves across in one recorded save, nothing is lost ---------- */
-var SP = null;
+var SP = null;   /* SP.grp, SP.gname: also put the two items in a group */
 function spMoved() { var it = item(SP.id); return it ? { f: it.stock - SP.f1, c: it.cage - SP.c1 } : { f: 0, c: 0 }; }
 function spCheck() {   /* the message under the numbers, and whether Review can be tapped */
-  var it = item(SP.id), n1 = SP.n1.trim(), n2 = SP.n2.trim(), st = { ok: false, bad: true, msg: '' };
+  var it = item(SP.id), n1 = SP.n1.trim(), n2 = SP.n2.trim(), gn = String(SP.gname || '').trim(), st = { ok: false, bad: true, msg: '' };
   if (!it) return st;
-  var df = SP.f1 + SP.f2 - it.stock, dc = hasCage(it) ? SP.c1 + SP.c2 - it.cage : 0, nm = function (x) { return String(x).toLowerCase().replace(/\s+/g, ' ').trim(); };
+  var df = SP.f1 + SP.f2 - it.stock, dc = hasCage(it) && !SP.grp ? SP.c1 + SP.c2 - it.cage : 0, nm = function (x) { return String(x).toLowerCase().replace(/\s+/g, ' ').trim(); };
   if (df !== 0) st.msg = SP.f1 + ' + ' + SP.f2 + ' = ' + (SP.f1 + SP.f2) + ', but ' + it.stock + (it.shelf ? ' are on the shelf' : ' are in the fridge') + '. ' + Math.abs(df) + (df > 0 ? ' too many' : ' too few');
   else if (dc !== 0) st.msg = 'In storage ' + SP.c1 + ' + ' + SP.c2 + ' = ' + (SP.c1 + SP.c2) + ', but ' + it.cage + ' are there. ' + Math.abs(dc) + (dc > 0 ? ' too many' : ' too few');
   else if (!n1 || !n2) { st.msg = 'Give both items a name'; st.bad = false; }
   else if (nm(n1) === nm(n2)) st.msg = 'The two names must be different';
+  else if (SP.grp && !gn) { st.msg = 'Give the group a name'; st.bad = false; }
+  else if (SP.grp && (nm(gn) === nm(n1) || nm(gn) === nm(n2) || S.items.some(function (i) { return i.id !== it.id && (nm(i.name) === nm(gn) || nm(i.gbase || '') === nm(gn)); }))) st.msg = 'The group name must be different from the items: ' + gn;
   else if (S.items.some(function (i) { return i.id !== it.id && nm(i.name) === nm(n1); })) st.msg = n1 + ' already exists';
   else if (S.items.some(function (i) { return nm(i.name) === nm(n2); })) st.msg = n2 + ' already exists';
   else if ((it.open || 0) - (it.stock - SP.f1) < 0 || (it.cageOpen || 0) - (it.cage - SP.c1) < 0) st.msg = 'Too much has been bought or moved on this shift to split it now. Split it at the start of a shift.';
-  else { st.ok = true; st.bad = false; st.msg = SP.f1 + ' + ' + SP.f2 + ' = ' + it.stock + (hasCage(it) && it.cage > 0 ? ' and ' + SP.c1 + ' + ' + SP.c2 + ' = ' + it.cage + ' in storage' : '') + ' · every ' + esc(it.name.toLowerCase()) + ' is counted'; }
+  else { st.ok = true; st.bad = false; st.msg = SP.f1 + ' + ' + SP.f2 + ' = ' + it.stock + (hasCage(it) && it.cage > 0 && !SP.grp ? ' and ' + SP.c1 + ' + ' + SP.c2 + ' = ' + it.cage + ' in storage' : '') + ' · every ' + esc(it.name.toLowerCase()) + ' is counted'; }
   return st;
 }
 function spLive() {
@@ -2470,27 +2468,31 @@ function spLive() {
   box.className = st.ok ? 'spok' : st.bad ? 'spbad' : 'muted'; box.textContent = (st.ok ? '✓ ' : '') + st.msg; if (btn) btn.disabled = !st.ok;
 }
 function spForm() {
-  var it = item(SP.id); if (!it) return closeModal(); var cg = hasCage(it) && it.cage > 0, unit = unitPl(unitName(it), 2), where = it.shelf ? 'On the shelf' : 'In the fridge';
+  var it = item(SP.id); if (!it) return closeModal(); var cg = hasCage(it) && it.cage > 0 && !SP.grp, unit = unitPl(unitName(it), 2), where = it.shelf ? 'On the shelf' : 'In the fridge';
   var blk = function (k, lbl, ph) { return '<label>' + lbl + '</label><input data-sp="n' + k + '" value="' + esc(SP['n' + k]) + '" placeholder="' + ph + '" maxlength="40" autocomplete="off"><div class="row" style="margin-top:8px"><div class="grow"><b>' + where + '</b></div><div>' + stepper('spf' + k, SP['f' + k]) + '</div></div>' + (cg ? '<div class="row" style="margin-top:6px"><div class="grow"><b>In storage (' + esc(unit) + ')</b></div><div>' + stepper('spc' + k, SP['c' + k]) + '</div></div>' : ''); };
   modal('<h2>✂ Split ' + esc(it.name) + '</h2><div class="card"><div class="muted">' + esc(it.name) + ' becomes two items with the same price (' + money(it.price) + '), cost and size. How many of the <b>' + it.stock + '</b> ' + (it.shelf ? 'on the shelf' : 'in the fridge') + (cg ? ' and <b>' + it.cage + '</b> ' + esc(unit) + ' in storage' : '') + ' are each?</div>' +
-    blk(1, 'First item (keeps the history)', 'e.g. Stag') + '<div style="height:12px"></div>' + blk(2, 'Second item', 'e.g. Pilsner') + '<div id="sp-st" style="margin-top:12px;border-radius:12px;padding:10px 12px;font-weight:700"></div></div>' +
+    blk(1, 'First item (keeps the history)', 'e.g. Stag') + '<div style="height:12px"></div>' + blk(2, 'Second item', 'e.g. Pilsner') + '<div class="spgr" data-act="spgrp"><div class="chk2' + (SP.grp ? ' on' : '') + '">' + (SP.grp ? '✓' : '') + '</div><div class="grow"><b>Put them in a group</b><div class="muted" style="font-size:12px">One name for the cases in storage; each brand stays on its own in the fridge.</div></div></div>' + (SP.grp ? '<div class="f" style="margin-top:8px"><label>Group name</label><input data-sp="gname" value="' + esc(SP.gname || '') + '" placeholder="e.g. Beers" maxlength="30" autocomplete="off"></div>' + (hasCage(it) && it.cage > 0 ? '<div class="muted" style="font-size:12px">The ' + it.cage + ' ' + esc(unitPl(unitName(it), it.cage)) + ' in storage will belong to the group.</div>' : '') : '') + '<div id="sp-st" style="margin-top:12px;border-radius:12px;padding:10px 12px;font-weight:700"></div></div>' +
     '<button class="btn block" data-act="spreview" disabled>Review</button><button class="btn sec block" data-act="stockback" style="margin-top:10px">Back</button>', true);
   spLive();
 }
 function spReview() {
   var it = item(SP.id), st = spCheck(); if (!it || !st.ok) return toast(st.msg || 'Check the numbers');
-  var n1 = SP.n1.trim(), n2 = SP.n2.trim(), cg = hasCage(it) && it.cage > 0, row = function (a, b) { return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-top:1px solid var(--line)"><span>' + a + '</span><b>' + b + '</b></div>'; }, loc = function (f, c) { return f + (it.shelf ? ' on the shelf' : ' in the fridge') + (cg ? ' · ' + c + ' ' + esc(unitPl(unitName(it), 2)) : ''); };
-  askConfirm('Split ' + esc(it.name) + '?', row('<b>' + esc(n1) + '</b>' + (n1 !== it.name ? ' (was ' + esc(it.name) + ')' : ''), loc(SP.f1, SP.c1)) + row('<b>' + esc(n2) + '</b> (new)', loc(SP.f2, SP.c2)) + row('Price · cost', money(it.price) + ' · ' + (it.cost ? money(it.cost) : 'same')) + row('Total', loc(it.stock, it.cage) + ' → ' + loc(SP.f1 + SP.f2, SP.c1 + SP.c2)) +
+  var n1 = SP.n1.trim(), n2 = SP.n2.trim(), cg = hasCage(it) && it.cage > 0 && !SP.grp, row = function (a, b) { return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-top:1px solid var(--line)"><span>' + a + '</span><b>' + b + '</b></div>'; }, loc = function (f, c) { return f + (it.shelf ? ' on the shelf' : ' in the fridge') + (cg ? ' · ' + c + ' ' + esc(unitPl(unitName(it), 2)) : ''); };
+  askConfirm('Split ' + esc(it.name) + '?', row('<b>' + esc(n1) + '</b>' + (n1 !== it.name ? ' (was ' + esc(it.name) + ')' : ''), loc(SP.f1, SP.c1)) + row('<b>' + esc(n2) + '</b> (new)', loc(SP.f2, SP.c2)) + row('Price · cost', money(it.price) + ' · ' + (it.cost ? money(it.cost) : 'same')) + (SP.grp ? row('Group', '<b>' + esc(grpTitle(SP.gname.trim(), [n1, n2])) + '</b>') + (hasCage(it) && it.cage > 0 ? row('Storage', it.cage + ' ' + esc(unitPl(unitName(it), it.cage)) + ' go to the group') : '') : '') + row('Total', loc(it.stock, it.cage) + ' → ' + loc(SP.f1 + SP.f2, SP.c1 + SP.c2)) +
     '<div class="muted" style="margin-top:8px">Nothing is lost or gained, so no shortage and no cash change. Old sales stay under "' + esc(it.name) + '" in History. It is written to History as one entry.</div>', 'Yes, split it', spSave);
 }
 function spSave() {
   var it = item(SP.id), st = spCheck(); if (!it || !st.ok) return;
-  var n1 = SP.n1.trim(), n2 = SP.n2.trim(), mf = it.stock - SP.f1, mc = hasCage(it) ? it.cage - SP.c1 : 0, nid = newId('items'), b = writeBatch(DB); newEv();
-  var cg = hasCage(it) ? SP.c2 : 0, d2 = { name: n2, price: it.price, per: per(it), stock: SP.f2, open: SP.f2, cage: cg, cageOpen: cg, shelf: !!it.shelf, ord: (typeof it.ord === 'number' ? it.ord : Date.now()) + 1, lastEvent: LE, cost: it.cost || 0 }; if (it.unit) d2.unit = it.unit;
-  b.update(ref('items/' + it.id), { name: n1, stock: SP.f1, open: (it.open || 0) - mf, cage: hasCage(it) ? SP.c1 : it.cage, cageOpen: (it.cageOpen || 0) - mc, lastEvent: LE });
+  var grp = !!SP.grp, gname = String(SP.gname || '').trim(), gid = grp ? newId('items') : '';
+  var n1 = SP.n1.trim(), n2 = SP.n2.trim(), mf = it.stock - SP.f1, mc = hasCage(it) && !grp ? it.cage - SP.c1 : 0, nid = newId('items'), b = writeBatch(DB); newEv();
+  var cg = hasCage(it) && !grp ? SP.c2 : 0, d2 = { name: n2, price: it.price, per: per(it), stock: SP.f2, open: SP.f2, cage: cg, cageOpen: cg, shelf: !!it.shelf, ord: (typeof it.ord === 'number' ? it.ord : Date.now()) + 1, lastEvent: LE, cost: it.cost || 0 }; if (it.unit) d2.unit = it.unit; if (grp) d2.grpOf = gid;
+  var u1 = { name: n1, stock: SP.f1, open: (it.open || 0) - mf, cage: grp ? 0 : hasCage(it) ? SP.c1 : it.cage, cageOpen: grp ? 0 : (it.cageOpen || 0) - mc, lastEvent: LE }; if (grp) u1.grpOf = gid;
+  b.update(ref('items/' + it.id), u1);
   b.set(ref('items/' + nid), d2);
-  mkEvent(b, 'split', it, 0, 0, { items: [it.id, nid], name: n1, splitFrom: it.name, splitTo: n2, f1: SP.f1, f2: SP.f2, c1: SP.c1, c2: SP.c2, shelf: !!it.shelf, note: it.name + ' split into ' + n1 + ' (' + SP.f1 + (hasCage(it) && it.cage > 0 ? ' + ' + SP.c1 + ' ' + unitPl(unitName(it), 2) : '') + ') and ' + n2 + ' (' + SP.f2 + (hasCage(it) && it.cage > 0 ? ' + ' + SP.c2 + ' ' + unitPl(unitName(it), 2) : '') + ')' });
-  commit(b); SP = null; closeModal(); toast(it.name + ' split into ' + n1 + ' and ' + n2);
+  var gtitle = grp ? grpTitle(gname, [n1, n2]) : '';
+  if (grp) b.set(ref('items/' + gid), { name: gtitle, gbase: gname, isGrp: true, price: it.price, per: per(it), unit: it.unit || 'case', stock: 0, open: 0, cage: it.cage || 0, cageOpen: it.cageOpen || 0, shelf: false, ord: (typeof it.ord === 'number' ? it.ord : Date.now()) - 0.5, lastEvent: LE, cost: it.cost || 0 });
+  mkEvent(b, 'split', it, 0, 0, { items: grp ? [it.id, nid, gid] : [it.id, nid], group: gtitle, name: n1, splitFrom: it.name, splitTo: n2, f1: SP.f1, f2: SP.f2, c1: SP.c1, c2: SP.c2, shelf: !!it.shelf, note: it.name + ' split into ' + n1 + ' (' + SP.f1 + (hasCage(it) && it.cage > 0 && !grp ? ' + ' + SP.c1 + ' ' + unitPl(unitName(it), 2) : '') + ') and ' + n2 + ' (' + SP.f2 + (hasCage(it) && it.cage > 0 && !grp ? ' + ' + SP.c2 + ' ' + unitPl(unitName(it), 2) : '') + ')' + (grp ? ' · grouped as ' + gtitle : '') });
+  commit(b); SP = null; closeModal(); toast(it.name + ' split into ' + n1 + ' and ' + n2 + (grp ? ' · group ' + gname + ' made' : ''));
 }
 function esSave() {
   var it = item(ES.id); if (!it) return; if (isGrp(it)) ST.fridge = it.stock;
@@ -6958,10 +6960,14 @@ document.addEventListener('click', function (e) {
   else if (a === 'gbnew') { var gnm = String((GN && GN.nb) || '').trim(), gpr = num(GN && GN.np); if (!gnm) return toast('Name the brand'); if (!(gpr > 0)) return toast('Enter the selling price'); gbSave(id, [], { name: gnm, price: gpr }); }
   else if (a === 'gbold') { gbSave(b.dataset.g, [id], null); }
   else if (a === 'gbout') { askConfirm('Take it out of the group?', '<b>' + esc((item(id) || {}).name || '') + '</b> becomes a normal item again. Its counts and history stay.', 'Yes, take it out', function () { gbOut(id); }); }
-  else if (a === 'stchk') stChk(id);
-  else if (a === 'stok') { var sti = item(id); closeCf(); if (sti && inControl()) { var sb = writeBatch(DB); newEv(); mkEvent(sb, 'stcheck', sti, 0, 0, { cases: sti.cage, note: sti.cage + ' ' + unitPl(unitName(sti), sti.cage) + ' in storage checked' }); commit(sb); toast(sti.name + ' checked'); } }
-  else if (a === 'stundo') { if (inControl()) cancelEvent(id, 'Storage check undone', true); else toast('Only the person in control can undo'); }
-  else if (a === 'splitopen') { var spi = item(ST.id); if (!spi) return; SP = { id: spi.id, n1: spi.name, n2: '', f1: spi.stock, c1: spi.cage, f2: 0, c2: 0 }; spForm(); }
+  else if (a === 'stchk') {   /* a plain checkbox: tick when counted, tap again to untick. Nothing about the stock changes */
+    var sti = item(id); if (!sti) return; if (!inControl()) return toast('Only the person in control can check the storage');
+    var stev = S.log.filter(function (e) { return e.type === 'stcheck' && e.item === id && e.cases === sti.cage; }).pop();
+    if (stev) cancelEvent(stev.id, 'Storage check undone', true);
+    else { var sb = writeBatch(DB); newEv(); mkEvent(sb, 'stcheck', sti, 0, 0, { cases: sti.cage, note: sti.cage + ' ' + unitPl(unitName(sti), sti.cage) + ' in storage checked' }); commit(sb); }
+  }
+  else if (a === 'splitopen') { var spi = item(ST.id); if (!spi) return; SP = { id: spi.id, n1: spi.name, n2: '', f1: spi.stock, c1: spi.cage, f2: 0, c2: 0, grp: false, gname: '' }; spForm(); }
+  else if (a === 'spgrp') { if (SP) { SP.grp = !SP.grp; if (SP.grp && !SP.gname) SP.gname = (item(SP.id) || {}).name || ''; spForm(); } }
   else if (/^sp[fc][12][+-]$/.test(a)) { var spk = a.slice(2, 4), spc = SP && item(SP.id); if (!spc) return; SP[spk] = Math.max(0, SP[spk] + (a.slice(-1) === '+' ? 1 : -1)); spLive(); }
   else if (a === 'spreview') spReview();
   else if (a === 'stockback') { SP = null; stockSheet(); }
