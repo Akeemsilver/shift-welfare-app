@@ -117,6 +117,14 @@ nav button.on{color:var(--link);background:var(--soft)}
 .gapA .gpill{margin-top:8px;border-radius:12px;padding:8px;text-align:center;font-weight:700;font-size:inherit;background:rgba(127,127,127,.16)}
 .gapA.gok .gpill{background:var(--ok);color:#fff}.gapA.gbad .gpill{background:var(--exp);color:#fff}
 .spok{background:var(--okb);color:var(--ok);border-left:3px solid var(--ok)}.spbad{background:var(--exp-bg);color:var(--exp);border-left:3px solid var(--exp)}
+.chips2{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}.chips2 button{border:2px solid var(--link);color:var(--link);background:transparent;border-radius:999px;padding:6px 14px;font-weight:700;font-size:13.5px}
+.mxr{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--line)}.mxr b{font-size:16px;font-weight:600}
+.mixbox{margin-top:12px;padding:12px;border-radius:12px;background:var(--soft)}
+.brow.sub{margin-left:14px;border-left:3px solid var(--link);padding-left:10px}.gtag{font-size:11px;background:var(--soft);color:var(--link);border-radius:6px;padding:1px 6px;margin-left:6px;font-weight:700;vertical-align:middle}
+.stsec{margin:12px 0 0}.sth{font-size:19px;font-weight:600;margin:6px 4px 6px}.sth small{color:var(--muted);font-weight:400;font-size:14px;margin-left:6px}
+.strow2{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:1px solid var(--line);cursor:pointer}.strow2:first-child{border-top:0}.strow2.done{background:var(--okb)}
+.strow2 .nm{flex:1}.strow2 .nm b{font-size:17px;font-weight:500;display:block}.strow2 .nm small{color:var(--muted);font-size:13px}.strow2 .q{font-size:19px;font-weight:600;text-align:right}.strow2 .q small{display:block;font-size:11px;color:var(--muted);font-weight:400}
+.chk2{width:28px;height:28px;border-radius:8px;border:2px solid var(--secb);display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff}.chk2.on{background:var(--ok);border-color:var(--ok)}
 .hsafe{background:var(--okb);border-left:4px solid var(--ok);border-radius:8px;padding:8px 10px;font-size:14px;line-height:1.4;margin:6px 0 4px}
 .hnote{background:var(--surface);border-left:4px solid #d9a400;border-radius:8px;padding:8px 10px;font-size:14px;line-height:1.4;margin:6px 0 4px}
 .card.nts{border-left:3px solid var(--line)}.card.nts.cr{border-left-color:var(--soon)}.card.nts.sp{border-left-color:var(--exp)}.card.nts.gw{border-left-color:var(--ok)}.nts .nh{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px}.nts .nh b:last-child{white-space:nowrap}.nts .nl{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line)}.nts .nl small{display:block;color:var(--muted);font-size:12.5px;margin-top:1px}.nts .nf{color:var(--muted);font-size:12.5px;margin-top:4px}   /* the credit / spoiled / goodwill cards on the handover pages */
@@ -312,7 +320,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '4.03', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '4.04', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -513,8 +521,56 @@ function tosList() { return (SH().tos || []).map(person).filter(Boolean); }
 function tosText() { return tosList().map(plabel).join(', '); }
 function wsw(w) { return '<span class="sw ' + swc(w) + '">' + esc(w || 'Saved') + '</span>'; }
 function per(i) { return i.per || CFG.perCase; }
+/* ---------- Groups: Beers (Stag, Carib, Pilsner). The group item holds the cases in storage; each brand is a normal item in the fridge (grpOf = the group) ---------- */
+function isGrp(i) { return !!(i && i.isGrp); }
+function brandsOf(g) { return S.items.filter(function (i) { return i.grpOf === g.id; }).sort(function (a, b) { return (a.ord || 0) - (b.ord || 0) || a.name.localeCompare(b.name); }); }
+function grpTitle(base, names) { return base + (names.length ? ' (' + (names.length > 3 ? names.slice(0, 2).join(', ') + ', +' + (names.length - 2) : names.join(', ')) + ')' : ''); }
+function grpBase(g) { return g ? (g.gbase || g.name) : ''; }
+function grpShop(g) { return brandsOf(g).reduce(function (a, b) { return a + (b.stock || 0); }, 0); }
+function mixSum(m) { var t = 0; for (var k in (m || {})) t += Math.max(0, Math.floor(+m[k] || 0)); return t; }
+function mixLastGet(gid) { try { return (JSON.parse(localStorage.getItem('sw_gmix') || '{}') || {})[gid] || null; } catch (e) { return null; } }
+function mixLastSet(gid, m) { try { var o = JSON.parse(localStorage.getItem('sw_gmix') || '{}') || {}; o[gid] = m; localStorage.setItem('sw_gmix', JSON.stringify(o)); } catch (e) {} }
+function mixScaled(gid, need, bs) {   /* the last mix, scaled to the number going now (whole numbers, the rest to the first brand) */
+  var last = mixLastGet(gid); if (!last) return null; var tot = 0, ids = bs.map(function (b) { return b.id; }); ids.forEach(function (id) { tot += Math.max(0, Math.floor(+last[id] || 0)); }); if (!(tot > 0) || !(need > 0)) return null;
+  var out = {}, used = 0, first = ''; ids.forEach(function (id) { var n = Math.floor((Math.max(0, Math.floor(+last[id] || 0)) * need) / tot); if (n > 0) { out[id] = n; used += n; if (!first) first = id; } }); if (first) out[first] += need - used; else return null; return out;
+}
+function mixStatus(need, mix) {
+  var t = mixSum(mix), parts = Object.keys(mix || {}).map(function (id) { return Math.max(0, Math.floor(+mix[id] || 0)); }).filter(function (n) { return n > 0; });
+  if (t === need) return { ok: true, html: '✓ ' + (parts.length > 1 ? parts.join(' + ') + ' = ' : '') + need + ' · all the beers are placed' };
+  return { ok: false, html: t + ' of ' + need + ' · ' + (t < need ? (need - t) + ' still to place' : (t - need) + ' too many') };
+}
+function mixHtml(g, k, mix, need) {   /* the brand question: which brands are in the cases going to the fridge. Every number can be typed; it has to add up */
+  var bs = brandsOf(g); if (!bs.length) return '<div class="bwarn">This group has no brands yet. Add a brand first: Stock → ' + esc(g.name) + '.</div>';
+  var st = mixStatus(need, mix), sc = mixScaled(g.id, need, bs), ex = ' data-k="' + k + '"';
+  return '<div class="chips2">' + bs.map(function (b) { return '<button type="button" data-act="mxall"' + ex + ' data-b="' + b.id + '">All ' + esc(b.name) + '</button>'; }).join('') + (sc ? '<button type="button" data-act="mxlast"' + ex + '>Same as last time (' + Object.keys(sc).map(function (id) { return sc[id]; }).join(' + ') + ')</button>' : '') + '</div>' +
+    bs.map(function (b) { return '<div class="mxr"><b>' + esc(b.name) + '</b><div class="stepper"><button data-act="mx-"' + ex + ' data-b="' + b.id + '" aria-label="Less">−</button><input class="stepin" type="number" inputmode="numeric" min="0" data-mx="' + k + '" data-b="' + b.id + '" value="' + Math.max(0, Math.floor(+(mix || {})[b.id] || 0)) + '" aria-label="' + esc(b.name) + '"><button data-act="mx+"' + ex + ' data-b="' + b.id + '" aria-label="More">+</button></div></div>'; }).join('') +
+    '<div id="mxs-' + k + '" class="' + (st.ok ? 'spok' : 'spbad') + '" style="margin-top:10px;border-radius:12px;padding:10px 12px;font-weight:700">' + st.html + '</div>';
+}
+function grpCtx(k) {   /* what the brand question belongs to: a purchase line, or the Move a case screen */
+  if (k === 'm') { var g = GM && item(GM.gid); return g ? { g: g, mix: GM.mix, need: GM.n * per(g), redraw: gmDraw } : null; }
+  var l = BUY && BUY.lines[+k], it = l && item(l.item); return l && isGrp(it) ? { g: it, mix: (l.mix = l.mix || {}), need: lineParts(l).ds, redraw: render } : null;
+}
+function mixLive(k) { var c = grpCtx(k), box = $('#mxs-' + k); if (!c || !box) return; var st = mixStatus(c.need, c.mix); box.className = st.ok ? 'spok' : 'spbad'; box.innerHTML = st.html; var go = $('#gm-go'); if (go && k === 'm') go.disabled = !st.ok; }
+function mxClick(a, k, bid) {
+  var c = grpCtx(k); if (!c) return; var bs = brandsOf(c.g);
+  if (a === 'mxall') { for (var x in c.mix) delete c.mix[x]; c.mix[bid] = c.need; }
+  else if (a === 'mxlast') { var sc = mixScaled(c.g.id, c.need, bs); if (!sc) return; for (var y in c.mix) delete c.mix[y]; for (var z in sc) c.mix[z] = sc[z]; }
+  else c.mix[bid] = Math.max(0, Math.floor(+c.mix[bid] || 0) + (a === 'mx+' ? 1 : -1));
+  c.redraw();
+}
+function grpMixSlot(l, k) {   /* inside the item's bubble, under the yellow box: shows as soon as a case goes to the shop, hides when none does */
+  var it = item(l.item); if (!isGrp(it)) return ''; var pt = lineParts(l), shopB = pt.bun ? pt.b - pt.sto : 0, w = lineWord(l);
+  var what = [shopB ? shopB + ' ' + unitPl(w, shopB) : '', pt.u ? pt.u + ' ' + unitPl('single', pt.u) : ''].filter(Boolean).join(' + ');
+  return '<div id="bg' + k + '">' + (pt.ds > 0 ? '<div class="mixbox"><b>Which beers are in the ' + esc(what) + ' for the shop?</b><div class="muted" style="margin:2px 0 6px">' + pt.ds + ' in all. They go to the fridge by brand. You can type the numbers.</div>' + mixHtml(it, String(k), l.mix || {}, pt.ds) + '</div>' : '') + '</div>';
+}
+function grpMixMsg(l) {   /* '' when the line is fine; otherwise what is wrong with the brands */
+  var it = item(l.item); if (!isGrp(it)) return ''; var pt = lineParts(l); if (!(pt.ds > 0)) return '';
+  if (!brandsOf(it).length) return 'Add a brand to ' + it.name + ' first';
+  var t = mixSum(l.mix); if (t === pt.ds) return ''; return t < pt.ds ? (pt.ds - t) + ' beers still to place in the shop' : (t - pt.ds) + ' too many beers placed in the shop';
+}
+function grpMixConf(l, li) { if (!isGrp(li) || !l.mix) return ''; var t = brandsOf(li).filter(function (b) { return (l.mix[b.id] || 0) > 0; }).map(function (b) { return esc(b.name) + ' ' + l.mix[b.id]; }); return t.length ? '<br><span class="muted">Shop: ' + t.join(' · ') + '</span>' : ''; }
 /* storage: every fridge item has it; a shelf item has it when it comes in packs (more than 1 in a pack). The unit word (case, pack, box...) belongs to each item */
-function hasCage(i) { return !i.shelf || (i.per > 1) || (i.cage > 0) || (i.cageOpen > 0); }   /* anything can be kept in storage: the cage list shows when there is something in it */
+function hasCage(i) { return !i.grpOf && (!i.shelf || (i.per > 1) || (i.cage > 0) || (i.cageOpen > 0)); }   /* anything can be kept in storage: the cage list shows when there is something in it */
 function unitName(i) { return String((i && i.unit) || (i && i.shelf ? 'pack' : 'case')).toLowerCase(); }
 function unitPl(u, n) { return n === 1 ? u : (/(s|x|ch|sh)$/.test(u) ? u + 'es' : u + 's'); }
 function uLab(i, n) { return n + ' ' + unitPl(unitName(i), n); }
@@ -608,7 +664,8 @@ function setShift(obj) { var u = {}; for (var k in obj) u['shift.' + k] = obj[k]
 function reverseEvent(b, e) {
   var it = item(e.item), cid = e.cid || rootOf(e.cr || e.person || ''); LE = e.id;   /* the cancelled record carries the same id as the event */
   if (e.type === 'savemove') return 'A savings move cannot be cancelled. Move the money back instead.';
-  if (e.type === 'split') return 'A split cannot be cancelled. Ask a president.';
+  if (e.type === 'split' || e.type === 'gmove' || e.type === 'group') return 'This cannot be cancelled here. Ask a president.';
+  if (e.type === 'stcheck') return null;
   if (['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'hoopen', 'repay', 'shortfix', 'hocorr', 'shiftrec', 'watchchg', 'fundshort', 'fundover', 'sealopen', 'sealout', 'advsettle'].indexOf(e.type) >= 0) return 'This entry cannot be cancelled here. It was made with a stock purchase. Ask a president.';
   if (e.type === 'sale') { if (!it) return 'That item no longer exists'; itemInc(b, it.id, { stock: e.qty }); if (e.cr) balInc(b, cid, -e.amt); }
   else if (e.type === 'count') { if (e.qty > 0) { if (!it) return 'That item no longer exists'; itemInc(b, it.id, { stock: e.qty }); } }
@@ -653,8 +710,8 @@ function reverseEvent(b, e) {
   else if (e.type === 'move') { if (!it || it.stock < e.qty) return 'Cannot undo: those items were already sold'; itemInc(b, it.id, { stock: -e.qty, cage: e.cases }); }
   else if (e.type === 'buy' || e.type === 'other') {
     if (e.advId) { var sv0 = advSettleOf(e.advId); if (!sv0 || sv0.sid !== e.sid) return 'This purchase was paid with cash given earlier, in another shift, so it cannot be cancelled here. Ask a president.'; }
-    for (var k = 0; k < (e.lines || []).length; k++) { var l = e.lines[k], li = item(l.item); if (!li || (l.v === 2 ? (li.cage < l.dc || li.stock < l.ds) : (l.shelf ? li.stock : li.cage) < l.cases * (l.pk || 1))) return 'Cannot undo: that stock was already moved or sold'; }
-    (e.lines || []).forEach(function (l) { itemInc(b, l.item, l.v === 2 ? { cage: -l.dc, stock: -l.ds } : l.shelf ? { stock: -l.cases * (l.pk || 1) } : { cage: -l.cases }); });
+    for (var k = 0; k < (e.lines || []).length; k++) { var l = e.lines[k], li = item(l.item); if (!li || (l.mix ? li.cage < l.dc : l.v === 2 ? (li.cage < l.dc || li.stock < l.ds) : (l.shelf ? li.stock : li.cage) < l.cases * (l.pk || 1))) return 'Cannot undo: that stock was already moved or sold'; if (l.mix) for (var bk in l.mix) { var bb = item(bk); if (!bb || bb.stock < l.mix[bk]) return 'Cannot undo: that stock was already moved or sold'; } }
+    (e.lines || []).forEach(function (l) { if (l.mix) { itemInc(b, l.item, { cage: -l.dc }); for (var bk2 in l.mix) itemInc(b, bk2, { stock: -l.mix[bk2] }); } else itemInc(b, l.item, l.v === 2 ? { cage: -l.dc, stock: -l.ds } : l.shelf ? { stock: -l.cases * (l.pk || 1) } : { cage: -l.cases }); });
   }
   else return 'This entry cannot be cancelled';
   return null;
@@ -1136,7 +1193,7 @@ function fundPage(id) {
   wpPage(fundPage, [id], h, true);
 }
 function vCount() {
-  var LI = ordItems(S.items).filter(liveItem), t = totals(), h = owedStrip(), n = LI.filter(function (i) { return cnum(i.id).counted; }).length;
+  var LI = ordItems(S.items).filter(liveItem).filter(function (i) { return !isGrp(i); }), t = totals(), h = owedStrip(), n = LI.filter(function (i) { return cnum(i.id).counted; }).length;
   var stT = storedTotal(), redCash = stT > 0.004 && t.cash + 0.004 < stT, sv = S.savings;
   h += '<div class="tiles"><div class="tile dk"><div class="l">Sales this shift</div><div class="v">' + money(t.sales) + '</div></div>' +
        '<div class="tile dk"><div class="l">Items sold</div><div class="v">' + t.sold + '</div></div>' +
@@ -1151,8 +1208,8 @@ function vCount() {
   return h + ordHint() + '<div class="cgrid">' + LI.map(function (i) {
     var c = cnum(i.id), nl = noteLeft(i, c), nt = !c.counted && nl.extra > 0, cl = c.counted ? ' done' : nt ? ' noted' : i.stock <= 0 ? ' out' : i.stock <= 6 ? ' low' : '';
     var chips = (c.cr ? '<span class="chp cr">' + c.cr + ' credit</span>' : '') + (c.sp ? '<span class="chp sp">' + c.sp + ' spoiled</span>' : '') + (c.gw ? '<span class="chp gw">' + c.gw + ' goodwill</span>' : '');
-    return '<button class="cc' + cl + '" data-act="pick" data-id="' + i.id + '"><div class="cn">' + esc(i.name) + '</div>' + (c.counted ? '' : nt ? '<span class="nt">◐ noted</span>' : '<span class="cpr">' + money(i.price) + '</span>') + '<div class="cv">' + (nt ? '<span class="oldn">' + i.stock + '</span>' + nl.left : i.stock) + '</div><div class="cs">' + (nt ? 'should be left · not counted yet' : hasCage(i) ? '📦 Cage: ' + uLab(i, i.cage) : '🧁 On the shelf') + '</div>' + (nt ? '<div>' + chips + '</div>' : '') + (c.counted ? '<div class="cs" style="margin-top:3px"><span class="pill">Sold ' + Math.max(0, c.sold - c.sp - c.gw) + '</span>' + (c.cr ? ' <span class="pill low">Credit ' + c.cr + '</span>' : '') + (c.sp ? ' <span class="pill out">Spoiled ' + c.sp + '</span>' : '') + (c.gw ? ' <span class="pill" style="background:var(--okb);color:var(--ok)">Goodwill ' + c.gw + '</span>' : '') + '</div><span class="ck">✓ −' + c.sold + '</span>' : '') + '</button>';
-  }).join('') + '</div>' + ordHtml();
+    return '<button class="cc' + cl + '" data-act="pick" data-id="' + i.id + '"><div class="cn">' + esc(i.name) + '</div>' + (c.counted ? '' : nt ? '<span class="nt">◐ noted</span>' : '<span class="cpr">' + money(i.price) + '</span>') + '<div class="cv">' + (nt ? '<span class="oldn">' + i.stock + '</span>' + nl.left : i.stock) + '</div><div class="cs">' + (nt ? 'should be left · not counted yet' : i.grpOf ? '🍺 In the ' + esc(grpBase(item(i.grpOf))) + ' group' : hasCage(i) ? '📦 Cage: ' + uLab(i, i.cage) : '🧁 On the shelf') + '</div>' + (nt ? '<div>' + chips + '</div>' : '') + (c.counted ? '<div class="cs" style="margin-top:3px"><span class="pill">Sold ' + Math.max(0, c.sold - c.sp - c.gw) + '</span>' + (c.cr ? ' <span class="pill low">Credit ' + c.cr + '</span>' : '') + (c.sp ? ' <span class="pill out">Spoiled ' + c.sp + '</span>' : '') + (c.gw ? ' <span class="pill" style="background:var(--okb);color:var(--ok)">Goodwill ' + c.gw + '</span>' : '') + '</div><span class="ck">✓ −' + c.sold + '</span>' : '') + '</button>';
+  }).join('') + '</div>' + stoSection() + ordHtml();
 }
 function cnPreview(it) {
   var c = cnum(it.id), nlh = noteLeft(it, c), miss = it.stock - CN.to, gone = c.sold + miss, sold = Math.max(0, gone - c.sp - c.gw), cash = Math.max(0, sold - c.cr), over = c.cr > sold || c.sp + c.gw > gone;
@@ -1310,6 +1367,7 @@ function loanNext(pid) {
     closeModal(); toast(money(amt) + ' lent to ' + (PK.ng ? PK.ng.name : plab(pid)), id);
   });
 }
+function closeCf() { var c = $('#cf'); if (c) c.remove(); }
 function askConfirm(title, body, yes, fn) {
   CONF = fn;
   $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div><h2>' + title + '</h2><p style="margin-top:0">' + body + '</p><button class="btn green block" data-act="cyes">' + esc(yes) + '</button><button class="btn sec block" data-act="cno" style="margin-top:10px">Go back</button></div></div>');
@@ -2239,17 +2297,19 @@ function startFresh() {
   closeModal(); opCommit([], Math.max(0, num(OP.cash)));
 }
 function vStock() {
-  var su = startupOn(), h = (su ? startupBanner() : '') + '<button class="btn block" data-act="newitem" style="margin-bottom:14px">+ Add a new item</button>';
+  var su = startupOn(), h = (su ? startupBanner() : '') + '<button class="btn block" data-act="newitem" style="margin-bottom:14px">+ Add a new item</button>' + (inControl() ? '<button class="btn sec block" data-act="grpnew" style="margin:-4px 0 14px">🍺 + New group (brands sharing cases)</button>' : '');
   if (!S.items.length) return h + '<div class="card empty">Your items will show here.</div>';
   var nm2 = function (x, y) { return x.name.localeCompare(y.name); }, row = function (i) {
-    return '<button class="bub brow"' + (gone0(i) ? ' style="opacity:.6"' : '') + ' data-act="stockitem" data-id="' + i.id + '"><span class="grow"><span class="n">' + esc(i.name) + '</span><span class="s"><span class="sf"><b class="' + (i.stock <= 0 ? 'z' : '') + '">' + i.stock + '</b> ' + (i.shelf ? 'on shelf' : 'in fridge') + '</span>' + (hasCage(i) ? '<span class="sc">· 📦 ' + uLab(i, i.cage) + ' in storage</span>' : '') + '</span></span><b class="pr">' + money(i.price) + '</b><span class="ch">›</span></button>';
+    if (isGrp(i)) return grpRow(i);
+    return '<button class="bub brow' + (i.grpOf ? ' sub' : '') + '"' + (gone0(i) ? ' style="opacity:.6"' : '') + ' data-act="stockitem" data-id="' + i.id + '"><span class="grow"><span class="n">' + esc(i.name) + '</span><span class="s"><span class="sf"><b class="' + (i.stock <= 0 ? 'z' : '') + '">' + i.stock + '</b> ' + (i.shelf ? 'on shelf' : 'in fridge') + '</span>' + (hasCage(i) ? '<span class="sc">· 📦 ' + uLab(i, i.cage) + ' in storage</span>' : '') + '</span></span><b class="pr">' + money(i.price) + '</b><span class="ch">›</span></button>';
   }, sec = function (title, ic, list) {   /* each place its own card, A to Z, what ran out at the bottom */
     if (!list.length) return '';
-    list = list.filter(function (i) { return !gone0(i); }).sort(nm2).concat(list.filter(gone0).sort(nm2));
+    list = list.filter(function (i) { return !i.grpOf; }); list = list.filter(function (i) { return !gone0(i); }).sort(nm2).concat(list.filter(gone0).sort(nm2));
+    list = list.reduce(function (a, i) { a.push(i); if (isGrp(i)) brandsOf(i).forEach(function (br) { a.push(br); }); return a; }, []);   /* a group's brands sit right under it */
     return '<div class="card brows" style="margin-top:12px"><div class="bsechead"><span>' + ic + '</span><b>' + title + '</b><span class="muted">' + list.length + (list.length === 1 ? ' item' : ' items') + '</span></div>' + list.map(row).join('') + '</div>';
   };
   var strow = function (i) { return '<button class="bub brow" data-act="stockitem" data-id="' + i.id + '"><span class="grow"><span class="n">' + esc(i.name) + '</span></span><b class="pr" style="font-size:15px;color:var(--ink)">' + uLab(i, i.cage) + '</b><span class="ch">›</span></button>'; };
-  var stl = S.items.filter(function (i) { return i.cage > 0; }).sort(nm2), stc = stl.length ? '<div class="card brows" style="margin-top:12px"><div class="bsechead"><span>📦</span><b>Storage</b><span class="muted">' + stl.length + (stl.length === 1 ? ' item' : ' items') + '</span></div>' + stl.map(strow).join('') + '</div>' : '';
+  var stl = S.items.filter(function (i) { return i.cage > 0 && !isGrp(i); }).sort(nm2), stc = stl.length ? '<div class="card brows" style="margin-top:12px"><div class="bsechead"><span>📦</span><b>Storage</b><span class="muted">' + stl.length + (stl.length === 1 ? ' item' : ' items') + '</span></div>' + stl.map(strow).join('') + '</div>' : '';
   h += sec('Fridge', '🧊', S.items.filter(function (i) { return !i.shelf; })) + sec('Shelf', '🧁', S.items.filter(function (i) { return i.shelf; })) + stc + (su ? '<button class="btn block" data-act="stbegin" style="background:var(--okb);margin-top:4px">✓ Start workplace</button><p class="muted">Press when your items are ready. You can still edit items afterwards.</p>' : '') + '<p class="muted">Tap an item to count it, move a case to the fridge, or record spoilage.</p>';
   return h;
 }
@@ -2265,8 +2325,87 @@ function stockView(id) {   /* a person who is not in control can look at an item
     stockInfoHtml(it) +
     '<button class="btn sec block" data-act="close">Close</button></div>');
 }
+function grpRow(i) { return '<button class="bub brow grp" data-act="stockitem" data-id="' + i.id + '"><span class="grow"><span class="n">🍺 ' + esc(i.name) + ' <span class="gtag">group</span></span><span class="s"><span class="sc" style="margin:0">📦 <b>' + uLab(i, i.cage) + '</b> in storage · ' + per(i) + ' each</span></span></span><span class="ch">›</span></button>'; }
+var GM = null, GN = null;
+function grpSheet() {
+  var it = item(ST.id); if (!it) return closeModal(); var bs = brandsOf(it), w = unitName(it);
+  modal('<div class="ps"><div class="row"><h2 class="grow" style="margin:0;font-size:20px">🍺 ' + esc(it.name) + '</h2></div>' +
+    '<div class="card" style="margin-top:12px"><h2>Stock now</h2><div class="row"><div class="grow"><label>In storage (' + unitPl(w, 2) + ' of ' + per(it) + ')</label><b style="font-size:18px;font-weight:600">' + it.cage + '</b></div></div><p class="muted" style="margin:8px 0 0">The cases are counted here. The fridge is counted by brand, below.</p></div>' +
+    (inControl() ? '<div class="card"><h2>Move ' + (w === 'case' ? 'a case' : 'a ' + w) + ' to the fridge</h2><div class="row"><div>' + stepper('sm', ST.move) + '</div><div class="grow muted">= ' + ST.move * per(it) + ' items</div></div><button class="btn sec block" data-act="gmove" style="margin-top:10px"' + (it.cage < 1 || ST.move < 1 || !bs.length ? ' disabled' : '') + '>Choose the brands and move</button></div>' : '') +
+    '<div class="card"><h2>Brands (in the fridge)</h2>' + (bs.length ? bs.map(function (b) { return '<div class="hkv" data-act="stockitem" data-id="' + b.id + '" style="cursor:pointer"><span>' + esc(b.name) + '</span><b>' + b.stock + ' · ' + money(b.price) + ' ›</b></div>'; }).join('') : '<div class="muted">No brands yet.</div>') + (inControl() ? '<button class="btn sec block" data-act="gbadd" style="margin-top:10px">＋ Add a brand</button>' : '') + '</div>' +
+    (inControl() ? '<button class="btn red block" data-act="editstock">⚠ Edit stock</button>' : '') + '<button class="btn sec block" data-act="close" style="margin-top:10px">Close</button></div>');
+}
+function gmDraw() {
+  var g = item(GM.gid); if (!g) return closeModal(); var need = GM.n * per(g), st = mixStatus(need, GM.mix);
+  modal('<h2>Move ' + GM.n + ' ' + unitPl(unitName(g), GM.n) + ' to the fridge</h2><div class="card"><div class="muted" style="margin-bottom:8px">' + GM.n + ' × ' + per(g) + ' = <b>' + need + '</b> items. Which brands are in ' + (GM.n === 1 ? 'the case' : 'the cases') + '? You can type the numbers.</div>' + mixHtml(g, 'm', GM.mix, need) + '</div>' +
+    '<button class="btn block" id="gm-go" data-act="gmgo"' + (st.ok ? '' : ' disabled') + '>Move to the fridge</button><button class="btn sec block" data-act="gmback" style="margin-top:10px">Back</button>', true);
+}
+function gmGo() {
+  var g = item(GM.gid); if (!g) return; var n = GM.n, need = n * per(g), bs = brandsOf(g), mixv = {};
+  if (g.cage < n) return toast('Only ' + g.cage + ' in the cage'); if (mixSum(GM.mix) !== need) return toast('The brands have to add up to ' + need);
+  var b = writeBatch(DB); newEv(); itemInc(b, g.id, { cage: -n }); var ids = [g.id];
+  bs.forEach(function (br) { var q = Math.max(0, Math.floor(+GM.mix[br.id] || 0)); if (q > 0) { mixv[br.id] = q; ids.push(br.id); itemInc(b, br.id, { stock: q }); } });
+  mkEvent(b, 'gmove', g, need, 0, { items: ids, cases: n, mix: mixv, note: uLab(g, n) + ' of ' + g.name + ' to the fridge: ' + bs.filter(function (br) { return mixv[br.id]; }).map(function (br) { return br.name + ' ' + mixv[br.id]; }).join(', ') });
+  mixLastSet(g.id, mixv); commit(b); GM = null; ST = { id: g.id, fridge: g.stock, cage: g.cage - n, move: 0, spoil: 0 }; toast(uLab(g, n) + ' moved to the fridge'); stockSheet();
+}
+function gnDraw() {
+  var cands = S.items.filter(function (i) { return !i.isGrp && !i.grpOf && !i.shelf; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+  modal('<h2>🍺 New group</h2><div class="card"><div class="muted" style="margin-bottom:6px">A group holds the cases in storage. Each brand in it is counted and sold on its own in the fridge.</div><div class="f"><label>Group name</label><input data-gn="base" value="' + esc(GN.base) + '" placeholder="e.g. Beers" maxlength="30" autocomplete="off"></div><div class="f"><label>Items in one case</label><input data-gn="per" type="number" inputmode="numeric" min="2" value="' + esc(GN.per) + '"></div>' +
+    '<label>Which items are brands of it?</label><div class="list">' + (cands.length ? cands.map(function (i) { return '<div data-act="gnpick" data-id="' + i.id + '"><div class="grow"><b>' + esc(i.name) + '</b><div class="muted">' + i.stock + ' in fridge' + (i.cage ? ' · ' + uLab(i, i.cage) + ' in storage' : '') + '</div></div>' + (GN.pick[i.id] ? '<span class="pill">✓</span>' : '') + '</div>'; }).join('') : '<div class="muted">No items to add. Make the brands first with + Add a new item.</div>') + '</div></div>' +
+    '<button class="btn block" data-act="gngo">Make the group</button><button class="btn sec block" data-act="close" style="margin-top:10px">Cancel</button>', true);
+}
+function grpPutIn(b, g, ids) {   /* move existing items into the group: their cases in storage become the group's; returns what was added, or an error text */
+  var add = 0, addO = 0, i; for (var k = 0; k < ids.length; k++) { i = item(ids[k]); if (!i) return { err: 'Item not found' }; if ((i.cage || 0) > 0 && per(i) !== per(g)) return { err: i.name + ' comes in cases of ' + per(i) + ', not ' + per(g) + '. Empty its storage first.' }; add += i.cage || 0; addO += i.cageOpen || 0; }
+  ids.forEach(function (id) { b.update(ref('items/' + id), { grpOf: g.id, cage: 0, cageOpen: 0, lastEvent: LE }); }); return { add: add, addO: addO };
+}
+function gnGo() {
+  var base = String(GN.base || '').trim(), pr = Math.floor(num(GN.per)), ids = Object.keys(GN.pick).filter(function (k) { return GN.pick[k]; });
+  if (!base) return toast('Name the group'); if (!(pr >= 2)) return toast('How many items are in one case?'); if (!ids.length) return toast('Pick at least one brand');
+  if (S.items.some(function (i) { return nkey(i.name) === nkey(base) || nkey(i.gbase || '') === nkey(base); })) return toast(base + ' already exists');
+  var gid = newId('items'), b = writeBatch(DB), first = item(ids[0]); newEv(); var g = { id: gid, per: pr, name: base }, r = grpPutIn(b, g, ids); if (r.err) return toast(r.err);
+  var names = ids.map(function (id) { return item(id).name; }), title = grpTitle(base, names), cost = ids.map(function (id) { return item(id).cost || 0; }).filter(Boolean)[0] || 0;
+  b.set(ref('items/' + gid), { name: title, gbase: base, isGrp: true, price: first.price, per: pr, unit: first.unit || 'case', stock: 0, open: 0, cage: r.add, cageOpen: r.addO, shelf: false, ord: Math.min.apply(null, ids.map(function (id) { return item(id).ord || 0; })) - 0.5, lastEvent: LE, cost: cost });
+  mkEvent(b, 'group', { id: gid, name: title }, 0, 0, { items: [gid].concat(ids), note: 'Group ' + title + ' made · ' + r.add + ' ' + unitPl(first.unit || 'case', r.add) + ' in storage' });
+  commit(b); GN = null; closeModal(); toast(base + ' group made');
+}
+function gbDraw(gid) {
+  var g = item(gid); if (!g) return; var cands = S.items.filter(function (i) { return !i.isGrp && !i.grpOf && !i.shelf; }).sort(function (a, b) { return a.name.localeCompare(b.name); }), last = brandsOf(g).slice(-1)[0];
+  modal('<h2>＋ Add a brand to ' + esc(grpBase(g)) + '</h2><div class="card"><label style="margin-top:0">A new brand</label><div class="f"><input data-gn="nb" placeholder="Brand name, e.g. Carib" maxlength="30" autocomplete="off"></div><div class="f"><label>Selling price (each)</label><input data-gn="np" type="number" inputmode="decimal" min="0" value="' + esc(last ? last.price : g.price || '') + '"></div><button class="btn block" data-act="gbnew" data-id="' + gid + '">Add the new brand</button></div>' +
+    (cands.length ? '<div class="card"><label style="margin-top:0">Or an item you already have</label><div class="list">' + cands.map(function (i) { return '<div data-act="gbold" data-id="' + i.id + '" data-g="' + gid + '"><div class="grow"><b>' + esc(i.name) + '</b><div class="muted">' + i.stock + ' in fridge' + (i.cage ? ' · ' + uLab(i, i.cage) + ' in storage' : '') + '</div></div><span class="muted">add ›</span></div>'; }).join('') + '</div></div>' : '') +
+    '<button class="btn sec block" data-act="gbback" data-id="' + gid + '">Back</button>', true);
+}
+function gbSave(gid, ids, nb) {
+  var g = item(gid); if (!g) return; var b = writeBatch(DB); newEv(); var add = 0, addO = 0, newId0 = '', r;
+  if (ids.length) { r = grpPutIn(b, g, ids); if (r.err) return toast(r.err); add = r.add; addO = r.addO; }
+  var nm = nb ? nb.name : '';
+  if (nb) { if (S.items.some(function (i) { return nkey(i.name) === nkey(nb.name); })) return toast(nb.name + ' already exists'); newId0 = newId('items'); b.set(ref('items/' + newId0), { name: nb.name, price: nb.price, per: per(g), unit: g.unit || 'case', stock: 0, open: 0, cage: 0, cageOpen: 0, shelf: false, ord: Date.now(), lastEvent: LE, cost: g.cost || 0, grpOf: gid }); }
+  var names = brandsOf(g).map(function (x) { return x.name; }).concat(ids.map(function (id) { return item(id).name; })).concat(nm ? [nm] : []), title = grpTitle(grpBase(g), names);
+  b.update(ref('items/' + gid), { name: title, cage: (g.cage || 0) + add, cageOpen: (g.cageOpen || 0) + addO, lastEvent: LE });
+  mkEvent(b, 'group', g, 0, 0, { items: [gid].concat(ids, newId0 ? [newId0] : []), name: title, note: (nm || ids.map(function (id) { return item(id).name; }).join(', ')) + ' added to ' + grpBase(g) });
+  commit(b); ST = { id: gid, fridge: 0, cage: (g.cage || 0) + add, move: 0, spoil: 0 }; toast((nm || 'Brand') + ' added'); grpSheet();
+}
+function gbOut(id) {   /* take a brand out of its group: it keeps its history and becomes a normal item */
+  var br = item(id), g = br && item(br.grpOf); if (!br || !g) return; var b = writeBatch(DB); newEv();
+  b.update(ref('items/' + id), { grpOf: deleteField(), lastEvent: LE });
+  var names = brandsOf(g).filter(function (x) { return x.id !== id; }).map(function (x) { return x.name; }), title = grpTitle(grpBase(g), names);
+  b.update(ref('items/' + g.id), { name: title, lastEvent: LE });
+  mkEvent(b, 'group', g, 0, 0, { items: [g.id, id], name: title, note: br.name + ' taken out of ' + grpBase(g) }); commit(b); closeModal(); toast(br.name + ' is a normal item again');
+}
+function stoSection() {   /* the bottom of the Count tab: the cases in storage, view only; a tick says someone looked at them */
+  var L = S.items.filter(function (i) { return (i.cage || 0) > 0 && (isGrp(i) || hasCage(i)); }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+  if (!L.length) return ''; var done = {}; S.log.forEach(function (e) { if (e.type === 'stcheck' && e.item) done[e.item] = e; });
+  var n = L.filter(function (i) { return done[i.id]; }).length;
+  return '<div class="stsec"><div class="sth">📦 Storage <small>count the cases in the cage</small></div><div class="card" style="padding:0;overflow:hidden">' + L.map(function (i) {
+    var d = done[i.id], st = d && d.cases === i.cage;
+    return '<div class="strow2' + (st ? ' done' : '') + '" data-act="stchk" data-id="' + i.id + '"><div class="nm"><b>' + esc(i.name) + '</b><small>' + (st ? '✓ checked by ' + esc(d.byName || '') + ' · ' + hhmm(d.t) : unitPl(unitName(i), 2) + ' of ' + per(i)) + '</small></div><div class="q">' + i.cage + '<small>' + unitPl(unitName(i), i.cage) + '</small></div><div class="chk2' + (st ? ' on' : '') + '">' + (st ? '✓' : '') + '</div></div>';
+  }).join('') + '</div><div class="muted" style="margin:4px 6px 10px;font-size:13px">View only. Tap a row to confirm it. Checked ' + n + ' of ' + L.length + '.</div></div>';
+}
+function stChk(id) {
+  var it = item(id); if (!it) return; if (!inControl()) return toast('Only the person in control can check the storage');
+  $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div><h2>' + esc(it.name) + '</h2><p style="margin-top:0">The app has <b>' + it.cage + ' ' + unitPl(unitName(it), it.cage) + '</b> in storage.<br>Is that what is in the cage?</p><button class="btn green block" data-act="stok" data-id="' + id + '">Yes, ' + it.cage + ' ' + unitPl(unitName(it), it.cage) + '</button><button class="btn sec block" data-act="stdiff" data-id="' + id + '" style="margin-top:10px">It\'s different</button><button class="btn sec block" data-act="cno" style="margin-top:10px">Cancel</button></div></div>');
+}
 function stockSheet() {
-  var it = item(ST.id); if (!it) return closeModal();
+  var it = item(ST.id); if (!it) return closeModal(); if (isGrp(it)) return grpSheet();
   modal('<div class="ps"><div class="row"><h2 class="grow" style="margin:0;font-size:21px">' + esc(it.name) + '</h2><b style="color:var(--link);font-size:21px;margin-right:10px">' + money(it.price) + '</b></div>' +
     (startupOn() ? '<div class="card" style="margin-top:12px"><h2>Stock now</h2><div class="dest' + (ST.fridge > 0 ? ' on' : '') + '"><div class="dn"><span class="di">' + (it.shelf ? '🧁' : '🧊') + '</span><div><b>Shop</b><span>' + (it.shelf ? 'on the shelf, ready to sell' : 'in the fridge, ready to sell') + '</span></div></div>' + stepper('sf', ST.fridge) + '</div>' + (hasCage(it) ? '<div class="dest' + (ST.cage > 0 ? ' on' : '') + '"><div class="dn"><span class="di">📦</span><div><b>Storage</b><span>whole ' + unitPl(unitName(it), 2) + ' only, in the cage</span></div></div>' + stepper('sg', ST.cage) + '</div>' : '') + '<p class="muted" style="margin:8px 0 8px">You are setting up, so you can change these directly. They are saved quietly.</p><button class="btn block" data-act="stsave">Save counts</button></div>' :
     '<div class="card" style="margin-top:12px"><h2>Stock now</h2><div class="row"><div class="grow"><label>' + (it.shelf ? 'On the shelf' : 'In the fridge') + '</label><b style="font-size:18px;font-weight:600">' + it.stock + '</b></div>' +
@@ -2277,7 +2416,7 @@ function stockSheet() {
     '<div class="card"><h2>Spoiled / damaged</h2><div class="row"><div>' + stepper('sp', ST.spoil) + '</div><div class="grow muted">out of the ' + (it.shelf ? 'shelf' : 'fridge') + '</div></div>' +
     '<button class="btn sec block" data-act="dospoil" style="margin-top:10px"' + (it.stock < 1 || ST.spoil < 1 ? ' disabled' : '') + '>Record spoiled</button></div>' +
     '<div class="card"><h2>Item details</h2><div class="f"><label>Name</label><input id="sd-name" value="' + esc(it.name) + '" autocomplete="off"></div><div class="f"><label>Kept in</label>' + whereSeg('sd-where', it.shelf, 'wsel', ' data-for="sd"') + '</div><div class="row f"><div class="grow"><label>Selling price (each item)</label>' + ig('<input id="sd-price" type="number" inputmode="decimal" min="0" value="' + it.price + '">', '$') + '</div></div>' + unitBlock('sd', it.unit, it.shelf ? (it.per > 1 ? it.per : '') : per(it), it.shelf) + '<div class="f"><label>Cost price each (what you paid)</label>' + ig('<input id="sd-cost" type="number" inputmode="decimal" min="0" value="' + (it.cost || '') + '">', '$') + '</div>' +
-    '<button class="btn sec block" data-act="splitopen">✂ Split into two items</button><button class="btn sec block" data-act="savedetails" style="margin-top:10px">Save details</button><button class="btn red block" data-act="rmitem" style="margin-top:10px">Remove item</button></div>' +
+    '<button class="btn sec block" data-act="splitopen">✂ Split into two items</button><button class="btn sec block" data-act="savedetails" style="margin-top:10px">Save details</button>' + (it.grpOf ? '<button class="btn sec block" data-act="gbout" data-id="' + it.id + '" style="margin-top:10px">Take out of the ' + esc(grpBase(item(it.grpOf))) + ' group</button>' : '') + '<button class="btn red block" data-act="rmitem" style="margin-top:10px">Remove item</button></div>' +
     (startupOn() ? '' : '<button class="btn red block" data-act="editstock">⚠ Edit stock</button>') + '<div style="margin-top:12px">' + stockInfoHtml(it) + '</div><button class="btn sec block" data-act="close" style="margin-top:10px">Close</button></div>');
 }
 /* ---------- Edit stock by hand: a deliberate, red, recorded last resort ---------- */
@@ -2354,7 +2493,7 @@ function spSave() {
   commit(b); SP = null; closeModal(); toast(it.name + ' split into ' + n1 + ' and ' + n2);
 }
 function esSave() {
-  var it = item(ES.id); if (!it) return;
+  var it = item(ES.id); if (!it) return; if (isGrp(it)) ST.fridge = it.stock;
   var df = ST.fridge - it.stock, dg = hasCage(it) ? ST.cage - it.cage : 0, b = writeBatch(DB); newEv();
   var cut = (df < 0 ? -df : 0) + (dg < 0 ? -dg * per(it) : 0);
   itemInc(b, it.id, { stock: df, cage: dg });
@@ -2476,6 +2615,7 @@ function lineMissing(l) {   /* what is still missing before this item counts as 
   if (!isNew && !it) return 'Choose an item';
   if (isNew) { if (!l.name.trim()) return 'Name the new item'; if (!(num(l.price) > 0)) return 'Enter the selling price'; if (l.kind !== 'item' && lineP(l) < 2) return 'Enter how many items are in one ' + l.kind; }
   if (lineParts(l).items < 1) return 'Choose how many you bought';
+  var gmm = grpMixMsg(l); if (gmm) return gmm;
   if (!BUY.other && BUY.lines.length > 1 && BUY.mode !== 'total' && !(num(l.cost) > 0)) return 'Enter what ' + lineCountText(l) + ' cost, or choose “No, only a total” on the bill';
   return '';
 }
@@ -2518,8 +2658,8 @@ function buyLineHtml(l, k) {
     '<div class="bsec">How many did you buy?</div>' + qPair(bun ? [capW(unitPl(w, 2)), p + ' in a ' + w, 'bl', t.b] : null, ['Singles', 'loose items', 'bu', t.u], ex) + '<div class="bsep"></div>' +
     '<div class="bsec">Where are they going?</div><div class="muted" style="font-size:12px;margin-bottom:4px">Tap a place to send them all there, or change the numbers. They always add up to what you bought.</div>' +
     '<div id="bw' + k + '" data-h="' + esc(destRows(l, k)) + '">' + destRows(l, k) + '</div>' +
-    '<div id="bs' + k + '" style="padding:10px;border-radius:10px;background:var(--soon-bg);margin-top:12px;font-size:14px">' + buySummary(l) + '</div>' + costBlock(l, k) +
-    (it ? '<div style="margin-top:12px"><div class="muted" style="font-size:11px;margin-bottom:4px">Right now (counted by the app)</div><div class="row" style="gap:8px"><div class="grow">' + lockBox(it.stock, 'in the shop') + '</div><div class="grow">' + lockBox(it.cage || 0, bun ? unitPl(unitName(it), it.cage || 0) + ' in storage' : 'in storage') + '</div></div></div>' : (isNew ? '<div style="margin-top:12px"><div class="muted" style="font-size:11px;margin-bottom:4px">Right now (counted by the app)</div><div class="bnote">A new item starts at 0.</div></div>' : '')) +
+    '<div id="bs' + k + '" style="padding:10px;border-radius:10px;background:var(--soon-bg);margin-top:12px;font-size:14px">' + buySummary(l) + '</div>' + grpMixSlot(l, k) + costBlock(l, k) +
+    (it ? '<div style="margin-top:12px"><div class="muted" style="font-size:11px;margin-bottom:4px">Right now (counted by the app)</div><div class="row" style="gap:8px"><div class="grow">' + lockBox(isGrp(it) ? grpShop(it) : it.stock, 'in the shop') + '</div><div class="grow">' + lockBox(it.cage || 0, bun ? unitPl(unitName(it), it.cage || 0) + ' in storage' : 'in storage') + '</div></div></div>' : (isNew ? '<div style="margin-top:12px"><div class="muted" style="font-size:11px;margin-bottom:4px">Right now (counted by the app)</div><div class="bnote">A new item starts at 0.</div></div>' : '')) +
     '<div id="bm' + k + '">' + (bad ? '<div class="bwarn">⚠ Not finished: ' + esc(miss) + '. It folds once it is complete.</div>' : '') + '</div>' +
     (BUY.lines.length > 1 ? '<div style="margin-top:10px"><button class="btn sec sm" data-act="bldel" ' + ex + '>Remove</button></div>' : '') + '</div></div>';
   return h;
@@ -2584,8 +2724,8 @@ function billBar() {
 /* item picker for purchase bill lines: search or scroll, alphabetical */
 var IP = null;
 function ipList(q) {
-  var k = nkey(q), l = S.items.filter(function (i) { return !k || nkey(i.name).indexOf(k) >= 0; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
-  var h = l.map(function (i) { return '<div data-act="ippick" data-id="' + i.id + '"><div class="grow"><b>' + esc(i.name) + '</b><div class="muted">' + ((i.shelf ? i.stock + ' on shelf' : i.stock + ' in fridge') + (hasCage(i) ? ' · ' + uLab(i, i.cage) : '')) + '</div></div>' + (i.id === IP.cur ? '<span class="pill">✓</span>' : '') + '</div>'; }).join('');
+  var k = nkey(q), l = S.items.filter(function (i) { return !i.grpOf && (!k || nkey(i.name).indexOf(k) >= 0); }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+  var h = l.map(function (i) { return '<div data-act="ippick" data-id="' + i.id + '"><div class="grow"><b>' + esc(i.name) + '</b><div class="muted">' + ((isGrp(i) ? uLab(i, i.cage) + ' in storage · ' + brandsOf(i).length + ' brands' : (i.shelf ? i.stock + ' on shelf' : i.stock + ' in fridge') + (hasCage(i) ? ' · ' + uLab(i, i.cage) : ''))) + '</div></div>' + (i.id === IP.cur ? '<span class="pill">✓</span>' : '') + '</div>'; }).join('');
   return h;
 }
 function ipNewRow(q) { return '<div data-act="ipnew" style="background:var(--surface);border:2px solid var(--secb);border-radius:10px;padding:10px 12px;margin-top:8px;cursor:pointer"><b>+ New item' + (q.trim() ? ' “' + esc(q.trim()) + '”' : ' (not on the list)') + '</b></div>'; }   /* always at the top, under the search box */
@@ -2664,8 +2804,16 @@ function buySave() {
       ln.item = nid; ln.name = l.name.trim(); BDEST[nid] = pt.d === 'split' ? 'store' : pt.d;
     } else {
       var it = item(l.item); if (!it) return toast('Pick an item');
+      if (isGrp(it)) {   /* a group: the cases go to storage on the group, what goes to the shop is placed by brand */
+        var gmsg = grpMixMsg(l); if (gmsg) return toast(gmsg);
+        var gid0 = { cage: pt.dc }; gid0.cost = ce; if (!it.cost && ce > 0) fills.push({ id: it.id, cost: ce }); itemInc(b, it.id, gid0);
+        var mixv = {}; brandsOf(it).forEach(function (br) { var nn = Math.max(0, Math.floor(num((l.mix || {})[br.id]))); if (nn > 0) { mixv[br.id] = nn; var bd = { stock: nn }; bd.cost = ce; if (!br.cost && ce > 0) fills.push({ id: br.id, cost: ce }); itemInc(b, br.id, bd); } });
+        if (Object.keys(mixv).length) { ln.mix = mixv; mixLastSet(it.id, mixv); }
+        ln.item = it.id; ln.name = it.name;
+      } else {
       var idl = { cage: pt.dc, stock: pt.ds }; idl.cost = ce; if (!it.cost && ce > 0) fills.push({ id: it.id, cost: ce }); itemInc(b, it.id, idl);
       ln.item = it.id; ln.name = it.name;
+      }
     }
     lines.push(ln);
   }
@@ -2673,7 +2821,7 @@ function buySave() {
   var when = BUY.when ? new Date(BUY.when).getTime() : Date.now();
   if (!BUY.other && !S.suppliers.some(function (s) { return nkey(s.name) === nkey(supName); })) b.set(ref('suppliers/' + newId('suppliers')), { name: supName, nameKey: nkey(supName) });
   var tc = lines.reduce(function (a, l) { return a + l.items; }, 0);
-  mkEvent(b, BUY.other ? 'other' : 'buy', null, tc, BUY.other ? 0 : paid, { invoice: BUY.other ? 0 : total, advId: sp ? sp.a.id : '', writeoff: BUY.other ? 0 : wo, name: BUY.other ? 'Added stock' : 'Purchase', lines: lines, supplier: BUY.other ? '' : supName, tax: BUY.other ? 0 : num(BUY.tax), receipt: BUY.other ? '' : (BUY.receipt || ''), note: BUY.other ? BUY.note.trim() : '', t: when, items: lines.map(function (l) { return l.item; }) });
+  mkEvent(b, BUY.other ? 'other' : 'buy', null, tc, BUY.other ? 0 : paid, { invoice: BUY.other ? 0 : total, advId: sp ? sp.a.id : '', writeoff: BUY.other ? 0 : wo, name: BUY.other ? 'Added stock' : 'Purchase', lines: lines, supplier: BUY.other ? '' : supName, tax: BUY.other ? 0 : num(BUY.tax), receipt: BUY.other ? '' : (BUY.receipt || ''), note: BUY.other ? BUY.note.trim() : '', t: when, items: lines.reduce(function (a, l) { a.push(l.item); Object.keys(l.mix || {}).forEach(function (id) { a.push(id); }); return a; }, []) });
   if (sp) mkEvent(b, 'advsettle', null, 1, sp.change, { name: 'Stock purchase paid with cash given earlier', advId: sp.a.id, buyId: eid, bill: total, advAmt: sp.a.amt, extra: sp.extra, supplier: supName, advTo: sp.a.advTo || '' }, newId('events'));   /* settles the cash given earlier: any change goes back into the cash on hand */
   var rcp = BUY.other ? '' : (BUY.receipt || ''), isBuy = !BUY.other, tot0 = total;
   BUY = null; toast('Stock added', eid); render();
@@ -2763,9 +2911,10 @@ function sheetRows() {
   return ordItems(S.items).map(function (i) {
     var L = S.log.filter(function (e) { return e.item === i.id; }), s = function (f) { return L.reduce(function (a, e) { return a + f(e); }, 0); };
     var lines = function (types, unitsOnly) { return S.log.reduce(function (a, e) { return types.indexOf(e.type) < 0 ? a : a + (e.lines || []).reduce(function (x, l) { return l.item !== i.id ? x : l.v === 2 ? x + (unitsOnly ? l.ds : l.dc) : (hasCage(i) ? (l.by === 'unit') === !!unitsOnly : !unitsOnly) ? x + l.cases * (l.pk || 1) : x; }, 0); }, 0); };
+    var mixIn = function (types) { return S.log.reduce(function (a, e) { return types.indexOf(e.type) < 0 ? a : a + (e.lines || []).reduce(function (x, l) { return x + ((l.mix || {})[i.id] || 0); }, 0); }, 0); }, gmv = S.log.reduce(function (a, e) { return e.type === 'gmove' ? a + ((e.mix || {})[i.id] || 0) : a; }, 0);   /* brands: what came in through a group purchase or a case moved to the fridge */
     var R = { id: i.id, shelf: !!i.shelf, store: hasCage(i), direct: !hasCage(i), unit: unitName(i), name: i.name, price: i.price, per: per(i), open: i.open || 0, stock: i.stock, cageOpen: i.cageOpen || 0, cage: i.cage,
-      gone: s(function (e) { return e.type === 'sale' || e.type === 'count' ? e.qty : 0; }), soldAmt: s(function (e) { return e.type === 'sale' || e.type === 'count' ? e.amt : 0; }), crQ: s(function (e) { return e.type === 'cnote' && !creditCover().set[e.id] ? e.qty : 0; }), crAmt: s(function (e) { return e.type === 'cnote' && !creditCover().set[e.id] ? e.amt : 0; }), spQ: s(function (e) { return e.type === 'snote' ? e.qty : 0; }), spAmt: s(function (e) { return e.type === 'snote' ? e.amt : 0; }), gwQ: s(function (e) { return e.type === 'gnote' ? e.qty : 0; }), gwAmt: s(function (e) { return e.type === 'gnote' ? e.amt : 0; }), counted: L.some(function (e) { return e.type === 'count'; }), moved: s(function (e) { return e.type === 'move' ? e.qty : 0; }), movedCases: s(function (e) { return e.type === 'move' ? e.cases : 0; }),
-      spoil: s(function (e) { return e.type === 'spoil' ? e.qty : 0; }), adj: s(function (e) { return e.type === 'adjust' ? e.qty : 0; }), edit: s(function (e) { return e.type === 'stockedit' ? e.qty : 0; }), cedit: s(function (e) { return e.type === 'stockedit' ? e.cases : 0; }), cadj: s(function (e) { return e.type === 'cageadj' ? e.qty : 0; }), bought: lines(['buy', 'other']), ub: lines(['buy', 'other'], true) };
+      gone: s(function (e) { return e.type === 'sale' || e.type === 'count' ? e.qty : 0; }), soldAmt: s(function (e) { return e.type === 'sale' || e.type === 'count' ? e.amt : 0; }), crQ: s(function (e) { return e.type === 'cnote' && !creditCover().set[e.id] ? e.qty : 0; }), crAmt: s(function (e) { return e.type === 'cnote' && !creditCover().set[e.id] ? e.amt : 0; }), spQ: s(function (e) { return e.type === 'snote' ? e.qty : 0; }), spAmt: s(function (e) { return e.type === 'snote' ? e.amt : 0; }), gwQ: s(function (e) { return e.type === 'gnote' ? e.qty : 0; }), gwAmt: s(function (e) { return e.type === 'gnote' ? e.amt : 0; }), counted: L.some(function (e) { return e.type === 'count'; }), moved: s(function (e) { return e.type === 'move' ? e.qty : 0; }) + gmv, movedCases: s(function (e) { return e.type === 'move' || e.type === 'gmove' ? e.cases : 0; }),
+      spoil: s(function (e) { return e.type === 'spoil' ? e.qty : 0; }), adj: s(function (e) { return e.type === 'adjust' ? e.qty : 0; }), edit: s(function (e) { return e.type === 'stockedit' ? e.qty : 0; }), cedit: s(function (e) { return e.type === 'stockedit' ? e.cases : 0; }), cadj: s(function (e) { return e.type === 'cageadj' ? e.qty : 0; }), bought: lines(['buy', 'other']), ub: isGrp(i) ? 0 : lines(['buy', 'other'], true) + mixIn(['buy', 'other']) };
     R.store = R.store || R.bought > 0 || R.movedCases > 0; R.direct = !R.store;   /* anything bought into storage this shift shows in the storage list */
     R.sold = Math.max(0, R.gone - R.spQ - R.gwQ);   /* sold = what left the fridge by counting, minus what was spoiled; credit is part of sold */
     return R;
@@ -3318,6 +3467,9 @@ function evRow(e, cancelable) {
   else if (e.type === 'opening') { ic = '📝'; tx = e.fresh ? 'Workplace started' : 'Opening handover entered by hand'; sub = (e.fromName ? 'From ' + e.fromName + ' · ' + e.fromWk + ' shift · ' + e.fromDate + ' ' + HL(e.fromHalf) + (e.fromTime ? ' · taken over at ' + fmtTime(e.fromTime) : '') + ' · ' : '') + 'Cash ' + money(e.cash || 0) + ' · ' + (e.lines || []).length + ' items counted' + (e.prevSales ? ' · previous sales ' + money(num(e.prevSales)) : ''); }
   else if (e.type === 'opencredit') { ic = '📒'; tx = 'Opening credit: ' + (e.crName || plab(e.cr)); sub = e.note || 'Owed from before'; amt = money(e.amt); col = 'var(--soon)'; }
   else if (e.type === 'newitem') { ic = '🆕'; tx = 'New item: ' + e.name; sub = e.note; }
+  else if (e.type === 'gmove') { ic = '📦'; tx = 'Case moved to the fridge: ' + (e.name || ''); sub = e.note; }
+  else if (e.type === 'group') { ic = '🍺'; tx = 'Group: ' + (e.name || ''); sub = e.note; }
+  else if (e.type === 'stcheck') { ic = '✓'; tx = 'Storage checked: ' + (e.name || ''); sub = e.note; }
   else if (e.type === 'split') { ic = '✂️'; tx = 'Item split: ' + (e.splitFrom || '') + ' → ' + e.name + ' and ' + (e.splitTo || ''); sub = e.note; }
   else if (e.type === 'remove') { ic = '🚫'; tx = 'Item removed: ' + e.name; sub = e.note; }
   else if (e.type === 'edit') { ic = '✏️'; tx = 'Item changed: ' + e.name; sub = e.note; }
@@ -6795,6 +6947,20 @@ document.addEventListener('click', function (e) {
     mkEvent(nb, 'newitem', { id: nid, name: name }, fr, 0, { cases: cg, note: 'New item ' + name + ' at ' + money(num($('#ni-price').value)) }); commit(nb); closeModal(); toast(name + ' added');
   }
   else if (a === 'editstock') esWarn();
+  else if (a === 'grpnew') { GN = { base: '', per: 24, pick: {} }; gnDraw(); }
+  else if (a === 'gnpick') { if (GN) { GN.pick[id] = !GN.pick[id]; gnDraw(); } }
+  else if (a === 'gngo') gnGo();
+  else if (a === 'gmove') { var gmi = item(ST.id); if (!gmi || !isGrp(gmi)) return; if (ST.move < 1) return toast('Choose how many first'); if (gmi.cage < ST.move) return toast('Only ' + gmi.cage + ' in the cage'); GM = { gid: gmi.id, n: ST.move, mix: {} }; gmDraw(); }
+  else if (a === 'gmgo') gmGo();
+  else if (a === 'gmback') { GM = null; stockSheet(); }
+  else if (a === 'gbadd') { var gbg = item(ST.id), gbl = gbg && brandsOf(gbg).slice(-1)[0]; GN = { nb: '', np: String(gbl ? gbl.price : gbg ? gbg.price || '' : '') }; gbDraw(ST.id); }
+  else if (a === 'gbback') { GN = null; stockSheet(); }
+  else if (a === 'gbnew') { var gnm = String((GN && GN.nb) || '').trim(), gpr = num(GN && GN.np); if (!gnm) return toast('Name the brand'); if (!(gpr > 0)) return toast('Enter the selling price'); gbSave(id, [], { name: gnm, price: gpr }); }
+  else if (a === 'gbold') { gbSave(b.dataset.g, [id], null); }
+  else if (a === 'gbout') { askConfirm('Take it out of the group?', '<b>' + esc((item(id) || {}).name || '') + '</b> becomes a normal item again. Its counts and history stay.', 'Yes, take it out', function () { gbOut(id); }); }
+  else if (a === 'stchk') stChk(id);
+  else if (a === 'stok') { var sti = item(id); closeCf(); if (sti && inControl()) { var sb = writeBatch(DB); newEv(); mkEvent(sb, 'stcheck', sti, 0, 0, { cases: sti.cage, note: sti.cage + ' ' + unitPl(unitName(sti), sti.cage) + ' in storage checked' }); commit(sb); toast(sti.name + ' checked'); } }
+  else if (a === 'stdiff') { var sdi = item(id); closeCf(); if (sdi) { ST = { id: sdi.id, fridge: sdi.stock, cage: sdi.cage, move: 0, spoil: 0 }; stockSheet(); toast('Use ⚠ Edit stock to record the real number'); } }
   else if (a === 'splitopen') { var spi = item(ST.id); if (!spi) return; SP = { id: spi.id, n1: spi.name, n2: '', f1: spi.stock, c1: spi.cage, f2: 0, c2: 0 }; spForm(); }
   else if (/^sp[fc][12][+-]$/.test(a)) { var spk = a.slice(2, 4), spc = SP && item(SP.id); if (!spc) return; SP[spk] = Math.max(0, SP[spk] + (a.slice(-1) === '+' ? 1 : -1)); spLive(); }
   else if (a === 'spreview') spReview();
@@ -6871,18 +7037,20 @@ document.addEventListener('click', function (e) {
   else if (a === 'bu+' || a === 'bu-') { var bk2 = +b.dataset.k; BUY.lines[bk2].units = stepTo(Math.floor(num(BUY.lines[bk2].units)), a === 'bu+' ? 1 : -1, 0); render(); }
   else if (a === 'bs+' || a === 'bs-' || a === 'bh+' || a === 'bh-') { var sl = BUY.lines[+b.dataset.k], sp = lineParts(sl); sl.sto = Math.max(0, Math.min(sp.n, sp.sto + ((a === 'bs+' || a === 'bh-') ? 1 : -1))); render(); }
   else if (a === 'bdest') { var bl0 = BUY.lines[+b.dataset.k], bi0 = item(bl0.item); bl0.dest = b.dataset.v; delete bl0.sto; if (bi0) { BDEST[bi0.id] = bl0.dest; try { localStorage.setItem('sw_bdest', JSON.stringify(BDEST)); } catch (e) {} } render(); }
+  else if (a === 'mx+' || a === 'mx-' || a === 'mxall' || a === 'mxlast') mxClick(a, b.dataset.k, b.dataset.b);
   else if (a === 'bbill') { BUY.mode = b.dataset.v === 'total' ? 'total' : 'each'; render(); }
   else if (a === 'bfold') { var fl = BUY.lines[+b.dataset.k]; if (lineMissing(fl)) toast('Finish this item first'); else keepY(function () { fl.fold = !fl.fold; render(); }); }
   else if (a === 'bladd') keepY(function () { if (BUY.lines.length === 1 && !BUY.other && num(BUY.total) > 0 && !(num(BUY.lines[0].cost) > 0)) BUY.lines[0].cost = String(Math.max(0, r2(num(BUY.total) - num(BUY.tax)))); BUY.lines.push({ item: S.items[0] ? S.items[0].id : '__new', cases: 1, units: 0, dest: '', name: '', price: '', per: String(CFG.perCase), kind: 'case', where: 'fridge', cost: '' }); BUY.lines.forEach(function (x, i) { if (i < BUY.lines.length - 1) { x.chk = true; x.fold = !lineMissing(x); } }); render(); });
   else if (a === 'bldel') { BUY.lines.splice(+b.dataset.k, 1); render(); }
   else if (a === 'buysave') {
         if (BUY.other) return buySave();
+    for (var gk = 0; gk < BUY.lines.length; gk++) { var gmx = grpMixMsg(BUY.lines[gk]); if (gmx) return toast(gmx); }
     var tot = num(BUY.total), cs = BUY.lines.reduce(function (x, l) { return x + lineParts(l).items; }, 0);
     if (!BUY.sup.trim()) return toast('Who was it bought from?'); if (tot <= 0 && BUY.lines.length > 1 && BUY.mode !== 'total') { for (var mk = 0; mk < BUY.lines.length; mk++) if (lineMissing(BUY.lines[mk])) { BUY.lines[mk].chk = true; BUY.lines[mk].fold = false; render(); var me = document.querySelectorAll('.bline')[mk]; if (me) me.scrollIntoView({ block: 'center' }); return toast(lineMissing(BUY.lines[mk])); } }
     if (tot <= 0) return toast('Enter the total on the bill');
     var bc = billCheck(); if (bc) return toast(bc);
     if (woAmt() < 0) return toast('Cash taken cannot be less than the bill total');
-    askConfirm('Save this purchase?', '<b>' + esc(BUY.sup.trim()) + '</b><br>' + BUY.lines.map(function (l) { var li = item(l.item), pt = lineParts(l), w = lineWord(l); return [pt.b ? pt.b + ' ' + unitPl(w, pt.b) : '', pt.u ? pt.u + ' ' + unitPl('single', pt.u) : ''].filter(Boolean).join(' + ') + ' of ' + esc(li ? li.name : l.name) + ' <span class="muted">(' + (pt.dc > 0 ? 'storage' : 'the shop') + ')</span>'; }).join('<br>') + '<br><br>Bill total <b>' + money(tot) + '</b> · ' + (advSplit() ? 'paid from the ' + money(advSplit().a.amt) + ' given earlier' + (advSplit().extra > 0 ? ' + ' + money(advSplit().extra) + ' from the cash on hand' : '') + (advSplit().change > 0 ? '<br><b>' + money(advSplit().change) + ' change goes back into the cash on hand</b>' : '') : 'cash taken <b>' + money(paidAmt()) + '</b>') + (woAmt() > 0 ? '<br>Change not kept: <b>' + money(woAmt()) + '</b>' + (woAmt() > 5 ? '<br><b style="color:var(--exp)">This writes off ' + money(woAmt()) + '. Is that right?</b>' : '') : '') + '<br>' + cs + ' item' + (cs === 1 ? '' : 's') + ' are added to the stock.<br><span class="muted">' + (BUY.receipt ? '📎 Receipt photo attached.' : 'No receipt photo attached.') + '</span>', 'Yes, save purchase', buySave);
+    askConfirm('Save this purchase?', '<b>' + esc(BUY.sup.trim()) + '</b><br>' + BUY.lines.map(function (l) { var li = item(l.item), pt = lineParts(l), w = lineWord(l); return [pt.b ? pt.b + ' ' + unitPl(w, pt.b) : '', pt.u ? pt.u + ' ' + unitPl('single', pt.u) : ''].filter(Boolean).join(' + ') + ' of ' + esc(li ? li.name : l.name) + ' <span class="muted">(' + (pt.dc > 0 ? 'storage' : 'the shop') + ')</span>' + grpMixConf(l, li); }).join('<br>') + '<br><br>Bill total <b>' + money(tot) + '</b> · ' + (advSplit() ? 'paid from the ' + money(advSplit().a.amt) + ' given earlier' + (advSplit().extra > 0 ? ' + ' + money(advSplit().extra) + ' from the cash on hand' : '') + (advSplit().change > 0 ? '<br><b>' + money(advSplit().change) + ' change goes back into the cash on hand</b>' : '') : 'cash taken <b>' + money(paidAmt()) + '</b>') + (woAmt() > 0 ? '<br>Change not kept: <b>' + money(woAmt()) + '</b>' + (woAmt() > 5 ? '<br><b style="color:var(--exp)">This writes off ' + money(woAmt()) + '. Is that right?</b>' : '') : '') + '<br>' + cs + ' item' + (cs === 1 ? '' : 's') + ' are added to the stock.<br><span class="muted">' + (BUY.receipt ? '📎 Receipt photo attached.' : 'No receipt photo attached.') + '</span>', 'Yes, save purchase', buySave);
   }
   else if (a === 'htab') { HT = b.dataset.v; render(); }
   else if (a === 'hoopen') { HOPEN[id] = !HOPEN[id]; soldRedraw(); }   /* the page that is open redraws itself: the Handover tab, the receiving page, the handover record or the viewer */
@@ -7199,6 +7367,8 @@ document.addEventListener('input', function (e) {
   else if (t.id === 'ip-q') { $('#ip-list').innerHTML = ipList(t.value); $('#ip-new').innerHTML = ipNewRow(t.value); }
   else if (t.dataset.sp) { SP[t.dataset.sp] = t.value; spLive(); }
   else if (t.dataset.step && /^sp[fc][12]$/.test(t.dataset.step) && SP) { SP[t.dataset.step.slice(2)] = Math.max(0, Math.floor(num(t.value)) || 0); spLive(); }
+  else if (t.dataset.mx) { var mc = grpCtx(t.dataset.mx); if (mc) { mc.mix[t.dataset.b] = Math.max(0, Math.floor(num(t.value)) || 0); mixLive(t.dataset.mx); } }
+  else if (t.dataset.gn) { if (GN) GN[t.dataset.gn] = t.value; }
   else if (t.dataset.step === 'bl') { BUY.lines[+t.dataset.k].cases = Math.max(0, Math.floor(num(t.value)) || 0); buyLive(); }
   else if (t.dataset.step === 'bu') { BUY.lines[+t.dataset.k].units = Math.max(0, Math.floor(num(t.value)) || 0); buyLive(); }
   else if (t.dataset.step === 'bs' || t.dataset.step === 'bh') { var tl = BUY.lines[+t.dataset.k], tp = lineParts(tl), tn = Math.max(0, Math.floor(num(t.value)) || 0); tl.sto = Math.max(0, Math.min(tp.n, t.dataset.step === 'bs' ? tn : tp.n - tn)); buyLive(); var dd = $('#bw' + t.dataset.k), oth = dd && dd.querySelector('[data-step=' + (t.dataset.step === 'bs' ? 'bh' : 'bs') + ']'); if (oth) oth.value = t.dataset.step === 'bs' ? tp.n - tl.sto : tl.sto; }
