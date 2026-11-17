@@ -121,10 +121,10 @@ nav button.on{color:var(--link);background:var(--soft)}
 .mxr{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--line)}.mxr b{font-size:16px;font-weight:600}
 .mixbox{margin-top:12px;padding:12px;border-radius:12px;background:var(--soft)}
 .brow.sub{margin-left:14px;border-left:3px solid var(--link);padding-left:10px}.gtag{font-size:11px;background:var(--soft);color:var(--link);border-radius:6px;padding:1px 6px;margin-left:6px;font-weight:700;vertical-align:middle}
-.stsec{margin:12px 0 0}.sth{font-size:19px;font-weight:600;margin:6px 4px 6px}.sth small{color:var(--muted);font-weight:400;font-size:14px;margin-left:6px}
-.strow2{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:1px solid var(--line);cursor:pointer}.strow2:first-child{border-top:0}.strow2.done{background:var(--okb)}
-.strow2 .nm{flex:1}.strow2 .nm b{font-size:17px;font-weight:500;display:block}.strow2 .nm small{color:var(--muted);font-size:13px}.strow2 .q{font-size:19px;font-weight:600;text-align:right}.strow2 .q small{display:block;font-size:11px;color:var(--muted);font-weight:400}
-.chk2{width:28px;height:28px;border-radius:8px;border:2px solid var(--secb);display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff}.chk2.on{background:var(--ok);border-color:var(--ok)}
+.stsec{margin:12px 0 0}.sth{font-size:14px;font-weight:700;margin:4px 2px 6px}.sth small{color:var(--muted);font-weight:400;font-size:11px;margin-left:6px}
+.strow2{display:flex;align-items:center;gap:10px;padding:9px 12px 9px 12px;border-top:1px solid var(--line);cursor:pointer}.strow2:first-child{border-top:0}.stundo{border:1px solid var(--secb);background:transparent;color:var(--link);border-radius:8px;padding:3px 9px;font-size:11px;font-weight:700}
+.strow2 .nm{flex:1}.strow2 .nm b{font-size:12px;font-weight:700;line-height:1.2;display:block}.strow2 .nm small{color:var(--muted);font-size:11px}.strow2 .q{font-size:15px;font-weight:500;text-align:right;line-height:1.15}.strow2 .q small{display:block;font-size:11px;color:var(--muted);font-weight:400}
+.chk2{width:22px;height:22px;border-radius:7px;border:2px solid var(--secb);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;flex:none}.chk2.on{background:var(--ok);border-color:var(--ok)}
 .hsafe{background:var(--okb);border-left:4px solid var(--ok);border-radius:8px;padding:8px 10px;font-size:14px;line-height:1.4;margin:6px 0 4px}
 .hnote{background:var(--surface);border-left:4px solid #d9a400;border-radius:8px;padding:8px 10px;font-size:14px;line-height:1.4;margin:6px 0 4px}
 .card.nts{border-left:3px solid var(--line)}.card.nts.cr{border-left-color:var(--soon)}.card.nts.sp{border-left-color:var(--exp)}.card.nts.gw{border-left-color:var(--ok)}.nts .nh{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px}.nts .nh b:last-child{white-space:nowrap}.nts .nl{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line)}.nts .nl small{display:block;color:var(--muted);font-size:12.5px;margin-top:1px}.nts .nf{color:var(--muted);font-size:12.5px;margin-top:4px}   /* the credit / spoiled / goodwill cards on the handover pages */
@@ -320,7 +320,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '4.04', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '4.05', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2397,12 +2397,12 @@ function stoSection() {   /* the bottom of the Count tab: the cases in storage, 
   var n = L.filter(function (i) { return done[i.id]; }).length;
   return '<div class="stsec"><div class="sth">📦 Storage <small>count the cases in the cage</small></div><div class="card" style="padding:0;overflow:hidden">' + L.map(function (i) {
     var d = done[i.id], st = d && d.cases === i.cage;
-    return '<div class="strow2' + (st ? ' done' : '') + '" data-act="stchk" data-id="' + i.id + '"><div class="nm"><b>' + esc(i.name) + '</b><small>' + (st ? '✓ checked by ' + esc(d.byName || '') + ' · ' + hhmm(d.t) : unitPl(unitName(i), 2) + ' of ' + per(i)) + '</small></div><div class="q">' + i.cage + '<small>' + unitPl(unitName(i), i.cage) + '</small></div><div class="chk2' + (st ? ' on' : '') + '">' + (st ? '✓' : '') + '</div></div>';
-  }).join('') + '</div><div class="muted" style="margin:4px 6px 10px;font-size:13px">View only. Tap a row to confirm it. Checked ' + n + ' of ' + L.length + '.</div></div>';
+    return '<div class="strow2"' + (st ? '' : ' data-act="stchk" data-id="' + i.id + '"') + '><div class="nm"><b>' + esc(i.name) + '</b><small>' + (st ? 'checked by ' + esc(d.byName || '') + ' · ' + hhmm(d.t) : unitPl(unitName(i), 2) + ' of ' + per(i)) + '</small></div><div class="q">' + i.cage + '<small>' + unitPl(unitName(i), i.cage) + '</small></div>' + (st ? '<button class="stundo" data-act="stundo" data-id="' + d.id + '">Undo</button>' : '') + '<div class="chk2' + (st ? ' on' : '') + '">' + (st ? '✓' : '') + '</div></div>';
+  }).join('') + '</div><div class="muted" style="margin:4px 4px 10px;font-size:11px">View only. Tap a row to confirm it. Checked ' + n + ' of ' + L.length + '.</div></div>';
 }
 function stChk(id) {
   var it = item(id); if (!it) return; if (!inControl()) return toast('Only the person in control can check the storage');
-  $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div><h2>' + esc(it.name) + '</h2><p style="margin-top:0">The app has <b>' + it.cage + ' ' + unitPl(unitName(it), it.cage) + '</b> in storage.<br>Is that what is in the cage?</p><button class="btn green block" data-act="stok" data-id="' + id + '">Yes, ' + it.cage + ' ' + unitPl(unitName(it), it.cage) + '</button><button class="btn sec block" data-act="stdiff" data-id="' + id + '" style="margin-top:10px">It\'s different</button><button class="btn sec block" data-act="cno" style="margin-top:10px">Cancel</button></div></div>');
+  $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div><h2>' + esc(it.name) + '</h2><p style="margin-top:0">The app has <b>' + it.cage + ' ' + unitPl(unitName(it), it.cage) + '</b> in storage.<br>Is that what is in the cage?</p><button class="btn green block" data-act="stok" data-id="' + id + '">Yes, ' + it.cage + ' ' + unitPl(unitName(it), it.cage) + '</button><button class="btn sec block" data-act="cno" style="margin-top:10px">Cancel</button><div class="muted" style="margin-top:8px;font-size:12px">View only. The stock cannot be changed from here.</div></div></div>');
 }
 function stockSheet() {
   var it = item(ST.id); if (!it) return closeModal(); if (isGrp(it)) return grpSheet();
@@ -6960,7 +6960,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'gbout') { askConfirm('Take it out of the group?', '<b>' + esc((item(id) || {}).name || '') + '</b> becomes a normal item again. Its counts and history stay.', 'Yes, take it out', function () { gbOut(id); }); }
   else if (a === 'stchk') stChk(id);
   else if (a === 'stok') { var sti = item(id); closeCf(); if (sti && inControl()) { var sb = writeBatch(DB); newEv(); mkEvent(sb, 'stcheck', sti, 0, 0, { cases: sti.cage, note: sti.cage + ' ' + unitPl(unitName(sti), sti.cage) + ' in storage checked' }); commit(sb); toast(sti.name + ' checked'); } }
-  else if (a === 'stdiff') { var sdi = item(id); closeCf(); if (sdi) { ST = { id: sdi.id, fridge: sdi.stock, cage: sdi.cage, move: 0, spoil: 0 }; stockSheet(); toast('Use ⚠ Edit stock to record the real number'); } }
+  else if (a === 'stundo') { if (inControl()) cancelEvent(id, 'Storage check undone', true); else toast('Only the person in control can undo'); }
   else if (a === 'splitopen') { var spi = item(ST.id); if (!spi) return; SP = { id: spi.id, n1: spi.name, n2: '', f1: spi.stock, c1: spi.cage, f2: 0, c2: 0 }; spForm(); }
   else if (/^sp[fc][12][+-]$/.test(a)) { var spk = a.slice(2, 4), spc = SP && item(SP.id); if (!spc) return; SP[spk] = Math.max(0, SP[spk] + (a.slice(-1) === '+' ? 1 : -1)); spLive(); }
   else if (a === 'spreview') spReview();
