@@ -324,7 +324,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '4.11', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '4.12', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -4716,10 +4716,10 @@ function rxWarn(h) {   /* what the receiver should know before counting */
   if (typeof h.computed === 'number' && r2(h.computed - h.cash) > 0) L.push('Cash was counted <b>' + money(r2(h.computed - h.cash)) + ' short</b> by ' + esc(hnl(h.fromName, h.fromEmail)));
   var ow = r2((h.owedBy || []).reduce(function (a, x) { return a + (x.bal || 0); }, 0)); if (ow > 0) {   /* tap the line to see who owes it */
     var oo = !!RXF.crowe, ob = (h.owedBy || []).filter(function (x) { return x.bal > 0; });
-    L.push('<span data-act="rxfold" data-v="crowe" style="cursor:pointer">Unpaid credit: <b>' + money(ow) + '</b> <span style="color:var(--muted)">' + (oo ? '▴ hide' : '▾ who owes') + '</span></span>' + (oo ? '<div style="margin:4px 0 2px;padding:6px 10px;border-radius:10px;background:var(--surface)">' + ob.map(function (x) { return '<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-top:1px solid var(--line)"><span>' + esc(x.label || x.name || '') + '</span><b>' + money(x.bal) + '</b></div>'; }).join('') + '</div>' : ''));
+    L.push({ raw: '<div data-act="rxfold" data-v="crowe" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 -6px;padding:6px 6px;border-radius:8px"><span>• Unpaid credit: <b>' + money(ow) + '</b></span><span style="color:var(--muted);flex:none">' + (oo ? 'tap to hide ▴' : 'tap to view ▾') + '</span></div>' + (oo ? '<div style="margin:2px 0 4px;padding:6px 10px;border-radius:10px;background:var(--surface)">' + ob.map(function (x) { return '<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-top:1px solid var(--line)"><span>' + esc(x.label || x.name || '') + '</span><b>' + money(x.bal) + '</b></div>'; }).join('') + '</div>' : '') });
   }
   var sl = (h.openShort || []).filter(function (x) { return x.owed > 0; }); if (sl.length) L.push(sl.map(function (x) { return esc(x.wk); }).join(', ') + (sl.length === 1 ? ' shift owes ' : ' shifts owe ') + '<b>' + money(r2(sl.reduce(function (a, x) { return a + x.owed; }, 0))) + '</b> for shortages');
-  return L.length ? '<div class="warnbox"><b>⚠ Check these first</b><div style="margin-top:3px">' + L.map(function (x) { return '• ' + x; }).join('<br>') + '</div></div>' : '';
+  return L.length ? '<div class="warnbox"><b>⚠ Check these first</b><div style="margin-top:3px">' + L.map(function (x) { return x.raw ? x.raw : '<div>• ' + x + '</div>'; }).join('') + '</div></div>' : '';
 }
 function rxDetail(h) {   /* the first page: the two stock lists (tap a row to read what changed), and the rest folded so the page stays short */
   if (!rxHasDetail(h)) return '';
