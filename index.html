@@ -326,7 +326,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '4.16', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '4.17', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2334,7 +2334,7 @@ function stockView(id) {   /* a person who is not in control can look at an item
 var GOPEN = {};   /* groups opened on the Stock page; every group is closed each time the Stock tab is opened */
 function grpRow(i) {
   var bs = brandsOf(i), open = !!GOPEN[i.id], fr = bs.reduce(function (a, b) { return a + (b.stock || 0); }, 0), brk = bs.map(function (b) { return (b.stock || 0) + ' ' + esc(b.name); }).join(' · ');
-  return '<div class="bub brow grp" data-act="stockitem" data-id="' + i.id + '" role="button" tabindex="0" style="cursor:pointer"><span class="grow"><span class="n">🍺 ' + esc(open ? i.name : grpBase(i)) + ' <span class="gtag">group</span></span>' +
+  return '<div class="bub brow grp" data-act="stockitem" data-id="' + i.id + '" role="button" tabindex="0" style="cursor:pointer"><span class="grow"><span class="n">🍺 ' + esc(grpBase(i)) + ' <span class="gtag">group</span></span>' +
     '<span class="s">' + (open ? '<span class="sc" style="margin:0">📦 ' + uLab(i, i.cage) + ' in storage · ' + per(i) + ' each</span>' : '<span class="sf"><b class="' + (fr <= 0 ? 'z' : '') + '">' + fr + '</b> in fridge</span><span class="sc">· 📦 ' + uLab(i, i.cage) + ' in storage</span>') + '</span></span><b class="pr">' + money(i.price) + '</b><span class="ch">›</span></div>' +
     '<div class="gbar" data-act="gtog" data-id="' + i.id + '" role="button" tabindex="0" aria-expanded="' + (open ? 'true' : 'false') + '"><div>' + (open ? 'The ' + bs.length + (bs.length === 1 ? ' brand' : ' brands') + '<small>tap to fold them away</small>' : (brk || 'No brands yet') + '<small>tap to see each brand</small>') + '</div><span class="bt">' + (open ? '▴ Hide' : '▾ Show') + '</span></div>';
 }
