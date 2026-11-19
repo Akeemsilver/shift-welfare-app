@@ -125,7 +125,7 @@ nav button.on{color:var(--link);background:var(--soft)}
 .gd .note{background:var(--soon-bg);border-left:3px solid var(--soon);padding:8px 10px;border-radius:8px;margin:8px 0}.gd .ok{background:var(--ok-bg);border-left:3px solid var(--ok);padding:8px 10px;border-radius:8px;margin:8px 0}.gd a[data-act]{color:var(--link);cursor:pointer;font-weight:600}
 .gtop{float:right;font-size:12px;font-weight:400;color:var(--link);cursor:pointer}
 .mixbox{margin-top:12px;padding:12px;border-radius:12px;background:var(--soft)}
-.bub.brow.sub{margin-left:14px;width:calc(100% - 14px);border-left:3px solid var(--link);padding-left:10px}.gtog{flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--link);margin-left:2px;border-radius:8px}
+.bub.brow.sub{margin-left:14px;width:calc(100% - 14px);border-left:3px solid var(--link);padding-left:10px}.gtog{flex:none;display:inline-block;padding:14px 10px;margin:-14px -10px;cursor:pointer;transition:transform .15s}.gtog.on{transform:rotate(90deg)}
 .gtag{font-size:11px;background:var(--soft);color:var(--link);border-radius:6px;padding:1px 6px;margin-left:6px;font-weight:700;vertical-align:middle}
 .stsec{margin:12px 0 0}.sth{font-size:14px;font-weight:700;margin:4px 2px 6px}.sth small{color:var(--muted);font-weight:400;font-size:11px;margin-left:6px}
 .strow2{display:flex;align-items:center;gap:10px;padding:9px 12px 9px 12px;border-top:1px solid var(--line);cursor:pointer}.strow2:first-child{border-top:0}.strow2 .nm{flex:1}.strow2 .nm b{font-size:12px;font-weight:700;line-height:1.2;display:block}.strow2 .nm small{color:var(--muted);font-size:11px}.strow2 .q{font-size:15px;font-weight:500;text-align:right;line-height:1.15}.strow2 .q small{display:block;font-size:11px;color:var(--muted);font-weight:400}
@@ -325,7 +325,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '4.14', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '4.15', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2310,7 +2310,7 @@ function vStock() {
   }, sec = function (title, ic, list) {   /* each place its own card, A to Z, what ran out at the bottom */
     if (!list.length) return '';
     list = list.filter(function (i) { return !i.grpOf; }); list = list.filter(function (i) { return !gone0(i); }).sort(nm2).concat(list.filter(gone0).sort(nm2));
-    list = list.reduce(function (a, i) { a.push(i); if (isGrp(i) && !GCOL[i.id]) brandsOf(i).forEach(function (br) { a.push(br); }); return a; }, []);   /* a group's brands sit right under it */
+    list = list.reduce(function (a, i) { a.push(i); if (isGrp(i) && GOPEN[i.id]) brandsOf(i).forEach(function (br) { a.push(br); }); return a; }, []);   /* a group's brands sit right under it */
     return '<div class="card brows" style="margin-top:12px"><div class="bsechead"><span>' + ic + '</span><b>' + title + '</b><span class="muted">' + list.length + (list.length === 1 ? ' item' : ' items') + '</span></div>' + list.map(row).join('') + '</div>';
   };
   var strow = function (i) { return '<button class="bub brow" data-act="stockitem" data-id="' + i.id + '"><span class="grow"><span class="n">' + esc(i.name) + '</span></span><b class="pr" style="font-size:15px;color:var(--ink)">' + uLab(i, i.cage) + '</b><span class="ch">›</span></button>'; };
@@ -2330,12 +2330,12 @@ function stockView(id) {   /* a person who is not in control can look at an item
     stockInfoHtml(it) +
     '<button class="btn sec block" data-act="close">Close</button></div>');
 }
-var GCOL = {};   /* groups folded on the Stock page; every group is open each time the Stock tab is opened */
+var GOPEN = {};   /* groups opened on the Stock page; every group is closed each time the Stock tab is opened */
 function grpRow(i) {
-  var bs = brandsOf(i), col = !!GCOL[i.id], fr = bs.reduce(function (a, b) { return a + (b.stock || 0); }, 0), brk = bs.map(function (b) { return (b.stock || 0) + ' ' + esc(b.name); }).join(' · ');
+  var bs = brandsOf(i), col = !GOPEN[i.id], fr = bs.reduce(function (a, b) { return a + (b.stock || 0); }, 0), brk = bs.map(function (b) { return (b.stock || 0) + ' ' + esc(b.name); }).join(' · ');
   return '<div class="bub brow grp" data-act="stockitem" data-id="' + i.id + '" role="button" tabindex="0" style="cursor:pointer"><span class="grow"><span class="n">🍺 ' + esc(col ? grpBase(i) : i.name) + ' <span class="gtag">group</span></span>' +
-    '<span class="s">' + (col ? '<span class="sf"><b class="' + (fr <= 0 ? 'z' : '') + '">' + fr + '</b> in fridge</span><span class="sc">· 📦 <b>' + uLab(i, i.cage) + '</b> in storage</span>' : '<span class="sc" style="margin:0">📦 <b>' + uLab(i, i.cage) + '</b> in storage · ' + per(i) + ' each</span>') + '</span>' +
-    (col && brk ? '<span class="s" style="font-size:12px;color:var(--muted)">' + brk + '</span>' : '') + '</span><b class="pr">' + money(i.price) + '</b><span class="gtog" data-act="gtog" data-id="' + i.id + '" role="button" aria-label="' + (col ? 'Open the group' : 'Close the group') + '">' + (col ? '▸' : '▾') + '</span></div>';
+    '<span class="s">' + (col ? '<span class="sf"><b class="' + (fr <= 0 ? 'z' : '') + '">' + fr + '</b> in fridge</span><span class="sc">· 📦 ' + uLab(i, i.cage) + ' in storage</span>' : '<span class="sc" style="margin:0">📦 ' + uLab(i, i.cage) + ' in storage · ' + per(i) + ' each</span>') + '</span>' +
+    (col && brk ? '<span class="s" style="font-size:12px;color:var(--muted)">' + brk + '</span>' : '') + '</span><b class="pr">' + money(i.price) + '</b><span class="ch gtog' + (col ? '' : ' on') + '" data-act="gtog" data-id="' + i.id + '" role="button" aria-label="' + (col ? 'Open the group' : 'Close the group') + '">›</span></div>';
 }
 var GM = null, GN = null;
 function grpSheet() {
@@ -6817,7 +6817,7 @@ document.addEventListener('touchmove', function (e) {
 
 document.addEventListener('click', function (e) {
   var nb = e.target.closest('#nav button');
-  if (nb) { if (nb.dataset.tab === tab && !helpOff() && !$('#modal').innerHTML && HELP[tab]) return helpOpen(tab); closeModal(); tab = nb.dataset.tab; if (tab === 'stock') GCOL = {}; render(); window.scrollTo(0, 0); tabHint(); return; }
+  if (nb) { if (nb.dataset.tab === tab && !helpOff() && !$('#modal').innerHTML && HELP[tab]) return helpOpen(tab); closeModal(); tab = nb.dataset.tab; if (tab === 'stock') GOPEN = {}; render(); window.scrollTo(0, 0); tabHint(); return; }
   var hbn = e.target.closest('.iconbtn'), hid = hbn ? hbn.id : e.target.id;
   if (hid === 'menu') return settings();
   if (hid === 'bell') return noticesModal();
@@ -7030,7 +7030,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'editstock') esWarn();
   else if (a === 'gdsave') gdSave();
   else if (a === 'gdsame') { var gsg = item(ST.id); if (gsg) askConfirm('Make them all the same?', 'Every brand in <b>' + esc(grpBase(gsg)) + '</b> becomes ' + money(gsg.price) + (gsg.cost ? ' with cost ' + money(gsg.cost) : '') + '.', 'Yes, make them the same', function () { gdApply(gsg.id, grpBase(gsg), gsg.price, gsg.cost || 0); }); }
-  else if (a === 'gtog') { GCOL[id] = !GCOL[id]; render(); }
+  else if (a === 'gtog') { GOPEN[id] = !GOPEN[id]; render(); }
   else if (a === 'grpnew') { GN = { base: '', per: 24, pick: {} }; gnDraw(); }
   else if (a === 'gnpick') { if (GN) { GN.pick[id] = !GN.pick[id]; gnDraw(); } }
   else if (a === 'gngo') gnGo();
