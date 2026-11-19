@@ -125,7 +125,8 @@ nav button.on{color:var(--link);background:var(--soft)}
 .gd .note{background:var(--soon-bg);border-left:3px solid var(--soon);padding:8px 10px;border-radius:8px;margin:8px 0}.gd .ok{background:var(--ok-bg);border-left:3px solid var(--ok);padding:8px 10px;border-radius:8px;margin:8px 0}.gd a[data-act]{color:var(--link);cursor:pointer;font-weight:600}
 .gtop{float:right;font-size:12px;font-weight:400;color:var(--link);cursor:pointer}
 .mixbox{margin-top:12px;padding:12px;border-radius:12px;background:var(--soft)}
-.bub.brow.sub{margin-left:14px;width:calc(100% - 14px);border-left:3px solid var(--link);padding-left:10px}.gtog{flex:none;display:inline-block;padding:14px 10px;margin:-14px -10px;cursor:pointer;transition:transform .15s}.gtog.on{transform:rotate(90deg)}
+.bub.brow.sub{margin-left:14px;width:calc(100% - 14px);border-left:3px solid var(--link);padding-left:10px}.gbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 8px;padding:11px 14px;background:var(--soft);color:var(--link);border-radius:12px;font-weight:700;font-size:13.5px;line-height:1.25;cursor:pointer}.gbar small{display:block;color:var(--muted);font-weight:400;font-size:12px;margin-top:2px}.gbar .bt{flex:none;background:var(--link);color:#fff;border-radius:999px;padding:8px 14px;font-size:12.5px;white-space:nowrap}
+.gbar+.bub.brow{border-top:1px solid var(--line)}
 .gtag{font-size:11px;background:var(--soft);color:var(--link);border-radius:6px;padding:1px 6px;margin-left:6px;font-weight:700;vertical-align:middle}
 .stsec{margin:12px 0 0}.sth{font-size:14px;font-weight:700;margin:4px 2px 6px}.sth small{color:var(--muted);font-weight:400;font-size:11px;margin-left:6px}
 .strow2{display:flex;align-items:center;gap:10px;padding:9px 12px 9px 12px;border-top:1px solid var(--line);cursor:pointer}.strow2:first-child{border-top:0}.strow2 .nm{flex:1}.strow2 .nm b{font-size:12px;font-weight:700;line-height:1.2;display:block}.strow2 .nm small{color:var(--muted);font-size:11px}.strow2 .q{font-size:15px;font-weight:500;text-align:right;line-height:1.15}.strow2 .q small{display:block;font-size:11px;color:var(--muted);font-weight:400}
@@ -325,7 +326,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '4.15', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '4.16', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -2332,10 +2333,10 @@ function stockView(id) {   /* a person who is not in control can look at an item
 }
 var GOPEN = {};   /* groups opened on the Stock page; every group is closed each time the Stock tab is opened */
 function grpRow(i) {
-  var bs = brandsOf(i), col = !GOPEN[i.id], fr = bs.reduce(function (a, b) { return a + (b.stock || 0); }, 0), brk = bs.map(function (b) { return (b.stock || 0) + ' ' + esc(b.name); }).join(' · ');
-  return '<div class="bub brow grp" data-act="stockitem" data-id="' + i.id + '" role="button" tabindex="0" style="cursor:pointer"><span class="grow"><span class="n">🍺 ' + esc(col ? grpBase(i) : i.name) + ' <span class="gtag">group</span></span>' +
-    '<span class="s">' + (col ? '<span class="sf"><b class="' + (fr <= 0 ? 'z' : '') + '">' + fr + '</b> in fridge</span><span class="sc">· 📦 ' + uLab(i, i.cage) + ' in storage</span>' : '<span class="sc" style="margin:0">📦 ' + uLab(i, i.cage) + ' in storage · ' + per(i) + ' each</span>') + '</span>' +
-    (col && brk ? '<span class="s" style="font-size:12px;color:var(--muted)">' + brk + '</span>' : '') + '</span><b class="pr">' + money(i.price) + '</b><span class="ch gtog' + (col ? '' : ' on') + '" data-act="gtog" data-id="' + i.id + '" role="button" aria-label="' + (col ? 'Open the group' : 'Close the group') + '">›</span></div>';
+  var bs = brandsOf(i), open = !!GOPEN[i.id], fr = bs.reduce(function (a, b) { return a + (b.stock || 0); }, 0), brk = bs.map(function (b) { return (b.stock || 0) + ' ' + esc(b.name); }).join(' · ');
+  return '<div class="bub brow grp" data-act="stockitem" data-id="' + i.id + '" role="button" tabindex="0" style="cursor:pointer"><span class="grow"><span class="n">🍺 ' + esc(open ? i.name : grpBase(i)) + ' <span class="gtag">group</span></span>' +
+    '<span class="s">' + (open ? '<span class="sc" style="margin:0">📦 ' + uLab(i, i.cage) + ' in storage · ' + per(i) + ' each</span>' : '<span class="sf"><b class="' + (fr <= 0 ? 'z' : '') + '">' + fr + '</b> in fridge</span><span class="sc">· 📦 ' + uLab(i, i.cage) + ' in storage</span>') + '</span></span><b class="pr">' + money(i.price) + '</b><span class="ch">›</span></div>' +
+    '<div class="gbar" data-act="gtog" data-id="' + i.id + '" role="button" tabindex="0" aria-expanded="' + (open ? 'true' : 'false') + '"><div>' + (open ? 'The ' + bs.length + (bs.length === 1 ? ' brand' : ' brands') + '<small>tap to fold them away</small>' : (brk || 'No brands yet') + '<small>tap to see each brand</small>') + '</div><span class="bt">' + (open ? '▴ Hide' : '▾ Show') + '</span></div>';
 }
 var GM = null, GN = null;
 function grpSheet() {
