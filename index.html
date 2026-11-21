@@ -327,7 +327,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '4.19', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '4.20', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -1266,7 +1266,7 @@ function countSheet() {
   CN.q = Math.min(CN.q, cqMax(it));
   if (CN.to == null) CN.to = noteLeft(it).left;   /* starts at what the notes say should be left; the person changes it to what is really there */
   if (CN.to > it.stock) CN.to = it.stock;
-  modal('<div class="ps"><div class="row"><div class="grow"><h2 style="margin:0">' + esc(it.name) + '</h2><div class="muted">Expected ' + (it.shelf ? 'on the shelf' : 'in the fridge') + (hasCage(it) ? ' · cage ' + uLab(it, it.cage) : '') + '</div></div><b style="font-size:22px;font-weight:600;text-align:right">' + (noteLeft(it).extra > 0 ? noteLeft(it).left : it.stock) + (noteLeft(it).extra > 0 ? '<div class="muted" style="font-size:11px;font-weight:500">should be left (was ' + it.stock + ')</div>' : '') + '</b></div>' +
+  modal('<div class="ps"><div class="row"><div class="grow"><h2 style="margin:0">' + esc(it.name) + '</h2><div class="muted">Expected ' + (it.shelf ? 'on the shelf' : 'in the fridge') + (hasCage(it) ? ' · cage ' + uLab(it, it.cage) : it.grpOf && item(it.grpOf) ? ' · cage ' + uLab(item(it.grpOf), item(it.grpOf).cage) + ' (' + esc(grpBase(item(it.grpOf))) + ' group)' : '') + '</div></div><b style="font-size:22px;font-weight:600;text-align:right">' + (noteLeft(it).extra > 0 ? noteLeft(it).left : it.stock) + (noteLeft(it).extra > 0 ? '<div class="muted" style="font-size:11px;font-weight:500">should be left (was ' + it.stock + ')</div>' : '') + '</b></div>' +
     '<div class="card" style="margin-top:12px"><label>Count now (what is really ' + (it.shelf ? 'on the shelf' : 'in the fridge') + ')</label>' + stepper('cn', CN.to) + '<div id="cn-prev">' + cnPreview(it) + '</div>' +
     '<div class="row" style="margin-top:10px;gap:10px"><button class="btn green" data-act="cnsave" style="flex:1">Save count</button>' + (lastOf(['count']) ? undoBtn('cnundo', 'Cancel this count') : '') + '</div></div>' +
     (!hasCage(it) && it.grpOf && item(it.grpOf) ? brandCageCard(it) : '') +
@@ -2405,10 +2405,15 @@ function gdSave() {
   if (!pc) return gdApply(g.id, nm, g.price, 0);
   askConfirm('Change it for the whole group?', '<b>' + esc(grpBase(g)) + '</b> · ' + bs.length + (bs.length === 1 ? ' brand' : ' brands') + (bs.length ? ' (' + bs.map(function (x) { return esc(x.name); }).join(', ') + ')' : '') + '<br>' + (pr !== g.price ? 'selling price ' + money(g.price) + ' → <b>' + money(pr) + '</b><br>' : '') + (co > 0 && co !== (g.cost || 0) ? 'cost each ' + money(g.cost || 0) + ' → <b>' + money(co) + '</b><br>' : '') + '<span class="muted">Every brand in the group changes too. Past sales and profit keep the old price and cost.</span>', 'Yes, change all', function () { gdApply(g.id, nm, pr, co); });
 }
+function gmLayer(html) {   /* the brand pop-up is a sheet from the bottom, over the page that opened it (the Count menu or the group's page) */
+  var lay = $('#gml'); if (lay) { lay.firstChild.innerHTML = html; return; }
+  $('#modal').insertAdjacentHTML('beforeend', '<div class="modal" id="gml"><div>' + html + '</div></div>');
+}
+function gmClose() { var l = $('#gml'); if (l) l.remove(); }
 function gmDraw() {
   var g = item(GM.gid); if (!g) return closeModal();
-  modal('<h2>Add ' + GM.n + ' ' + unitPl(unitName(g), GM.n) + ' of ' + esc(grpBase(g)) + ' to the fridge</h2><div class="card"><div class="muted" style="margin-bottom:8px">' + GM.n + ' × ' + per(g) + ' = <b>' + GM.n * per(g) + '</b> items. Which brands are in ' + (GM.n === 1 ? 'the case' : 'the cases') + '? You can type the numbers. They always add up.</div>' + mixHtml(grpCtx('m')) + '</div>' +
-    '<button class="btn block" id="gm-go" data-act="gmgo">Add to the fridge</button><button class="btn sec block" data-act="gmback" style="margin-top:10px">Back</button>', true);
+  gmLayer('<h2>Add ' + GM.n + ' ' + unitPl(unitName(g), GM.n) + ' of ' + esc(grpBase(g)) + ' to the fridge</h2><div class="card"><div class="muted" style="margin-bottom:8px">' + GM.n + ' × ' + per(g) + ' = <b>' + GM.n * per(g) + '</b> items. Which brands are in ' + (GM.n === 1 ? 'the case' : 'the cases') + '? You can type the numbers. They always add up.</div>' + mixHtml(grpCtx('m')) + '</div>' +
+    '<button class="btn block" id="gm-go" data-act="gmgo">Add to the fridge</button><button class="btn sec block" data-act="gmback" style="margin-top:10px">Back</button>');
 }
 function gmGo() {
   var g = item(GM.gid); if (!g) return; var n = GM.n, need = n * per(g), bs = brandsOf(g), mixv = {}; mixNorm(grpCtx('m'));
@@ -2416,7 +2421,7 @@ function gmGo() {
   var b = writeBatch(DB); newEv(); itemInc(b, g.id, { cage: -n }); var ids = [g.id];
   bs.forEach(function (br) { var q = Math.max(0, Math.floor(+GM.mix[br.id] || 0)); if (q > 0) { mixv[br.id] = q; ids.push(br.id); itemInc(b, br.id, { stock: q }); } });
   mkEvent(b, 'gmove', g, need, 0, { items: ids, cases: n, mix: mixv, note: uLab(g, n) + ' of ' + g.name + ' to the fridge: ' + bs.filter(function (br) { return mixv[br.id]; }).map(function (br) { return br.name + ' ' + mixv[br.id]; }).join(', ') });
-  mixLastSet(g.id, mixv); commit(b); var from = GM.from; GM = null; toast(uLab(g, n) + ' added to the fridge');
+  mixLastSet(g.id, mixv); commit(b); var from = GM.from; GM = null; gmClose(); toast(uLab(g, n) + ' added to the fridge');
   if (from === 'count') { CN = { to: null, q: 0, mv: 0 }; setTimeout(function () { if (tab === 'sell' && item(sel)) countSheet(); }, 250); } else { ST = { id: g.id, fridge: g.stock, cage: g.cage - n, move: 0, spoil: 0 }; stockSheet(); }
 }
 function gnDraw() {
@@ -6865,6 +6870,7 @@ document.addEventListener('click', function (e) {
   if (hid === 'hist') return histOpen();
   if (hid === 'prof') { PF = { mode: 'day', off: 0 }; WPS = []; return profitModal(); }
   if (e.target.id === 'cf' && e.target.classList.contains('sheetx')) { e.target.remove(); return; }
+  if (e.target.id === 'gml') { GM = null; gmClose(); return; }
   if (e.target.id === 'mbg') { if (M && !M.personId && !isPres() && $('#who-q, [data-np]')) return; return closeModal(); }
   var b = e.target.closest('[data-act]'); if (!b) return;
   var a = b.dataset.act, id = b.dataset.id, it = id && item(id);
@@ -7077,7 +7083,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'gngo') gnGo();
   else if (a === 'gmove') { var gmi = item(ST.id); if (!gmi || !isGrp(gmi)) return; if (ST.move < 1) return toast('Choose how many first'); if (gmi.cage < ST.move) return toast('Only ' + gmi.cage + ' in the cage'); GM = { gid: gmi.id, n: ST.move, mix: {}, from: 'stock' }; gmDraw(); }
   else if (a === 'gmgo') gmGo();
-  else if (a === 'gmback') { var gfrom = GM && GM.from; GM = null; if (gfrom === 'count') countSheet(); else stockSheet(); }
+  else if (a === 'gmback') { GM = null; gmClose(); }
   else if (a === 'gbadd') { GN = { nb: '' }; gbDraw(ST.id); }
   else if (a === 'gbback') { GN = null; stockSheet(); }
   else if (a === 'gbnew') { var gnm = String((GN && GN.nb) || '').trim(); if (!gnm) return toast('Name the brand'); gbSave(id, [], { name: gnm }); }
