@@ -327,7 +327,7 @@ function writeBatch(db) {
   }
   var f = { set: function () { return f; }, update: function () { return f; }, delete: function () { return f; }, commit: function () { return Promise.reject(VIEWERR()); } }; return f;
 }
-var APP_VERSION = '4.20', RULES_VERSION = '2.42';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
+var APP_VERSION = '4.21', RULES_VERSION = '2.43';   /* shown in Settings; the deploy zip and the rules file carry the same numbers */
 /* ---------- the workplace settings (places/{pid}/config/main); until it is read, Couva's own values are used ---------- */
 var DEFAULT_CFG = {
   shifts: [{ name: 'Black', color: '#14181C' }, { name: 'White', color: '#FFFFFF' }, { name: 'Blue', color: '#1F6FA8' }, { name: 'Red', color: '#C7361F' }],
@@ -703,7 +703,13 @@ function setShift(obj) { var u = {}; for (var k in obj) u['shift.' + k] = obj[k]
 function reverseEvent(b, e) {
   var it = item(e.item), cid = e.cid || rootOf(e.cr || e.person || ''); LE = e.id;   /* the cancelled record carries the same id as the event */
   if (e.type === 'savemove') return 'A savings move cannot be cancelled. Move the money back instead.';
-  if (e.type === 'split' || e.type === 'gmove' || e.type === 'group') return 'This cannot be cancelled here. Ask a president.';
+  if (e.type === 'gmove') {   /* put the cases back in storage and take the brands back out of the fridge, unless some were already sold or counted */
+    var gg = item(e.item); if (!gg) return 'That group no longer exists'; var gmx = e.mix || {}, short = [];
+    Object.keys(gmx).forEach(function (k) { var br = item(k); if (!br || (br.stock || 0) < gmx[k]) short.push((br ? br.name : 'A brand') + ' (' + gmx[k] + ' needed, ' + (br ? br.stock || 0 : 0) + ' in the fridge)'); });
+    if (short.length) return 'Cannot undo: some of these were already sold or counted: ' + short.join(', ');
+    itemInc(b, gg.id, { cage: e.cases || 0 }); Object.keys(gmx).forEach(function (k) { itemInc(b, k, { stock: -gmx[k] }); }); return null;
+  }
+  if (e.type === 'split' || e.type === 'group') return 'This cannot be cancelled here. Ask a president.';
   if (e.type === 'stcheck') return null;
   if (['newitem', 'remove', 'edit', 'cashshort', 'opening', 'switch', 'stockedit', 'takeover', 'hoopen', 'repay', 'shortfix', 'hocorr', 'shiftrec', 'watchchg', 'fundshort', 'fundover', 'sealopen', 'sealout', 'advsettle'].indexOf(e.type) >= 0) return 'This entry cannot be cancelled here. It was made with a stock purchase. Ask a president.';
   if (e.type === 'sale') { if (!it) return 'That item no longer exists'; itemInc(b, it.id, { stock: e.qty }); if (e.cr) balInc(b, cid, -e.amt); }
@@ -1560,20 +1566,20 @@ function offsetOpen(wk) {   /* the owner, a president or an admin clears one shi
   if (!o.length) return toast('No shortages owed');
   if (!srcs.length) return toast('No shift has cash over to use');
   var to = o.filter(function (x) { return x.wk === wk; })[0] || o[0]; OFF = { to: to.wk, from: '', amount: '' };
-  OFF.from = srcs.filter(function (w) { return w !== OFF.to; })[0] || ''; if (!OFF.from) return toast('The shift that owes has the only cash over. Another shift is needed to pay it');
+  OFF.from = srcs.indexOf(OFF.to) >= 0 ? OFF.to : srcs[0] || '';   /* the shift's own cash over first: it can pay its own shortage */
   offsetDraw();
 }
 function offsetDraw() {
-  var F = OFF, o = openShortList(), srcs = WATCHES.filter(function (w) { return overOf(w) > 0.004 && w !== F.to; });
+  var F = OFF, o = openShortList(), srcs = WATCHES.filter(function (w) { return overOf(w) > 0.004; });
   if (srcs.indexOf(F.from) < 0) F.from = srcs[0] || '';
   var owed = (o.filter(function (x) { return x.wk === F.to; })[0] || { owed: 0 }).owed, avail = F.from ? overOf(F.from) : 0, max = r2(Math.min(owed, avail));
   if (F.amount === '' || num(F.amount) > max) F.amount = String(max);
   var amt = num(F.amount), okAmt = amt > 0 && amt <= max + 0.004;
   modal('<h2>Pay with cash over</h2><div class="muted" style="margin:-4px 0 8px">For the president and admins. You do not need to be in control. No cash moves.</div><div class="card"><label>Shift that owes</label>' + seg(o.map(function (x) { return [x.wk, esc(x.wk) + ' · ' + money(x.owed)]; }), 'ofto', F.to, Math.min(o.length, 4)) +
-    '<label style="margin-top:12px">Pay it with the cash over of</label>' + (srcs.length ? seg(srcs.map(function (w) { return [w, esc(w) + ' · ' + money(overOf(w))]; }), 'offrom', F.from, Math.min(srcs.length, 4)) : '<div class="muted">No other shift has cash over.</div>') +
+    '<label style="margin-top:12px">Pay it with the cash over of</label>' + (srcs.length ? seg(srcs.map(function (w) { return [w, esc(w) + ' · ' + money(overOf(w))]; }), 'offrom', F.from, Math.min(srcs.length, 4)) : '<div class="muted">No shift has cash over.</div>') +
     '<div class="f" style="margin-top:12px"><label>Amount <span class="muted">(up to ' + money(max) + ')</span></label><input id="of-amt" data-of="amount" type="number" inputmode="decimal" min="0" step="any" value="' + esc(F.amount) + '"></div></div>' +
     (okAmt ? '<div class="card" style="background:var(--soon-bg);border-left:2px solid var(--soon);box-shadow:none"><b>What will change</b><div style="margin-top:6px;font-size:13.5px"><div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line)"><span>' + esc(F.to) + ' owes</span><b>' + money(owed) + ' → ' + money(r2(owed - amt)) + '</b></div><div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line)"><span>' + esc(F.from) + ' cash over</span><b>' + money(avail) + ' → ' + money(r2(avail - amt)) + '</b></div><div class="muted" style="margin-top:6px">Nothing moves in the cash. The extra cash counted is already in the till and the missing cash is already out of it, so this only settles the books. It is written to History and each shift is told.</div></div></div>' : '') +
-    '<button class="btn block" data-act="ofgo"' + (okAmt ? '' : ' disabled') + '>' + (okAmt ? 'Yes, clear ' + esc(F.to) + '\'s ' + money(amt) + ' with ' + esc(F.from) + '\'s cash over' : 'Choose an amount') + '</button><button class="btn sec block" data-act="close" style="margin-top:8px">Cancel</button>');
+    '<button class="btn block" data-act="ofgo"' + (okAmt ? '' : ' disabled') + '>' + (okAmt ? 'Yes, clear ' + esc(F.to) + '\'s ' + money(amt) + ' with ' + (F.from === F.to ? 'its own' : esc(F.from) + '\'s') + ' cash over' : 'Choose an amount') + '</button><button class="btn sec block" data-act="close" style="margin-top:8px">Cancel</button>');
 }
 function offsetGo() {
   var F = OFF; if (!F || !(canApprove() && !OWNERVIEW)) return; F.amount = ($('#of-amt') || {}).value || F.amount; var amt = num(F.amount);
@@ -3557,7 +3563,7 @@ function evRow(e, cancelable) {
   else if (e.type === 'opening') { ic = '📝'; tx = e.fresh ? 'Workplace started' : 'Opening handover entered by hand'; sub = (e.fromName ? 'From ' + e.fromName + ' · ' + e.fromWk + ' shift · ' + e.fromDate + ' ' + HL(e.fromHalf) + (e.fromTime ? ' · taken over at ' + fmtTime(e.fromTime) : '') + ' · ' : '') + 'Cash ' + money(e.cash || 0) + ' · ' + (e.lines || []).length + ' items counted' + (e.prevSales ? ' · previous sales ' + money(num(e.prevSales)) : ''); }
   else if (e.type === 'opencredit') { ic = '📒'; tx = 'Opening credit: ' + (e.crName || plab(e.cr)); sub = e.note || 'Owed from before'; amt = money(e.amt); col = 'var(--soon)'; }
   else if (e.type === 'newitem') { ic = '🆕'; tx = 'New item: ' + e.name; sub = e.note; }
-  else if (e.type === 'gmove') { ic = '📦'; tx = 'Case moved to the fridge: ' + (e.name || ''); sub = e.note; }
+  else if (e.type === 'gmove') { ic = '🧊'; var gmg = item(e.item) || {}, gmt = Object.keys(e.mix || {}).map(function (k) { return (e.mix[k] || 0) + ' ' + ((item(k) || {}).name || ''); }).join(' + '); tx = 'Moved ' + (gmt || (e.qty + ' items')) + ' to the fridge'; sub = uLab(gmg, e.cases || 0) + ' of ' + (gmg.gbase || e.name || '') + ' from storage'; }
   else if (e.type === 'group') { ic = '📦'; tx = 'Group: ' + (e.name || ''); sub = e.note; }
   else if (e.type === 'stcheck') { ic = '✓'; tx = 'Storage checked: ' + (e.name || ''); sub = e.note; }
   else if (e.type === 'split') { ic = '✂️'; tx = 'Item split: ' + (e.splitFrom || '') + ' → ' + e.name + ' and ' + (e.splitTo || ''); sub = e.note; }
@@ -3575,7 +3581,7 @@ function evRow(e, cancelable) {
 }
 /* ---------- History: one full page. All = the entries of a day or a month, Shifts = the permanent shift summaries (a day, a month or a year), Charts. The Filter is in the top bar ---------- */
 var HY = { tab: 'all', per: 'day', dt: new Date(), types: {}, short: false, wk: '', sid: '', cnt: {}, sper: 'month', pper: 'month', pf: 'all', pq: '', pid: '', pl: null, hm: '', pm: '', cv: 'score', sy: 0, back: false, yr: false, cf: {} }, HUN = null, HEVS = null, HSDOCS = null, HSD = {}, HYSIG = '';
-var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Goodwill', '🎁', ['gnote']], ['Stock moves', '🧊', ['move']], ['Cash used', '💵', ['usecash', 'usechange', 'advsettle']], ['Donations and events', '🎁', ['donation']], ['Savings', '🏦', ['savemove']], ['Stored cash', '💰', ['addcash', 'fundshort', 'fundover', 'sealopen', 'sealout', 'absorb']], ['Shortages and repayments', '⚠️', ['cashshort', 'repay', 'offset', 'gapfix']], ['Corrections', '🛠️', ['hocorr', 'shortfix', 'shiftfix', 'dayfix']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
+var HGROUPS = [['Sales', '🛒', ['sale']], ['Credit and payments', '💳', ['loan', 'pay', 'cnote', 'opencredit']], ['Counts', '🧮', ['count']], ['Purchases', '🧾', ['buy', 'other']], ['Spoiled', '🗑', ['spoil', 'snote']], ['Goodwill', '🎁', ['gnote']], ['Stock moves', '🧊', ['move', 'gmove']], ['Cash used', '💵', ['usecash', 'usechange', 'advsettle']], ['Donations and events', '🎁', ['donation']], ['Savings', '🏦', ['savemove']], ['Stored cash', '💰', ['addcash', 'fundshort', 'fundover', 'sealopen', 'sealout', 'absorb']], ['Shortages and repayments', '⚠️', ['cashshort', 'repay', 'offset', 'gapfix']], ['Corrections', '🛠️', ['hocorr', 'shortfix', 'shiftfix', 'dayfix']], ['Stock edits by hand', '✎', ['stockedit', 'adjust', 'cageadj', 'newitem', 'remove', 'edit', 'costfill']], ['Control changes', '🛡️', ['takeover', 'switch', 'watchchg', 'shiftrec']], ['Handovers', '🔁', ['handover']]];
 function hgroup(e) { if ((e.type === 'adjust' || e.type === 'cageadj') && e.ho) return 'Shortages and repayments'; for (var i = 0; i < HGROUPS.length; i++) if (HGROUPS[i][2].indexOf(e.type) >= 0) return HGROUPS[i][0]; return 'Stock edits by hand'; }
 function histNoon(d) { var x = new Date(d); x.setHours(12, 0, 0, 0); return x; }
 function histToday() { return histNoon(new Date(Date.now() - bizHour() * 36e5)); }   /* History always opens on today, by the phone's own clock */
@@ -4418,7 +4424,7 @@ function calDay(key) {
 }
 function cancelAsk(id) {
   var e = S.log.filter(function (x) { return x.id === id; })[0]; if (!e) return toast('Only entries from this shift can be cancelled');
-  var tx = (e.type === 'sale' || e.type === 'cnote' ? e.qty + ' × ' + e.name + ' · ' + money(e.amt) : e.type === 'count' ? 'Count of ' + e.name + ' (' + e.from + ' → ' + e.to + ')' : e.type === 'snote' ? 'Spoiled note: ' + e.qty + ' × ' + e.name : e.type === 'gnote' ? 'Goodwill note: ' + e.qty + ' × ' + e.name : e.type === 'absorb' ? 'Stored cash moved: ' + money(e.amt) + ' (' + (e.fundName || '') + ')' : e.type === 'loan' ? 'Cash loan ' + money(e.amt) : e.type === 'pay' ? 'Payment ' + money(e.amt) : e.type === 'buy' ? 'Purchase ' + money(e.amt) : e.name);
+  var tx = (e.type === 'sale' || e.type === 'cnote' ? e.qty + ' × ' + e.name + ' · ' + money(e.amt) : e.type === 'count' ? 'Count of ' + e.name + ' (' + e.from + ' → ' + e.to + ')' : e.type === 'snote' ? 'Spoiled note: ' + e.qty + ' × ' + e.name : e.type === 'gnote' ? 'Goodwill note: ' + e.qty + ' × ' + e.name : e.type === 'absorb' ? 'Stored cash moved: ' + money(e.amt) + ' (' + (e.fundName || '') + ')' : e.type === 'loan' ? 'Cash loan ' + money(e.amt) : e.type === 'pay' ? 'Payment ' + money(e.amt) : e.type === 'buy' ? 'Purchase ' + money(e.amt) : e.type === 'gmove' ? 'Moved ' + Object.keys(e.mix || {}).map(function (k) { return (e.mix[k] || 0) + ' ' + ((item(k) || {}).name || ''); }).join(' + ') + ' to the fridge (' + uLab(item(e.item) || {}, e.cases || 0) + ' of ' + ((item(e.item) || {}).gbase || e.name) + ')' : e.name);
   CONF = null; var r = ''; window.__cid = id; window.__reason = '';
   $('#modal').insertAdjacentHTML('beforeend', '<div class="modal mid" id="cf"><div><h2>Cancel this entry?</h2><p style="margin-top:0"><b>' + esc(tx) + '</b><br><span class="muted">Everything it changed (stock, credit, cash) is put back and the entry disappears from the list.</span></p>' +
     (e.type === 'absorb' ? '<div class="muted" style="margin:0 0 6px">The ' + money(e.amt) + ' goes back into ' + esc(e.fundName || 'the fund') + ', each shift gets back what it gave. The cash on hand does not change.</div><label>Why? (required)</label><input id="cx-why" placeholder="Write why it is being cancelled" maxlength="120"><div class="chips" style="flex-wrap:wrap;overflow:visible">' + ['Wrong amount', 'Wrong fund', 'Done by mistake'].map(function (x) { return '<button data-act="abreason" data-v="' + x + '">' + x + '</button>'; }).join('') + '</div>' : '<label>Reason (optional)</label><div class="chips" style="flex-wrap:wrap;overflow:visible">' + REASONS.map(function (x) { return '<button data-act="reason" data-v="' + x + '">' + x + '</button>'; }).join('') + '</div>') +
